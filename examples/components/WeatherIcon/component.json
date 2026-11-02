@@ -1,7 +1,7 @@
 {
  "component": "WeatherIcon",
- "version": 2,
- "summary": "A square weather symbol drawn with circles, rounded rectangles, lines and a crescent path: sun, cloud, rain, snow, storm, partly cloudy or fog, with a moon instead of the sun at night.",
+ "version": 3,
+ "summary": "A square weather symbol drawn with circles, rounded rectangles, lines and a crescent path: sun, cloud, rain, snow, storm, partly cloudy or fog, with a moon instead of the sun at night. Opt-in morph mode: one outline that morphs smoothly between sun, cloud, rain, snow and storm when a value changes, with optional animated rays, rain, snow and lightning.",
  "params": {
   "condition": {
    "type": "enum",
@@ -16,7 +16,7 @@
    ],
    "default": "sun",
    "static": true,
-   "doc": "Codes, in order: sun: an amber disc with eight rays; cloud: a grey cloud; rain: a cloud over three slanted blue drops; snow: a cloud over three blue flakes (dots); storm: a cloud over an amber lightning bolt; partly: partly cloudy, a small sun (a crescent moon at night) behind a grey cloud; fog: a cloud over two horizontal grey lines. Static: to switch it at run time, put one call per condition in a stateLayout driven by a host integer"
+   "doc": "Codes, in order: sun: an amber disc with eight rays; cloud: a grey cloud; rain: a cloud over three slanted blue drops; snow: a cloud over three blue flakes (dots); storm: a cloud over an amber lightning bolt; partly: partly cloudy, a small sun (a crescent moon at night) behind a grey cloud; fog: a cloud over two horizontal grey lines. Static: to switch it at run time, put one call per condition in a stateLayout driven by a host integer. Ignored when morph is true"
   },
   "night": {
    "type": "float",
@@ -31,6 +31,69 @@
   "label": {
    "type": "string",
    "doc": "Accessibility label, a text or a \"@textVariable\"; by default Sunny, Cloudy, Rain, Snow, Thunderstorm, Partly cloudy or Fog (with night given: Clear for sun, since the same label must hold by day and by night; pass a label such as \"Clear night\" for a fixed night icon)"
+  },
+  "morph": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Opt-in morph mode: one outline that morphs smoothly between sun, cloud, rain, snow and storm whenever value changes (a host variable, a tap), instead of the fixed condition drawing. 'partly', 'fog' and night are not part of it"
+  },
+  "value": {
+   "type": "float",
+   "default": 0,
+   "doc": "With morph: the condition as a number or \"@variable\": 0 sun, 1 cloud, 2 rain, 3 snow, 4 storm. A change eases the old outline into the new one over duration seconds (any pair: sun straight to storm does not pass through the others)"
+  },
+  "duration": {
+   "type": "float",
+   "default": 0.8,
+   "static": true,
+   "doc": "With morph: the morph's length in seconds (the standard cubic easing). Mono has no motion: the drawing switches"
+  },
+  "animate": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "With morph: the details move: the sun's rays turn and pulse, rain falls, snow drifts, the bolt flickers and the icon floats. It repaints every frame while shown; off (the default), they hold still. Always still in mono"
+  },
+  "look": {
+   "type": "enum",
+   "values": [
+    "flat",
+    "rich"
+   ],
+   "default": "flat",
+   "static": true,
+   "doc": "With morph: flat fills the outline with the colour params (theme colours by default, for icons on a surface); rich is an illustration for coloured skies: gradient bodies (amber sun, white clouds, slate rain cloud, dark storm), a glow behind the sun and a faint edge. Mono ignores it"
+  },
+  "sunColor": {
+   "type": "color",
+   "default": "@colors.warning",
+   "doc": "With morph: the colour of the sun disc and rays (flat look only)"
+  },
+  "cloudColor": {
+   "type": "color",
+   "default": "@colors.muted",
+   "doc": "With morph: the colour of the cloud, rain and snow clouds (flat look only)"
+  },
+  "stormColor": {
+   "type": "color",
+   "default": "@colors.muted",
+   "doc": "With morph: the colour of the storm cloud (flat look only)"
+  },
+  "dropColor": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "With morph: the colour of the rain"
+  },
+  "flakeColor": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "With morph: the colour of the snow"
+  },
+  "boltColor": {
+   "type": "color",
+   "default": "@colors.warning",
+   "doc": "With morph: the colour of the bolt"
   }
  },
  "locals": {
@@ -39,7 +102,10 @@
  "capabilities": [
   "draw.shapes",
   "draw.transform",
-  "data.loop"
+  "data.loop",
+  "anim.morph",
+  "draw.morph",
+  "anim.value"
  ],
  "call": {
   "WeatherIcon": {
@@ -58,28 +124,32 @@
        "$if": "label",
        "then": "@label",
        "else": {
-        "$if": "condition == 'sun'",
-        "then": {
-         "$if": "night",
-         "then": "Clear",
-         "else": "Sunny"
-        },
+        "$if": "morph",
+        "then": "Weather",
         "else": {
-         "$if": "condition == 'cloud'",
-         "then": "Cloudy",
+         "$if": "condition == 'sun'",
+         "then": {
+          "$if": "night",
+          "then": "Clear",
+          "else": "Sunny"
+         },
          "else": {
-          "$if": "condition == 'rain'",
-          "then": "Rain",
+          "$if": "condition == 'cloud'",
+          "then": "Cloudy",
           "else": {
-           "$if": "condition == 'snow'",
-           "then": "Snow",
+           "$if": "condition == 'rain'",
+           "then": "Rain",
            "else": {
-            "$if": "condition == 'storm'",
-            "then": "Thunderstorm",
+            "$if": "condition == 'snow'",
+            "then": "Snow",
             "else": {
-             "$if": "condition == 'partly'",
-             "then": "Partly cloudy",
-             "else": "Fog"
+             "$if": "condition == 'storm'",
+             "then": "Thunderstorm",
+             "else": {
+              "$if": "condition == 'partly'",
+              "then": "Partly cloudy",
+              "else": "Fog"
+             }
             }
            }
           }
@@ -90,212 +160,773 @@
      }
     }
    ],
-   "commands": [
-    {
-     "variable": {
-      "name": "s",
-      "value": "min(componentWidth(), componentHeight())"
-     }
-    },
-    {
-     "translate": {
-      "dx": "(componentWidth() - @s) / 2",
-      "dy": "(componentHeight() - @s) / 2"
-     }
-    },
-    {
-     "scale": {
-      "sx": "@s / @size",
-      "sy": "@s / @size"
-     }
-    },
-    {
-     "$if": "condition == 'sun'",
-     "then": {
-      "$if": "night",
+   "commands": {
+    "$if": "morph",
+    "then": [
+     {
+      "variable": {
+       "name": "s",
+       "value": "min(componentWidth(), componentHeight())"
+      }
+     },
+     {
+      "translate": {
+       "dx": "(componentWidth() - @s) / 2",
+       "dy": "(componentHeight() - @s) / 2"
+      }
+     },
+     {
+      "scale": {
+       "sx": "@s / 200",
+       "sy": "@s / 200"
+      }
+     },
+     {
+      "$if": "theme.mono",
+      "then": {
+       "variable": {
+        "name": "wxt",
+        "value": "0"
+       }
+      },
+      "else": {
+       "$if": "animate",
+       "then": {
+        "variable": {
+         "name": "wxt",
+         "value": "continuousSec()"
+        }
+       },
+       "else": {
+        "variable": {
+         "name": "wxt",
+         "value": "0"
+        }
+       }
+      }
+     },
+     {
+      "variable": {
+       "name": "wxw0",
+       "value": {
+        "value": "1 - min(1, abs(@value - 0))",
+        "anim": "@duration"
+       }
+      }
+     },
+     {
+      "variable": {
+       "name": "wxw1",
+       "value": {
+        "value": "1 - min(1, abs(@value - 1))",
+        "anim": "@duration"
+       }
+      }
+     },
+     {
+      "variable": {
+       "name": "wxw2",
+       "value": {
+        "value": "1 - min(1, abs(@value - 2))",
+        "anim": "@duration"
+       }
+      }
+     },
+     {
+      "variable": {
+       "name": "wxw3",
+       "value": {
+        "value": "1 - min(1, abs(@value - 3))",
+        "anim": "@duration"
+       }
+      }
+     },
+     {
+      "variable": {
+       "name": "wxw4",
+       "value": {
+        "value": "1 - min(1, abs(@value - 4))",
+        "anim": "@duration"
+       }
+      }
+     },
+     {
+      "pathTween": {
+       "id": "wxM1",
+       "path1": {
+        "$gen": {
+         "kind": "weather-outline",
+         "shape": "sun"
+        }
+       },
+       "path2": {
+        "$gen": {
+         "kind": "weather-outline",
+         "shape": "cloud"
+        }
+       },
+       "tween": "@wxw1 / max(0.0001, @wxw0 + @wxw1)"
+      }
+     },
+     {
+      "pathTween": {
+       "id": "wxM2",
+       "path1": "wxM1",
+       "path2": {
+        "$gen": {
+         "kind": "weather-outline",
+         "shape": "rain"
+        }
+       },
+       "tween": "@wxw2 / max(0.0001, @wxw0 + @wxw1 + @wxw2)"
+      }
+     },
+     {
+      "pathTween": {
+       "id": "wxM3",
+       "path1": "wxM2",
+       "path2": {
+        "$gen": {
+         "kind": "weather-outline",
+         "shape": "snow"
+        }
+       },
+       "tween": "@wxw3 / max(0.0001, @wxw0 + @wxw1 + @wxw2 + @wxw3)"
+      }
+     },
+     {
+      "pathTween": {
+       "id": "wxBody",
+       "path1": "wxM3",
+       "path2": {
+        "$gen": {
+         "kind": "weather-outline",
+         "shape": "storm"
+        }
+       },
+       "tween": "@wxw4 / max(0.0001, @wxw0 + @wxw1 + @wxw2 + @wxw3 + @wxw4)"
+      }
+     },
+     {
+      "$if": "animate",
+      "then": {
+       "translate": {
+        "dx": 0,
+        "dy": "3 * sin(@wxt * 1.3)"
+       }
+      }
+     },
+     {
+      "$if": "theme.mono",
       "then": [
        {
-        "conditionalOperations": {
-         "condition": "lt",
-         "v1": "@night",
-         "v2": 0.5,
-         "commands": [
+        "paint": {
+         "ops": [
           {
-           "paint": {
-            "ops": [
-             {
-              "color": "@colors.warning"
-             },
-             {
-              "style": "stroke"
-             },
-             {
-              "strokeWidth": "@u * 1.5"
-             },
-             {
-              "strokeCap": "round"
-             }
-            ]
-           }
+           "shader": 0
           },
           {
-           "$if": "theme.mono",
-           "then": {
-            "drawCircle": {
-             "cx": "@u * 12",
-             "cy": "@u * 12",
-             "radius": "@u * 4.25"
-            }
-           },
-           "else": {
-            "drawCircle": {
-             "cx": "@u * 12",
-             "cy": "@u * 12",
-             "radius": "@u * 4.75"
-            }
-           }
+           "color": "@colors.onSurface"
           },
           {
-           "loop": {
-            "index": "i",
-            "from": 0,
-            "until": 8,
-            "step": 1,
-            "commands": [
-             {
-              "rotate": {
-               "angle": 45,
-               "pivotX": "@u * 12",
-               "pivotY": "@u * 12"
-              }
-             },
-             {
-              "drawLine": {
-               "x1": "@u * 12",
-               "y1": "@u * 2.5",
-               "x2": "@u * 12",
-               "y2": "@u * 4.75"
-              }
-             }
-            ]
-           }
+           "style": "stroke"
           },
           {
-           "$if": "theme.mono",
-           "else": [
-            {
-             "paint": {
-              "ops": [
-               {
-                "style": "fill"
-               }
-              ]
-             }
-            },
-            {
-             "drawCircle": {
-              "cx": "@u * 12",
-              "cy": "@u * 12",
-              "radius": "@u * 4.75"
-             }
-            }
-           ]
+           "strokeWidth": 4
+          },
+          {
+           "strokeCap": "round"
           }
          ]
         }
        },
        {
-        "conditionalOperations": {
-         "condition": "ge",
-         "v1": "@night",
-         "v2": 0.5,
-         "commands": [
+        "paint": {
+         "ops": [
           {
-           "pathData": {
-            "id": "wxMoon",
-            "data": [
-             "path:MOVE",
-             "@u * 19.28",
-             "@u * 13.82",
-             "path:CUBIC",
-             "@u * 19.28",
-             "@u * 13.82",
-             "@u * 18.33",
-             "@u * 17.61",
-             "@u * 14.63",
-             "@u * 20.04",
-             "@u * 10.77",
-             "@u * 19.4",
-             "path:CUBIC",
-             "@u * 10.77",
-             "@u * 19.4",
-             "@u * 6.92",
-             "@u * 18.76",
-             "@u * 4.2",
-             "@u * 15.26",
-             "@u * 4.53",
-             "@u * 11.37",
-             "path:CUBIC",
-             "@u * 4.53",
-             "@u * 11.37",
-             "@u * 4.86",
-             "@u * 7.48",
-             "@u * 8.12",
-             "@u * 4.49",
-             "@u * 12.03",
-             "@u * 4.5",
-             "path:CUBIC",
-             "@u * 12.03",
-             "@u * 4.5",
-             "@u * 10.09",
-             "@u * 6.66",
-             "@u * 9.98",
-             "@u * 9.9",
-             "@u * 11.76",
-             "@u * 12.18",
-             "path:CUBIC",
-             "@u * 11.76",
-             "@u * 12.18",
-             "@u * 13.54",
-             "@u * 14.47",
-             "@u * 16.71",
-             "@u * 15.16",
-             "@u * 19.28",
-             "@u * 13.82",
-             "path:CLOSE"
-            ]
+           "alpha": "@wxw0"
+          }
+         ]
+        }
+       }
+      ],
+      "else": {
+       "$if": "look == 'rich'",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "radialGradient": {
+             "centerX": 100,
+             "centerY": 100,
+             "radius": 96,
+             "colors": [
+              "#66FFE082",
+              "#00FFE082"
+             ]
+            }
+           },
+           {
+            "alpha": "@wxw0"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": 100,
+          "cy": 100,
+          "radius": 96
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "shader": 0
+           },
+           {
+            "color": "#FFFFD54F"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 7
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "@wxw0"
+           }
+          ]
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "shader": 0
+           },
+           {
+            "color": "@sunColor"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 7
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "@wxw0"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "loop": {
+       "index": "i",
+       "from": 0,
+       "until": 12,
+       "commands": [
+        {
+         "save": [
+          {
+           "rotate": {
+            "angle": "i * 30 + @wxt * 14",
+            "pivotX": 100,
+            "pivotY": 100
            }
           },
           {
-           "paint": {
-            "ops": [
-             {
-              "color": "@colors.warning"
-             },
-             {
-              "$if": "theme.mono",
-              "then": [
-               {
-                "style": "stroke"
-               },
-               {
-                "strokeWidth": "@u * 1.5"
-               },
-               {
-                "strokeJoin": "round"
-               }
-              ],
-              "else": {
-               "style": "fill"
-              }
-             }
-            ]
+           "drawLine": {
+            "x1": 100,
+            "y1": "44 - 6 * @wxw0",
+            "x2": 100,
+            "y2": "34 - 14 * @wxw0 + 4 * sin(@wxt * 2 + i)"
            }
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "$if": "theme.mono",
+      "then": [
+       {
+        "paint": {
+         "ops": [
+          {
+           "shader": 0
           },
           {
-           "drawPath": {
-            "path": "wxMoon"
+           "color": "@colors.onSurface"
+          },
+          {
+           "alpha": 1
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": "max(4, 360 / @s)"
+          },
+          {
+           "strokeJoin": "round"
+          }
+         ]
+        }
+       },
+       {
+        "drawPath": {
+         "path": "wxBody"
+        }
+       }
+      ],
+      "else": {
+       "$if": "look == 'rich'",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "linearGradient": {
+             "x1": 0,
+             "y1": 60,
+             "x2": 0,
+             "y2": 140,
+             "colors": [
+              "#FFFFE48A",
+              "#FFFFA726"
+             ]
+            }
+           },
+           {
+            "alpha": "1"
            }
+          ]
+         }
+        },
+        {
+         "drawPath": {
+          "path": "wxBody"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "linearGradient": {
+             "x1": 0,
+             "y1": 60,
+             "x2": 0,
+             "y2": 140,
+             "colors": [
+              "#FFFFFFFF",
+              "#FFDCE4EE"
+             ]
+            }
+           },
+           {
+            "alpha": "@wxw1 / max(0.0001, @wxw0 + @wxw1)"
+           }
+          ]
+         }
+        },
+        {
+         "drawPath": {
+          "path": "wxBody"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "linearGradient": {
+             "x1": 0,
+             "y1": 60,
+             "x2": 0,
+             "y2": 140,
+             "colors": [
+              "#FFD5DDE6",
+              "#FF8E9CAD"
+             ]
+            }
+           },
+           {
+            "alpha": "@wxw2 / max(0.0001, @wxw0 + @wxw1 + @wxw2)"
+           }
+          ]
+         }
+        },
+        {
+         "drawPath": {
+          "path": "wxBody"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "linearGradient": {
+             "x1": 0,
+             "y1": 60,
+             "x2": 0,
+             "y2": 140,
+             "colors": [
+              "#FFFFFFFF",
+              "#FFD7E4F3"
+             ]
+            }
+           },
+           {
+            "alpha": "@wxw3 / max(0.0001, @wxw0 + @wxw1 + @wxw2 + @wxw3)"
+           }
+          ]
+         }
+        },
+        {
+         "drawPath": {
+          "path": "wxBody"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "linearGradient": {
+             "x1": 0,
+             "y1": 60,
+             "x2": 0,
+             "y2": 140,
+             "colors": [
+              "#FF77738F",
+              "#FF3D3A52"
+             ]
+            }
+           },
+           {
+            "alpha": "@wxw4 / max(0.0001, @wxw0 + @wxw1 + @wxw2 + @wxw3 + @wxw4)"
+           }
+          ]
+         }
+        },
+        {
+         "drawPath": {
+          "path": "wxBody"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "shader": 0
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 2.5
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 0.18
+           }
+          ]
+         }
+        },
+        {
+         "drawPath": {
+          "path": "wxBody"
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "shader": 0
+           },
+           {
+            "color": "@cloudColor"
+           },
+           {
+            "alpha": 1
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawPath": {
+          "path": "wxBody"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@stormColor"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "@wxw4 / max(0.0001, 1 - @wxw0)"
+           }
+          ]
+         }
+        },
+        {
+         "drawPath": {
+          "path": "wxBody"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@sunColor"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "@wxw0"
+           }
+          ]
+         }
+        },
+        {
+         "drawPath": {
+          "path": "wxBody"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "$if": "theme.mono",
+      "then": {
+       "paint": {
+        "ops": [
+         {
+          "shader": 0
+         },
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "max(3, 300 / @s)"
+         },
+         {
+          "strokeCap": "round"
+         }
+        ]
+       }
+      },
+      "else": {
+       "paint": {
+        "ops": [
+         {
+          "shader": 0
+         },
+         {
+          "color": "@dropColor"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 5
+         },
+         {
+          "strokeCap": "round"
+         }
+        ]
+       }
+      }
+     },
+     {
+      "loop": {
+       "index": "j",
+       "from": 0,
+       "until": 7,
+       "commands": [
+        {
+         "variable": {
+          "name": "wxp",
+          "value": "fract(@wxt * 1.3 + j * 0.382)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "(@wxw2 + 0.7 * @wxw4) * (1 - @wxp * @wxp)"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "60 + j * 14 - @wxp * 10",
+          "y1": "126 + @wxp * 58",
+          "x2": "57 + j * 14 - @wxp * 10",
+          "y2": "137 + @wxp * 58"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "$if": "theme.mono",
+      "then": {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      "else": {
+       "paint": {
+        "ops": [
+         {
+          "color": "@flakeColor"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      }
+     },
+     {
+      "loop": {
+       "index": "j",
+       "from": 0,
+       "until": 8,
+       "commands": [
+        {
+         "variable": {
+          "name": "wxq",
+          "value": "fract(@wxt * 0.32 + j * 0.618)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "@wxw3 * (1 - @wxq * @wxq)"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "56 + j * 13 + 6 * sin(@wxt * 1.7 + j * 2.1)",
+          "cy": "122 + @wxq * 64",
+          "radius": "2.6 + (j % 3)"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "$if": "theme.mono",
+      "then": [
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": "max(3, 300 / @s)"
+          },
+          {
+           "strokeJoin": "round"
+          }
+         ]
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "alpha": "@wxw4"
           }
          ]
         }
@@ -306,772 +937,75 @@
         "paint": {
          "ops": [
           {
-           "color": "@colors.warning"
-          },
-          {
-           "style": "stroke"
-          },
-          {
-           "strokeWidth": "@u * 1.5"
-          },
-          {
-           "strokeCap": "round"
+           "color": "@boltColor"
           }
          ]
         }
        },
        {
-        "$if": "theme.mono",
-        "then": {
-         "drawCircle": {
-          "cx": "@u * 12",
-          "cy": "@u * 12",
-          "radius": "@u * 4.25"
-         }
-        },
-        "else": {
-         "drawCircle": {
-          "cx": "@u * 12",
-          "cy": "@u * 12",
-          "radius": "@u * 4.75"
-         }
-        }
-       },
-       {
-        "loop": {
-         "index": "i",
-         "from": 0,
-         "until": 8,
-         "step": 1,
-         "commands": [
-          {
-           "rotate": {
-            "angle": 45,
-            "pivotX": "@u * 12",
-            "pivotY": "@u * 12"
-           }
-          },
-          {
-           "drawLine": {
-            "x1": "@u * 12",
-            "y1": "@u * 2.5",
-            "x2": "@u * 12",
-            "y2": "@u * 4.75"
-           }
+        "$if": "animate",
+        "then": [
+         {
+          "variable": {
+           "name": "wxf",
+           "value": "fract(@wxt / 2.6)"
           }
-         ]
-        }
-       },
-       {
-        "$if": "theme.mono",
-        "else": [
+         },
          {
           "paint": {
            "ops": [
             {
-             "style": "fill"
+             "alpha": "@wxw4 * (0.6 + 0.4 * (step(@wxf, 0.86) - step(@wxf, 0.9) + step(@wxf, 0.94) - step(@wxf, 0.97)))"
             }
            ]
           }
-         },
-         {
-          "drawCircle": {
-           "cx": "@u * 12",
-           "cy": "@u * 12",
-           "radius": "@u * 4.75"
-          }
          }
-        ]
+        ],
+        "else": {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "@wxw4"
+           }
+          ]
+         }
+        }
        }
       ]
-     }
-    },
-    {
-     "$if": "condition == 'cloud'",
-     "then": {
-      "save": {
-       "commands": [
-        {
-         "translate": {
-          "dx": 0,
-          "dy": "@u * 3"
-         }
-        },
-        {
-         "$if": "theme.mono",
-         "then": [
-          {
-           "paint": {
-            "ops": [
-             {
-              "color": "@colors.onSurface"
-             },
-             {
-              "style": "fill"
-             }
-            ]
-           }
-          },
-          {
-           "drawCircle": {
-            "cx": "@u * 8",
-            "cy": "@u * 11",
-            "radius": "@u * 5.25"
-           }
-          },
-          {
-           "drawCircle": {
-            "cx": "@u * 13",
-            "cy": "@u * 8.5",
-            "radius": "@u * 6.75"
-           }
-          },
-          {
-           "drawCircle": {
-            "cx": "@u * 17.5",
-            "cy": "@u * 11.5",
-            "radius": "@u * 4.75"
-           }
-          },
-          {
-           "drawRoundRect": {
-            "left": "@u * 2.75",
-            "top": "@u * 9.75",
-            "right": "@u * 22.25",
-            "bottom": "@u * 16.25",
-            "rx": "@u * 3.25",
-            "ry": "@u * 3.25"
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "color": "@colors.background"
-             }
-            ]
-           }
-          },
-          {
-           "drawCircle": {
-            "cx": "@u * 8",
-            "cy": "@u * 11",
-            "radius": "@u * 4"
-           }
-          },
-          {
-           "drawCircle": {
-            "cx": "@u * 13",
-            "cy": "@u * 8.5",
-            "radius": "@u * 5.5"
-           }
-          },
-          {
-           "drawCircle": {
-            "cx": "@u * 17.5",
-            "cy": "@u * 11.5",
-            "radius": "@u * 3.5"
-           }
-          },
-          {
-           "drawRoundRect": {
-            "left": "@u * 4",
-            "top": "@u * 11",
-            "right": "@u * 21",
-            "bottom": "@u * 15",
-            "rx": "@u * 2",
-            "ry": "@u * 2"
-           }
-          }
-         ],
-         "else": [
-          {
-           "paint": {
-            "ops": [
-             {
-              "color": "@colors.muted"
-             },
-             {
-              "style": "fill"
-             }
-            ]
-           }
-          },
-          {
-           "drawCircle": {
-            "cx": "@u * 8",
-            "cy": "@u * 11",
-            "radius": "@u * 4"
-           }
-          },
-          {
-           "drawCircle": {
-            "cx": "@u * 13",
-            "cy": "@u * 8.5",
-            "radius": "@u * 5.5"
-           }
-          },
-          {
-           "drawCircle": {
-            "cx": "@u * 17.5",
-            "cy": "@u * 11.5",
-            "radius": "@u * 3.5"
-           }
-          },
-          {
-           "drawRoundRect": {
-            "left": "@u * 4",
-            "top": "@u * 11",
-            "right": "@u * 21",
-            "bottom": "@u * 15",
-            "rx": "@u * 2",
-            "ry": "@u * 2"
-           }
-          }
-         ]
+     },
+     {
+      "drawPath": {
+       "path": {
+        "$gen": {
+         "kind": "weather-outline",
+         "shape": "bolt"
         }
-       ]
+       }
       }
      }
-    },
-    {
-     "$if": "condition == 'rain'",
-     "then": [
-      {
-       "$if": "theme.mono",
-       "then": [
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.onSurface"
-           },
-           {
-            "style": "fill"
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 8",
-          "cy": "@u * 11",
-          "radius": "@u * 5.25"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 13",
-          "cy": "@u * 8.5",
-          "radius": "@u * 6.75"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 17.5",
-          "cy": "@u * 11.5",
-          "radius": "@u * 4.75"
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@u * 2.75",
-          "top": "@u * 9.75",
-          "right": "@u * 22.25",
-          "bottom": "@u * 16.25",
-          "rx": "@u * 3.25",
-          "ry": "@u * 3.25"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.background"
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 8",
-          "cy": "@u * 11",
-          "radius": "@u * 4"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 13",
-          "cy": "@u * 8.5",
-          "radius": "@u * 5.5"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 17.5",
-          "cy": "@u * 11.5",
-          "radius": "@u * 3.5"
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@u * 4",
-          "top": "@u * 11",
-          "right": "@u * 21",
-          "bottom": "@u * 15",
-          "rx": "@u * 2",
-          "ry": "@u * 2"
-         }
-        }
-       ],
-       "else": [
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.muted"
-           },
-           {
-            "style": "fill"
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 8",
-          "cy": "@u * 11",
-          "radius": "@u * 4"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 13",
-          "cy": "@u * 8.5",
-          "radius": "@u * 5.5"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 17.5",
-          "cy": "@u * 11.5",
-          "radius": "@u * 3.5"
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@u * 4",
-          "top": "@u * 11",
-          "right": "@u * 21",
-          "bottom": "@u * 15",
-          "rx": "@u * 2",
-          "ry": "@u * 2"
-         }
-        }
-       ]
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@colors.primary"
-         },
-         {
-          "style": "stroke"
-         },
-         {
-          "strokeWidth": "@u * 1.5"
-         },
-         {
-          "strokeCap": "round"
-         }
-        ]
-       }
-      },
-      {
-       "drawLine": {
-        "x1": "@u * 8.5",
-        "y1": "@u * 17.5",
-        "x2": "@u * 7.5",
-        "y2": "@u * 21.5"
-       }
-      },
-      {
-       "drawLine": {
-        "x1": "@u * 13",
-        "y1": "@u * 17.5",
-        "x2": "@u * 12",
-        "y2": "@u * 21.5"
-       }
-      },
-      {
-       "drawLine": {
-        "x1": "@u * 17.5",
-        "y1": "@u * 17.5",
-        "x2": "@u * 16.5",
-        "y2": "@u * 21.5"
-       }
+    ],
+    "else": [
+     {
+      "variable": {
+       "name": "s",
+       "value": "min(componentWidth(), componentHeight())"
       }
-     ]
-    },
-    {
-     "$if": "condition == 'snow'",
-     "then": [
-      {
-       "$if": "theme.mono",
-       "then": [
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.onSurface"
-           },
-           {
-            "style": "fill"
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 8",
-          "cy": "@u * 11",
-          "radius": "@u * 5.25"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 13",
-          "cy": "@u * 8.5",
-          "radius": "@u * 6.75"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 17.5",
-          "cy": "@u * 11.5",
-          "radius": "@u * 4.75"
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@u * 2.75",
-          "top": "@u * 9.75",
-          "right": "@u * 22.25",
-          "bottom": "@u * 16.25",
-          "rx": "@u * 3.25",
-          "ry": "@u * 3.25"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.background"
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 8",
-          "cy": "@u * 11",
-          "radius": "@u * 4"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 13",
-          "cy": "@u * 8.5",
-          "radius": "@u * 5.5"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 17.5",
-          "cy": "@u * 11.5",
-          "radius": "@u * 3.5"
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@u * 4",
-          "top": "@u * 11",
-          "right": "@u * 21",
-          "bottom": "@u * 15",
-          "rx": "@u * 2",
-          "ry": "@u * 2"
-         }
-        }
-       ],
-       "else": [
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.muted"
-           },
-           {
-            "style": "fill"
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 8",
-          "cy": "@u * 11",
-          "radius": "@u * 4"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 13",
-          "cy": "@u * 8.5",
-          "radius": "@u * 5.5"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 17.5",
-          "cy": "@u * 11.5",
-          "radius": "@u * 3.5"
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@u * 4",
-          "top": "@u * 11",
-          "right": "@u * 21",
-          "bottom": "@u * 15",
-          "rx": "@u * 2",
-          "ry": "@u * 2"
-         }
-        }
-       ]
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@colors.primary"
-         },
-         {
-          "style": "fill"
-         }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "@u * 8",
-        "cy": "@u * 18.5",
-        "radius": "@u * 1.4"
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "@u * 12.5",
-        "cy": "@u * 21",
-        "radius": "@u * 1.4"
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "@u * 17",
-        "cy": "@u * 18.5",
-        "radius": "@u * 1.4"
-       }
+     },
+     {
+      "translate": {
+       "dx": "(componentWidth() - @s) / 2",
+       "dy": "(componentHeight() - @s) / 2"
       }
-     ]
-    },
-    {
-     "$if": "condition == 'storm'",
-     "then": [
-      {
-       "$if": "theme.mono",
-       "then": [
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.onSurface"
-           },
-           {
-            "style": "fill"
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 8",
-          "cy": "@u * 11",
-          "radius": "@u * 5.25"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 13",
-          "cy": "@u * 8.5",
-          "radius": "@u * 6.75"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 17.5",
-          "cy": "@u * 11.5",
-          "radius": "@u * 4.75"
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@u * 2.75",
-          "top": "@u * 9.75",
-          "right": "@u * 22.25",
-          "bottom": "@u * 16.25",
-          "rx": "@u * 3.25",
-          "ry": "@u * 3.25"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.background"
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 8",
-          "cy": "@u * 11",
-          "radius": "@u * 4"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 13",
-          "cy": "@u * 8.5",
-          "radius": "@u * 5.5"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 17.5",
-          "cy": "@u * 11.5",
-          "radius": "@u * 3.5"
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@u * 4",
-          "top": "@u * 11",
-          "right": "@u * 21",
-          "bottom": "@u * 15",
-          "rx": "@u * 2",
-          "ry": "@u * 2"
-         }
-        }
-       ],
-       "else": [
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.muted"
-           },
-           {
-            "style": "fill"
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 8",
-          "cy": "@u * 11",
-          "radius": "@u * 4"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 13",
-          "cy": "@u * 8.5",
-          "radius": "@u * 5.5"
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@u * 17.5",
-          "cy": "@u * 11.5",
-          "radius": "@u * 3.5"
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@u * 4",
-          "top": "@u * 11",
-          "right": "@u * 21",
-          "bottom": "@u * 15",
-          "rx": "@u * 2",
-          "ry": "@u * 2"
-         }
-        }
-       ]
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@colors.warning"
-         },
-         {
-          "style": "stroke"
-         },
-         {
-          "strokeWidth": "@u * 1.5"
-         },
-         {
-          "strokeCap": "round"
-         },
-         {
-          "strokeJoin": "round"
-         }
-        ]
-       }
-      },
-      {
-       "drawLine": {
-        "x1": "@u * 14",
-        "y1": "@u * 15.5",
-        "x2": "@u * 11",
-        "y2": "@u * 19.5"
-       }
-      },
-      {
-       "drawLine": {
-        "x1": "@u * 11",
-        "y1": "@u * 19.5",
-        "x2": "@u * 14",
-        "y2": "@u * 19.5"
-       }
-      },
-      {
-       "drawLine": {
-        "x1": "@u * 14",
-        "y1": "@u * 19.5",
-        "x2": "@u * 11.5",
-        "y2": "@u * 23"
-       }
+     },
+     {
+      "scale": {
+       "sx": "@s / @size",
+       "sy": "@s / @size"
       }
-     ]
-    },
-    {
-     "$if": "condition == 'partly'",
-     "then": [
-      {
+     },
+     {
+      "$if": "condition == 'sun'",
+      "then": {
        "$if": "night",
        "then": [
         {
@@ -1102,16 +1036,16 @@
             "$if": "theme.mono",
             "then": {
              "drawCircle": {
-              "cx": "@u * 8.5",
-              "cy": "@u * 8.5",
-              "radius": "@u * 3"
+              "cx": "@u * 12",
+              "cy": "@u * 12",
+              "radius": "@u * 4.25"
              }
             },
             "else": {
              "drawCircle": {
-              "cx": "@u * 8.5",
-              "cy": "@u * 8.5",
-              "radius": "@u * 3.5"
+              "cx": "@u * 12",
+              "cy": "@u * 12",
+              "radius": "@u * 4.75"
              }
             }
            },
@@ -1125,16 +1059,16 @@
               {
                "rotate": {
                 "angle": 45,
-                "pivotX": "@u * 8.5",
-                "pivotY": "@u * 8.5"
+                "pivotX": "@u * 12",
+                "pivotY": "@u * 12"
                }
               },
               {
                "drawLine": {
-                "x1": "@u * 8.5",
-                "y1": "@u * 1.75",
-                "x2": "@u * 8.5",
-                "y2": "@u * 3.5"
+                "x1": "@u * 12",
+                "y1": "@u * 2.5",
+                "x2": "@u * 12",
+                "y2": "@u * 4.75"
                }
               }
              ]
@@ -1154,9 +1088,9 @@
              },
              {
               "drawCircle": {
-               "cx": "@u * 8.5",
-               "cy": "@u * 8.5",
-               "radius": "@u * 3.5"
+               "cx": "@u * 12",
+               "cy": "@u * 12",
+               "radius": "@u * 4.75"
               }
              }
             ]
@@ -1172,56 +1106,56 @@
           "commands": [
            {
             "pathData": {
-             "id": "wxMoonS",
+             "id": "wxMoon",
              "data": [
               "path:MOVE",
-              "@u * 13.83",
-              "@u * 9.85",
+              "@u * 19.28",
+              "@u * 13.82",
               "path:CUBIC",
-              "@u * 13.83",
-              "@u * 9.85",
-              "@u * 13.14",
-              "@u * 12.58",
-              "@u * 10.5",
-              "@u * 14.35",
-              "@u * 7.72",
-              "@u * 13.94",
+              "@u * 19.28",
+              "@u * 13.82",
+              "@u * 18.33",
+              "@u * 17.61",
+              "@u * 14.63",
+              "@u * 20.04",
+              "@u * 10.77",
+              "@u * 19.4",
               "path:CUBIC",
-              "@u * 7.72",
-              "@u * 13.94",
-              "@u * 4.93",
-              "@u * 13.54",
-              "@u * 2.9",
-              "@u * 11.1",
-              "@u * 3.0",
-              "@u * 8.29",
+              "@u * 10.77",
+              "@u * 19.4",
+              "@u * 6.92",
+              "@u * 18.76",
+              "@u * 4.2",
+              "@u * 15.26",
+              "@u * 4.53",
+              "@u * 11.37",
               "path:CUBIC",
-              "@u * 3.0",
-              "@u * 8.29",
-              "@u * 3.11",
-              "@u * 5.48",
-              "@u * 5.33",
-              "@u * 3.2",
-              "@u * 8.14",
-              "@u * 3.01",
+              "@u * 4.53",
+              "@u * 11.37",
+              "@u * 4.86",
+              "@u * 7.48",
+              "@u * 8.12",
+              "@u * 4.49",
+              "@u * 12.03",
+              "@u * 4.5",
               "path:CUBIC",
-              "@u * 8.14",
-              "@u * 3.01",
+              "@u * 12.03",
+              "@u * 4.5",
+              "@u * 10.09",
               "@u * 6.66",
-              "@u * 4.68",
-              "@u * 6.62",
-              "@u * 7.17",
-              "@u * 8.04",
-              "@u * 8.88",
+              "@u * 9.98",
+              "@u * 9.9",
+              "@u * 11.76",
+              "@u * 12.18",
               "path:CUBIC",
-              "@u * 8.04",
-              "@u * 8.88",
-              "@u * 9.47",
-              "@u * 10.59",
-              "@u * 11.93",
-              "@u * 11.0",
-              "@u * 13.83",
-              "@u * 9.85",
+              "@u * 11.76",
+              "@u * 12.18",
+              "@u * 13.54",
+              "@u * 14.47",
+              "@u * 16.71",
+              "@u * 15.16",
+              "@u * 19.28",
+              "@u * 13.82",
               "path:CLOSE"
              ]
             }
@@ -1254,7 +1188,7 @@
            },
            {
             "drawPath": {
-             "path": "wxMoonS"
+             "path": "wxMoon"
             }
            }
           ]
@@ -1284,16 +1218,16 @@
          "$if": "theme.mono",
          "then": {
           "drawCircle": {
-           "cx": "@u * 8.5",
-           "cy": "@u * 8.5",
-           "radius": "@u * 3"
+           "cx": "@u * 12",
+           "cy": "@u * 12",
+           "radius": "@u * 4.25"
           }
          },
          "else": {
           "drawCircle": {
-           "cx": "@u * 8.5",
-           "cy": "@u * 8.5",
-           "radius": "@u * 3.5"
+           "cx": "@u * 12",
+           "cy": "@u * 12",
+           "radius": "@u * 4.75"
           }
          }
         },
@@ -1307,16 +1241,16 @@
            {
             "rotate": {
              "angle": 45,
-             "pivotX": "@u * 8.5",
-             "pivotY": "@u * 8.5"
+             "pivotX": "@u * 12",
+             "pivotY": "@u * 12"
             }
            },
            {
             "drawLine": {
-             "x1": "@u * 8.5",
-             "y1": "@u * 1.75",
-             "x2": "@u * 8.5",
-             "y2": "@u * 3.5"
+             "x1": "@u * 12",
+             "y1": "@u * 2.5",
+             "x2": "@u * 12",
+             "y2": "@u * 4.75"
             }
            }
           ]
@@ -1336,172 +1270,25 @@
           },
           {
            "drawCircle": {
-            "cx": "@u * 8.5",
-            "cy": "@u * 8.5",
-            "radius": "@u * 3.5"
+            "cx": "@u * 12",
+            "cy": "@u * 12",
+            "radius": "@u * 4.75"
            }
           }
          ]
         }
        ]
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "translate": {
-           "dx": "@u * 1.5",
-           "dy": "@u * 5.5"
-          }
-         },
-         {
-          "$if": "theme.mono",
-          "then": [
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "@colors.onSurface"
-              },
-              {
-               "style": "fill"
-              }
-             ]
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": "@u * 8",
-             "cy": "@u * 11",
-             "radius": "@u * 5.25"
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": "@u * 13",
-             "cy": "@u * 8.5",
-             "radius": "@u * 6.75"
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": "@u * 17.5",
-             "cy": "@u * 11.5",
-             "radius": "@u * 4.75"
-            }
-           },
-           {
-            "drawRoundRect": {
-             "left": "@u * 2.75",
-             "top": "@u * 9.75",
-             "right": "@u * 22.25",
-             "bottom": "@u * 16.25",
-             "rx": "@u * 3.25",
-             "ry": "@u * 3.25"
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "@colors.background"
-              }
-             ]
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": "@u * 8",
-             "cy": "@u * 11",
-             "radius": "@u * 4"
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": "@u * 13",
-             "cy": "@u * 8.5",
-             "radius": "@u * 5.5"
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": "@u * 17.5",
-             "cy": "@u * 11.5",
-             "radius": "@u * 3.5"
-            }
-           },
-           {
-            "drawRoundRect": {
-             "left": "@u * 4",
-             "top": "@u * 11",
-             "right": "@u * 21",
-             "bottom": "@u * 15",
-             "rx": "@u * 2",
-             "ry": "@u * 2"
-            }
-           }
-          ],
-          "else": [
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "@colors.muted"
-              },
-              {
-               "style": "fill"
-              }
-             ]
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": "@u * 8",
-             "cy": "@u * 11",
-             "radius": "@u * 4"
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": "@u * 13",
-             "cy": "@u * 8.5",
-             "radius": "@u * 5.5"
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": "@u * 17.5",
-             "cy": "@u * 11.5",
-             "radius": "@u * 3.5"
-            }
-           },
-           {
-            "drawRoundRect": {
-             "left": "@u * 4",
-             "top": "@u * 11",
-             "right": "@u * 21",
-             "bottom": "@u * 15",
-             "rx": "@u * 2",
-             "ry": "@u * 2"
-            }
-           }
-          ]
-         }
-        ]
-       }
       }
-     ]
-    },
-    {
-     "$if": "condition == 'fog'",
-     "then": [
-      {
+     },
+     {
+      "$if": "condition == 'cloud'",
+      "then": {
        "save": {
         "commands": [
          {
           "translate": {
            "dx": 0,
-           "dy": "@u * -1"
+           "dy": "@u * 3"
           }
          },
          {
@@ -1639,50 +1426,1158 @@
          }
         ]
        }
-      },
-      {
-       "paint": {
-        "ops": [
+      }
+     },
+     {
+      "$if": "condition == 'rain'",
+      "then": [
+       {
+        "$if": "theme.mono",
+        "then": [
          {
-          "$if": "theme.mono",
-          "then": {
-           "color": "@colors.onSurface"
-          },
-          "else": {
-           "color": "@colors.muted"
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "style": "fill"
+            }
+           ]
           }
          },
          {
-          "style": "stroke"
+          "drawCircle": {
+           "cx": "@u * 8",
+           "cy": "@u * 11",
+           "radius": "@u * 5.25"
+          }
          },
          {
-          "strokeWidth": "@u * 1.5"
+          "drawCircle": {
+           "cx": "@u * 13",
+           "cy": "@u * 8.5",
+           "radius": "@u * 6.75"
+          }
          },
          {
-          "strokeCap": "round"
+          "drawCircle": {
+           "cx": "@u * 17.5",
+           "cy": "@u * 11.5",
+           "radius": "@u * 4.75"
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@u * 2.75",
+           "top": "@u * 9.75",
+           "right": "@u * 22.25",
+           "bottom": "@u * 16.25",
+           "rx": "@u * 3.25",
+           "ry": "@u * 3.25"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.background"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 8",
+           "cy": "@u * 11",
+           "radius": "@u * 4"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 13",
+           "cy": "@u * 8.5",
+           "radius": "@u * 5.5"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 17.5",
+           "cy": "@u * 11.5",
+           "radius": "@u * 3.5"
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@u * 4",
+           "top": "@u * 11",
+           "right": "@u * 21",
+           "bottom": "@u * 15",
+           "rx": "@u * 2",
+           "ry": "@u * 2"
+          }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.muted"
+            },
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 8",
+           "cy": "@u * 11",
+           "radius": "@u * 4"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 13",
+           "cy": "@u * 8.5",
+           "radius": "@u * 5.5"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 17.5",
+           "cy": "@u * 11.5",
+           "radius": "@u * 3.5"
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@u * 4",
+           "top": "@u * 11",
+           "right": "@u * 21",
+           "bottom": "@u * 15",
+           "rx": "@u * 2",
+           "ry": "@u * 2"
+          }
          }
         ]
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.primary"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": "@u * 1.5"
+          },
+          {
+           "strokeCap": "round"
+          }
+         ]
+        }
+       },
+       {
+        "drawLine": {
+         "x1": "@u * 8.5",
+         "y1": "@u * 17.5",
+         "x2": "@u * 7.5",
+         "y2": "@u * 21.5"
+        }
+       },
+       {
+        "drawLine": {
+         "x1": "@u * 13",
+         "y1": "@u * 17.5",
+         "x2": "@u * 12",
+         "y2": "@u * 21.5"
+        }
+       },
+       {
+        "drawLine": {
+         "x1": "@u * 17.5",
+         "y1": "@u * 17.5",
+         "x2": "@u * 16.5",
+         "y2": "@u * 21.5"
+        }
        }
-      },
-      {
-       "drawLine": {
-        "x1": "@u * 3.5",
-        "y1": "@u * 17.5",
-        "x2": "@u * 17.5",
-        "y2": "@u * 17.5"
+      ]
+     },
+     {
+      "$if": "condition == 'snow'",
+      "then": [
+       {
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 8",
+           "cy": "@u * 11",
+           "radius": "@u * 5.25"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 13",
+           "cy": "@u * 8.5",
+           "radius": "@u * 6.75"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 17.5",
+           "cy": "@u * 11.5",
+           "radius": "@u * 4.75"
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@u * 2.75",
+           "top": "@u * 9.75",
+           "right": "@u * 22.25",
+           "bottom": "@u * 16.25",
+           "rx": "@u * 3.25",
+           "ry": "@u * 3.25"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.background"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 8",
+           "cy": "@u * 11",
+           "radius": "@u * 4"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 13",
+           "cy": "@u * 8.5",
+           "radius": "@u * 5.5"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 17.5",
+           "cy": "@u * 11.5",
+           "radius": "@u * 3.5"
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@u * 4",
+           "top": "@u * 11",
+           "right": "@u * 21",
+           "bottom": "@u * 15",
+           "rx": "@u * 2",
+           "ry": "@u * 2"
+          }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.muted"
+            },
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 8",
+           "cy": "@u * 11",
+           "radius": "@u * 4"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 13",
+           "cy": "@u * 8.5",
+           "radius": "@u * 5.5"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 17.5",
+           "cy": "@u * 11.5",
+           "radius": "@u * 3.5"
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@u * 4",
+           "top": "@u * 11",
+           "right": "@u * 21",
+           "bottom": "@u * 15",
+           "rx": "@u * 2",
+           "ry": "@u * 2"
+          }
+         }
+        ]
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.primary"
+          },
+          {
+           "style": "fill"
+          }
+         ]
+        }
+       },
+       {
+        "drawCircle": {
+         "cx": "@u * 8",
+         "cy": "@u * 18.5",
+         "radius": "@u * 1.4"
+        }
+       },
+       {
+        "drawCircle": {
+         "cx": "@u * 12.5",
+         "cy": "@u * 21",
+         "radius": "@u * 1.4"
+        }
+       },
+       {
+        "drawCircle": {
+         "cx": "@u * 17",
+         "cy": "@u * 18.5",
+         "radius": "@u * 1.4"
+        }
        }
-      },
-      {
-       "drawLine": {
-        "x1": "@u * 6.5",
-        "y1": "@u * 21",
-        "x2": "@u * 20.5",
-        "y2": "@u * 21"
+      ]
+     },
+     {
+      "$if": "condition == 'storm'",
+      "then": [
+       {
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 8",
+           "cy": "@u * 11",
+           "radius": "@u * 5.25"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 13",
+           "cy": "@u * 8.5",
+           "radius": "@u * 6.75"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 17.5",
+           "cy": "@u * 11.5",
+           "radius": "@u * 4.75"
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@u * 2.75",
+           "top": "@u * 9.75",
+           "right": "@u * 22.25",
+           "bottom": "@u * 16.25",
+           "rx": "@u * 3.25",
+           "ry": "@u * 3.25"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.background"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 8",
+           "cy": "@u * 11",
+           "radius": "@u * 4"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 13",
+           "cy": "@u * 8.5",
+           "radius": "@u * 5.5"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 17.5",
+           "cy": "@u * 11.5",
+           "radius": "@u * 3.5"
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@u * 4",
+           "top": "@u * 11",
+           "right": "@u * 21",
+           "bottom": "@u * 15",
+           "rx": "@u * 2",
+           "ry": "@u * 2"
+          }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.muted"
+            },
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 8",
+           "cy": "@u * 11",
+           "radius": "@u * 4"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 13",
+           "cy": "@u * 8.5",
+           "radius": "@u * 5.5"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@u * 17.5",
+           "cy": "@u * 11.5",
+           "radius": "@u * 3.5"
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@u * 4",
+           "top": "@u * 11",
+           "right": "@u * 21",
+           "bottom": "@u * 15",
+           "rx": "@u * 2",
+           "ry": "@u * 2"
+          }
+         }
+        ]
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.warning"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": "@u * 1.5"
+          },
+          {
+           "strokeCap": "round"
+          },
+          {
+           "strokeJoin": "round"
+          }
+         ]
+        }
+       },
+       {
+        "drawLine": {
+         "x1": "@u * 14",
+         "y1": "@u * 15.5",
+         "x2": "@u * 11",
+         "y2": "@u * 19.5"
+        }
+       },
+       {
+        "drawLine": {
+         "x1": "@u * 11",
+         "y1": "@u * 19.5",
+         "x2": "@u * 14",
+         "y2": "@u * 19.5"
+        }
+       },
+       {
+        "drawLine": {
+         "x1": "@u * 14",
+         "y1": "@u * 19.5",
+         "x2": "@u * 11.5",
+         "y2": "@u * 23"
+        }
        }
-      }
-     ]
-    }
-   ]
+      ]
+     },
+     {
+      "$if": "condition == 'partly'",
+      "then": [
+       {
+        "$if": "night",
+        "then": [
+         {
+          "conditionalOperations": {
+           "condition": "lt",
+           "v1": "@night",
+           "v2": 0.5,
+           "commands": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.warning"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": "@u * 1.5"
+               },
+               {
+                "strokeCap": "round"
+               }
+              ]
+             }
+            },
+            {
+             "$if": "theme.mono",
+             "then": {
+              "drawCircle": {
+               "cx": "@u * 8.5",
+               "cy": "@u * 8.5",
+               "radius": "@u * 3"
+              }
+             },
+             "else": {
+              "drawCircle": {
+               "cx": "@u * 8.5",
+               "cy": "@u * 8.5",
+               "radius": "@u * 3.5"
+              }
+             }
+            },
+            {
+             "loop": {
+              "index": "i",
+              "from": 0,
+              "until": 8,
+              "step": 1,
+              "commands": [
+               {
+                "rotate": {
+                 "angle": 45,
+                 "pivotX": "@u * 8.5",
+                 "pivotY": "@u * 8.5"
+                }
+               },
+               {
+                "drawLine": {
+                 "x1": "@u * 8.5",
+                 "y1": "@u * 1.75",
+                 "x2": "@u * 8.5",
+                 "y2": "@u * 3.5"
+                }
+               }
+              ]
+             }
+            },
+            {
+             "$if": "theme.mono",
+             "else": [
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "style": "fill"
+                 }
+                ]
+               }
+              },
+              {
+               "drawCircle": {
+                "cx": "@u * 8.5",
+                "cy": "@u * 8.5",
+                "radius": "@u * 3.5"
+               }
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "conditionalOperations": {
+           "condition": "ge",
+           "v1": "@night",
+           "v2": 0.5,
+           "commands": [
+            {
+             "pathData": {
+              "id": "wxMoonS",
+              "data": [
+               "path:MOVE",
+               "@u * 13.83",
+               "@u * 9.85",
+               "path:CUBIC",
+               "@u * 13.83",
+               "@u * 9.85",
+               "@u * 13.14",
+               "@u * 12.58",
+               "@u * 10.5",
+               "@u * 14.35",
+               "@u * 7.72",
+               "@u * 13.94",
+               "path:CUBIC",
+               "@u * 7.72",
+               "@u * 13.94",
+               "@u * 4.93",
+               "@u * 13.54",
+               "@u * 2.9",
+               "@u * 11.1",
+               "@u * 3.0",
+               "@u * 8.29",
+               "path:CUBIC",
+               "@u * 3.0",
+               "@u * 8.29",
+               "@u * 3.11",
+               "@u * 5.48",
+               "@u * 5.33",
+               "@u * 3.2",
+               "@u * 8.14",
+               "@u * 3.01",
+               "path:CUBIC",
+               "@u * 8.14",
+               "@u * 3.01",
+               "@u * 6.66",
+               "@u * 4.68",
+               "@u * 6.62",
+               "@u * 7.17",
+               "@u * 8.04",
+               "@u * 8.88",
+               "path:CUBIC",
+               "@u * 8.04",
+               "@u * 8.88",
+               "@u * 9.47",
+               "@u * 10.59",
+               "@u * 11.93",
+               "@u * 11.0",
+               "@u * 13.83",
+               "@u * 9.85",
+               "path:CLOSE"
+              ]
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.warning"
+               },
+               {
+                "$if": "theme.mono",
+                "then": [
+                 {
+                  "style": "stroke"
+                 },
+                 {
+                  "strokeWidth": "@u * 1.5"
+                 },
+                 {
+                  "strokeJoin": "round"
+                 }
+                ],
+                "else": {
+                 "style": "fill"
+                }
+               }
+              ]
+             }
+            },
+            {
+             "drawPath": {
+              "path": "wxMoonS"
+             }
+            }
+           ]
+          }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.warning"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": "@u * 1.5"
+            },
+            {
+             "strokeCap": "round"
+            }
+           ]
+          }
+         },
+         {
+          "$if": "theme.mono",
+          "then": {
+           "drawCircle": {
+            "cx": "@u * 8.5",
+            "cy": "@u * 8.5",
+            "radius": "@u * 3"
+           }
+          },
+          "else": {
+           "drawCircle": {
+            "cx": "@u * 8.5",
+            "cy": "@u * 8.5",
+            "radius": "@u * 3.5"
+           }
+          }
+         },
+         {
+          "loop": {
+           "index": "i",
+           "from": 0,
+           "until": 8,
+           "step": 1,
+           "commands": [
+            {
+             "rotate": {
+              "angle": 45,
+              "pivotX": "@u * 8.5",
+              "pivotY": "@u * 8.5"
+             }
+            },
+            {
+             "drawLine": {
+              "x1": "@u * 8.5",
+              "y1": "@u * 1.75",
+              "x2": "@u * 8.5",
+              "y2": "@u * 3.5"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "$if": "theme.mono",
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@u * 8.5",
+             "cy": "@u * 8.5",
+             "radius": "@u * 3.5"
+            }
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "save": {
+         "commands": [
+          {
+           "translate": {
+            "dx": "@u * 1.5",
+            "dy": "@u * 5.5"
+           }
+          },
+          {
+           "$if": "theme.mono",
+           "then": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onSurface"
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 8",
+              "cy": "@u * 11",
+              "radius": "@u * 5.25"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 13",
+              "cy": "@u * 8.5",
+              "radius": "@u * 6.75"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 17.5",
+              "cy": "@u * 11.5",
+              "radius": "@u * 4.75"
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": "@u * 2.75",
+              "top": "@u * 9.75",
+              "right": "@u * 22.25",
+              "bottom": "@u * 16.25",
+              "rx": "@u * 3.25",
+              "ry": "@u * 3.25"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.background"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 8",
+              "cy": "@u * 11",
+              "radius": "@u * 4"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 13",
+              "cy": "@u * 8.5",
+              "radius": "@u * 5.5"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 17.5",
+              "cy": "@u * 11.5",
+              "radius": "@u * 3.5"
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": "@u * 4",
+              "top": "@u * 11",
+              "right": "@u * 21",
+              "bottom": "@u * 15",
+              "rx": "@u * 2",
+              "ry": "@u * 2"
+             }
+            }
+           ],
+           "else": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.muted"
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 8",
+              "cy": "@u * 11",
+              "radius": "@u * 4"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 13",
+              "cy": "@u * 8.5",
+              "radius": "@u * 5.5"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 17.5",
+              "cy": "@u * 11.5",
+              "radius": "@u * 3.5"
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": "@u * 4",
+              "top": "@u * 11",
+              "right": "@u * 21",
+              "bottom": "@u * 15",
+              "rx": "@u * 2",
+              "ry": "@u * 2"
+             }
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     },
+     {
+      "$if": "condition == 'fog'",
+      "then": [
+       {
+        "save": {
+         "commands": [
+          {
+           "translate": {
+            "dx": 0,
+            "dy": "@u * -1"
+           }
+          },
+          {
+           "$if": "theme.mono",
+           "then": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onSurface"
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 8",
+              "cy": "@u * 11",
+              "radius": "@u * 5.25"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 13",
+              "cy": "@u * 8.5",
+              "radius": "@u * 6.75"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 17.5",
+              "cy": "@u * 11.5",
+              "radius": "@u * 4.75"
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": "@u * 2.75",
+              "top": "@u * 9.75",
+              "right": "@u * 22.25",
+              "bottom": "@u * 16.25",
+              "rx": "@u * 3.25",
+              "ry": "@u * 3.25"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.background"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 8",
+              "cy": "@u * 11",
+              "radius": "@u * 4"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 13",
+              "cy": "@u * 8.5",
+              "radius": "@u * 5.5"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 17.5",
+              "cy": "@u * 11.5",
+              "radius": "@u * 3.5"
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": "@u * 4",
+              "top": "@u * 11",
+              "right": "@u * 21",
+              "bottom": "@u * 15",
+              "rx": "@u * 2",
+              "ry": "@u * 2"
+             }
+            }
+           ],
+           "else": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.muted"
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 8",
+              "cy": "@u * 11",
+              "radius": "@u * 4"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 13",
+              "cy": "@u * 8.5",
+              "radius": "@u * 5.5"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@u * 17.5",
+              "cy": "@u * 11.5",
+              "radius": "@u * 3.5"
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": "@u * 4",
+              "top": "@u * 11",
+              "right": "@u * 21",
+              "bottom": "@u * 15",
+              "rx": "@u * 2",
+              "ry": "@u * 2"
+             }
+            }
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "$if": "theme.mono",
+           "then": {
+            "color": "@colors.onSurface"
+           },
+           "else": {
+            "color": "@colors.muted"
+           }
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": "@u * 1.5"
+          },
+          {
+           "strokeCap": "round"
+          }
+         ]
+        }
+       },
+       {
+        "drawLine": {
+         "x1": "@u * 3.5",
+         "y1": "@u * 17.5",
+         "x2": "@u * 17.5",
+         "y2": "@u * 17.5"
+        }
+       },
+       {
+        "drawLine": {
+         "x1": "@u * 6.5",
+         "y1": "@u * 21",
+         "x2": "@u * 20.5",
+         "y2": "@u * 21"
+        }
+       }
+      ]
+     }
+    ]
+   }
   }
  },
  "pitfalls": [
@@ -1692,6 +2587,11 @@
   "Mono draws the cloud as an outline: the same shapes 1.25 units larger in onSurface, then the shapes themselves in @colors.background, so the ring follows their union. It assumes the icon sits on the background colour, which every surface is in mono",
   "The sun's eight rays are one line drawn in a loop that rotates the canvas 45° per pass (8 × 45° = 360°, back to the start)",
   "The drawing is scaled to the box the layout actually gives the canvas (min of its width and height, centred), so a call clamped by a smaller parent shrinks instead of being cut off",
-  "partly draws the small sun or moon first and the cloud over it: the filled cloud (or, in mono, its background-filled outline) hides the part behind it"
+  "partly draws the small sun or moon first and the cloud over it: the filled cloud (or, in mono, its background-filled outline) hides the part behind it",
+  "Morph mode (morph: true) reads value (0 sun, 1 cloud, 2 rain, 3 snow, 4 storm) at run time: one call follows a host variable or a tap, no stateLayout needed. Each condition has an eased weight (anim of 1 - |value - i|) and four chained pathTweens give each outline its weight, so a change from a to b is a pure a-to-b morph. Fractions blend outlines (2.5 is half rain cloud, half snow cloud)",
+  "The five outlines are op-list paths from the weather-outline generator, written once per document (about 4.5 KB for the five, shared by every morph call); each morph call adds about 1.5 KB (flat) or 2 KB (rich) for the tweens and details. For a row of icons that never changes at run time, the static condition is much smaller",
+  "Morph mode names its variables wxw0..wxw4, wxt, wxp, wxq and wxf and its paths wxM1..wxM3 and wxBody: every call redefines them in its own canvas, so several calls coexist, but don't use those names in the document",
+  "animate repaints every frame while the icon is on screen (continuousSec); leave it off for widgets and lists. Mono is always still and has no morph motion (the expansion removes every anim): the outline switches",
+  "In morph mode size is still what the canvas asks for, and the drawing scales to the box it gets: to size it from an expression, put the call in a box whose width and height are that expression and give size a large value"
  ]
 }

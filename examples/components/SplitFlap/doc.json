@@ -1,0 +1,222 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Split-flap tiles: a word that flips in, a clock that flips on the minute, a status flap cycling through four words, and three rows of destinations moving up every six seconds"
+ },
+ "resources": {
+  "variables": {
+   "hm": "timeInHr() * 100 + timeInMin() % 60",
+   "mo": "(timeInHr() * 60 + timeInMin() % 60 + 1439) % 1440",
+   "hmo": "floor(@mo / 60) * 100 + @mo % 60",
+   "word": "floor(animationTime() / 4)",
+   "cyc": "floor(animationTime() / 6)",
+   "scroll": 0
+  },
+  "floatArrays": {
+   "cities": {
+    "value": [
+     12,
+     9,
+     19,
+     2,
+     15,
+     1,
+     0,
+     0,
+     16,
+     15,
+     18,
+     20,
+     15,
+     0,
+     0,
+     0,
+     13,
+     1,
+     4,
+     18,
+     9,
+     4,
+     0,
+     0,
+     19,
+     5,
+     22,
+     9,
+     12,
+     12,
+     1,
+     0,
+     16,
+     1,
+     18,
+     9,
+     19,
+     0,
+     0,
+     0,
+     2,
+     15,
+     18,
+     4,
+     5,
+     1,
+     21,
+     24,
+     12,
+     25,
+     15,
+     14,
+     0,
+     0,
+     0,
+     0,
+     7,
+     5,
+     14,
+     5,
+     22,
+     5,
+     0,
+     0
+    ]
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "verticalScroll": "@scroll"
+    },
+    {
+     "padding": 20
+    },
+    {
+     "spacedBy": 10
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "A word, flipping in",
+      "fontSize": 13,
+      "color": "@colors.muted"
+     }
+    },
+    {
+     "SplitFlap": {
+      "text": "DEPARTURES",
+      "tileWidth": 28,
+      "tileHeight": 42,
+      "gap": 3
+     }
+    },
+    {
+     "text": {
+      "value": "The clock, flipping on the minute",
+      "fontSize": 13,
+      "color": "@colors.muted",
+      "modifiers": [
+       {
+        "padding": [
+         0,
+         14,
+         0,
+         0
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "SplitFlap": {
+      "tiles": 5,
+      "label": "Time",
+      "code": "ifElse(27 + floor(@hm / pow(10, 3 - i + step(i, 2))) % 10, 37, 1 - min(1, abs(i - 2)))",
+      "prev": "ifElse(27 + floor(@hmo / pow(10, 3 - i + step(i, 2))) % 10, 37, 1 - min(1, abs(i - 2)))",
+      "since": "continuousSec() % 60",
+      "delay": 0.1,
+      "ripple": 0.06,
+      "jitter": 0,
+      "tileWidth": 44,
+      "tileHeight": 64,
+      "gap": 4
+     }
+    },
+    {
+     "text": {
+      "value": "Word flaps: a drum of whole words",
+      "fontSize": 13,
+      "color": "@colors.muted",
+      "modifiers": [
+       {
+        "padding": [
+         0,
+         14,
+         0,
+         0
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "SplitFlap": {
+      "tiles": 1,
+      "label": "Status",
+      "drum": "        ON TIME BOARDINGDELAYED CANCELED",
+      "glyphWidth": 8,
+      "align": "start",
+      "textSize": 0.5,
+      "code": "@word % 4 + 1",
+      "prev": "ifElse((@word + 3) % 4 + 1, 0, step(@word, 0.5))",
+      "since": "animationTime() % 4",
+      "delay": 0.2,
+      "tileWidth": 170,
+      "tileHeight": 40,
+      "jitter": 0
+     }
+    },
+    {
+     "text": {
+      "value": "Rows from a float array, moving up every 6 s",
+      "fontSize": 13,
+      "color": "@colors.muted",
+      "modifiers": [
+       {
+        "padding": [
+         0,
+         14,
+         0,
+         0
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "SplitFlap": {
+      "tiles": 8,
+      "rows": 3,
+      "label": "Destinations",
+      "code": "arrayGet(@cities, ((@cyc + r) % 8) * 8 + i)",
+      "prev": "arrayGet(@cities, ((@cyc + r + 7) % 8) * 8 + i) * step(@cyc, 0.5)",
+      "since": "animationTime() % 6",
+      "tileWidth": 26,
+      "tileHeight": 38,
+      "gap": 3,
+      "rowGap": 6
+     }
+    }
+   ]
+  }
+ }
+}

@@ -7,7 +7,6 @@
  "prompt": "Build an ICU-style patient monitor: a scrolling ECG trace drawn from a waveform array looping with the clock, with the sweep-and-erase gap of a real monitor, an SpO2 pleth wave, heart rate and SpO2 numbers from host variables, and a flashing red alarm when the heart rate is out of range. Dark, crisp, legible, on a tablet and on a phone.",
  "level": 5,
  "family": "SHW",
- "hand_built": "A sweep-and-erase trace is two path expressions per wave evaluated against the clock, plus a hand-placed tile grid that switches between landscape and portrait with lerp; no library component draws either.",
  "capabilities": {
   "primary": [
    "draw.plot",
@@ -56,12 +55,11 @@
   "telemetry"
  ],
  "teaches": [
+  "The three traces are SweepTrace calls in a column laid over the canvas: offset under the top bar, width and height computed from the screen (componentWidth() in a modifier is the parent's), so the same rows serve landscape and portrait",
   "A sweep-and-erase trace without a sample buffer: the head is x_h = fract(T / D) * width, and the sample at x shows the time T - fract((x_h - x) / width + 1) * D, so the new sweep and the previous one both stay put on screen while the head moves",
-  "Two pathExpressions per wave, 0..head and head+gap..width, are the trace and its erase gap; end and count are expressions (floor(head / step) * step, head / step + 1) so the samples sit on a fixed pixel grid and the trace does not shimmer",
   "The ECG beat is stored as a fixed 0.62 s window (100 samples) read with min(1, fract(phase) * k): the QRS keeps its real width at any heart rate and the baseline fills the rest of the RR interval, so 148 bpm looks like tachycardia rather than a squashed beat",
   "The alarm is data, not layout: hrA = ifElse(0, 1, max(hr - hrHi, hrLo - hr)) and blink = ifElse(0, 1, 0.5 - fract(T * 2)) drive conditionalOperations that paint the tile red, turn its text white and show the banner",
-  "One canvas serves both orientations: land = ifElse(0, 1, W - 1.15 H) and every tile rectangle is lerp(portrait, landscape, @land)",
-  "A soft glow is the same path stroked twice: 2.4x wider at alpha 0.16, then the 2 px trace on top"
+  "One canvas serves both orientations: land = ifElse(0, 1, W - 1.15 H) and every tile rectangle is lerp(portrait, landscape, @land)"
  ],
  "pitfalls": [
   "TypeScript player: PathExpression.evalRPN has no case for splineLoop (op 75), so a pathExpression using splineLoop draws vertical spikes there; use spline(@a, fract(t)) with the first value repeated at the end, which both players evaluate",
@@ -232,24 +230,28 @@
   "TIM-04"
  ],
  "derived": {
-  "components": [],
-  "component_instances": 0,
-  "component_modes": {},
+  "components": [
+   "SweepTrace"
+  ],
+  "component_instances": 3,
+  "component_modes": {
+   "SweepTrace": "expand"
+  },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 11809,
+  "bytes": 12122,
   "header": {
    "width": 800,
    "height": 480
   },
-  "op_count": 472,
+  "op_count": 516,
   "operations": {
-   "ACCESSIBILITY_SEMANTICS": 1,
-   "ANIMATED_FLOAT": 170,
+   "ACCESSIBILITY_SEMANTICS": 4,
+   "ANIMATED_FLOAT": 162,
    "COLOR_CONSTANT": 20,
    "COLOR_EXPRESSIONS": 20,
-   "COMPONENT_VALUE": 2,
-   "CanvasContent": 1,
+   "COMPONENT_VALUE": 8,
+   "CanvasContent": 4,
    "ConditionalOperations": 17,
    "DATA_FLOAT": 8,
    "DATA_TEXT": 19,
@@ -261,14 +263,17 @@
    "DRAW_TEXT_ANCHOR": 32,
    "DataListFloat": 3,
    "HEADER": 1,
-   "LAYOUT_CANVAS": 1,
+   "LAYOUT_BOX": 5,
+   "LAYOUT_CANVAS": 4,
+   "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
-   "LayoutComponentContent": 1,
+   "LayoutComponentContent": 10,
    "LoopOperation": 20,
-   "MODIFIER_HEIGHT": 1,
-   "MODIFIER_WIDTH": 1,
+   "MODIFIER_HEIGHT": 10,
+   "MODIFIER_OFFSET": 1,
+   "MODIFIER_WIDTH": 10,
    "NAMED_VARIABLE": 18,
-   "PAINT_VALUES": 56,
+   "PAINT_VALUES": 59,
    "PathExpression": 6,
    "THEME": 30,
    "TextFromFloat": 12
@@ -369,11 +374,12 @@
   "audit": {
    "error": 0,
    "warning": 1,
-   "info": 1
+   "info": 2
   },
   "audit_findings": [
    "warning: text_in_canvas",
-   "info: repaint_continuous"
+   "info: repaint_continuous",
+   "info: expression_entries"
   ],
   "repaint": "continuous",
   "interaction_targets": {
@@ -396,9 +402,11 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 11557,
-    "component_modes": {},
-    "op_count": 429,
+    "bytes": 11792,
+    "component_modes": {
+     "SweepTrace": "expand"
+    },
+    "op_count": 467,
     "host_variables": [
      {
       "name": "alarm",
@@ -518,9 +526,11 @@
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 11557,
-    "component_modes": {},
-    "op_count": 429,
+    "bytes": 11792,
+    "component_modes": {
+     "SweepTrace": "expand"
+    },
+    "op_count": 467,
     "host_variables": [
      {
       "name": "alarm",
@@ -662,7 +672,8 @@
      640
     ],
     "audit_findings": [
-     "info: repaint_continuous"
+     "info: repaint_continuous",
+     "info: expression_entries"
     ]
    },
    "phone-alarm": {
@@ -673,7 +684,8 @@
      640
     ],
     "audit_findings": [
-     "info: repaint_continuous"
+     "info: repaint_continuous",
+     "info: expression_entries"
     ]
    },
    "large": {
@@ -684,7 +696,8 @@
      800
     ],
     "audit_findings": [
-     "info: repaint_continuous"
+     "info: repaint_continuous",
+     "info: expression_entries"
     ]
    },
    "light-alarm": {
@@ -695,13 +708,18 @@
   },
   "json_keys": [
    "$if",
+   "SweepTrace",
    "alarm",
    "alpha",
    "apiLevel",
+   "baseline",
    "bottom",
+   "box",
    "canvas",
+   "children",
    "color",
    "colors",
+   "column",
    "commands",
    "condition",
    "conditionalOperations",
@@ -711,6 +729,7 @@
    "cy",
    "dark",
    "decimal",
+   "delay",
    "dia",
    "drawCircle",
    "drawLine",
@@ -726,6 +745,7 @@
    "expressionY",
    "flags",
    "floatArrays",
+   "glow",
    "header",
    "height",
    "hr",
@@ -734,11 +754,13 @@
    "id",
    "ink",
    "inkMuted",
+   "label",
    "left",
    "light",
    "line",
    "modifiers",
    "name",
+   "offset",
    "onAlarm",
    "ops",
    "paint",
@@ -750,6 +772,7 @@
    "pleth",
    "profiles",
    "radius",
+   "rate",
    "resources",
    "resp",
    "right",
@@ -757,8 +780,11 @@
    "rr",
    "rx",
    "ry",
+   "sample",
+   "scale",
    "screen",
    "semantics",
+   "speed",
    "spo2",
    "spo2Lo",
    "start",
@@ -766,19 +792,30 @@
    "strokeJoin",
    "strokeWidth",
    "style",
+   "sweeptrace1_T",
+   "sweeptrace1_k",
+   "sweeptrace1_rr",
+   "sweeptrace2_T",
+   "sweeptrace2_rr",
+   "sweeptrace3_T",
+   "sweeptrace3_rr",
    "sys",
    "text",
    "textSize",
    "then",
+   "thickness",
    "top",
    "type",
    "v1",
    "v2",
    "value",
+   "values",
    "variable",
    "variables",
+   "verticalWeight",
    "whole",
    "width",
+   "window",
    "x",
    "x1",
    "x2",
@@ -833,7 +870,7 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-02T20:23:18.379Z"
+  "built_at": "2026-11-02T22:50:40.689Z"
  },
  "snippets": [
   {
@@ -842,22 +879,22 @@
    "note": "one beat as a fixed 0.62 s window"
   },
   {
-   "pointer": "/root/canvas/commands/50",
-   "shows": "time.clock",
-   "note": "the sweep head from the clock"
-  },
-  {
-   "pointer": "/root/canvas/commands/54",
+   "pointer": "/root/box/children/1/box/children/0/column/children/0/box/children/0",
    "shows": "draw.plot",
-   "note": "the ECG trace up to the head, sampled on a 1 px grid"
+   "note": "the ECG: a SweepTrace with a beat window and a glow"
   },
   {
-   "pointer": "/root/canvas/commands/54",
+   "pointer": "/root/box/children/1/box/children/0/column/children/1/box/children/0",
    "shows": "data.spline",
-   "note": "beat shape by spline over the waveform array"
+   "note": "pleth trailing the beat by 0.18 cycles"
   },
   {
-   "pointer": "/root/canvas/commands/16",
+   "pointer": "/root/box/children/1/box/children/0/column",
+   "shows": "time.clock",
+   "note": "three traces in a column sized from the screen, swept by the clock"
+  },
+  {
+   "pointer": "/root/box/children/0/canvas/commands/16",
    "shows": "host.variables",
    "note": "alarm state from the host heart rate and its limits"
   },
@@ -866,5 +903,8 @@
    "shows": "host.variables",
    "note": "vitals and alarm limits the host sets"
   }
+ ],
+ "components": [
+  "SweepTrace"
  ]
 }

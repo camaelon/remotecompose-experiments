@@ -239,314 +239,157 @@
    "spo2Lo": {
     "value": 90,
     "export": true
-   }
+   },
+   "sweeptrace1_T": "timeInSec()",
+   "sweeptrace1_rr": "@hr / 60",
+   "sweeptrace1_k": "max(1 / (0.62 * @sweeptrace1_rr), 1 / 0.95)",
+   "sweeptrace2_T": "timeInSec()",
+   "sweeptrace2_rr": "@hr / 60",
+   "sweeptrace3_T": "timeInSec()",
+   "sweeptrace3_rr": "@rr / 60"
   }
  },
  "root": {
-  "canvas": {
+  "box": {
    "modifiers": [
-    "fillMaxSize",
-    {
-     "semantics": {
-      "contentDescription": "Patient monitor"
-     }
-    }
+    "fillMaxSize"
    ],
-   "commands": [
+   "children": [
     {
-     "variable": {
-      "name": "W",
-      "value": "componentWidth()"
-     }
-    },
-    {
-     "variable": {
-      "name": "H",
-      "value": "componentHeight()"
-     }
-    },
-    {
-     "variable": {
-      "name": "T",
-      "value": "timeInSec()"
-     }
-    },
-    {
-     "variable": {
-      "name": "land",
-      "value": "ifElse(0, 1, @W - 1.15 * @H)"
-     }
-    },
-    {
-     "variable": {
-      "name": "tb",
-      "value": "40"
-     }
-    },
-    {
-     "variable": {
-      "name": "pad",
-      "value": "12"
-     }
-    },
-    {
-     "variable": {
-      "name": "gap",
-      "value": "18"
-     }
-    },
-    {
-     "variable": {
-      "name": "nw",
-      "value": "clamp(180, 300, @W * 0.3)"
-     }
-    },
-    {
-     "variable": {
-      "name": "wx",
-      "value": "@pad"
-     }
-    },
-    {
-     "variable": {
-      "name": "ww",
-      "value": "@W - 2 * @pad - @land * (@nw + @pad)"
-     }
-    },
-    {
-     "variable": {
-      "name": "wy",
-      "value": "@tb"
-     }
-    },
-    {
-     "variable": {
-      "name": "wh",
-      "value": "lerp((@H - @tb) * 0.5, @H - @tb - @pad, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "tx",
-      "value": "lerp(@pad, @W - @pad - @nw, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "tw",
-      "value": "lerp(@W - 2 * @pad, @nw, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "ty",
-      "value": "lerp(@tb + @wh + 10, @tb, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "th",
-      "value": "@H - @pad - @ty"
-     }
-    },
-    {
-     "variable": {
-      "name": "hrA",
-      "value": "ifElse(0, 1, max(@hr - @hrHi, @hrLo - @hr))"
-     }
-    },
-    {
-     "variable": {
-      "name": "spA",
-      "value": "ifElse(0, 1, @spo2Lo - @spo2) * (1 - @hrA)"
-     }
-    },
-    {
-     "variable": {
-      "name": "blink",
-      "value": "ifElse(0, 1, 0.5 - fract(@T / 2))"
-     }
-    },
-    {
-     "variable": {
-      "name": "bps",
-      "value": "@hr / 60"
-     }
-    },
-    {
-     "variable": {
-      "name": "rps",
-      "value": "@rr / 60"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize",
        {
-        "color": "@colors.background"
-       },
-       {
-        "style": "fill"
+        "semantics": {
+         "contentDescription": "Patient monitor"
+        }
        }
-      ]
-     }
-    },
-    {
-     "drawRect": {
-      "left": 0,
-      "top": 0,
-      "right": "@W",
-      "bottom": "@H"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.muted"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 13
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "BED 07",
-      "x": "@pad",
-      "y": 21,
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "variable": {
-      "name": "hh",
-      "value": "timeInHr()"
-     }
-    },
-    {
-     "variable": {
-      "name": "mm",
-      "value": "timeInMin() % 60"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 15
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "@hh",
-       "whole": 2,
-       "decimal": 0,
-       "flags": 13
-      },
-      "x": "@W - @pad - 26",
-      "y": 21,
-      "panX": 1,
-      "panY": 0
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": ":",
-      "x": "@W - @pad - 22",
-      "y": 21,
-      "panX": 0,
-      "panY": 0
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "@mm",
-       "whole": 2,
-       "decimal": 0,
-       "flags": 13
-      },
-      "x": "@W - @pad - 18",
-      "y": 21,
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.outline"
-       },
-       {
-        "style": "stroke"
-       }
-      ]
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "strokeWidth": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawLine": {
-      "x1": 0,
-      "y1": "@tb - 4",
-      "x2": "@W",
-      "y2": "@tb - 4"
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@hrA",
-      "v2": 0.5,
+      ],
       "commands": [
        {
-        "paint": {
-         "ops": [
-          {
-           "style": "fill"
-          },
-          {
-           "color": "@colors.onSurface"
-          },
-          {
-           "alpha": 1
-          }
-         ]
+        "variable": {
+         "name": "W",
+         "value": "componentWidth()"
         }
        },
        {
-        "drawRoundRect": {
-         "left": "@W / 2 - 92",
-         "top": 6,
-         "right": "@W / 2 + 92",
-         "bottom": 30,
-         "rx": 6,
-         "ry": 6
+        "variable": {
+         "name": "H",
+         "value": "componentHeight()"
+        }
+       },
+       {
+        "variable": {
+         "name": "T",
+         "value": "timeInSec()"
+        }
+       },
+       {
+        "variable": {
+         "name": "land",
+         "value": "ifElse(0, 1, @W - 1.15 * @H)"
+        }
+       },
+       {
+        "variable": {
+         "name": "tb",
+         "value": "40"
+        }
+       },
+       {
+        "variable": {
+         "name": "pad",
+         "value": "12"
+        }
+       },
+       {
+        "variable": {
+         "name": "gap",
+         "value": "18"
+        }
+       },
+       {
+        "variable": {
+         "name": "nw",
+         "value": "clamp(180, 300, @W * 0.3)"
+        }
+       },
+       {
+        "variable": {
+         "name": "wx",
+         "value": "@pad"
+        }
+       },
+       {
+        "variable": {
+         "name": "ww",
+         "value": "@W - 2 * @pad - @land * (@nw + @pad)"
+        }
+       },
+       {
+        "variable": {
+         "name": "wy",
+         "value": "@tb"
+        }
+       },
+       {
+        "variable": {
+         "name": "wh",
+         "value": "lerp((@H - @tb) * 0.5, @H - @tb - @pad, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "tx",
+         "value": "lerp(@pad, @W - @pad - @nw, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "tw",
+         "value": "lerp(@W - 2 * @pad, @nw, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "ty",
+         "value": "lerp(@tb + @wh + 10, @tb, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "th",
+         "value": "@H - @pad - @ty"
+        }
+       },
+       {
+        "variable": {
+         "name": "hrA",
+         "value": "ifElse(0, 1, max(@hr - @hrHi, @hrLo - @hr))"
+        }
+       },
+       {
+        "variable": {
+         "name": "spA",
+         "value": "ifElse(0, 1, @spo2Lo - @spo2) * (1 - @hrA)"
+        }
+       },
+       {
+        "variable": {
+         "name": "blink",
+         "value": "ifElse(0, 1, 0.5 - fract(@T / 2))"
+        }
+       },
+       {
+        "variable": {
+         "name": "bps",
+         "value": "@hr / 60"
+        }
+       },
+       {
+        "variable": {
+         "name": "rps",
+         "value": "@rr / 60"
         }
        },
        {
@@ -556,26 +399,232 @@
            "color": "@colors.background"
           },
           {
-           "alpha": 1
-          },
-          {
-           "textSize": 14
+           "style": "fill"
           }
          ]
         }
        },
        {
+        "drawRect": {
+         "left": 0,
+         "top": 0,
+         "right": "@W",
+         "bottom": "@H"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "textSize": 13
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "BED 07",
+         "x": "@pad",
+         "y": 21,
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "variable": {
+         "name": "hh",
+         "value": "timeInHr()"
+        }
+       },
+       {
+        "variable": {
+         "name": "mm",
+         "value": "timeInMin() % 60"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "textSize": 15
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textFromFloat",
+          "value": "@hh",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 13
+         },
+         "x": "@W - @pad - 26",
+         "y": 21,
+         "panX": 1,
+         "panY": 0
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": ":",
+         "x": "@W - @pad - 22",
+         "y": 21,
+         "panX": 0,
+         "panY": 0
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textFromFloat",
+          "value": "@mm",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 13
+         },
+         "x": "@W - @pad - 18",
+         "y": 21,
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.outline"
+          },
+          {
+           "style": "stroke"
+          }
+         ]
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "strokeWidth": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawLine": {
+         "x1": 0,
+         "y1": "@tb - 4",
+         "x2": "@W",
+         "y2": "@tb - 4"
+        }
+       },
+       {
         "conditionalOperations": {
          "condition": "gt",
-         "v1": "@hr",
-         "v2": "@hrHi",
+         "v1": "@hrA",
+         "v2": 0.5,
          "commands": [
           {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@W / 2 - 92",
+            "top": 6,
+            "right": "@W / 2 + 92",
+            "bottom": 30,
+            "rx": 6,
+            "ry": 6
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "textSize": 14
+             }
+            ]
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "gt",
+            "v1": "@hr",
+            "v2": "@hrHi",
+            "commands": [
+             {
+              "drawTextAnchored": {
+               "text": "HR HIGH",
+               "x": "@W / 2 - 80",
+               "y": 19,
+               "panX": -1,
+               "panY": 0
+              }
+             }
+            ]
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "lt",
+            "v1": "@hr",
+            "v2": "@hrLo",
+            "commands": [
+             {
+              "drawTextAnchored": {
+               "text": "HR LOW",
+               "x": "@W / 2 - 80",
+               "y": 19,
+               "panX": -1,
+               "panY": 0
+              }
+             }
+            ]
+           }
+          },
+          {
            "drawTextAnchored": {
-            "text": "HR HIGH",
-            "x": "@W / 2 - 80",
+            "text": {
+             "type": "textFromFloat",
+             "value": "@hr",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            "x": "@W / 2 + 80",
             "y": 19,
-            "panX": -1,
+            "panX": 1,
             "panY": 0
            }
           }
@@ -584,17 +633,754 @@
        },
        {
         "conditionalOperations": {
-         "condition": "lt",
-         "v1": "@hr",
-         "v2": "@hrLo",
+         "condition": "gt",
+         "v1": "@spA",
+         "v2": 0.5,
          "commands": [
           {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@W / 2 - 92",
+            "top": 6,
+            "right": "@W / 2 + 92",
+            "bottom": 30,
+            "rx": 6,
+            "ry": 6
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "textSize": 14
+             }
+            ]
+           }
+          },
+          {
            "drawTextAnchored": {
-            "text": "HR LOW",
+            "text": "SpO2 LOW",
             "x": "@W / 2 - 80",
             "y": 19,
             "panX": -1,
             "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textFromFloat",
+             "value": "@spo2",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            "x": "@W / 2 + 80",
+            "y": 19,
+            "panX": 1,
+            "panY": 0
+           }
+          }
+         ]
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.outline"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 1
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawLine": {
+         "x1": "@wx",
+         "y1": "@wy + @wh * 0.4",
+         "x2": "@wx + @ww",
+         "y2": "@wy + @wh * 0.4"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.outline"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 1
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawLine": {
+         "x1": "@wx",
+         "y1": "@wy + @wh * 0.72",
+         "x2": "@wx + @ww",
+         "y2": "@wy + @wh * 0.72"
+        }
+       },
+       {
+        "variable": {
+         "name": "ek",
+         "value": "max(1 / (0.62 * @bps), 1 / 0.95)"
+        }
+       },
+       {
+        "variable": {
+         "name": "hrX",
+         "value": "@tx"
+        }
+       },
+       {
+        "variable": {
+         "name": "hrY",
+         "value": "@ty"
+        }
+       },
+       {
+        "variable": {
+         "name": "hrW",
+         "value": "lerp(@tw / 2 - 5, @tw, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "hrH",
+         "value": "lerp(@th / 2 - 5, @th * 0.4 - 6, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "hrR",
+         "value": "@hrX + @hrW"
+        }
+       },
+       {
+        "variable": {
+         "name": "hrB",
+         "value": "@hrY + @hrH"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.background"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@hrX",
+         "top": "@hrY",
+         "right": "@hrR",
+         "bottom": "@hrB",
+         "rx": 10,
+         "ry": 10
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.outline"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@hrX + 0.5",
+         "top": "@hrY + 0.5",
+         "right": "@hrR - 0.5",
+         "bottom": "@hrB - 0.5",
+         "rx": 10,
+         "ry": 10
+        }
+       },
+       {
+        "variable": {
+         "name": "spX",
+         "value": "lerp(@tx + @tw / 2 + 5, @tx, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "spY",
+         "value": "lerp(@ty, @ty + @th * 0.4, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "spW",
+         "value": "lerp(@tw / 2 - 5, @tw, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "spH",
+         "value": "lerp(@th / 2 - 5, @th * 0.32 - 6, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "spR",
+         "value": "@spX + @spW"
+        }
+       },
+       {
+        "variable": {
+         "name": "spB",
+         "value": "@spY + @spH"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.background"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@spX",
+         "top": "@spY",
+         "right": "@spR",
+         "bottom": "@spB",
+         "rx": 10,
+         "ry": 10
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.outline"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@spX + 0.5",
+         "top": "@spY + 0.5",
+         "right": "@spR - 0.5",
+         "bottom": "@spB - 0.5",
+         "rx": 10,
+         "ry": 10
+        }
+       },
+       {
+        "variable": {
+         "name": "rrX",
+         "value": "@tx"
+        }
+       },
+       {
+        "variable": {
+         "name": "rrY",
+         "value": "lerp(@ty + @th / 2 + 5, @ty + @th * 0.72, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "rrW",
+         "value": "lerp(@tw / 2 - 5, @tw * 0.4 - 4, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "rrH",
+         "value": "lerp(@th / 2 - 5, @th * 0.28, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "rrR",
+         "value": "@rrX + @rrW"
+        }
+       },
+       {
+        "variable": {
+         "name": "rrB",
+         "value": "@rrY + @rrH"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.background"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@rrX",
+         "top": "@rrY",
+         "right": "@rrR",
+         "bottom": "@rrB",
+         "rx": 10,
+         "ry": 10
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.outline"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@rrX + 0.5",
+         "top": "@rrY + 0.5",
+         "right": "@rrR - 0.5",
+         "bottom": "@rrB - 0.5",
+         "rx": 10,
+         "ry": 10
+        }
+       },
+       {
+        "variable": {
+         "name": "bpX",
+         "value": "lerp(@tx + @tw / 2 + 5, @tx + @tw * 0.4 + 4, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "bpY",
+         "value": "lerp(@ty + @th / 2 + 5, @ty + @th * 0.72, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "bpW",
+         "value": "lerp(@tw / 2 - 5, @tw * 0.6 - 4, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "bpH",
+         "value": "lerp(@th / 2 - 5, @th * 0.28, @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "bpR",
+         "value": "@bpX + @bpW"
+        }
+       },
+       {
+        "variable": {
+         "name": "bpB",
+         "value": "@bpY + @bpH"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.background"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@bpX",
+         "top": "@bpY",
+         "right": "@bpR",
+         "bottom": "@bpB",
+         "rx": 10,
+         "ry": 10
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.outline"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@bpX + 0.5",
+         "top": "@bpY + 0.5",
+         "right": "@bpR - 0.5",
+         "bottom": "@bpB - 0.5",
+         "rx": 10,
+         "ry": 10
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "gt",
+         "v1": "@hrA",
+         "v2": 0.5,
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 4
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@hrX + 2",
+            "top": "@hrY + 2",
+            "right": "@hrR - 2",
+            "bottom": "@hrB - 2",
+            "rx": 9,
+            "ry": 9
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "gt",
+         "v1": "@hrA * @blink",
+         "v2": 0.5,
+         "commands": [
+          {
+           "drawRoundRect": {
+            "left": "@hrX",
+            "top": "@hrY",
+            "right": "@hrR",
+            "bottom": "@hrB",
+            "rx": 10,
+            "ry": 10
+           }
+          }
+         ]
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "gt",
+         "v1": "@spA",
+         "v2": 0.5,
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 4
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@spX + 2",
+            "top": "@spY + 2",
+            "right": "@spR - 2",
+            "bottom": "@spB - 2",
+            "rx": 9,
+            "ry": 9
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "gt",
+         "v1": "@spA * @blink",
+         "v2": 0.5,
+         "commands": [
+          {
+           "drawRoundRect": {
+            "left": "@spX",
+            "top": "@spY",
+            "right": "@spR",
+            "bottom": "@spB",
+            "rx": 10,
+            "ry": 10
+           }
+          }
+         ]
+        }
+       },
+       {
+        "variable": {
+         "name": "hrF",
+         "value": "min(@hrH * 0.62, @hrW * 0.36)"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "textSize": 14
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "gt",
+         "v1": "@hrA * @blink",
+         "v2": 0.5,
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "HR",
+         "x": "@hrX + 12",
+         "y": "@hrY + 20",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "textSize": 11
+          }
+         ]
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "gt",
+         "v1": "@hrA * @blink",
+         "v2": 0.5,
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "bpm",
+         "x": "@hrR - 12",
+         "y": "@hrY + 20",
+         "panX": 1,
+         "panY": 0
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textFromFloat",
+          "value": "@hrHi",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "x": "@hrX + 12",
+         "y": "@hrY + 40",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textFromFloat",
+          "value": "@hrLo",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "x": "@hrX + 12",
+         "y": "@hrY + 54",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "textSize": "@hrF"
+          }
+         ]
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "gt",
+         "v1": "@hrA * @blink",
+         "v2": 0.5,
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             }
+            ]
            }
           }
          ]
@@ -609,27 +1395,21 @@
           "decimal": 0,
           "flags": 5
          },
-         "x": "@W / 2 + 80",
-         "y": 19,
+         "x": "@hrR - 12",
+         "y": "@hrB - @hrH * 0.4",
          "panX": 1,
          "panY": 0
         }
-       }
-      ]
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@spA",
-      "v2": 0.5,
-      "commands": [
+       },
+       {
+        "variable": {
+         "name": "beat",
+         "value": "exp(-fract(@T * @bps - 0.282 / @ek) * 9)"
+        }
+       },
        {
         "paint": {
          "ops": [
-          {
-           "style": "fill"
-          },
           {
            "color": "@colors.onSurface"
           },
@@ -640,37 +1420,169 @@
         }
        },
        {
-        "drawRoundRect": {
-         "left": "@W / 2 - 92",
-         "top": 6,
-         "right": "@W / 2 + 92",
-         "bottom": 30,
-         "rx": 6,
-         "ry": 6
+        "drawCircle": {
+         "cx": "@hrX + 44",
+         "cy": "@hrY + 15",
+         "radius": "3 + 2 * @beat"
         }
        },
        {
         "paint": {
          "ops": [
           {
-           "color": "@colors.background"
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "variable": {
+         "name": "spF",
+         "value": "min(@spH * 0.62, @spW * 0.36)"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
           },
           {
-           "alpha": 1
+           "style": "fill"
           },
           {
            "textSize": 14
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "gt",
+         "v1": "@spA * @blink",
+         "v2": 0.5,
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             }
+            ]
+           }
           }
          ]
         }
        },
        {
         "drawTextAnchored": {
-         "text": "SpO2 LOW",
-         "x": "@W / 2 - 80",
-         "y": 19,
+         "text": "SpO2",
+         "x": "@spX + 12",
+         "y": "@spY + 20",
          "panX": -1,
          "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "textSize": 11
+          }
+         ]
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "gt",
+         "v1": "@spA * @blink",
+         "v2": 0.5,
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "%",
+         "x": "@spR - 12",
+         "y": "@spY + 20",
+         "panX": 1,
+         "panY": 0
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textFromFloat",
+          "value": "100",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "x": "@spX + 12",
+         "y": "@spY + 40",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textFromFloat",
+          "value": "@spo2Lo",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "x": "@spX + 12",
+         "y": "@spY + 54",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "textSize": "@spF"
+          }
+         ]
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "gt",
+         "v1": "@spA * @blink",
+         "v2": 0.5,
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             }
+            ]
+           }
+          }
+         ]
         }
        },
        {
@@ -682,9 +1594,281 @@
           "decimal": 0,
           "flags": 5
          },
-         "x": "@W / 2 + 80",
-         "y": 19,
+         "x": "@spR - 26",
+         "y": "@spB - @spH * 0.4",
          "panX": 1,
+         "panY": 0
+        }
+       },
+       {
+        "variable": {
+         "name": "pv",
+         "value": "spline(@pleth, fract(@T * @bps - 0.18))"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.outline"
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@spR - 18",
+         "top": "@spY + 32",
+         "right": "@spR - 12",
+         "bottom": "@spB - 12",
+         "rx": 3,
+         "ry": 3
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@spR - 18",
+         "top": "@spB - 12 - (@spH - 44) * (0.15 + 0.85 * @pv)",
+         "right": "@spR - 12",
+         "bottom": "@spB - 12",
+         "rx": 3,
+         "ry": 3
+        }
+       },
+       {
+        "variable": {
+         "name": "rrF",
+         "value": "min(@rrH * 0.5, @rrW * 0.36)"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "textSize": 14
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "RR",
+         "x": "@rrX + 12",
+         "y": "@rrY + 20",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "textSize": 11
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "rpm",
+         "x": "@rrR - 12",
+         "y": "@rrY + 20",
+         "panX": 1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "textSize": "@rrF"
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textFromFloat",
+          "value": "@rr",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "x": "@rrR - 12",
+         "y": "@rrB - @rrH * 0.36",
+         "panX": 1,
+         "panY": 0
+        }
+       },
+       {
+        "variable": {
+         "name": "bpF",
+         "value": "min(@bpH * 0.36, @bpW * 0.17)"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "textSize": 14
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "NIBP",
+         "x": "@bpX + 12",
+         "y": "@bpY + 20",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "textSize": 11
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "mmHg",
+         "x": "@bpR - 12",
+         "y": "@bpY + 20",
+         "panX": 1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "textSize": "@bpF"
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textFromFloat",
+          "value": "@sys",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "x": "@bpX + @bpW * 0.5 - @bpF * 0.18",
+         "y": "@bpB - @bpH * 0.38",
+         "panX": 1,
+         "panY": 0
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "/",
+         "x": "@bpX + @bpW * 0.5",
+         "y": "@bpB - @bpH * 0.38",
+         "panX": 0,
+         "panY": 0
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textFromFloat",
+          "value": "@dia",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "x": "@bpX + @bpW * 0.5 + @bpF * 0.18",
+         "y": "@bpB - @bpH * 0.38",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "textSize": 12
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "MAP",
+         "x": "@bpX + 12",
+         "y": "@bpB - 12",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "variable": {
+         "name": "map",
+         "value": "round((@sys + 2 * @dia) / 3)"
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textFromFloat",
+          "value": "@map",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "x": "@bpX + 44",
+         "y": "@bpB - 12",
+         "panX": -1,
          "panY": 0
         }
        }
@@ -692,1696 +1876,632 @@
      }
     },
     {
-     "paint": {
-      "ops": [
+     "box": {
+      "modifiers": [
        {
-        "color": "@colors.onSurface"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 12
-       },
-       {
-        "alpha": 0.85
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "II",
-      "x": "@wx + 2",
-      "y": "@wy + 14",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.outline"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeWidth": 1
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawLine": {
-      "x1": "@wx",
-      "y1": "@wy + @wh * 0.4",
-      "x2": "@wx + @ww",
-      "y2": "@wy + @wh * 0.4"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 12
-       },
-       {
-        "alpha": 0.85
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "Pleth",
-      "x": "@wx + 2",
-      "y": "@wy + @wh * 0.4 + 14",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.outline"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeWidth": 1
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawLine": {
-      "x1": "@wx",
-      "y1": "@wy + @wh * 0.72",
-      "x2": "@wx + @ww",
-      "y2": "@wy + @wh * 0.72"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 12
-       },
-       {
-        "alpha": 0.85
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "Resp",
-      "x": "@wx + 2",
-      "y": "@wy + @wh * 0.72 + 14",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "variable": {
-      "name": "ek",
-      "value": "max(1 / (0.62 * @bps), 1 / 0.95)"
-     }
-    },
-    {
-     "variable": {
-      "name": "w0y",
-      "value": "@wy + @wh * 0.4 * 0.7"
-     }
-    },
-    {
-     "variable": {
-      "name": "w0a",
-      "value": "@wh * 0.4 * 0.52"
-     }
-    },
-    {
-     "variable": {
-      "name": "w0d",
-      "value": "@ww / 100"
-     }
-    },
-    {
-     "variable": {
-      "name": "w0h",
-      "value": "fract(@T / @w0d) * @ww"
-     }
-    },
-    {
-     "variable": {
-      "name": "w0e",
-      "value": "floor(@w0h / 1) * 1"
-     }
-    },
-    {
-     "variable": {
-      "name": "w0s",
-      "value": "(floor((@w0h + @gap) / 1) + 1) * 1"
-     }
-    },
-    {
-     "variable": {
-      "name": "w0z",
-      "value": "floor(@ww / 1) * 1"
-     }
-    },
-    {
-     "pathExpression": {
-      "id": "w0p1",
-      "expressionX": "@wx + a[0]",
-      "expressionY": "@w0y - @w0a * spline(@ecg, min(1, fract((@T - fract((@w0h - a[0]) / @ww + 1) * @w0d) * @bps - 0) * @ek))",
-      "start": 0,
-      "end": "@w0e",
-      "count": "@w0e / 1 + 1",
-      "flags": 2
-     }
-    },
-    {
-     "pathExpression": {
-      "id": "w0p2",
-      "expressionX": "@wx + a[0]",
-      "expressionY": "@w0y - @w0a * spline(@ecg, min(1, fract((@T - fract((@w0h - a[0]) / @ww + 1) * @w0d) * @bps - 0) * @ek))",
-      "start": "@w0s",
-      "end": "@w0z",
-      "count": "max(2, (@w0z - @w0s) / 1 + 1)",
-      "flags": 2
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeJoin": "round"
-       },
-       {
-        "strokeCap": "round"
-       },
-       {
-        "strokeWidth": 2
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawPath": {
-      "path": "w0p1"
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@w0z - @w0s",
-      "v2": 1,
-      "commands": [
-       {
-        "drawPath": {
-         "path": "w0p2"
+        "offset": {
+         "x": 12,
+         "y": 40
         }
+       },
+       {
+        "width": "windowWidth() - 24 - ifElse(0, 1, windowWidth() - 1.15 * windowHeight()) * (clamp(180, 300, windowWidth() * 0.3) + 12)"
+       },
+       {
+        "height": "lerp((windowHeight() - 40) * 0.5, windowHeight() - 52, ifElse(0, 1, windowWidth() - 1.15 * windowHeight()))"
        }
-      ]
-     }
-    },
-    {
-     "paint": {
-      "ops": [
+      ],
+      "children": [
        {
-        "style": "fill"
-       },
-       {
-        "alpha": 0.25
-       }
-      ]
-     }
-    },
-    {
-     "variable": {
-      "name": "w0q",
-      "value": "@w0y - @w0a * spline(@ecg, min(1, fract(@T * @bps - 0) * @ek))"
-     }
-    },
-    {
-     "drawCircle": {
-      "cx": "@wx + @w0e",
-      "cy": "@w0q",
-      "radius": 6
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawCircle": {
-      "cx": "@wx + @w0e",
-      "cy": "@w0q",
-      "radius": 2.6
-     }
-    },
-    {
-     "variable": {
-      "name": "w1y",
-      "value": "@wy + @wh * 0.4 + @wh * 0.32 * 0.84"
-     }
-    },
-    {
-     "variable": {
-      "name": "w1a",
-      "value": "@wh * 0.32 * 0.62"
-     }
-    },
-    {
-     "variable": {
-      "name": "w1d",
-      "value": "@ww / 100"
-     }
-    },
-    {
-     "variable": {
-      "name": "w1h",
-      "value": "fract(@T / @w1d) * @ww"
-     }
-    },
-    {
-     "variable": {
-      "name": "w1e",
-      "value": "floor(@w1h / 2) * 2"
-     }
-    },
-    {
-     "variable": {
-      "name": "w1s",
-      "value": "(floor((@w1h + @gap) / 2) + 1) * 2"
-     }
-    },
-    {
-     "variable": {
-      "name": "w1z",
-      "value": "floor(@ww / 2) * 2"
-     }
-    },
-    {
-     "pathExpression": {
-      "id": "w1p1",
-      "expressionX": "@wx + a[0]",
-      "expressionY": "@w1y - @w1a * spline(@pleth, fract((@T - fract((@w1h - a[0]) / @ww + 1) * @w1d) * @bps - 0.18))",
-      "start": 0,
-      "end": "@w1e",
-      "count": "@w1e / 2 + 1",
-      "flags": 2
-     }
-    },
-    {
-     "pathExpression": {
-      "id": "w1p2",
-      "expressionX": "@wx + a[0]",
-      "expressionY": "@w1y - @w1a * spline(@pleth, fract((@T - fract((@w1h - a[0]) / @ww + 1) * @w1d) * @bps - 0.18))",
-      "start": "@w1s",
-      "end": "@w1z",
-      "count": "max(2, (@w1z - @w1s) / 2 + 1)",
-      "flags": 2
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeJoin": "round"
-       },
-       {
-        "strokeCap": "round"
-       },
-       {
-        "strokeWidth": 2
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawPath": {
-      "path": "w1p1"
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@w1z - @w1s",
-      "v2": 2,
-      "commands": [
-       {
-        "drawPath": {
-         "path": "w1p2"
-        }
-       }
-      ]
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "style": "fill"
-       },
-       {
-        "alpha": 0.25
-       }
-      ]
-     }
-    },
-    {
-     "variable": {
-      "name": "w1q",
-      "value": "@w1y - @w1a * spline(@pleth, fract(@T * @bps - 0.18))"
-     }
-    },
-    {
-     "drawCircle": {
-      "cx": "@wx + @w1e",
-      "cy": "@w1q",
-      "radius": 6
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawCircle": {
-      "cx": "@wx + @w1e",
-      "cy": "@w1q",
-      "radius": 2.6
-     }
-    },
-    {
-     "variable": {
-      "name": "w2y",
-      "value": "@wy + @wh * 0.72 + @wh * 0.28 * 0.82"
-     }
-    },
-    {
-     "variable": {
-      "name": "w2a",
-      "value": "@wh * 0.28 * 0.55"
-     }
-    },
-    {
-     "variable": {
-      "name": "w2d",
-      "value": "@ww / 25"
-     }
-    },
-    {
-     "variable": {
-      "name": "w2h",
-      "value": "fract(@T / @w2d) * @ww"
-     }
-    },
-    {
-     "variable": {
-      "name": "w2e",
-      "value": "floor(@w2h / 3) * 3"
-     }
-    },
-    {
-     "variable": {
-      "name": "w2s",
-      "value": "(floor((@w2h + @gap) / 3) + 1) * 3"
-     }
-    },
-    {
-     "variable": {
-      "name": "w2z",
-      "value": "floor(@ww / 3) * 3"
-     }
-    },
-    {
-     "pathExpression": {
-      "id": "w2p1",
-      "expressionX": "@wx + a[0]",
-      "expressionY": "@w2y - @w2a * spline(@resp, fract((@T - fract((@w2h - a[0]) / @ww + 1) * @w2d) * @rps - 0))",
-      "start": 0,
-      "end": "@w2e",
-      "count": "@w2e / 3 + 1",
-      "flags": 2
-     }
-    },
-    {
-     "pathExpression": {
-      "id": "w2p2",
-      "expressionX": "@wx + a[0]",
-      "expressionY": "@w2y - @w2a * spline(@resp, fract((@T - fract((@w2h - a[0]) / @ww + 1) * @w2d) * @rps - 0))",
-      "start": "@w2s",
-      "end": "@w2z",
-      "count": "max(2, (@w2z - @w2s) / 3 + 1)",
-      "flags": 2
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeJoin": "round"
-       },
-       {
-        "strokeCap": "round"
-       },
-       {
-        "strokeWidth": 1.6
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawPath": {
-      "path": "w2p1"
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@w2z - @w2s",
-      "v2": 3,
-      "commands": [
-       {
-        "drawPath": {
-         "path": "w2p2"
-        }
-       }
-      ]
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "style": "fill"
-       },
-       {
-        "alpha": 0.25
-       }
-      ]
-     }
-    },
-    {
-     "variable": {
-      "name": "w2q",
-      "value": "@w2y - @w2a * spline(@resp, fract(@T * @rps - 0))"
-     }
-    },
-    {
-     "drawCircle": {
-      "cx": "@wx + @w2e",
-      "cy": "@w2q",
-      "radius": 4.800000000000001
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawCircle": {
-      "cx": "@wx + @w2e",
-      "cy": "@w2q",
-      "radius": 2.08
-     }
-    },
-    {
-     "variable": {
-      "name": "hrX",
-      "value": "@tx"
-     }
-    },
-    {
-     "variable": {
-      "name": "hrY",
-      "value": "@ty"
-     }
-    },
-    {
-     "variable": {
-      "name": "hrW",
-      "value": "lerp(@tw / 2 - 5, @tw, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "hrH",
-      "value": "lerp(@th / 2 - 5, @th * 0.4 - 6, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "hrR",
-      "value": "@hrX + @hrW"
-     }
-    },
-    {
-     "variable": {
-      "name": "hrB",
-      "value": "@hrY + @hrH"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.background"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawRoundRect": {
-      "left": "@hrX",
-      "top": "@hrY",
-      "right": "@hrR",
-      "bottom": "@hrB",
-      "rx": 10,
-      "ry": 10
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.outline"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeWidth": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawRoundRect": {
-      "left": "@hrX + 0.5",
-      "top": "@hrY + 0.5",
-      "right": "@hrR - 0.5",
-      "bottom": "@hrB - 0.5",
-      "rx": 10,
-      "ry": 10
-     }
-    },
-    {
-     "variable": {
-      "name": "spX",
-      "value": "lerp(@tx + @tw / 2 + 5, @tx, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "spY",
-      "value": "lerp(@ty, @ty + @th * 0.4, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "spW",
-      "value": "lerp(@tw / 2 - 5, @tw, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "spH",
-      "value": "lerp(@th / 2 - 5, @th * 0.32 - 6, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "spR",
-      "value": "@spX + @spW"
-     }
-    },
-    {
-     "variable": {
-      "name": "spB",
-      "value": "@spY + @spH"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.background"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawRoundRect": {
-      "left": "@spX",
-      "top": "@spY",
-      "right": "@spR",
-      "bottom": "@spB",
-      "rx": 10,
-      "ry": 10
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.outline"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeWidth": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawRoundRect": {
-      "left": "@spX + 0.5",
-      "top": "@spY + 0.5",
-      "right": "@spR - 0.5",
-      "bottom": "@spB - 0.5",
-      "rx": 10,
-      "ry": 10
-     }
-    },
-    {
-     "variable": {
-      "name": "rrX",
-      "value": "@tx"
-     }
-    },
-    {
-     "variable": {
-      "name": "rrY",
-      "value": "lerp(@ty + @th / 2 + 5, @ty + @th * 0.72, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "rrW",
-      "value": "lerp(@tw / 2 - 5, @tw * 0.4 - 4, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "rrH",
-      "value": "lerp(@th / 2 - 5, @th * 0.28, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "rrR",
-      "value": "@rrX + @rrW"
-     }
-    },
-    {
-     "variable": {
-      "name": "rrB",
-      "value": "@rrY + @rrH"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.background"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawRoundRect": {
-      "left": "@rrX",
-      "top": "@rrY",
-      "right": "@rrR",
-      "bottom": "@rrB",
-      "rx": 10,
-      "ry": 10
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.outline"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeWidth": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawRoundRect": {
-      "left": "@rrX + 0.5",
-      "top": "@rrY + 0.5",
-      "right": "@rrR - 0.5",
-      "bottom": "@rrB - 0.5",
-      "rx": 10,
-      "ry": 10
-     }
-    },
-    {
-     "variable": {
-      "name": "bpX",
-      "value": "lerp(@tx + @tw / 2 + 5, @tx + @tw * 0.4 + 4, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "bpY",
-      "value": "lerp(@ty + @th / 2 + 5, @ty + @th * 0.72, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "bpW",
-      "value": "lerp(@tw / 2 - 5, @tw * 0.6 - 4, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "bpH",
-      "value": "lerp(@th / 2 - 5, @th * 0.28, @land)"
-     }
-    },
-    {
-     "variable": {
-      "name": "bpR",
-      "value": "@bpX + @bpW"
-     }
-    },
-    {
-     "variable": {
-      "name": "bpB",
-      "value": "@bpY + @bpH"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.background"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawRoundRect": {
-      "left": "@bpX",
-      "top": "@bpY",
-      "right": "@bpR",
-      "bottom": "@bpB",
-      "rx": 10,
-      "ry": 10
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.outline"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeWidth": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawRoundRect": {
-      "left": "@bpX + 0.5",
-      "top": "@bpY + 0.5",
-      "right": "@bpR - 0.5",
-      "bottom": "@bpB - 0.5",
-      "rx": 10,
-      "ry": 10
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@hrA",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
+        "column": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "children": [
           {
-           "color": "@colors.onSurface"
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "verticalWeight": 0.4
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "semantics": {
+                  "contentDescription": "II"
+                 }
+                }
+               ],
+               "commands": [
+                {
+                 "variable": {
+                  "name": "sweeptrace1_W",
+                  "value": "componentWidth()"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace1_y0",
+                  "value": "componentHeight() * 0.7"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace1_a",
+                  "value": "componentHeight() * 0.52"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace1_d",
+                  "value": "@sweeptrace1_W / 100"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace1_h",
+                  "value": "fract(@sweeptrace1_T / @sweeptrace1_d) * @sweeptrace1_W"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace1_e",
+                  "value": "floor(@sweeptrace1_h / 1) * 1"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace1_s",
+                  "value": "(floor((@sweeptrace1_h + 18) / 1) + 1) * 1"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace1_z",
+                  "value": "floor(@sweeptrace1_W / 1) * 1"
+                 }
+                },
+                {
+                 "pathExpression": {
+                  "id": "sweeptrace1_p1",
+                  "expressionX": "a[0]",
+                  "expressionY": "@sweeptrace1_y0 - @sweeptrace1_a * spline(@ecg, min(1, fract((@sweeptrace1_T - fract((@sweeptrace1_h - a[0]) / @sweeptrace1_W + 1) * @sweeptrace1_d) * @sweeptrace1_rr) * @sweeptrace1_k))",
+                  "start": 0,
+                  "end": "@sweeptrace1_e",
+                  "count": "@sweeptrace1_e / 1 + 1",
+                  "flags": 2
+                 }
+                },
+                {
+                 "pathExpression": {
+                  "id": "sweeptrace1_p2",
+                  "expressionX": "a[0]",
+                  "expressionY": "@sweeptrace1_y0 - @sweeptrace1_a * spline(@ecg, min(1, fract((@sweeptrace1_T - fract((@sweeptrace1_h - a[0]) / @sweeptrace1_W + 1) * @sweeptrace1_d) * @sweeptrace1_rr) * @sweeptrace1_k))",
+                  "start": "@sweeptrace1_s",
+                  "end": "@sweeptrace1_z",
+                  "count": "max(2, (@sweeptrace1_z - @sweeptrace1_s) / 1 + 1)",
+                  "flags": 2
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeJoin": "round"
+                   },
+                   {
+                    "strokeCap": "round"
+                   },
+                   {
+                    "strokeWidth": 2
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "sweeptrace1_p1"
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "gt",
+                  "v1": "@sweeptrace1_z - @sweeptrace1_s",
+                  "v2": 1,
+                  "commands": [
+                   {
+                    "drawPath": {
+                     "path": "sweeptrace1_p2"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace1_q",
+                  "value": "@sweeptrace1_y0 - @sweeptrace1_a * spline(@ecg, min(1, fract(@sweeptrace1_T * @sweeptrace1_rr) * @sweeptrace1_k))"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawCircle": {
+                  "cx": "@sweeptrace1_e",
+                  "cy": "@sweeptrace1_q",
+                  "radius": 3.1
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "textSize": 12
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "II",
+                  "x": 2,
+                  "y": 14,
+                  "panX": -1,
+                  "panY": 0
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
           },
           {
-           "style": "stroke"
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "verticalWeight": 0.32
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "semantics": {
+                  "contentDescription": "Pleth"
+                 }
+                }
+               ],
+               "commands": [
+                {
+                 "variable": {
+                  "name": "sweeptrace2_W",
+                  "value": "componentWidth()"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace2_y0",
+                  "value": "componentHeight() * 0.84"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace2_a",
+                  "value": "componentHeight() * 0.62"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace2_d",
+                  "value": "@sweeptrace2_W / 100"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace2_h",
+                  "value": "fract(@sweeptrace2_T / @sweeptrace2_d) * @sweeptrace2_W"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace2_e",
+                  "value": "floor(@sweeptrace2_h / 2) * 2"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace2_s",
+                  "value": "(floor((@sweeptrace2_h + 18) / 2) + 1) * 2"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace2_z",
+                  "value": "floor(@sweeptrace2_W / 2) * 2"
+                 }
+                },
+                {
+                 "pathExpression": {
+                  "id": "sweeptrace2_p1",
+                  "expressionX": "a[0]",
+                  "expressionY": "@sweeptrace2_y0 - @sweeptrace2_a * spline(@pleth, fract((@sweeptrace2_T - fract((@sweeptrace2_h - a[0]) / @sweeptrace2_W + 1) * @sweeptrace2_d) * @sweeptrace2_rr - 0.18))",
+                  "start": 0,
+                  "end": "@sweeptrace2_e",
+                  "count": "@sweeptrace2_e / 2 + 1",
+                  "flags": 2
+                 }
+                },
+                {
+                 "pathExpression": {
+                  "id": "sweeptrace2_p2",
+                  "expressionX": "a[0]",
+                  "expressionY": "@sweeptrace2_y0 - @sweeptrace2_a * spline(@pleth, fract((@sweeptrace2_T - fract((@sweeptrace2_h - a[0]) / @sweeptrace2_W + 1) * @sweeptrace2_d) * @sweeptrace2_rr - 0.18))",
+                  "start": "@sweeptrace2_s",
+                  "end": "@sweeptrace2_z",
+                  "count": "max(2, (@sweeptrace2_z - @sweeptrace2_s) / 2 + 1)",
+                  "flags": 2
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeJoin": "round"
+                   },
+                   {
+                    "strokeCap": "round"
+                   },
+                   {
+                    "strokeWidth": 2
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "sweeptrace2_p1"
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "gt",
+                  "v1": "@sweeptrace2_z - @sweeptrace2_s",
+                  "v2": 2,
+                  "commands": [
+                   {
+                    "drawPath": {
+                     "path": "sweeptrace2_p2"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace2_q",
+                  "value": "@sweeptrace2_y0 - @sweeptrace2_a * spline(@pleth, fract(@sweeptrace2_T * @sweeptrace2_rr - 0.18))"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawCircle": {
+                  "cx": "@sweeptrace2_e",
+                  "cy": "@sweeptrace2_q",
+                  "radius": 3.1
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "textSize": 12
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "Pleth",
+                  "x": 2,
+                  "y": 14,
+                  "panX": -1,
+                  "panY": 0
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
           },
           {
-           "strokeWidth": 4
-          },
-          {
-           "alpha": 1
-          }
-         ]
-        }
-       },
-       {
-        "drawRoundRect": {
-         "left": "@hrX + 2",
-         "top": "@hrY + 2",
-         "right": "@hrR - 2",
-         "bottom": "@hrB - 2",
-         "rx": 9,
-         "ry": 9
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "style": "fill"
-          }
-         ]
-        }
-       }
-      ]
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@hrA * @blink",
-      "v2": 0.5,
-      "commands": [
-       {
-        "drawRoundRect": {
-         "left": "@hrX",
-         "top": "@hrY",
-         "right": "@hrR",
-         "bottom": "@hrB",
-         "rx": 10,
-         "ry": 10
-        }
-       }
-      ]
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@spA",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "@colors.onSurface"
-          },
-          {
-           "style": "stroke"
-          },
-          {
-           "strokeWidth": 4
-          },
-          {
-           "alpha": 1
-          }
-         ]
-        }
-       },
-       {
-        "drawRoundRect": {
-         "left": "@spX + 2",
-         "top": "@spY + 2",
-         "right": "@spR - 2",
-         "bottom": "@spB - 2",
-         "rx": 9,
-         "ry": 9
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "style": "fill"
-          }
-         ]
-        }
-       }
-      ]
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@spA * @blink",
-      "v2": 0.5,
-      "commands": [
-       {
-        "drawRoundRect": {
-         "left": "@spX",
-         "top": "@spY",
-         "right": "@spR",
-         "bottom": "@spB",
-         "rx": 10,
-         "ry": 10
-        }
-       }
-      ]
-     }
-    },
-    {
-     "variable": {
-      "name": "hrF",
-      "value": "min(@hrH * 0.62, @hrW * 0.36)"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 14
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@hrA * @blink",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "@colors.background"
-          }
-         ]
-        }
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "HR",
-      "x": "@hrX + 12",
-      "y": "@hrY + 20",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.muted"
-       },
-       {
-        "textSize": 11
-       }
-      ]
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@hrA * @blink",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "@colors.background"
-          }
-         ]
-        }
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "bpm",
-      "x": "@hrR - 12",
-      "y": "@hrY + 20",
-      "panX": 1,
-      "panY": 0
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "@hrHi",
-       "whole": 3,
-       "decimal": 0,
-       "flags": 5
-      },
-      "x": "@hrX + 12",
-      "y": "@hrY + 40",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "@hrLo",
-       "whole": 3,
-       "decimal": 0,
-       "flags": 5
-      },
-      "x": "@hrX + 12",
-      "y": "@hrY + 54",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "textSize": "@hrF"
-       }
-      ]
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@hrA * @blink",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "@colors.background"
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "verticalWeight": 0.28
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "semantics": {
+                  "contentDescription": "Resp"
+                 }
+                }
+               ],
+               "commands": [
+                {
+                 "variable": {
+                  "name": "sweeptrace3_W",
+                  "value": "componentWidth()"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace3_y0",
+                  "value": "componentHeight() * 0.82"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace3_a",
+                  "value": "componentHeight() * 0.55"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace3_d",
+                  "value": "@sweeptrace3_W / 25"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace3_h",
+                  "value": "fract(@sweeptrace3_T / @sweeptrace3_d) * @sweeptrace3_W"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace3_e",
+                  "value": "floor(@sweeptrace3_h / 3) * 3"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace3_s",
+                  "value": "(floor((@sweeptrace3_h + 18) / 3) + 1) * 3"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace3_z",
+                  "value": "floor(@sweeptrace3_W / 3) * 3"
+                 }
+                },
+                {
+                 "pathExpression": {
+                  "id": "sweeptrace3_p1",
+                  "expressionX": "a[0]",
+                  "expressionY": "@sweeptrace3_y0 - @sweeptrace3_a * spline(@resp, fract((@sweeptrace3_T - fract((@sweeptrace3_h - a[0]) / @sweeptrace3_W + 1) * @sweeptrace3_d) * @sweeptrace3_rr))",
+                  "start": 0,
+                  "end": "@sweeptrace3_e",
+                  "count": "@sweeptrace3_e / 3 + 1",
+                  "flags": 2
+                 }
+                },
+                {
+                 "pathExpression": {
+                  "id": "sweeptrace3_p2",
+                  "expressionX": "a[0]",
+                  "expressionY": "@sweeptrace3_y0 - @sweeptrace3_a * spline(@resp, fract((@sweeptrace3_T - fract((@sweeptrace3_h - a[0]) / @sweeptrace3_W + 1) * @sweeptrace3_d) * @sweeptrace3_rr))",
+                  "start": "@sweeptrace3_s",
+                  "end": "@sweeptrace3_z",
+                  "count": "max(2, (@sweeptrace3_z - @sweeptrace3_s) / 3 + 1)",
+                  "flags": 2
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeJoin": "round"
+                   },
+                   {
+                    "strokeCap": "round"
+                   },
+                   {
+                    "strokeWidth": 1.6
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "sweeptrace3_p1"
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "gt",
+                  "v1": "@sweeptrace3_z - @sweeptrace3_s",
+                  "v2": 3,
+                  "commands": [
+                   {
+                    "drawPath": {
+                     "path": "sweeptrace3_p2"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "sweeptrace3_q",
+                  "value": "@sweeptrace3_y0 - @sweeptrace3_a * spline(@resp, fract(@sweeptrace3_T * @sweeptrace3_rr))"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawCircle": {
+                  "cx": "@sweeptrace3_e",
+                  "cy": "@sweeptrace3_q",
+                  "radius": 2.58
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "textSize": 12
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "Resp",
+                  "x": 2,
+                  "y": 14,
+                  "panX": -1,
+                  "panY": 0
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
           }
          ]
         }
        }
       ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "@hr",
-       "whole": 3,
-       "decimal": 0,
-       "flags": 5
-      },
-      "x": "@hrR - 12",
-      "y": "@hrB - @hrH * 0.4",
-      "panX": 1,
-      "panY": 0
-     }
-    },
-    {
-     "variable": {
-      "name": "beat",
-      "value": "exp(-fract(@T * @bps - 0.282 / @ek) * 9)"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawCircle": {
-      "cx": "@hrX + 44",
-      "cy": "@hrY + 15",
-      "radius": "3 + 2 * @beat"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "variable": {
-      "name": "spF",
-      "value": "min(@spH * 0.62, @spW * 0.36)"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 14
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@spA * @blink",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "@colors.background"
-          }
-         ]
-        }
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "SpO2",
-      "x": "@spX + 12",
-      "y": "@spY + 20",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.muted"
-       },
-       {
-        "textSize": 11
-       }
-      ]
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@spA * @blink",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "@colors.background"
-          }
-         ]
-        }
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "%",
-      "x": "@spR - 12",
-      "y": "@spY + 20",
-      "panX": 1,
-      "panY": 0
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "100",
-       "whole": 3,
-       "decimal": 0,
-       "flags": 5
-      },
-      "x": "@spX + 12",
-      "y": "@spY + 40",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "@spo2Lo",
-       "whole": 3,
-       "decimal": 0,
-       "flags": 5
-      },
-      "x": "@spX + 12",
-      "y": "@spY + 54",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "textSize": "@spF"
-       }
-      ]
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@spA * @blink",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "@colors.background"
-          }
-         ]
-        }
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "@spo2",
-       "whole": 3,
-       "decimal": 0,
-       "flags": 5
-      },
-      "x": "@spR - 26",
-      "y": "@spB - @spH * 0.4",
-      "panX": 1,
-      "panY": 0
-     }
-    },
-    {
-     "variable": {
-      "name": "pv",
-      "value": "spline(@pleth, fract(@T * @bps - 0.18))"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.outline"
-       }
-      ]
-     }
-    },
-    {
-     "drawRoundRect": {
-      "left": "@spR - 18",
-      "top": "@spY + 32",
-      "right": "@spR - 12",
-      "bottom": "@spB - 12",
-      "rx": 3,
-      "ry": 3
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       }
-      ]
-     }
-    },
-    {
-     "drawRoundRect": {
-      "left": "@spR - 18",
-      "top": "@spB - 12 - (@spH - 44) * (0.15 + 0.85 * @pv)",
-      "right": "@spR - 12",
-      "bottom": "@spB - 12",
-      "rx": 3,
-      "ry": 3
-     }
-    },
-    {
-     "variable": {
-      "name": "rrF",
-      "value": "min(@rrH * 0.5, @rrW * 0.36)"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 14
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "RR",
-      "x": "@rrX + 12",
-      "y": "@rrY + 20",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.muted"
-       },
-       {
-        "textSize": 11
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "rpm",
-      "x": "@rrR - 12",
-      "y": "@rrY + 20",
-      "panX": 1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "textSize": "@rrF"
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "@rr",
-       "whole": 3,
-       "decimal": 0,
-       "flags": 5
-      },
-      "x": "@rrR - 12",
-      "y": "@rrB - @rrH * 0.36",
-      "panX": 1,
-      "panY": 0
-     }
-    },
-    {
-     "variable": {
-      "name": "bpF",
-      "value": "min(@bpH * 0.36, @bpW * 0.17)"
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 14
-       },
-       {
-        "alpha": 1
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "NIBP",
-      "x": "@bpX + 12",
-      "y": "@bpY + 20",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.muted"
-       },
-       {
-        "textSize": 11
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "mmHg",
-      "x": "@bpR - 12",
-      "y": "@bpY + 20",
-      "panX": 1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.onSurface"
-       },
-       {
-        "textSize": "@bpF"
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "@sys",
-       "whole": 3,
-       "decimal": 0,
-       "flags": 5
-      },
-      "x": "@bpX + @bpW * 0.5 - @bpF * 0.18",
-      "y": "@bpB - @bpH * 0.38",
-      "panX": 1,
-      "panY": 0
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "/",
-      "x": "@bpX + @bpW * 0.5",
-      "y": "@bpB - @bpH * 0.38",
-      "panX": 0,
-      "panY": 0
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "@dia",
-       "whole": 3,
-       "decimal": 0,
-       "flags": 5
-      },
-      "x": "@bpX + @bpW * 0.5 + @bpF * 0.18",
-      "y": "@bpB - @bpH * 0.38",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "@colors.muted"
-       },
-       {
-        "textSize": 12
-       }
-      ]
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": "MAP",
-      "x": "@bpX + 12",
-      "y": "@bpB - 12",
-      "panX": -1,
-      "panY": 0
-     }
-    },
-    {
-     "variable": {
-      "name": "map",
-      "value": "round((@sys + 2 * @dia) / 3)"
-     }
-    },
-    {
-     "drawTextAnchored": {
-      "text": {
-       "type": "textFromFloat",
-       "value": "@map",
-       "whole": 3,
-       "decimal": 0,
-       "flags": 5
-      },
-      "x": "@bpX + 44",
-      "y": "@bpB - 12",
-      "panX": -1,
-      "panY": 0
      }
     }
    ]

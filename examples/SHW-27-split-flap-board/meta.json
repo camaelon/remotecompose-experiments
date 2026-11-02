@@ -7,7 +7,6 @@
  "prompt": "Make an airport or train station split-flap departure board: rows of departures with time, destination, platform and status, where every character flips through the letters with the mechanical flap animation when a row changes. Boarding and Delayed in their own colours. It should look great on a tablet in landscape and still work on a phone.",
  "level": 5,
  "family": "SHW",
- "hand_built": "The flap is a per-tile state machine (old code, new code, steps through the drum, the half-flap fold) evaluated inside nested loops over float arrays; no library component draws tiles from arrays, and a component per tile would multiply the document by 300.",
  "capabilities": {
   "primary": [
    "data.loop",
@@ -59,9 +58,9 @@
   "kiosk"
  ],
  "teaches": [
+  "Three SplitFlap calls over one canvas: the rows (tiles = the layout's column count, rows = what fits, tileX and tileY read from the layout's cx/cy arrays), the status column (a word drum, glyphWidth 8, align start) and the clock (code from timeInHr/timeInMin, since continuousSec() % 60). The board canvas below draws the header, labels and ticker; one canvas above draws the status colours and lamps once each status has settled",
+  "Per tile, as expressions of i (tile) and r (row): code = arrayGet(@chars, ((@k + r) % 12) * 26 + arrayGet(@cols, @cbase + i)), prev the same for the previous cycle, since = the time into the 9 s cycle; SplitFlap steps forward through the drum ((code - prev) mod 40 flaps at 22 a second) and draws the half-flap fold",
   "Text as numbers: each train is 26 character codes into a 40-character drum (space, A-Z, 0-9, ':', '-', '.'), all twelve in one float array; textSubtext(drum, code, 1) turns a code back into its glyph inside the loop, and the status words are 8-letter slices of one string",
-  "A real split-flap moves forward only: steps = (new - old + 40) % 40, progress f = clamp((tc - delay) * 22, steps, 0); the shown glyph is (old + floor(f)) % 40 and the next one is that plus one until f reaches steps",
-  "The fold in four draws per tile: the next glyph's top half and the current glyph's bottom half (clipRect), then the flap — the current top half shrinking to the split (scale sy = 1 - 2s about the split) or, past half way, the next bottom half opening — darkened as it turns edge-on",
   "The board cycle is floor(animationTime() / 9): row r shows train (k + r) % 12 and flips from train (k + r - 1) % 12, so the top train leaves and the list moves up; at load everything flips in from blank",
   "A per-tile delay (row * 0.16 + column * 0.035 + a hashed jitter fract(sin(r * 12.9 + c * 78.2) * 437.5) * 0.25) makes the flurry ripple across the board instead of flipping in lockstep",
   "The status is a whole-word flap (ON TIME, BOARDING, DELAYED, CANCELED) on its own five-entry list; once settled the word is redrawn in its colour through a clip whose width is zero for every other status, with a lamp that blinks for BOARDING",
@@ -74,8 +73,8 @@
   "clamp is clamp(value, max, min) in these players: clamp(x, 1, 12) is always 1",
   "step(a, b) is a > b, strictly: step(@k, 1) is 0 for the first cycle after the intro",
   "ifElse is ifElse(else, then, condition)",
-  "Never declare the same variable name twice in one document — the second declaration does not make a new value — so every flap call uses its own prefix for its variables",
-  "The tiles are redrawn every frame (about 270 tiles, roughly 10 000 operations a frame on the wide board): fine on a tablet or a kiosk, heavier than a normal screen"
+  "The tiles are redrawn every frame (about 270 tiles, roughly 10 000 operations a frame on the wide board): fine on a tablet or a kiosk, heavier than a normal screen",
+  "Variables the board canvas declares (@cw, @th, @k, @tc ...) are read by the SplitFlap canvases drawn after it in the same box: keep the board canvas first"
  ],
  "inputs": {
   "variables": {},
@@ -84,9 +83,9 @@
  },
  "snippets": [
   {
-   "pointer": "/root/commands/39",
+   "pointer": "/root/box/children/2",
    "shows": "data.loop",
-   "note": "the rows: an outer loop over rows, an inner loop over tiles, then the status flap"
+   "note": "the rows: one SplitFlap call, codes per tile and row from the float array"
   },
   {
    "pointer": "/resources/floatArrays",
@@ -94,22 +93,22 @@
    "note": "twelve trains as character codes, the status codes, and the three layouts' column tables"
   },
   {
-   "pointer": "/root/commands/16",
+   "pointer": "/root/box/children/0/canvas/commands/16",
    "shows": "time.animation",
    "note": "the board cycle from animationTime()"
   },
   {
-   "pointer": "/root/commands/39",
+   "pointer": "/root/box/children/2",
    "shows": "expr.string",
-   "note": "each tile slices its glyph out of the 40-character drum string with textSubtext"
+   "note": "the rows: one SplitFlap call, codes per tile and row from the float array"
   },
   {
-   "pointer": "/root/commands/31",
+   "pointer": "/root/box/children/1",
    "shows": "time.clock",
-   "note": "the flap clock: HH:MM digits from the clock, flipping from the previous minute"
+   "note": "the flap clock: a SplitFlap fed from the clock"
   },
   {
-   "pointer": "/root/commands/45",
+   "pointer": "/root/box/children/0/canvas/commands/41",
    "shows": "text.measure",
    "note": "the ticker, repeated at its measured width"
   }
@@ -204,46 +203,52 @@
   "DRW-12"
  ],
  "derived": {
-  "components": [],
-  "component_instances": 0,
-  "component_modes": {},
+  "components": [
+   "SplitFlap"
+  ],
+  "component_instances": 3,
+  "component_modes": {
+   "SplitFlap": "expand"
+  },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 12985,
+  "bytes": 13989,
   "header": {
    "width": 1280,
    "height": 800
   },
-  "op_count": 480,
+  "op_count": 516,
   "operations": {
-   "ANIMATED_FLOAT": 179,
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATED_FLOAT": 182,
    "CLIP_RECT": 17,
    "COLOR_CONSTANT": 26,
    "COLOR_EXPRESSIONS": 26,
    "COMPONENT_VALUE": 2,
-   "CanvasContent": 1,
-   "DATA_TEXT": 14,
+   "CanvasContent": 5,
+   "DATA_TEXT": 15,
    "DRAW_CIRCLE": 4,
    "DRAW_RECT": 7,
    "DRAW_ROUND_RECT": 6,
    "DRAW_TEXT_ANCHOR": 21,
    "DataListFloat": 5,
    "HEADER": 1,
-   "LAYOUT_CANVAS": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_CANVAS": 5,
    "LAYOUT_ROOT": 1,
-   "LayoutComponentContent": 1,
-   "LoopOperation": 30,
+   "LayoutComponentContent": 6,
+   "LoopOperation": 34,
    "MATRIX_RESTORE": 17,
    "MATRIX_SAVE": 17,
    "MATRIX_SCALE": 3,
    "MODIFIER_BACKGROUND": 1,
-   "MODIFIER_HEIGHT": 1,
-   "MODIFIER_WIDTH": 1,
+   "MODIFIER_HEIGHT": 6,
+   "MODIFIER_WIDTH": 6,
    "NAMED_VARIABLE": 18,
    "PAINT_VALUES": 31,
    "THEME": 39,
    "TextMeasure": 1,
-   "TextSubtext": 9
+   "TextSubtext": 10
   },
   "host_variables": [
    {
@@ -874,12 +879,11 @@
   "audit": {
    "error": 0,
    "warning": 0,
-   "info": 4
+   "info": 3
   },
   "audit_findings": [
    "info: repaint_continuous",
    "info: deep_expressions",
-   "info: absolute_layout",
    "info: expression_entries"
   ],
   "repaint": "continuous",
@@ -903,9 +907,11 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 12104,
-    "component_modes": {},
-    "op_count": 395,
+    "bytes": 9597,
+    "component_modes": {
+     "SplitFlap": "expand"
+    },
+    "op_count": 300,
     "host_variables": [
      {
       "name": "accent",
@@ -1553,9 +1559,11 @@
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 12104,
-    "component_modes": {},
-    "op_count": 395,
+    "bytes": 9597,
+    "component_modes": {
+     "SplitFlap": "expand"
+    },
+    "op_count": 300,
     "host_variables": [
      {
       "name": "accent",
@@ -2284,15 +2292,21 @@
   },
   "json_keys": [
    "$if",
+   "SplitFlap",
    "accent",
+   "align",
    "alpha",
    "apiLevel",
    "background",
    "band",
    "bandText",
    "bottom",
+   "box",
+   "canvas",
    "chars",
+   "children",
    "clipRect",
+   "code",
    "color",
    "colors",
    "cols",
@@ -2301,20 +2315,28 @@
    "cx",
    "cy",
    "dark",
+   "delay",
    "drawCircle",
    "drawLine",
    "drawRect",
    "drawRoundRect",
    "drawSector",
    "drawTextAnchored",
+   "drum",
    "else",
+   "fill",
    "flap",
+   "flapColor",
    "floatArrays",
    "from",
+   "glyphWidth",
    "header",
    "height",
    "index",
    "ink",
+   "inset",
+   "jitter",
+   "label",
    "left",
    "len",
    "light",
@@ -2329,11 +2351,15 @@
    "panY",
    "pivotX",
    "pivotY",
+   "prev",
    "profiles",
    "radius",
    "resources",
    "right",
+   "ripple",
    "root",
+   "rowPitch",
+   "rows",
    "rx",
    "ry",
    "sBoarding",
@@ -2342,7 +2368,10 @@
    "sOnTime",
    "save",
    "scale",
+   "semantics",
+   "since",
    "split",
+   "splitColor",
    "start",
    "startAngle",
    "status",
@@ -2357,8 +2386,13 @@
    "textSubtext",
    "then",
    "tile",
+   "tileColor",
+   "tileHeight",
+   "tileWidth",
+   "tileX",
+   "tileY",
+   "tiles",
    "top",
-   "type",
    "until",
    "value",
    "varName",
@@ -2417,6 +2451,9 @@
     "drawTextAnchored"
    ]
   },
-  "built_at": "2026-11-02T20:23:31.512Z"
- }
+  "built_at": "2026-11-02T22:50:52.605Z"
+ },
+ "components": [
+  "SplitFlap"
+ ]
 }

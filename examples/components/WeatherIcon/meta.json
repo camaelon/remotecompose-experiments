@@ -1,7 +1,7 @@
 {
  "id": "WeatherIcon",
  "name": "weather-icon",
- "version": 1,
+ "version": 2,
  "title": "Weather icon",
  "prompt": "Draw weather symbols for sunny, cloudy, rain, snow and thunderstorm, without images or SVG paths, labelled underneath.",
  "level": 1,
@@ -26,14 +26,23 @@
   "mist",
   "night",
   "moon",
-  "clear night"
+  "clear night",
+  "morph",
+  "morphing weather icon",
+  "animated weather icon",
+  "weather animation",
+  "icon transition",
+  "condition change"
  ],
  "teaches": [
   "{\"WeatherIcon\": {\"condition\": \"rain\"}} draws a 48 dp symbol; condition is static (sun, cloud, rain, snow, storm, partly, fog) and size scales the 24-unit drawing",
   "A cloud is three circles over a rounded rectangle; the mono outline is the same shapes drawn larger in onSurface and then in the background colour, which outlines their union",
   "Sun rays are one line in a loop that rotates the canvas 45° per pass, so the paint is set once",
   "night: \"@isNight\" swaps the sun for a crescent moon (sun and partly) at run time: both drawings are written, each in a conditionalOperations block on the variable",
-  "The crescent is a pathData op list of cubics (two circular arcs), about 200 B, so it needs no background-coloured bite and mono strokes the same path"
+  "The crescent is a pathData op list of cubics (two circular arcs), about 200 B, so it needs no background-coloured bite and mono strokes the same path",
+  "{\"WeatherIcon\": {\"morph\": true, \"value\": \"@cond\"}} is one outline that morphs between sun, cloud, rain, snow and storm whenever @cond (0..4) changes: per-condition eased weights and four chained pathTweens, so any pair morphs directly",
+  "look \"rich\" gives gradient bodies and a sun glow for icons on a coloured sky; animate: true turns the rays and makes the rain fall, the snow drift and the bolt flicker (continuous repaint)",
+  "The morph outlines come from the weather-outline generator ($gen): one shared path per shape in the document, whatever the number of calls"
  ],
  "snippets": [
   {
@@ -50,15 +59,38 @@
    "pointer": "/root/column/children/2/row/children/0",
    "shows": "draw.transform",
    "note": "storm at 32 dp with its own label"
+  },
+  {
+   "pointer": "/root/column/children/3/row/children/0/box/children/0",
+   "shows": "anim.morph",
+   "note": "morph mode, driven by @wx; the box around it cycles @wx on tap"
+  },
+  {
+   "pointer": "/root/column/children/3/row/children/0/box/children/0",
+   "shows": "draw.morph",
+   "note": "four chained pathTweens between the generator's outlines"
+  },
+  {
+   "pointer": "/root/column/children/3/row/children/0/box/children/0",
+   "shows": "anim.value",
+   "note": "one eased weight per condition"
   }
  ],
  "inputs": {
-  "variables": {},
+  "variables": {
+   "wx": {
+    "type": "float",
+    "meaning": "the morphing icons' condition, 0 sun to 4 storm",
+    "default": 0,
+    "min": 0,
+    "max": 4
+   }
+  },
   "clock": null,
-  "touch": false
+  "touch": true
  },
  "check": {
-  "describe": "Five distinct 48 dp icons in equal columns, each labelled: an amber sun with eight rays, a grey cloud centred in its square, a cloud over three slanted blue drops, a cloud over three blue dots, and a cloud over an amber bolt; below, a 32 dp storm icon. In mono the sun is a ring with rays and the clouds are white outlines. The columns are weighted: at 260 dp they get closer, at 480 dp they spread out; the icons keep their size.",
+  "describe": "Five distinct 48 dp icons in equal columns, each labelled: an amber sun with eight rays, a grey cloud centred in its square, a cloud over three slanted blue drops, a cloud over three blue dots, and a cloud over an amber bolt; below, a 32 dp storm icon. In mono the sun is a ring with rays and the clouds are white outlines. The columns are weighted: at 260 dp they get closer, at 480 dp they spread out; the icons keep their size. Below: two 96 dp morph icons (flat on the background, rich on a blue sky tile, an outlined drawing in mono) showing the sun; tapping the first steps @wx (sun -> cloud -> rain -> snow -> storm), and both morph to it: mid-morph the disc swells into the cloud outline.",
   "render": {},
   "renders": [
    {
@@ -80,65 +112,102 @@
    {
     "name": "narrow",
     "width": 280,
-    "height": 200
+    "height": 330
    },
    {
     "name": "wide",
     "width": 480,
-    "height": 200
+    "height": 330
+   },
+   {
+    "name": "morph-rain",
+    "variables": {
+     "wx": 2
+    },
+    "duration": 1.2
+   },
+   {
+    "name": "morph-storm-dark",
+    "theme": "dark",
+    "variables": {
+     "wx": 4
+    },
+    "duration": 1.2
+   },
+   {
+    "name": "morph-mid",
+    "touch_events": [
+     {
+      "t": 0.3,
+      "type": "tap",
+      "x": 64,
+      "y": 260
+     }
+    ],
+    "duration": 0.62
    }
   ]
  },
  "related": [
-  "CMP-11"
+  "ANM-09",
+  "CMP-11",
+  "SHW-30"
  ],
  "derived": {
   "components": [
    "WeatherIcon"
   ],
-  "component_instances": 6,
+  "component_instances": 8,
   "component_modes": {
    "WeatherIcon": "expand"
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 3814,
+  "bytes": 13583,
   "header": {
    "width": 320,
-   "height": 200
+   "height": 330
   },
-  "op_count": 247,
+  "op_count": 438,
   "operations": {
-   "ACCESSIBILITY_SEMANTICS": 6,
-   "ANIMATED_FLOAT": 30,
-   "COLOR_CONSTANT": 10,
-   "COLOR_EXPRESSIONS": 10,
-   "COMPONENT_VALUE": 12,
-   "CanvasContent": 6,
+   "ACCESSIBILITY_SEMANTICS": 9,
+   "ANIMATED_FLOAT": 95,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
+   "COMPONENT_VALUE": 16,
+   "CanvasContent": 8,
    "CoreText": 7,
-   "DATA_TEXT": 14,
-   "DRAW_CIRCLE": 20,
-   "DRAW_LINE": 10,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 17,
+   "DRAW_CIRCLE": 23,
+   "DRAW_LINE": 14,
+   "DRAW_PATH": 11,
    "DRAW_ROUND_RECT": 5,
    "HEADER": 1,
-   "LAYOUT_CANVAS": 6,
+   "LAYOUT_BOX": 3,
+   "LAYOUT_CANVAS": 8,
    "LAYOUT_COLUMN": 6,
    "LAYOUT_ROOT": 1,
-   "LAYOUT_ROW": 2,
-   "LayoutComponentContent": 21,
-   "LoopOperation": 11,
-   "MATRIX_RESTORE": 1,
-   "MATRIX_ROTATE": 1,
-   "MATRIX_SAVE": 1,
-   "MATRIX_SCALE": 6,
-   "MATRIX_TRANSLATE": 7,
-   "MODIFIER_BACKGROUND": 1,
-   "MODIFIER_HEIGHT": 7,
+   "LAYOUT_ROW": 3,
+   "LayoutComponentContent": 26,
+   "LoopOperation": 19,
+   "MATRIX_RESTORE": 3,
+   "MATRIX_ROTATE": 3,
+   "MATRIX_SAVE": 3,
+   "MATRIX_SCALE": 8,
+   "MATRIX_TRANSLATE": 9,
+   "MODIFIER_BACKGROUND": 2,
+   "MODIFIER_CLICK": 1,
+   "MODIFIER_HEIGHT": 11,
    "MODIFIER_PADDING": 1,
-   "MODIFIER_WIDTH": 13,
-   "NAMED_VARIABLE": 5,
-   "PAINT_VALUES": 11,
-   "THEME": 15
+   "MODIFIER_WIDTH": 18,
+   "NAMED_VARIABLE": 7,
+   "PAINT_VALUES": 41,
+   "PATH_DATA": 6,
+   "PATH_TWEEN": 8,
+   "RoundedClipRectModifierOperation": 1,
+   "THEME": 18,
+   "ValueFloatExpressionChangeActionOperation": 1
   },
   "host_variables": [
    {
@@ -162,9 +231,19 @@
     "value": "#FF4DA3FF"
    },
    {
+    "name": "sky",
+    "type": "color",
+    "value": "#FF2F6DB5"
+   },
+   {
     "name": "warning",
     "type": "color",
     "value": "#FFFFB74D"
+   },
+   {
+    "name": "wx",
+    "type": "float",
+    "value": 0
    }
   ],
   "render_findings": [],
@@ -176,8 +255,8 @@
   "audit_findings": [],
   "repaint": "idle",
   "interaction_targets": {
-   "total": 0,
-   "click": 0,
+   "total": 1,
+   "click": 1,
    "area": 0,
    "touch": 0
   },
@@ -195,11 +274,12 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 3667,
+    "bytes": 12826,
     "component_modes": {
      "WeatherIcon": "expand"
     },
-    "op_count": 230,
+    "motion_removed": 10,
+    "op_count": 393,
     "host_variables": [
      {
       "name": "background",
@@ -222,9 +302,19 @@
       "value": "#FFFFFFFF"
      },
      {
+      "name": "sky",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
       "name": "warning",
       "type": "color",
       "value": "#FFFFFFFF"
+     },
+     {
+      "name": "wx",
+      "type": "float",
+      "value": 0
      }
     ],
     "java_identical": true,
@@ -234,11 +324,12 @@
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 3667,
+    "bytes": 12826,
     "component_modes": {
      "WeatherIcon": "expand"
     },
-    "op_count": 230,
+    "motion_removed": 10,
+    "op_count": 393,
     "host_variables": [
      {
       "name": "background",
@@ -261,9 +352,19 @@
       "value": "#FF000000"
      },
      {
+      "name": "sky",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
       "name": "warning",
       "type": "color",
       "value": "#FF000000"
+     },
+     {
+      "name": "wx",
+      "type": "float",
+      "value": 0
      }
     ],
     "java_identical": true,
@@ -276,7 +377,7 @@
     "render_findings": [],
     "size": [
      280,
-     200
+     330
     ],
     "audit_findings": []
    },
@@ -285,19 +386,39 @@
     "render_findings": [],
     "size": [
      480,
-     200
+     330
     ],
     "audit_findings": []
+   },
+   "morph-rain": {
+    "render": "render-morph-rain.png",
+    "render_findings": []
+   },
+   "morph-storm-dark": {
+    "theme": "dark",
+    "render": "render-morph-storm-dark.png",
+    "render_findings": []
+   },
+   "morph-mid": {
+    "render": "render-morph-mid.png",
+    "render_findings": []
    }
   },
   "json_keys": [
    "WeatherIcon",
+   "alpha",
    "angle",
+   "anim",
    "apiLevel",
    "background",
    "bottom",
+   "box",
    "canvas",
+   "centerX",
+   "centerY",
    "children",
+   "clickable",
+   "clip",
    "color",
    "colors",
    "column",
@@ -309,42 +430,66 @@
    "dark",
    "drawCircle",
    "drawLine",
+   "drawPath",
    "drawRoundRect",
    "dx",
    "dy",
+   "export",
    "fontSize",
    "from",
+   "gen_wx_bolt_1",
+   "gen_wx_cloud_1",
+   "gen_wx_rain_1",
+   "gen_wx_snow_1",
+   "gen_wx_storm_1",
+   "gen_wx_sun_1",
    "header",
    "height",
    "horizontalAlignment",
+   "id",
    "index",
    "label",
    "left",
    "light",
+   "linearGradient",
+   "look",
    "loop",
    "modifiers",
+   "mono-dark",
+   "mono-light",
+   "morph",
    "muted",
    "name",
+   "onClick",
    "onSurface",
    "ops",
    "padding",
    "paint",
+   "path",
+   "path1",
+   "path2",
+   "pathTween",
+   "paths",
    "pivotX",
    "pivotY",
    "primary",
    "profiles",
+   "radialGradient",
    "radius",
    "resources",
    "right",
    "root",
    "rotate",
+   "roundedRect",
    "row",
    "rx",
    "ry",
    "save",
    "scale",
    "semantics",
+   "shader",
    "size",
+   "sky",
    "spacedBy",
    "step",
    "strokeCap",
@@ -353,20 +498,29 @@
    "style",
    "sx",
    "sy",
+   "target",
    "text",
    "top",
    "translate",
+   "tween",
+   "type",
    "until",
    "value",
    "variable",
+   "variables",
    "verticalAlignment",
    "warning",
    "weight",
    "width",
+   "wx",
+   "x",
    "x1",
    "x2",
+   "x3",
+   "y",
    "y1",
-   "y2"
+   "y2",
+   "y3"
   ],
   "evidence": {
    "draw.shapes": [
@@ -382,8 +536,17 @@
    ],
    "data.loop": [
     "loop"
+   ],
+   "anim.morph": [
+    "pathTween"
+   ],
+   "draw.morph": [
+    "pathTween"
+   ],
+   "anim.value": [
+    "anim"
    ]
   },
-  "built_at": "2026-11-01T22:51:44.372Z"
+  "built_at": "2026-11-02T22:57:25.194Z"
  }
 }

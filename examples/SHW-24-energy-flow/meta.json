@@ -7,7 +7,6 @@
  "prompt": "Build a home energy flow diagram: sources (solar, grid, battery) to uses (house, car, heat pump, export) as a Sankey, ribbon widths from host data arrays, animated particles flowing along the ribbons at speeds proportional to the flow, and a smooth transition when the data changes. Labels with values; tablet and phone layouts.",
  "level": 5,
  "family": "SHW",
- "hand_built": "A Sankey needs each ribbon's two stacked offsets computed from all the flows before it; no library chart does that, so the twelve ribbons are generated from one recipe.",
  "capabilities": {
   "primary": [
    "draw.plot",
@@ -82,12 +81,10 @@
   "touch": false
  },
  "teaches": [
+  "The diagram is one Sankey call: {\"flows\": \"@flows\", \"sources\": [[\"Solar\", \"@colors.solar\"], ...], \"uses\": [...]}; themed node colours live in resources.colors",
   "Each flow is eased on its own: g_k = arrayGet(@flows, k), then f_k = {value: @g_k, anim: 1.2}. Every offset is a sum of eased flows, so ribbons, bars and labels move together and never overlap mid-transition",
   "A ribbon is ONE closed pathExpression: a in 0..2, x = xs + dx * (1 - abs(1 - a)), y = ya + (yb - ya) * (1 - cos(pi a)) / 2 + w * step(a, 1). The same cosine ease serves the top edge forward and the bottom edge back; flags 4 (linear) keeps the corners square",
-  "Stacking without loops over variables: the source offset of link (s, u) is the sum of the flows before it in its row, the use offset the sum before it in its column, written out by the generator",
-  "Particles: phase = fract(T * 0.16 * arrayGet(@flows, i)) and a loop of 7 dots at fract(phase + j / 7), each with a fixed lateral offset sin(j * 2.39 + i) and alpha sin(pi t) so they fade in and out at the bars",
-  "Zero flows are skipped with conditionalOperations (gt @f_k 0.01), not drawn as hairlines",
-  "Layout scales with the box: label column clamp(70, 150, 0.21 W), gaps clamp(14, 30, 0.06 H), text clamp(11, 14, 0.018 W)"
+  "Particles: phase = fract(T * 0.16 * arrayGet(@flows, i)) and a loop of 7 dots at fract(phase + j / 7), each with a fixed lateral offset sin(j * 2.39 + i) and alpha sin(pi t) so they fade in and out at the bars"
  ],
  "pitfalls": [
   "C++ player (rc-render): an animated variable whose expression reads the array directly ({value: \"arrayGet(@flows, 0)\", anim}) never re-animates when the host replaces the array; route it through a plain variable first (g_k = arrayGet(...), then {value: \"@g_k\", anim})",
@@ -206,22 +203,26 @@
   "CMP-43"
  ],
  "derived": {
-  "components": [],
-  "component_instances": 0,
-  "component_modes": {},
+  "components": [
+   "Sankey"
+  ],
+  "component_instances": 1,
+  "component_modes": {
+   "Sankey": "expand"
+  },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 15502,
+  "bytes": 14344,
   "header": {
    "width": 800,
    "height": 500
   },
-  "op_count": 598,
+  "op_count": 525,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
-   "ANIMATED_FLOAT": 220,
-   "COLOR_CONSTANT": 34,
-   "COLOR_EXPRESSIONS": 34,
+   "ANIMATED_FLOAT": 213,
+   "COLOR_CONSTANT": 20,
+   "COLOR_EXPRESSIONS": 20,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
    "ConditionalOperations": 24,
@@ -233,21 +234,21 @@
    "DRAW_TEXT_ANCHOR": 14,
    "DataListFloat": 1,
    "HEADER": 1,
-   "LAYOUT_BOX": 1,
+   "LAYOUT_BOX": 2,
    "LAYOUT_CANVAS": 1,
    "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 2,
-   "LayoutComponentContent": 10,
-   "LoopOperation": 46,
+   "LayoutComponentContent": 11,
+   "LoopOperation": 32,
    "MODIFIER_BACKGROUND": 1,
-   "MODIFIER_HEIGHT": 3,
+   "MODIFIER_HEIGHT": 4,
    "MODIFIER_PADDING": 1,
-   "MODIFIER_WIDTH": 6,
-   "NAMED_VARIABLE": 18,
+   "MODIFIER_WIDTH": 7,
+   "NAMED_VARIABLE": 11,
    "PAINT_VALUES": 46,
    "PathExpression": 12,
-   "THEME": 51,
+   "THEME": 30,
    "TextFromFloat": 9,
    "TextMerge": 7
   },
@@ -263,29 +264,14 @@
     "value": "#FF35D49A"
    },
    {
-    "name": "batteryR",
-    "type": "color",
-    "value": "#B035D49A"
-   },
-   {
     "name": "car",
     "type": "color",
     "value": "#FF5AA9FF"
    },
    {
-    "name": "carR",
-    "type": "color",
-    "value": "#B05AA9FF"
-   },
-   {
     "name": "export",
     "type": "color",
     "value": "#FFF6E05C"
-   },
-   {
-    "name": "exportR",
-    "type": "color",
-    "value": "#B0F6E05C"
    },
    {
     "name": "flows",
@@ -311,29 +297,14 @@
     "value": "#FF8C9DB5"
    },
    {
-    "name": "gridR",
-    "type": "color",
-    "value": "#B08C9DB5"
-   },
-   {
     "name": "heat",
     "type": "color",
     "value": "#FFC77DFF"
    },
    {
-    "name": "heatR",
-    "type": "color",
-    "value": "#B0C77DFF"
-   },
-   {
     "name": "house",
     "type": "color",
     "value": "#FFFF8A5B"
-   },
-   {
-    "name": "houseR",
-    "type": "color",
-    "value": "#B0FF8A5B"
    },
    {
     "name": "muted",
@@ -349,24 +320,16 @@
     "name": "solar",
     "type": "color",
     "value": "#FFF6B73C"
-   },
-   {
-    "name": "solarR",
-    "type": "color",
-    "value": "#B0F6B73C"
    }
   ],
   "render_findings": [],
   "audit": {
    "error": 0,
-   "warning": 1,
-   "info": 4
+   "warning": 0,
+   "info": 2
   },
   "audit_findings": [
-   "warning: text_in_canvas",
    "info: repaint_continuous",
-   "info: repeated_subtree",
-   "info: repeated_subtree",
    "info: expression_entries"
   ],
   "repaint": "continuous",
@@ -390,10 +353,12 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 9321,
-    "component_modes": {},
+    "bytes": 8877,
+    "component_modes": {
+     "Sankey": "expand"
+    },
     "motion_removed": 14,
-    "op_count": 352,
+    "op_count": 335,
     "host_variables": [
      {
       "name": "background",
@@ -406,29 +371,14 @@
       "value": "#FF35D49A"
      },
      {
-      "name": "batteryR",
-      "type": "color",
-      "value": "#B035D49A"
-     },
-     {
       "name": "car",
       "type": "color",
       "value": "#FF5AA9FF"
      },
      {
-      "name": "carR",
-      "type": "color",
-      "value": "#B05AA9FF"
-     },
-     {
       "name": "export",
       "type": "color",
       "value": "#FFF6E05C"
-     },
-     {
-      "name": "exportR",
-      "type": "color",
-      "value": "#B0F6E05C"
      },
      {
       "name": "flows",
@@ -454,29 +404,14 @@
       "value": "#FF8C9DB5"
      },
      {
-      "name": "gridR",
-      "type": "color",
-      "value": "#B08C9DB5"
-     },
-     {
       "name": "heat",
       "type": "color",
       "value": "#FFC77DFF"
      },
      {
-      "name": "heatR",
-      "type": "color",
-      "value": "#B0C77DFF"
-     },
-     {
       "name": "house",
       "type": "color",
       "value": "#FFFF8A5B"
-     },
-     {
-      "name": "houseR",
-      "type": "color",
-      "value": "#B0FF8A5B"
      },
      {
       "name": "muted",
@@ -492,11 +427,6 @@
       "name": "solar",
       "type": "color",
       "value": "#FFF6B73C"
-     },
-     {
-      "name": "solarR",
-      "type": "color",
-      "value": "#B0F6B73C"
      }
     ],
     "java_identical": true,
@@ -506,10 +436,12 @@
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 9321,
-    "component_modes": {},
+    "bytes": 8877,
+    "component_modes": {
+     "Sankey": "expand"
+    },
     "motion_removed": 14,
-    "op_count": 352,
+    "op_count": 335,
     "host_variables": [
      {
       "name": "background",
@@ -522,29 +454,14 @@
       "value": "#FF14A372"
      },
      {
-      "name": "batteryR",
-      "type": "color",
-      "value": "#A614A372"
-     },
-     {
       "name": "car",
       "type": "color",
       "value": "#FF2F7FE0"
      },
      {
-      "name": "carR",
-      "type": "color",
-      "value": "#A62F7FE0"
-     },
-     {
       "name": "export",
       "type": "color",
       "value": "#FFD4B21C"
-     },
-     {
-      "name": "exportR",
-      "type": "color",
-      "value": "#A6D4B21C"
      },
      {
       "name": "flows",
@@ -570,29 +487,14 @@
       "value": "#FF6A7B96"
      },
      {
-      "name": "gridR",
-      "type": "color",
-      "value": "#A66A7B96"
-     },
-     {
       "name": "heat",
       "type": "color",
       "value": "#FFA457E6"
      },
      {
-      "name": "heatR",
-      "type": "color",
-      "value": "#A6A457E6"
-     },
-     {
       "name": "house",
       "type": "color",
       "value": "#FFF0703C"
-     },
-     {
-      "name": "houseR",
-      "type": "color",
-      "value": "#A6F0703C"
      },
      {
       "name": "muted",
@@ -608,11 +510,6 @@
       "name": "solar",
       "type": "color",
       "value": "#FFE39A0B"
-     },
-     {
-      "name": "solarR",
-      "type": "color",
-      "value": "#A6E39A0B"
      }
     ],
     "java_identical": true,
@@ -671,23 +568,22 @@
    }
   },
   "json_keys": [
-   "$if",
+   "Sankey",
    "alpha",
    "anim",
    "apiLevel",
    "background",
    "battery",
-   "batteryR",
    "bottom",
    "box",
    "canvas",
    "car",
-   "carR",
    "children",
    "color",
    "colors",
    "column",
    "commands",
+   "commit",
    "condition",
    "conditionalOperations",
    "contentDescription",
@@ -700,10 +596,8 @@
    "drawPath",
    "drawRoundRect",
    "drawTextAnchored",
-   "else",
    "end",
    "export",
-   "exportR",
    "expressionX",
    "expressionY",
    "flags",
@@ -713,17 +607,15 @@
    "fontWeight",
    "from",
    "grid",
-   "gridR",
    "header",
    "heat",
-   "heatR",
    "height",
    "house",
-   "houseR",
    "id",
    "id1",
    "id2",
    "index",
+   "label",
    "left",
    "light",
    "linearGradient",
@@ -751,16 +643,15 @@
    "semantics",
    "shader",
    "solar",
-   "solarR",
+   "sources",
    "start",
-   "strokeWidth",
    "style",
    "text",
    "textSize",
-   "then",
    "top",
    "type",
    "until",
+   "uses",
    "v1",
    "v2",
    "value",
@@ -830,7 +721,7 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-02T20:23:11.787Z"
+  "built_at": "2026-11-02T22:50:34.106Z"
  },
  "snippets": [
   {
@@ -839,29 +730,27 @@
    "note": "the 12 exported flows"
   },
   {
-   "pointer": "/root/4/column/children/3/canvas/commands/51",
+   "pointer": "/root/4/column/children/3/box/children/0",
    "shows": "draw.plot",
-   "note": "one ribbon: offsets, the closed band path expression, its gradient"
+   "note": "the Sankey call: flows, sources and uses with their colours"
   },
   {
-   "pointer": "/root/4/column/children/3/canvas/commands/9",
+   "pointer": "/root/4/column/children/3/box/children/0",
    "shows": "anim.value",
-   "note": "an eased flow, read through a plain variable"
+   "note": "every ribbon eases when the host replaces the array"
   },
   {
-   "pointer": "/root/4/column/children/3/canvas/commands/8",
-   "shows": "data.array",
-   "note": "a flow read from the exported host array"
-  },
-  {
-   "pointer": "/root/4/column/children/3/canvas/commands/8",
+   "pointer": "/resources/floatArrays",
    "shows": "host.variables",
-   "note": "the host array drives everything"
+   "note": "exported: the host sets new flows"
   },
   {
-   "pointer": "/root/4/column/children/3/canvas/commands/63",
+   "pointer": "/root/4/column/children/3/box/children/0",
    "shows": "anim.loop",
-   "note": "seven particles on a ribbon, speed proportional to its flow"
+   "note": "particles at a speed proportional to each flow"
   }
+ ],
+ "components": [
+  "Sankey"
  ]
 }

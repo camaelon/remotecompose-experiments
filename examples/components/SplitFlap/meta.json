@@ -1,0 +1,708 @@
+{
+ "id": "SplitFlap",
+ "name": "split-flap",
+ "version": 1,
+ "title": "SplitFlap",
+ "prompt": "Show text on split-flap tiles, like an old station departure board, that flip through the letters to the new text when it changes.",
+ "level": 3,
+ "use_cases": [
+  "transit",
+  "dashboard",
+  "travel"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "split flap",
+  "split-flap",
+  "solari",
+  "solari board",
+  "flap display",
+  "flip display",
+  "flip board",
+  "flip clock",
+  "flip text",
+  "departure board",
+  "station board",
+  "airport board",
+  "mechanical letters",
+  "char drum",
+  "word flap",
+  "retro display",
+  "letters flipping",
+  "ticker tiles"
+ ],
+ "teaches": [
+  "Smallest call {\"SplitFlap\": {\"text\": \"DEPARTURES\"}}: one tile per letter, flipping in from blank when the document appears",
+  "Changing text: code is the drum index per tile, an expression of i (tile) and r (row); prev is the index before; since restarts at the change. The tiles step forward through the drum like a real flap unit",
+  "A clock: code and prev from timeInHr()/timeInMin() of now and the previous minute, since continuousSec() % 60, so it flips in the first second of each minute",
+  "Word flaps: a drum of equal-width words (glyphWidth 8) and align start; rows: a float array of codes read as arrayGet(@cities, row * 8 + i), cycling every 6 s",
+  "Mono: outlined tiles showing the final glyph, the split cut as a gap, no flipping"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/1",
+   "shows": "expr.string",
+   "note": "the smallest call: a fixed word"
+  },
+  {
+   "pointer": "/root/column/children/3",
+   "shows": "time.animation",
+   "note": "a clock that flips on the minute"
+  },
+  {
+   "pointer": "/root/column/children/5",
+   "shows": "anim.stagger",
+   "note": "a word flap cycling every 4 s"
+  },
+  {
+   "pointer": "/root/column/children/7",
+   "shows": "data.loop",
+   "note": "three rows from a float array"
+  },
+  {
+   "pointer": "/root/column/children/3",
+   "shows": "draw.clip",
+   "note": "each tile's halves are clipped to either side of the split"
+  },
+  {
+   "pointer": "/root/column/children/3",
+   "shows": "draw.transform",
+   "note": "the flap is a half tile scaled toward the split"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": "the clock row reads timeInHr/timeInMin; everything else animationTime",
+  "touch": false
+ },
+ "check": {
+  "describe": "Light and dark: DEPARTURES on ten tiles; a five-tile clock still reading 08:41 at 0.3 s into 08:42 (its tiles flip from 0.34 s on; mono shows 08:42 at once); a DELAYED word flap (ON TIME at the intro); three rows of destinations (PORTO, MADRID, SEVILLA after the first move, some tiles still flipping). Mono dark and light: the same tiles as outlines with the final glyphs. intro (0.35 s): most tiles blank or on early letters. flip (6.5 s): the rows caught mid-flip. Landscape 640x400: the same column, scrolled to the top (the rows below the fold).",
+  "render": {
+   "animation_time": 6.5,
+   "clock": "2026-11-02T08:42:00.3",
+   "theme": "dark"
+  },
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "animation_time": 9,
+    "clock": "2026-11-02T08:42:00.3"
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "animation_time": 9,
+    "clock": "2026-11-02T08:42:00.3"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "animation_time": 9,
+    "clock": "2026-11-02T08:42:00.3"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "animation_time": 9,
+    "clock": "2026-11-02T08:42:00.3"
+   },
+   {
+    "name": "intro",
+    "theme": "dark",
+    "animation_time": 0.35,
+    "clock": "2026-11-02T08:42:00.3"
+   },
+   {
+    "name": "flip",
+    "theme": "light",
+    "animation_time": 6.5,
+    "clock": "2026-11-02T08:42:00.3"
+   },
+   {
+    "name": "landscape",
+    "theme": "dark",
+    "width": 640,
+    "height": 400,
+    "animation_time": 9,
+    "clock": "2026-11-02T08:42:00.3"
+   }
+  ]
+ },
+ "related": [
+  "SHW-27",
+  "DigitalClock",
+  "TXT-10",
+  "CMP-15"
+ ],
+ "derived": {
+  "components": [
+   "SplitFlap"
+  ],
+  "component_instances": 4,
+  "component_modes": {
+   "SplitFlap": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 8576,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 354,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 4,
+   "ANIMATED_FLOAT": 139,
+   "CLIP_RECT": 12,
+   "COLOR_CONSTANT": 8,
+   "COLOR_EXPRESSIONS": 8,
+   "CanvasContent": 4,
+   "ClipRectModifierOperation": 1,
+   "CoreText": 4,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 12,
+   "DRAW_RECT": 8,
+   "DRAW_ROUND_RECT": 8,
+   "DRAW_TEXT_ANCHOR": 12,
+   "DataListFloat": 2,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 4,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 9,
+   "LoopOperation": 16,
+   "MATRIX_RESTORE": 12,
+   "MATRIX_SAVE": 12,
+   "MATRIX_SCALE": 4,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 5,
+   "MODIFIER_PADDING": 4,
+   "MODIFIER_WIDTH": 5,
+   "NAMED_VARIABLE": 6,
+   "PAINT_VALUES": 24,
+   "ScrollModifierOperation": 1,
+   "THEME": 12,
+   "TextSubtext": 12,
+   "TouchExpression": 1
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "cities",
+    "type": "float_array",
+    "value": [
+     12,
+     9,
+     19,
+     2,
+     15,
+     1,
+     0,
+     0,
+     16,
+     15,
+     18,
+     20,
+     15,
+     0,
+     0,
+     0,
+     13,
+     1,
+     4,
+     18,
+     9,
+     4,
+     0,
+     0,
+     19,
+     5,
+     22,
+     9,
+     12,
+     12,
+     1,
+     0,
+     16,
+     1,
+     18,
+     9,
+     19,
+     0,
+     0,
+     0,
+     2,
+     15,
+     18,
+     4,
+     5,
+     1,
+     21,
+     24,
+     12,
+     25,
+     15,
+     14,
+     0,
+     0,
+     0,
+     0,
+     7,
+     5,
+     14,
+     5,
+     22,
+     5,
+     0,
+     0
+    ]
+   },
+   {
+    "name": "gen_sf1_text_1",
+    "type": "float_array",
+    "value": [
+     4,
+     5,
+     16,
+     1,
+     18,
+     20,
+     21,
+     18,
+     5,
+     19
+    ]
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: repaint_continuous",
+   "info: expression_entries"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 1,
+   "click": 0,
+   "area": 0,
+   "touch": 1
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 4553,
+    "component_modes": {
+     "SplitFlap": "expand"
+    },
+    "op_count": 181,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "cities",
+      "type": "float_array",
+      "value": [
+       12,
+       9,
+       19,
+       2,
+       15,
+       1,
+       0,
+       0,
+       16,
+       15,
+       18,
+       20,
+       15,
+       0,
+       0,
+       0,
+       13,
+       1,
+       4,
+       18,
+       9,
+       4,
+       0,
+       0,
+       19,
+       5,
+       22,
+       9,
+       12,
+       12,
+       1,
+       0,
+       16,
+       1,
+       18,
+       9,
+       19,
+       0,
+       0,
+       0,
+       2,
+       15,
+       18,
+       4,
+       5,
+       1,
+       21,
+       24,
+       12,
+       25,
+       15,
+       14,
+       0,
+       0,
+       0,
+       0,
+       7,
+       5,
+       14,
+       5,
+       22,
+       5,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "gen_sf1_text_1",
+      "type": "float_array",
+      "value": [
+       4,
+       5,
+       16,
+       1,
+       18,
+       20,
+       21,
+       18,
+       5,
+       19
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 4553,
+    "component_modes": {
+     "SplitFlap": "expand"
+    },
+    "op_count": 181,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "cities",
+      "type": "float_array",
+      "value": [
+       12,
+       9,
+       19,
+       2,
+       15,
+       1,
+       0,
+       0,
+       16,
+       15,
+       18,
+       20,
+       15,
+       0,
+       0,
+       0,
+       13,
+       1,
+       4,
+       18,
+       9,
+       4,
+       0,
+       0,
+       19,
+       5,
+       22,
+       9,
+       12,
+       12,
+       1,
+       0,
+       16,
+       1,
+       18,
+       9,
+       19,
+       0,
+       0,
+       0,
+       2,
+       15,
+       18,
+       4,
+       5,
+       1,
+       21,
+       24,
+       12,
+       25,
+       15,
+       14,
+       0,
+       0,
+       0,
+       0,
+       7,
+       5,
+       14,
+       5,
+       22,
+       5,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "gen_sf1_text_1",
+      "type": "float_array",
+      "value": [
+       4,
+       5,
+       16,
+       1,
+       18,
+       20,
+       21,
+       18,
+       5,
+       19
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "intro": {
+    "theme": "dark",
+    "render": "render-intro.png",
+    "render_findings": []
+   },
+   "flip": {
+    "theme": "light",
+    "render": "render-flip.png",
+    "render_findings": []
+   },
+   "landscape": {
+    "theme": "dark",
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     400
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "SplitFlap",
+   "align",
+   "alpha",
+   "apiLevel",
+   "background",
+   "bottom",
+   "canvas",
+   "children",
+   "cities",
+   "clipRect",
+   "code",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cyc",
+   "dark",
+   "delay",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "drum",
+   "floatArrays",
+   "fontSize",
+   "from",
+   "gap",
+   "gen_sf1_text_1",
+   "glyphWidth",
+   "header",
+   "height",
+   "hm",
+   "hmo",
+   "index",
+   "jitter",
+   "label",
+   "left",
+   "len",
+   "light",
+   "loop",
+   "mo",
+   "modifiers",
+   "muted",
+   "name",
+   "onSurface",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "pivotX",
+   "pivotY",
+   "prev",
+   "profiles",
+   "resources",
+   "right",
+   "ripple",
+   "root",
+   "rowGap",
+   "rows",
+   "rx",
+   "ry",
+   "save",
+   "scale",
+   "scroll",
+   "semantics",
+   "since",
+   "size",
+   "spacedBy",
+   "start",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "textSubtext",
+   "tileHeight",
+   "tileWidth",
+   "tiles",
+   "top",
+   "track",
+   "until",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalScroll",
+   "width",
+   "word",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "time.animation": [
+    "animationTime()",
+    "animationTime",
+    "continuousSec"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "expr.string": [
+    "textSubtext"
+   ],
+   "draw.clip": [
+    "clipRect"
+   ],
+   "draw.transform": [
+    "save",
+    "scale"
+   ],
+   "anim.stagger": [
+    "animationTime()"
+   ]
+  },
+  "built_at": "2026-11-02T22:56:43.523Z"
+ }
+}

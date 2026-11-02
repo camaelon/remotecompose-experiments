@@ -1,7 +1,7 @@
 {
  "id": "WorldMap",
  "name": "world map",
- "version": 1,
+ "version": 2,
  "title": "WorldMap",
  "prompt": "A world map with day and night and four cities, and a map of Europe with two countries highlighted and a marker the app moves.",
  "level": 2,
@@ -35,11 +35,18 @@
   "highlight country",
   "choropleth",
   "region map",
-  "tracker map"
+  "tracker map",
+  "world clock",
+  "sun position",
+  "subsolar point",
+  "daylight cities",
+  "twilight",
+  "soft terminator"
  ],
  "teaches": [
   "Call it with a region and what to mark: {\"WorldMap\": {\"cities\": [\"Tokyo\"], \"labels\": true}}; region takes world, a continent, a country (ISO code) or a lon/lat box",
   "night: true shades the night side from the clock (world maps)",
+  "For a world clock add twilight: true (a soft night edge), sun: true (the sun over the subsolar point) and daylight: true (city dots in dayColor with a halo where the sun is up, markerColor elsewhere; mono: filled or hollow)",
   "markLon/markLat take host variables: one marker the app moves",
   "{\"$map\"}, {\"$mapHeight\"} and {\"$mapPoint\"} are the building blocks for a map of your own in a canvas"
  ],
@@ -66,7 +73,7 @@
   "touch": false
  },
  "check": {
-  "describe": "Top: a world in plate carrée with the night side shaded for the pinned clock and four labelled cities; bottom: Europe with borders, France and Germany in the primary colour and a marker on Paris (lon/lat host variables).",
+  "describe": "Top: a world in plate carrée at 10:30 on 31 October: the night side shaded with a soft edge, the sun over southern Africa, London lit (warm dot with a halo), New York, Tokyo and Sydney at night (red dots); bottom: Europe with borders, France and Germany in the primary colour and a marker on Paris (lon/lat host variables). evening (19:45): the day over the Americas, New York lit, London dark. Mono: the night edge as a line, the sun a disc in a ring, lit cities filled and the others hollow.",
   "render": {
    "clock": "2026-10-31T10:30:00"
   },
@@ -96,6 +103,10 @@
     "name": "wide",
     "width": 560,
     "height": 330
+   },
+   {
+    "name": "evening",
+    "clock": "2026-10-31T19:45:00"
    }
   ]
  },
@@ -113,32 +124,34 @@
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 29291,
+  "bytes": 31207,
   "header": {
    "width": 360,
    "height": 330
   },
-  "op_count": 164,
+  "op_count": 238,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 2,
-   "ANIMATED_FLOAT": 24,
+   "ANIMATED_FLOAT": 45,
    "CLIP_RECT": 3,
-   "COLOR_CONSTANT": 12,
-   "COLOR_EXPRESSIONS": 12,
+   "COLOR_CONSTANT": 16,
+   "COLOR_EXPRESSIONS": 16,
    "COMPONENT_VALUE": 4,
    "CanvasContent": 2,
+   "ConditionalOperations": 1,
    "CoreText": 1,
    "DATA_FLOAT": 2,
-   "DATA_TEXT": 7,
-   "DRAW_CIRCLE": 5,
-   "DRAW_PATH": 5,
+   "DATA_TEXT": 8,
+   "DRAW_CIRCLE": 12,
+   "DRAW_PATH": 7,
    "DRAW_TEXT_ANCHOR": 4,
+   "DataListFloat": 5,
    "HEADER": 1,
    "LAYOUT_CANVAS": 2,
    "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
    "LayoutComponentContent": 4,
-   "LoopOperation": 12,
+   "LoopOperation": 17,
    "MATRIX_RESTORE": 5,
    "MATRIX_SAVE": 5,
    "MATRIX_SCALE": 2,
@@ -147,11 +160,11 @@
    "MODIFIER_HEIGHT": 3,
    "MODIFIER_PADDING": 1,
    "MODIFIER_WIDTH": 3,
-   "NAMED_VARIABLE": 8,
-   "PAINT_VALUES": 8,
+   "NAMED_VARIABLE": 15,
+   "PAINT_VALUES": 17,
    "PATH_DATA": 3,
-   "PathExpression": 1,
-   "THEME": 18
+   "PathExpression": 3,
+   "THEME": 24
   },
   "host_variables": [
    {
@@ -163,6 +176,61 @@
     "name": "error",
     "type": "color",
     "value": "#FFEF5350"
+   },
+   {
+    "name": "gen_day_coslat_1",
+    "type": "float_array",
+    "value": [
+     0.622500002,
+     0.7579,
+     0.81220001,
+     0.830299973
+    ]
+   },
+   {
+    "name": "gen_day_lon_1",
+    "type": "float_array",
+    "value": [
+     -0.119000003,
+     -73.9960022,
+     139.748993,
+     151.212997
+    ]
+   },
+   {
+    "name": "gen_day_sinlat_1",
+    "type": "float_array",
+    "value": [
+     0.782599986,
+     0.652400017,
+     0.583400011,
+     -0.557299972
+    ]
+   },
+   {
+    "name": "gen_day_x_1",
+    "type": "float_array",
+    "value": [
+     499.700012,
+     294.5,
+     888.200012,
+     920
+    ]
+   },
+   {
+    "name": "gen_day_y_1",
+    "type": "float_array",
+    "value": [
+     90.3000031,
+     120.199997,
+     134.199997,
+     327.399994
+    ]
+   },
+   {
+    "name": "highlight",
+    "type": "color",
+    "value": "#FFFFD180"
    },
    {
     "name": "lat",
@@ -193,17 +261,23 @@
     "name": "track",
     "type": "color",
     "value": "#FF2A3342"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
    }
   ],
   "render_findings": [],
   "audit": {
    "error": 0,
    "warning": 0,
-   "info": 2
+   "info": 3
   },
   "audit_findings": [
    "info: size_dominated",
-   "info: size_single_op"
+   "info: size_single_op",
+   "info: expression_entries"
   ],
   "repaint": "scheduled",
   "interaction_targets": {
@@ -226,11 +300,11 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 28681,
+    "bytes": 30316,
     "component_modes": {
      "WorldMap": "expand"
     },
-    "op_count": 114,
+    "op_count": 189,
     "host_variables": [
      {
       "name": "background",
@@ -239,6 +313,61 @@
      },
      {
       "name": "error",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "gen_day_coslat_1",
+      "type": "float_array",
+      "value": [
+       0.622500002,
+       0.7579,
+       0.81220001,
+       0.830299973
+      ]
+     },
+     {
+      "name": "gen_day_lon_1",
+      "type": "float_array",
+      "value": [
+       -0.119000003,
+       -73.9960022,
+       139.748993,
+       151.212997
+      ]
+     },
+     {
+      "name": "gen_day_sinlat_1",
+      "type": "float_array",
+      "value": [
+       0.782599986,
+       0.652400017,
+       0.583400011,
+       -0.557299972
+      ]
+     },
+     {
+      "name": "gen_day_x_1",
+      "type": "float_array",
+      "value": [
+       499.700012,
+       294.5,
+       888.200012,
+       920
+      ]
+     },
+     {
+      "name": "gen_day_y_1",
+      "type": "float_array",
+      "value": [
+       90.3000031,
+       120.199997,
+       134.199997,
+       327.399994
+      ]
+     },
+     {
+      "name": "highlight",
       "type": "color",
       "value": "#FFFFFFFF"
      },
@@ -261,6 +390,16 @@
       "name": "primary",
       "type": "color",
       "value": "#FFFFFFFF"
+     },
+     {
+      "name": "shadow",
+      "type": "color",
+      "value": "#FF424242"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
      }
     ],
     "java_identical": true,
@@ -270,11 +409,11 @@
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 28681,
+    "bytes": 30316,
     "component_modes": {
      "WorldMap": "expand"
     },
-    "op_count": 114,
+    "op_count": 189,
     "host_variables": [
      {
       "name": "background",
@@ -285,6 +424,61 @@
       "name": "error",
       "type": "color",
       "value": "#FF000000"
+     },
+     {
+      "name": "gen_day_coslat_1",
+      "type": "float_array",
+      "value": [
+       0.622500002,
+       0.7579,
+       0.81220001,
+       0.830299973
+      ]
+     },
+     {
+      "name": "gen_day_lon_1",
+      "type": "float_array",
+      "value": [
+       -0.119000003,
+       -73.9960022,
+       139.748993,
+       151.212997
+      ]
+     },
+     {
+      "name": "gen_day_sinlat_1",
+      "type": "float_array",
+      "value": [
+       0.782599986,
+       0.652400017,
+       0.583400011,
+       -0.557299972
+      ]
+     },
+     {
+      "name": "gen_day_x_1",
+      "type": "float_array",
+      "value": [
+       499.700012,
+       294.5,
+       888.200012,
+       920
+      ]
+     },
+     {
+      "name": "gen_day_y_1",
+      "type": "float_array",
+      "value": [
+       90.3000031,
+       120.199997,
+       134.199997,
+       327.399994
+      ]
+     },
+     {
+      "name": "highlight",
+      "type": "color",
+      "value": "#FFFFFFFF"
      },
      {
       "name": "lat",
@@ -305,6 +499,16 @@
       "name": "primary",
       "type": "color",
       "value": "#FF000000"
+     },
+     {
+      "name": "shadow",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
      }
     ],
     "java_identical": true,
@@ -321,7 +525,8 @@
     ],
     "audit_findings": [
      "info: size_dominated",
-     "info: size_single_op"
+     "info: size_single_op",
+     "info: expression_entries"
     ]
    },
    "wide": {
@@ -333,8 +538,13 @@
     ],
     "audit_findings": [
      "info: size_dominated",
-     "info: size_single_op"
+     "info: size_single_op",
+     "info: expression_entries"
     ]
+   },
+   "evening": {
+    "render": "render-evening.png",
+    "render_findings": []
    }
   },
   "json_keys": [
@@ -352,11 +562,14 @@
    "colors",
    "column",
    "commands",
+   "condition",
+   "conditionalOperations",
    "contentDescription",
    "count",
    "cx",
    "cy",
    "dark",
+   "daylight",
    "drawCircle",
    "drawPath",
    "drawTextAnchored",
@@ -367,17 +580,26 @@
    "export",
    "expressionX",
    "expressionY",
+   "floatArrays",
    "fontSize",
+   "from",
+   "gen_day_coslat_1",
+   "gen_day_lon_1",
+   "gen_day_sinlat_1",
+   "gen_day_x_1",
+   "gen_day_y_1",
    "header",
    "height",
    "highlight",
    "id",
+   "index",
    "label",
    "labels",
    "lat",
    "left",
    "light",
    "lon",
+   "loop",
    "map_europe_countries_low_1",
    "map_europe_countries_low_2",
    "map_world_land_low",
@@ -409,6 +631,7 @@
    "start",
    "strokeWidth",
    "style",
+   "sun",
    "surface",
    "sx",
    "sy",
@@ -417,21 +640,29 @@
    "top",
    "track",
    "translate",
+   "twilight",
    "type",
+   "until",
+   "v1",
+   "v2",
    "value",
    "variable",
    "variables",
+   "warning",
    "width",
    "worldmap1_decl",
    "worldmap1_nEdge",
+   "worldmap1_na",
    "worldmap1_off",
    "worldmap1_sunLon",
+   "worldmap1_sx",
+   "worldmap1_sy",
    "worldmap2_mx",
    "worldmap2_my",
    "x",
    "y"
   ],
   "evidence": {},
-  "built_at": "2026-11-01T22:51:46.479Z"
+  "built_at": "2026-11-02T22:57:28.107Z"
  }
 }

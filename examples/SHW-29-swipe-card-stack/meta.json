@@ -7,20 +7,16 @@
  "prompt": "Make a Tinder-style card stack of travel destinations with drawn art: I drag a card sideways and it rotates with my finger, if I fling it past a threshold it flies off left or right with a Like/Nope stamp, the next card scales up from behind, and it counts my likes. It should feel physical: fling and spring back.",
  "level": 5,
  "family": "SHW",
- "hand_built": "The library has no swipeable stack: the gesture state machine (press, release speed, fling-or-spring decision, flight, the stack's lift) and the card art are hand-built; the Pass and Save buttons are the library IconButton (outlined, 64 dp).",
  "capabilities": {
   "primary": [
    "input.press",
    "time.animation",
-   "data.loop",
-   "anim.trigger"
+   "data.loop"
   ],
   "secondary": [
    "input.tap",
    "draw.path",
    "draw.gradient",
-   "draw.transform",
-   "draw.clip",
    "data.array",
    "expr.trig",
    "expr.select",
@@ -53,76 +49,47 @@
   "showcase"
  ],
  "teaches": [
-  "Run a swipe without touchExpression: onTouchDown stores touchX(), touchY() and animationTime(); the card follows touchX() - downX while @drag is 1",
-  "Decide fling or spring at release in onTouchUp from the gesture alone: speed = distance / max(time held, 0.04), dismiss when |dx| > 110 or (speed > 700 and |dx| > 36), and store the direction, the release offset and upT = animationTime()",
-  "Spring back with a damped oscillator of the time since release: offset · e^(-7t) · (cos 13t + 0.54 sin 13t), and fly off with x = release + dir · (v·t + 2600 t²)",
-  "Draw a stack with one loop: i = 0..3 is depth 2, 1, 0 and the card in flight; each depth's scale, offset and dimming come from k + a shared lift that follows the drag (and finishes after a fling)",
+  "Build a swipe deck from the library SwipeStack: bind liked and passed to resources variables for the header counts, name the card index (\"index\": \"@card\") and draw the scene in the card slot from it",
   "Paint five different scenes from one body: per-card float arrays drive layer alphas (night, warm, day skies, aurora, sea, landmarks) and ridge parameters for pathExpression",
   "Close a pathExpression ridge to the bottom by running a[0] slightly past 0..1 with x clamped and y = ifElse(card height, ridge, inside)",
-  "Fire wakeIn only while a card moves: 0.016 + 3600 · step(t, 1.4)",
   "Give a picture-led card stack four looks: light and dark keep the painted art and theme only the page, header, counters and buttons; mono redraws each scene as hidden-line art (fill each ridge with the page colour, stroke it in onSurface) with outlined stamps and card edges instead of colour"
  ],
  "pitfalls": [
-  "Modifier actions are parsed before the canvas commands and cannot read tree variables (componentWidth(), touchExpression values): keep the gesture state in root variables and do geometry in the tree",
-  "The notch stop modes of touchExpression need touchSpec, which the Java JSON parser drops, and a notched touch value cannot be reset by the document: this is why the stack uses actions and time instead",
-  "touchVelX() is only loaded by the C++ player at touch-up (not Java, not TS): measure the speed yourself",
-  "A button tap also reaches the canvas behind it (TS), so the canvas's touch-up only commits when the finger moved more than 8 px",
   "step(x, edge) is strict: step(1, 1) is 0, so test a direction with step(@dir, 0.5)",
   "A computed colour is evaluated once per frame, not per loop iteration: vary paint alpha and gradients by the loop index instead",
-  "Taps are ignored for 0.3 s after a fling so two cards are never in flight",
   "Java's addDataList drops the list id, so textLookup cannot reach it from JSON: each card's texts are five drawTextAnchored per field, the right one shown by alpha 1 - min(1, |c - j|)",
-  "Numbers that a component reads (IconButton's onClick) belong in resources.variables, not root variable commands (U57)"
+  "The card slot is drawn for every visible card each frame (up to four): the scene is one loop-free body driven by float arrays, not five copies"
  ],
  "snippets": [
   {
-   "pointer": "/root/0/box/children/0/canvas/modifiers/3",
+   "pointer": "/root/column/children/1/box/children/0/SwipeStack/liked",
    "shows": "input.press",
-   "note": "release: distance, speed, fling-or-spring decision, counts"
+   "note": "the swipe deck's counts land in the document's own variables"
   },
   {
-   "pointer": "/root/0/box/children/0/canvas/modifiers/2",
-   "shows": "input.press",
-   "note": "press: where and when the finger went down"
-  },
-  {
-   "pointer": "/root/0/box/children/0/canvas/commands/11",
+   "pointer": "/root/column/children/1/box/children/0/SwipeStack",
    "shows": "time.animation",
-   "note": "the damped spring of the time since release"
+   "note": "the library SwipeStack: drag, tilt, fling or spring back, stamps, the stack's lift and the Pass / Save buttons"
   },
   {
-   "pointer": "/root/0/box/children/0/canvas/commands/16",
-   "shows": "time.animation",
-   "note": "the flight: release offset plus speed and acceleration"
-  },
-  {
-   "pointer": "/root/0/box/children/0/canvas/commands/52",
+   "pointer": "/root/column/children/1/box/children/0/SwipeStack/slots/card",
    "shows": "data.loop",
-   "note": "four iterations: three stacked cards and the one in flight"
+   "note": "one card's scene drawn from @card: the mono hidden-line drawing and the painted one"
   },
   {
-   "pointer": "/root/0/box/children/0/canvas/commands/52/loop/commands/8/save/commands/4/else/62",
-   "shows": "draw.path",
-   "note": "a ridge from per-card arrays, closed to the card bottom"
+   "pointer": "/root/column/children/1/box/children/0/SwipeStack/slots/card/0/else/0",
+   "shows": "draw.gradient",
+   "note": "the base dusk sky; night, warm and day skies are faded over it by per-card alphas"
   },
   {
-   "pointer": "/root/0/box/children/0/canvas/commands/52/loop/commands/8/save/commands/4/then/46",
-   "shows": "draw.path",
-   "note": "mono: the same ridge as a hidden-line drawing (page-colour fill, onSurface stroke)"
+   "pointer": "/resources/floatArrays",
+   "shows": "data.array",
+   "note": "per-destination sky, sun, ridge and landmark parameters"
   },
   {
-   "pointer": "/root/0/box/children/0/canvas/commands/52/loop/commands/8/save/commands/5",
-   "shows": "expr.select",
-   "note": "the LIKE stamp fades in with the drag"
-  },
-  {
-   "pointer": "/root/0/box/children/1/row/children/1",
-   "shows": "input.tap",
-   "note": "Save: library IconButton running the same fling, guarded while a card flies"
-  },
-  {
-   "pointer": "/root/0/box/children/0/canvas/commands/22",
-   "shows": "anim.trigger",
-   "note": "frames only while a card moves"
+   "pointer": "/root/column/children/0/canvas",
+   "shows": "text.dynamic",
+   "note": "the header with the saved and passed counts the stack writes"
   }
  ],
  "inputs": {
@@ -453,67 +420,69 @@
  ],
  "derived": {
   "components": [
-   "IconButton"
+   "IconButton",
+   "SwipeStack"
   ],
-  "component_instances": 2,
+  "component_instances": 3,
   "component_modes": {
-   "IconButton": "expand"
+   "IconButton": "expand",
+   "SwipeStack": "expand"
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 15733,
+  "bytes": 15451,
   "header": {
    "width": 360,
    "height": 720
   },
-  "op_count": 685,
+  "op_count": 672,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 3,
-   "ANIMATED_FLOAT": 216,
+   "ANIMATED_FLOAT": 218,
    "CLIP_PATH": 1,
-   "COLOR_CONSTANT": 22,
-   "COLOR_EXPRESSIONS": 22,
-   "COMPONENT_VALUE": 2,
-   "CanvasContent": 3,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "COMPONENT_VALUE": 3,
+   "CanvasContent": 4,
    "DATA_FLOAT": 18,
    "DATA_TEXT": 31,
-   "DRAW_CIRCLE": 4,
+   "DRAW_CIRCLE": 6,
    "DRAW_LINE": 4,
-   "DRAW_PATH": 11,
-   "DRAW_RECT": 15,
+   "DRAW_PATH": 12,
+   "DRAW_RECT": 13,
    "DRAW_ROUND_RECT": 5,
    "DRAW_TEXT_ANCHOR": 28,
    "DataListFloat": 17,
    "GraphicsLayerModifier": 2,
    "HEADER": 1,
-   "LAYOUT_BOX": 7,
-   "LAYOUT_CANVAS": 3,
+   "LAYOUT_BOX": 8,
+   "LAYOUT_CANVAS": 4,
+   "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 1,
-   "LayoutComponentContent": 11,
-   "LoopOperation": 27,
-   "MATRIX_RESTORE": 3,
+   "LayoutComponentContent": 14,
+   "LoopOperation": 19,
+   "MATRIX_RESTORE": 4,
    "MATRIX_ROTATE": 3,
-   "MATRIX_SAVE": 3,
+   "MATRIX_SAVE": 4,
    "MATRIX_SCALE": 1,
    "MATRIX_TRANSLATE": 2,
    "MODIFIER_BACKGROUND": 5,
    "MODIFIER_CLICK": 2,
-   "MODIFIER_HEIGHT": 9,
+   "MODIFIER_HEIGHT": 12,
    "MODIFIER_PADDING": 5,
    "MODIFIER_TOUCH_DOWN": 1,
    "MODIFIER_TOUCH_UP": 1,
-   "MODIFIER_WIDTH": 9,
-   "NAMED_VARIABLE": 28,
-   "PAINT_VALUES": 70,
-   "PATH_CREATE": 1,
-   "PATH_DATA": 1,
-   "PathAppend": 9,
+   "MODIFIER_WIDTH": 12,
+   "NAMED_VARIABLE": 24,
+   "PAINT_VALUES": 71,
+   "PATH_CREATE": 2,
+   "PathAppend": 13,
    "PathExpression": 5,
    "RoundedClipRectModifierOperation": 4,
-   "THEME": 33,
+   "THEME": 21,
    "TextFromFloat": 2,
-   "ValueFloatExpressionChangeActionOperation": 32,
+   "ValueFloatExpressionChangeActionOperation": 35,
    "WAKE_IN": 1
   },
   "host_variables": [
@@ -545,16 +514,6 @@
     ]
    },
    {
-    "name": "cardShadow",
-    "type": "color",
-    "value": "#55000000"
-   },
-   {
-    "name": "cardShadow2",
-    "type": "color",
-    "value": "#33000000"
-   },
-   {
     "name": "day",
     "type": "float_array",
     "value": [
@@ -564,16 +523,6 @@
      0,
      0.600000024
     ]
-   },
-   {
-    "name": "glow",
-    "type": "color",
-    "value": "#FF1F1B2E"
-   },
-   {
-    "name": "glow0",
-    "type": "color",
-    "value": "#000F1115"
    },
    {
     "name": "houses",
@@ -588,11 +537,6 @@
    },
    {
     "name": "like",
-    "type": "color",
-    "value": "#FF3DDC97"
-   },
-   {
-    "name": "likeStamp",
     "type": "color",
     "value": "#FF3DDC97"
    },
@@ -625,11 +569,6 @@
    },
    {
     "name": "nope",
-    "type": "color",
-    "value": "#FFFF5A6A"
-   },
-   {
-    "name": "nopeStamp",
     "type": "color",
     "value": "#FFFF5A6A"
    },
@@ -755,6 +694,11 @@
     ]
    },
    {
+    "name": "shadow",
+    "type": "color",
+    "value": "#FF263042"
+   },
+   {
     "name": "sunR",
     "type": "float_array",
     "value": [
@@ -786,6 +730,11 @@
      0.419999987,
      0.180000007
     ]
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
    },
    {
     "name": "torii",
@@ -841,11 +790,12 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 13808,
+    "bytes": 13868,
     "component_modes": {
-     "IconButton": "expand"
+     "IconButton": "expand",
+     "SwipeStack": "expand"
     },
-    "op_count": 566,
+    "op_count": 577,
     "host_variables": [
      {
       "name": "aur",
@@ -875,16 +825,6 @@
       ]
      },
      {
-      "name": "cardShadow",
-      "type": "color",
-      "value": "#55000000"
-     },
-     {
-      "name": "cardShadow2",
-      "type": "color",
-      "value": "#33000000"
-     },
-     {
       "name": "day",
       "type": "float_array",
       "value": [
@@ -894,16 +834,6 @@
        0,
        0.600000024
       ]
-     },
-     {
-      "name": "glow",
-      "type": "color",
-      "value": "#FF1F1B2E"
-     },
-     {
-      "name": "glow0",
-      "type": "color",
-      "value": "#000F1115"
      },
      {
       "name": "houses",
@@ -918,11 +848,6 @@
      },
      {
       "name": "like",
-      "type": "color",
-      "value": "#FF3DDC97"
-     },
-     {
-      "name": "likeStamp",
       "type": "color",
       "value": "#FF3DDC97"
      },
@@ -959,11 +884,6 @@
       "value": "#FFFF5A6A"
      },
      {
-      "name": "nopeStamp",
-      "type": "color",
-      "value": "#FFFF5A6A"
-     },
-     {
       "name": "onSurface",
       "type": "color",
       "value": "#FFFFFFFF"
@@ -1118,6 +1038,11 @@
       ]
      },
      {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
       "name": "torii",
       "type": "float_array",
       "value": [
@@ -1141,17 +1066,18 @@
      }
     ],
     "java_identical": true,
-    "repaint": "scheduled",
+    "repaint": "idle",
     "render": "render-mono-dark.png",
     "render_findings": []
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 13808,
+    "bytes": 13868,
     "component_modes": {
-     "IconButton": "expand"
+     "IconButton": "expand",
+     "SwipeStack": "expand"
     },
-    "op_count": 566,
+    "op_count": 577,
     "host_variables": [
      {
       "name": "aur",
@@ -1181,16 +1107,6 @@
       ]
      },
      {
-      "name": "cardShadow",
-      "type": "color",
-      "value": "#26202838"
-     },
-     {
-      "name": "cardShadow2",
-      "type": "color",
-      "value": "#14202838"
-     },
-     {
       "name": "day",
       "type": "float_array",
       "value": [
@@ -1200,16 +1116,6 @@
        0,
        0.600000024
       ]
-     },
-     {
-      "name": "glow",
-      "type": "color",
-      "value": "#FFE6E3F2"
-     },
-     {
-      "name": "glow0",
-      "type": "color",
-      "value": "#00F5F7FA"
      },
      {
       "name": "houses",
@@ -1226,11 +1132,6 @@
       "name": "like",
       "type": "color",
       "value": "#FF0E8A55"
-     },
-     {
-      "name": "likeStamp",
-      "type": "color",
-      "value": "#FF3DDC97"
      },
      {
       "name": "lw",
@@ -1263,11 +1164,6 @@
       "name": "nope",
       "type": "color",
       "value": "#FFD0303F"
-     },
-     {
-      "name": "nopeStamp",
-      "type": "color",
-      "value": "#FFFF5A6A"
      },
      {
       "name": "onSurface",
@@ -1424,6 +1320,11 @@
       ]
      },
      {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
       "name": "torii",
       "type": "float_array",
       "value": [
@@ -1447,7 +1348,7 @@
      }
     ],
     "java_identical": true,
-    "repaint": "scheduled",
+    "repaint": "idle",
     "render": "render-mono-light.png",
     "render_findings": []
    },
@@ -1503,7 +1404,7 @@
   },
   "json_keys": [
    "$if",
-   "IconButton",
+   "SwipeStack",
    "alpha",
    "angle",
    "apiLevel",
@@ -1513,8 +1414,9 @@
    "box",
    "cabins",
    "canvas",
-   "cardShadow",
-   "cardShadow2",
+   "card",
+   "cardHeight",
+   "cardWidth",
    "centerX",
    "centerY",
    "children",
@@ -1523,6 +1425,7 @@
    "clipPath",
    "color",
    "colors",
+   "column",
    "commands",
    "contentDescription",
    "count",
@@ -1531,11 +1434,7 @@
    "dark",
    "day",
    "decimal",
-   "dir",
-   "downT",
-   "downX",
-   "downY",
-   "drag",
+   "description",
    "drawCircle",
    "drawLine",
    "drawPath",
@@ -1552,38 +1451,29 @@
    "flags",
    "floatArrays",
    "from",
-   "glow",
-   "glow0",
    "graphicsLayer",
-   "gx",
-   "gy",
    "header",
-   "heart",
    "height",
    "horizontalAlignment",
    "houses",
-   "icon",
    "id",
    "index",
-   "label",
    "left",
    "light",
    "like",
-   "likeStamp",
+   "likeButtonLabel",
+   "likeColor",
+   "liked",
    "likes",
    "linearGradient",
    "loop",
    "lw",
    "modifiers",
    "muted",
-   "mv",
-   "n",
    "name",
    "night",
    "nope",
-   "nopeStamp",
    "nopes",
-   "ok",
    "onClick",
    "onSurface",
    "onTouchDown",
@@ -1593,13 +1483,15 @@
    "paint",
    "panX",
    "panY",
+   "passButtonLabel",
+   "passColor",
+   "passed",
    "path",
    "pathAppendClose",
    "pathAppendLineTo",
    "pathAppendQuadTo",
    "pathCreate",
    "pathExpression",
-   "paths",
    "pivotX",
    "pivotY",
    "profiles",
@@ -1608,8 +1500,6 @@
    "radialGradient",
    "radius",
    "rb",
-   "relX",
-   "relY",
    "resources",
    "rf1",
    "rf2",
@@ -1627,6 +1517,7 @@
    "seconds",
    "semantics",
    "shader",
+   "shadow",
    "size",
    "slots",
    "spacedBy",
@@ -1637,6 +1528,22 @@
    "sunR",
    "sunX",
    "sunY",
+   "surface",
+   "swipestack1_decision",
+   "swipestack1_dir",
+   "swipestack1_downT",
+   "swipestack1_downX",
+   "swipestack1_downY",
+   "swipestack1_drag",
+   "swipestack1_gx",
+   "swipestack1_gy",
+   "swipestack1_mv",
+   "swipestack1_n",
+   "swipestack1_ok",
+   "swipestack1_relX",
+   "swipestack1_relY",
+   "swipestack1_upT",
+   "swipestack1_vel",
    "sx",
    "sy",
    "target",
@@ -1648,23 +1555,20 @@
    "translate",
    "type",
    "until",
-   "upT",
    "value",
    "variable",
    "variables",
-   "vel",
    "verticalAlignment",
+   "verticalWeight",
    "warm",
    "whole",
    "width",
    "x",
    "x1",
    "x2",
-   "x3",
    "y",
    "y1",
-   "y2",
-   "y3"
+   "y2"
   ],
   "evidence": {
    "input.press": [
@@ -1677,9 +1581,6 @@
    ],
    "data.loop": [
     "loop"
-   ],
-   "anim.trigger": [
-    "wakeIn"
    ],
    "input.tap": [
     "onClick",
@@ -1694,15 +1595,6 @@
    "draw.gradient": [
     "linearGradient",
     "radialGradient"
-   ],
-   "draw.transform": [
-    "save",
-    "rotate",
-    "scale",
-    "translate"
-   ],
-   "draw.clip": [
-    "clipPath"
    ],
    "data.array": [
     "floatArrays",
@@ -1723,9 +1615,10 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-02T20:23:42.614Z"
+  "built_at": "2026-11-02T22:51:03.620Z"
  },
  "components": [
+  "SwipeStack",
   "IconButton"
  ]
 }

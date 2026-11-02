@@ -1,0 +1,433 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "SwipeStack demo: four recipe cards to like or pass, with counts"
+ },
+ "resources": {
+  "variables": {
+   "likes": 0,
+   "passes": 0,
+   "verdict": 0
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 72
+       }
+      ],
+      "commands": [
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "textSize": 22
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "Tonight's dinner",
+         "x": 20,
+         "y": 34,
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "textSize": 14
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@likes",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": " liked · ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@passes",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " passed"
+           }
+          }
+         },
+         "x": 20,
+         "y": 60,
+         "panX": -1,
+         "panY": 0
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "verticalWeight": 1
+       }
+      ],
+      "children": [
+       {
+        "SwipeStack": {
+         "index": "@card",
+         "count": 4,
+         "liked": "@likes",
+         "passed": "@passes",
+         "decision": "@verdict",
+         "likeLabel": "YUM",
+         "passLabel": "NOPE",
+         "onSwipe": {
+          "type": "hostAction",
+          "name": "swipe",
+          "value": "@verdict",
+          "valueType": "float",
+          "actionType": 0
+         },
+         "slots": {
+          "card": [
+           {
+            "$if": "theme.mono",
+            "then": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 2
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 160,
+               "cy": 190,
+               "radius": "70 + 12 * @card"
+              }
+             }
+            ],
+            "else": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": "0.18 + 0.12 * @card"
+                }
+               ]
+              }
+             },
+             {
+              "drawRect": {
+               "left": 0,
+               "top": 0,
+               "right": 320,
+               "bottom": 330
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 160,
+               "cy": 190,
+               "radius": "70 + 12 * @card"
+              }
+             }
+            ]
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "style": "fill"
+              },
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "alpha": "1 - min(1, abs(@card - 0))"
+              },
+              {
+               "textSize": 32
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "Ramen",
+             "x": 24,
+             "y": 392,
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.muted"
+              },
+              {
+               "alpha": "1 - min(1, abs(@card - 0))"
+              },
+              {
+               "textSize": 14
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "Tokyo · 25 min",
+             "x": 24,
+             "y": 422,
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "alpha": "1 - min(1, abs(@card - 1))"
+              },
+              {
+               "textSize": 32
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "Tacos",
+             "x": 24,
+             "y": 392,
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.muted"
+              },
+              {
+               "alpha": "1 - min(1, abs(@card - 1))"
+              },
+              {
+               "textSize": 14
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "Mexico City · 15 min",
+             "x": 24,
+             "y": 422,
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "alpha": "1 - min(1, abs(@card - 2))"
+              },
+              {
+               "textSize": 32
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "Paella",
+             "x": 24,
+             "y": 392,
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.muted"
+              },
+              {
+               "alpha": "1 - min(1, abs(@card - 2))"
+              },
+              {
+               "textSize": 14
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "Valencia · 45 min",
+             "x": 24,
+             "y": 422,
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "alpha": "1 - min(1, abs(@card - 3))"
+              },
+              {
+               "textSize": 32
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "Pho",
+             "x": 24,
+             "y": 392,
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.muted"
+              },
+              {
+               "alpha": "1 - min(1, abs(@card - 3))"
+              },
+              {
+               "textSize": 14
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "Hanoi · 30 min",
+             "x": 24,
+             "y": 422,
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

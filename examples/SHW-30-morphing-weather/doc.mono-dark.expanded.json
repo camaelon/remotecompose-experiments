@@ -19,7 +19,22 @@
    "sel": {
     "value": 0,
     "export": true
-   }
+   },
+   "W": "windowWidth()",
+   "H": "windowHeight()",
+   "hh": "@H - 84",
+   "wide": "max(step(@W / @hh, 1.6), step(400, @hh))",
+   "isz": "min(@W * 0.66, @hh * 0.5) * (1 - @wide) + min(@hh - 8, @W * 0.3) * @wide",
+   "icx": "@W / 2 * (1 - @wide) + (@isz / 2 + 10) * @wide",
+   "icy": "@hh * 0.34 * (1 - @wide) + (@hh / 2 + 6) * @wide",
+   "ixl": "@icx - @isz / 2",
+   "iyt": "@icy - @isz / 2",
+   "dc": "ifElse(arrayGet(@fc, max(0, @sel - 1)), @condition, 0.5 - @sel)",
+   "c0": "@condition",
+   "c1": "arrayGet(@fc, 0)",
+   "c2": "arrayGet(@fc, 1)",
+   "c3": "arrayGet(@fc, 2)",
+   "c4": "arrayGet(@fc, 3)"
   },
   "colors": {
    "background": "#FF000000",
@@ -204,7 +219,7 @@
    }
   },
   "paths": {
-   "s0": [
+   "gen_wx_sun_1": [
     {
      "type": "moveTo",
      "x": 100,
@@ -466,7 +481,7 @@
      "type": "close"
     }
    ],
-   "s1": [
+   "gen_wx_cloud_1": [
     {
      "type": "moveTo",
      "x": 100,
@@ -728,7 +743,7 @@
      "type": "close"
     }
    ],
-   "s2": [
+   "gen_wx_rain_1": [
     {
      "type": "moveTo",
      "x": 100,
@@ -990,7 +1005,7 @@
      "type": "close"
     }
    ],
-   "s3": [
+   "gen_wx_snow_1": [
     {
      "type": "moveTo",
      "x": 100,
@@ -1252,7 +1267,7 @@
      "type": "close"
     }
    ],
-   "s4": [
+   "gen_wx_storm_1": [
     {
      "type": "moveTo",
      "x": 100,
@@ -1514,7 +1529,7 @@
      "type": "close"
     }
    ],
-   "bolt": [
+   "gen_wx_bolt_1": [
     {
      "type": "moveTo",
      "x": 108,
@@ -1587,56 +1602,8 @@
        "commands": [
         {
          "variable": {
-          "name": "W",
-          "value": "componentWidth()"
-         }
-        },
-        {
-         "variable": {
-          "name": "H",
-          "value": "componentHeight()"
-         }
-        },
-        {
-         "variable": {
-          "name": "hh",
-          "value": "@H - 84"
-         }
-        },
-        {
-         "variable": {
-          "name": "wide",
-          "value": "max(step(@W / @hh, 1.6), step(400, @hh))"
-         }
-        },
-        {
-         "variable": {
-          "name": "isz",
-          "value": "min(@W * 0.66, @hh * 0.5) * (1 - @wide) + min(@hh - 8, @W * 0.3) * @wide"
-         }
-        },
-        {
-         "variable": {
-          "name": "icx",
-          "value": "@W / 2 * (1 - @wide) + (@isz / 2 + 10) * @wide"
-         }
-        },
-        {
-         "variable": {
-          "name": "icy",
-          "value": "@hh * 0.34 * (1 - @wide) + (@hh / 2 + 6) * @wide"
-         }
-        },
-        {
-         "variable": {
           "name": "t",
           "value": "0"
-         }
-        },
-        {
-         "variable": {
-          "name": "dc",
-          "value": "ifElse(arrayGet(@fc, max(0, @sel - 1)), @condition, 0.5 - @sel)"
          }
         },
         {
@@ -1683,12 +1650,6 @@
         },
         {
          "variable": {
-          "name": "ws",
-          "value": "max(0.0001, @w0 + @w1 + @w2 + @w3 + @w4)"
-         }
-        },
-        {
-         "variable": {
           "name": "k1",
           "value": "@w1 / max(0.0001, @w0 + @w1)"
          }
@@ -1708,286 +1669,8 @@
         {
          "variable": {
           "name": "k4",
-          "value": "@w4 / @ws"
+          "value": "@w4 / max(0.0001, @w0 + @w1 + @w2 + @w3 + @w4)"
          }
-        },
-        {
-         "pathTween": {
-          "id": "m1",
-          "path1": "s0",
-          "path2": "s1",
-          "tween": "@k1"
-         }
-        },
-        {
-         "pathTween": {
-          "id": "m2",
-          "path1": "m1",
-          "path2": "s2",
-          "tween": "@k2"
-         }
-        },
-        {
-         "pathTween": {
-          "id": "m3",
-          "path1": "m2",
-          "path2": "s3",
-          "tween": "@k3"
-         }
-        },
-        {
-         "pathTween": {
-          "id": "body",
-          "path1": "m3",
-          "path2": "s4",
-          "tween": "@k4"
-         }
-        },
-        {
-         "save": [
-          {
-           "translate": {
-            "dx": "@icx",
-            "dy": "@icy + 3 * sin(@t * 1.3)"
-           }
-          },
-          {
-           "scale": {
-            "sx": "@isz / 200",
-            "sy": "@isz / 200"
-           }
-          },
-          {
-           "translate": {
-            "dx": -100,
-            "dy": -100
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "shader": 0
-             },
-             {
-              "color": "@colors.onSurface"
-             },
-             {
-              "alpha": "@w0"
-             },
-             {
-              "style": "stroke"
-             },
-             {
-              "strokeWidth": 4
-             },
-             {
-              "strokeCap": "round"
-             }
-            ]
-           }
-          },
-          {
-           "loop": {
-            "index": "i",
-            "from": 0,
-            "until": 12,
-            "commands": [
-             {
-              "save": [
-               {
-                "rotate": {
-                 "angle": "i * 30 + @t * 14",
-                 "pivotX": 100,
-                 "pivotY": 100
-                }
-               },
-               {
-                "drawLine": {
-                 "x1": 100,
-                 "y1": "44 - 6 * @w0",
-                 "x2": 100,
-                 "y2": "34 - 14 * @w0 + 4 * sin(@t * 2 + i)"
-                }
-               }
-              ]
-             }
-            ]
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "shader": 0
-             },
-             {
-              "color": "@colors.onSurface"
-             },
-             {
-              "alpha": 1
-             },
-             {
-              "style": "stroke"
-             },
-             {
-              "strokeWidth": 4
-             },
-             {
-              "strokeJoin": "round"
-             }
-            ]
-           }
-          },
-          {
-           "drawPath": {
-            "path": "body"
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "shader": 0
-             },
-             {
-              "style": "stroke"
-             },
-             {
-              "strokeWidth": 5
-             },
-             {
-              "strokeCap": "round"
-             }
-            ]
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "color": "@colors.onSurface"
-             },
-             {
-              "strokeWidth": 3
-             }
-            ]
-           }
-          },
-          {
-           "variable": {
-            "name": "wr",
-            "value": "@w2 + 0.7 * @w4"
-           }
-          },
-          {
-           "loop": {
-            "index": "j",
-            "from": 0,
-            "until": 7,
-            "commands": [
-             {
-              "variable": {
-               "name": "ph",
-               "value": "fract(@t * 1.3 + j * 0.382)"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "alpha": "@wr * (1 - @ph * @ph)"
-                }
-               ]
-              }
-             },
-             {
-              "drawLine": {
-               "x1": "60 + j * 14 - @ph * 10",
-               "y1": "126 + @ph * 58",
-               "x2": "57 + j * 14 - @ph * 10",
-               "y2": "137 + @ph * 58"
-              }
-             }
-            ]
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "style": "fill"
-             }
-            ]
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "color": "@colors.onSurface"
-             }
-            ]
-           }
-          },
-          {
-           "loop": {
-            "index": "j",
-            "from": 0,
-            "until": 8,
-            "commands": [
-             {
-              "variable": {
-               "name": "ps",
-               "value": "fract(@t * 0.32 + j * 0.618)"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "alpha": "@w3 * (1 - @ps * @ps)"
-                }
-               ]
-              }
-             },
-             {
-              "drawCircle": {
-               "cx": "56 + j * 13 + 6 * sin(@t * 1.7 + j * 2.1)",
-               "cy": "122 + @ps * 64",
-               "radius": "2.6 + (j % 3)"
-              }
-             }
-            ]
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "color": "@colors.onSurface"
-             },
-             {
-              "alpha": "@w4"
-             },
-             {
-              "style": "stroke"
-             },
-             {
-              "strokeWidth": 3
-             },
-             {
-              "strokeJoin": "round"
-             }
-            ]
-           }
-          },
-          {
-           "drawPath": {
-            "path": "bolt"
-           }
-          }
-         ]
         },
         {
          "textSubtext": {
@@ -2846,148 +2529,377 @@
           "panX": 0,
           "panY": 0
          }
-        },
+        }
+       ]
+      }
+     },
+     {
+      "column": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "children": [
         {
-         "paint": {
-          "ops": [
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
            {
-            "color": "@colors.onSurface"
-           },
-           {
-            "style": "stroke"
-           },
-           {
-            "strokeWidth": 9
-           },
-           {
-            "strokeJoin": "round"
+            "height": "@iyt"
            }
           ]
          }
         },
         {
-         "loop": {
-          "index": "d",
-          "from": 0,
-          "until": 5,
-          "commands": [
+         "row": {
+          "children": [
            {
-            "variable": {
-             "name": "cd",
-             "value": "ifElse(arrayGet(@fc, max(0, d - 1)), @condition, 0.5 - d)"
+            "box": {
+             "modifiers": [
+              {
+               "width": "@ixl"
+              },
+              {
+               "height": 1
+              }
+             ]
             }
            },
            {
-            "save": [
-             {
-              "translate": {
-               "dx": "8 + (d + 0.5) * @cw - 17",
-               "dy": "@st + 18"
+            "box": {
+             "modifiers": [
+              {
+               "width": "@isz"
+              },
+              {
+               "height": "@isz"
               }
-             },
-             {
-              "scale": {
-               "sx": 0.17,
-               "sy": 0.17
+             ],
+             "children": [
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": 480
+                 },
+                 {
+                  "semantics": {
+                   "contentDescription": "@cname"
+                  }
+                 }
+                ],
+                "commands": [
+                 {
+                  "variable": {
+                   "name": "weathericon1_s",
+                   "value": "min(componentWidth(), componentHeight())"
+                  }
+                 },
+                 {
+                  "translate": {
+                   "dx": "(componentWidth() - @weathericon1_s) / 2",
+                   "dy": "(componentHeight() - @weathericon1_s) / 2"
+                  }
+                 },
+                 {
+                  "scale": {
+                   "sx": "@weathericon1_s / 200",
+                   "sy": "@weathericon1_s / 200"
+                  }
+                 },
+                 {
+                  "variable": {
+                   "name": "weathericon1_wxt",
+                   "value": "0"
+                  }
+                 },
+                 {
+                  "variable": {
+                   "name": "weathericon1_wxw0",
+                   "value": "1 - min(1, abs(@dc - 0))"
+                  }
+                 },
+                 {
+                  "variable": {
+                   "name": "weathericon1_wxw1",
+                   "value": "1 - min(1, abs(@dc - 1))"
+                  }
+                 },
+                 {
+                  "variable": {
+                   "name": "weathericon1_wxw2",
+                   "value": "1 - min(1, abs(@dc - 2))"
+                  }
+                 },
+                 {
+                  "variable": {
+                   "name": "weathericon1_wxw3",
+                   "value": "1 - min(1, abs(@dc - 3))"
+                  }
+                 },
+                 {
+                  "variable": {
+                   "name": "weathericon1_wxw4",
+                   "value": "1 - min(1, abs(@dc - 4))"
+                  }
+                 },
+                 {
+                  "pathTween": {
+                   "id": "wxM1",
+                   "path1": "$paths.gen_wx_sun_1",
+                   "path2": "$paths.gen_wx_cloud_1",
+                   "tween": "@weathericon1_wxw1 / max(0.0001, @weathericon1_wxw0 + @weathericon1_wxw1)"
+                  }
+                 },
+                 {
+                  "pathTween": {
+                   "id": "wxM2",
+                   "path1": "wxM1",
+                   "path2": "$paths.gen_wx_rain_1",
+                   "tween": "@weathericon1_wxw2 / max(0.0001, @weathericon1_wxw0 + @weathericon1_wxw1 + @weathericon1_wxw2)"
+                  }
+                 },
+                 {
+                  "pathTween": {
+                   "id": "wxM3",
+                   "path1": "wxM2",
+                   "path2": "$paths.gen_wx_snow_1",
+                   "tween": "@weathericon1_wxw3 / max(0.0001, @weathericon1_wxw0 + @weathericon1_wxw1 + @weathericon1_wxw2 + @weathericon1_wxw3)"
+                  }
+                 },
+                 {
+                  "pathTween": {
+                   "id": "wxBody",
+                   "path1": "wxM3",
+                   "path2": "$paths.gen_wx_storm_1",
+                   "tween": "@weathericon1_wxw4 / max(0.0001, @weathericon1_wxw0 + @weathericon1_wxw1 + @weathericon1_wxw2 + @weathericon1_wxw3 + @weathericon1_wxw4)"
+                  }
+                 },
+                 {
+                  "translate": {
+                   "dx": 0,
+                   "dy": "3 * sin(@weathericon1_wxt * 1.3)"
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "shader": 0
+                    },
+                    {
+                     "color": "@colors.onSurface"
+                    },
+                    {
+                     "style": "stroke"
+                    },
+                    {
+                     "strokeWidth": 4
+                    },
+                    {
+                     "strokeCap": "round"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "alpha": "@weathericon1_wxw0"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "loop": {
+                   "index": "i",
+                   "from": 0,
+                   "until": 12,
+                   "commands": [
+                    {
+                     "save": [
+                      {
+                       "rotate": {
+                        "angle": "i * 30 + @weathericon1_wxt * 14",
+                        "pivotX": 100,
+                        "pivotY": 100
+                       }
+                      },
+                      {
+                       "drawLine": {
+                        "x1": 100,
+                        "y1": "44 - 6 * @weathericon1_wxw0",
+                        "x2": 100,
+                        "y2": "34 - 14 * @weathericon1_wxw0 + 4 * sin(@weathericon1_wxt * 2 + i)"
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "shader": 0
+                    },
+                    {
+                     "color": "@colors.onSurface"
+                    },
+                    {
+                     "alpha": 1
+                    },
+                    {
+                     "style": "stroke"
+                    },
+                    {
+                     "strokeWidth": "max(4, 360 / @weathericon1_s)"
+                    },
+                    {
+                     "strokeJoin": "round"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawPath": {
+                   "path": "wxBody"
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "shader": 0
+                    },
+                    {
+                     "color": "@colors.onSurface"
+                    },
+                    {
+                     "style": "stroke"
+                    },
+                    {
+                     "strokeWidth": "max(3, 300 / @weathericon1_s)"
+                    },
+                    {
+                     "strokeCap": "round"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "loop": {
+                   "index": "j",
+                   "from": 0,
+                   "until": 7,
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "weathericon1_wxp",
+                      "value": "fract(@weathericon1_wxt * 1.3 + j * 0.382)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "(@weathericon1_wxw2 + 0.7 * @weathericon1_wxw4) * (1 - @weathericon1_wxp * @weathericon1_wxp)"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": "60 + j * 14 - @weathericon1_wxp * 10",
+                      "y1": "126 + @weathericon1_wxp * 58",
+                      "x2": "57 + j * 14 - @weathericon1_wxp * 10",
+                      "y2": "137 + @weathericon1_wxp * 58"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.onSurface"
+                    },
+                    {
+                     "style": "fill"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "loop": {
+                   "index": "j",
+                   "from": 0,
+                   "until": 8,
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "weathericon1_wxq",
+                      "value": "fract(@weathericon1_wxt * 0.32 + j * 0.618)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@weathericon1_wxw3 * (1 - @weathericon1_wxq * @weathericon1_wxq)"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawCircle": {
+                      "cx": "56 + j * 13 + 6 * sin(@weathericon1_wxt * 1.7 + j * 2.1)",
+                      "cy": "122 + @weathericon1_wxq * 64",
+                      "radius": "2.6 + (j % 3)"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.onSurface"
+                    },
+                    {
+                     "style": "stroke"
+                    },
+                    {
+                     "strokeWidth": "max(3, 300 / @weathericon1_s)"
+                    },
+                    {
+                     "strokeJoin": "round"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "alpha": "@weathericon1_wxw4"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawPath": {
+                   "path": "$paths.gen_wx_bolt_1"
+                  }
+                 }
+                ]
+               }
               }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "alpha": "1 - min(1, abs(@cd - 0))"
-                }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "s0"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "alpha": "1 - min(1, abs(@cd - 1))"
-                }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "s1"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "alpha": "1 - min(1, abs(@cd - 2))"
-                }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "s2"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "alpha": "1 - min(1, abs(@cd - 3))"
-                }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "s3"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "alpha": "1 - min(1, abs(@cd - 4))"
-                }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "s4"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "alpha": "1 - min(1, abs(@cd - 4))"
-                }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "bolt"
-              }
-             }
-            ]
-           }
-          ]
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": 1
+             ]
+            }
            }
           ]
          }
@@ -3093,6 +3005,7 @@
           "children": [
            {
             "box": {
+             "horizontalAlignment": "center",
              "modifiers": [
               {
                "weight": 1
@@ -3111,11 +3024,346 @@
                 "value": 0
                }
               }
+             ],
+             "children": [
+              {
+               "column": {
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "height": 18
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 34
+                    },
+                    {
+                     "semantics": {
+                      "contentDescription": "Weather"
+                     }
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "weathericon2_s",
+                      "value": "min(componentWidth(), componentHeight())"
+                     }
+                    },
+                    {
+                     "translate": {
+                      "dx": "(componentWidth() - @weathericon2_s) / 2",
+                      "dy": "(componentHeight() - @weathericon2_s) / 2"
+                     }
+                    },
+                    {
+                     "scale": {
+                      "sx": "@weathericon2_s / 200",
+                      "sy": "@weathericon2_s / 200"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon2_wxt",
+                      "value": "0"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon2_wxw0",
+                      "value": "1 - min(1, abs(@c0 - 0))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon2_wxw1",
+                      "value": "1 - min(1, abs(@c0 - 1))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon2_wxw2",
+                      "value": "1 - min(1, abs(@c0 - 2))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon2_wxw3",
+                      "value": "1 - min(1, abs(@c0 - 3))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon2_wxw4",
+                      "value": "1 - min(1, abs(@c0 - 4))"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM1",
+                      "path1": "$paths.gen_wx_sun_1",
+                      "path2": "$paths.gen_wx_cloud_1",
+                      "tween": "@weathericon2_wxw1 / max(0.0001, @weathericon2_wxw0 + @weathericon2_wxw1)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM2",
+                      "path1": "wxM1",
+                      "path2": "$paths.gen_wx_rain_1",
+                      "tween": "@weathericon2_wxw2 / max(0.0001, @weathericon2_wxw0 + @weathericon2_wxw1 + @weathericon2_wxw2)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM3",
+                      "path1": "wxM2",
+                      "path2": "$paths.gen_wx_snow_1",
+                      "tween": "@weathericon2_wxw3 / max(0.0001, @weathericon2_wxw0 + @weathericon2_wxw1 + @weathericon2_wxw2 + @weathericon2_wxw3)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxBody",
+                      "path1": "wxM3",
+                      "path2": "$paths.gen_wx_storm_1",
+                      "tween": "@weathericon2_wxw4 / max(0.0001, @weathericon2_wxw0 + @weathericon2_wxw1 + @weathericon2_wxw2 + @weathericon2_wxw3 + @weathericon2_wxw4)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 4
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@weathericon2_wxw0"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "i",
+                      "from": 0,
+                      "until": 12,
+                      "commands": [
+                       {
+                        "save": [
+                         {
+                          "rotate": {
+                           "angle": "i * 30 + @weathericon2_wxt * 14",
+                           "pivotX": 100,
+                           "pivotY": 100
+                          }
+                         },
+                         {
+                          "drawLine": {
+                           "x1": 100,
+                           "y1": "44 - 6 * @weathericon2_wxw0",
+                           "x2": 100,
+                           "y2": "34 - 14 * @weathericon2_wxw0 + 4 * sin(@weathericon2_wxt * 2 + i)"
+                          }
+                         }
+                        ]
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "alpha": 1
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(4, 360 / @weathericon2_s)"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "wxBody"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(3, 300 / @weathericon2_s)"
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "j",
+                      "from": 0,
+                      "until": 7,
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "weathericon2_wxp",
+                         "value": "fract(@weathericon2_wxt * 1.3 + j * 0.382)"
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "alpha": "(@weathericon2_wxw2 + 0.7 * @weathericon2_wxw4) * (1 - @weathericon2_wxp * @weathericon2_wxp)"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawLine": {
+                         "x1": "60 + j * 14 - @weathericon2_wxp * 10",
+                         "y1": "126 + @weathericon2_wxp * 58",
+                         "x2": "57 + j * 14 - @weathericon2_wxp * 10",
+                         "y2": "137 + @weathericon2_wxp * 58"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "fill"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "j",
+                      "from": 0,
+                      "until": 8,
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "weathericon2_wxq",
+                         "value": "fract(@weathericon2_wxt * 0.32 + j * 0.618)"
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "alpha": "@weathericon2_wxw3 * (1 - @weathericon2_wxq * @weathericon2_wxq)"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawCircle": {
+                         "cx": "56 + j * 13 + 6 * sin(@weathericon2_wxt * 1.7 + j * 2.1)",
+                         "cy": "122 + @weathericon2_wxq * 64",
+                         "radius": "2.6 + (j % 3)"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(3, 300 / @weathericon2_s)"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@weathericon2_wxw4"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "$paths.gen_wx_bolt_1"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
              ]
             }
            },
            {
             "box": {
+             "horizontalAlignment": "center",
              "modifiers": [
               {
                "weight": 1
@@ -3134,11 +3382,346 @@
                 "value": 1
                }
               }
+             ],
+             "children": [
+              {
+               "column": {
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "height": 18
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 34
+                    },
+                    {
+                     "semantics": {
+                      "contentDescription": "Weather"
+                     }
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "weathericon3_s",
+                      "value": "min(componentWidth(), componentHeight())"
+                     }
+                    },
+                    {
+                     "translate": {
+                      "dx": "(componentWidth() - @weathericon3_s) / 2",
+                      "dy": "(componentHeight() - @weathericon3_s) / 2"
+                     }
+                    },
+                    {
+                     "scale": {
+                      "sx": "@weathericon3_s / 200",
+                      "sy": "@weathericon3_s / 200"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon3_wxt",
+                      "value": "0"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon3_wxw0",
+                      "value": "1 - min(1, abs(@c1 - 0))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon3_wxw1",
+                      "value": "1 - min(1, abs(@c1 - 1))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon3_wxw2",
+                      "value": "1 - min(1, abs(@c1 - 2))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon3_wxw3",
+                      "value": "1 - min(1, abs(@c1 - 3))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon3_wxw4",
+                      "value": "1 - min(1, abs(@c1 - 4))"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM1",
+                      "path1": "$paths.gen_wx_sun_1",
+                      "path2": "$paths.gen_wx_cloud_1",
+                      "tween": "@weathericon3_wxw1 / max(0.0001, @weathericon3_wxw0 + @weathericon3_wxw1)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM2",
+                      "path1": "wxM1",
+                      "path2": "$paths.gen_wx_rain_1",
+                      "tween": "@weathericon3_wxw2 / max(0.0001, @weathericon3_wxw0 + @weathericon3_wxw1 + @weathericon3_wxw2)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM3",
+                      "path1": "wxM2",
+                      "path2": "$paths.gen_wx_snow_1",
+                      "tween": "@weathericon3_wxw3 / max(0.0001, @weathericon3_wxw0 + @weathericon3_wxw1 + @weathericon3_wxw2 + @weathericon3_wxw3)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxBody",
+                      "path1": "wxM3",
+                      "path2": "$paths.gen_wx_storm_1",
+                      "tween": "@weathericon3_wxw4 / max(0.0001, @weathericon3_wxw0 + @weathericon3_wxw1 + @weathericon3_wxw2 + @weathericon3_wxw3 + @weathericon3_wxw4)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 4
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@weathericon3_wxw0"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "i",
+                      "from": 0,
+                      "until": 12,
+                      "commands": [
+                       {
+                        "save": [
+                         {
+                          "rotate": {
+                           "angle": "i * 30 + @weathericon3_wxt * 14",
+                           "pivotX": 100,
+                           "pivotY": 100
+                          }
+                         },
+                         {
+                          "drawLine": {
+                           "x1": 100,
+                           "y1": "44 - 6 * @weathericon3_wxw0",
+                           "x2": 100,
+                           "y2": "34 - 14 * @weathericon3_wxw0 + 4 * sin(@weathericon3_wxt * 2 + i)"
+                          }
+                         }
+                        ]
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "alpha": 1
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(4, 360 / @weathericon3_s)"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "wxBody"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(3, 300 / @weathericon3_s)"
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "j",
+                      "from": 0,
+                      "until": 7,
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "weathericon3_wxp",
+                         "value": "fract(@weathericon3_wxt * 1.3 + j * 0.382)"
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "alpha": "(@weathericon3_wxw2 + 0.7 * @weathericon3_wxw4) * (1 - @weathericon3_wxp * @weathericon3_wxp)"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawLine": {
+                         "x1": "60 + j * 14 - @weathericon3_wxp * 10",
+                         "y1": "126 + @weathericon3_wxp * 58",
+                         "x2": "57 + j * 14 - @weathericon3_wxp * 10",
+                         "y2": "137 + @weathericon3_wxp * 58"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "fill"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "j",
+                      "from": 0,
+                      "until": 8,
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "weathericon3_wxq",
+                         "value": "fract(@weathericon3_wxt * 0.32 + j * 0.618)"
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "alpha": "@weathericon3_wxw3 * (1 - @weathericon3_wxq * @weathericon3_wxq)"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawCircle": {
+                         "cx": "56 + j * 13 + 6 * sin(@weathericon3_wxt * 1.7 + j * 2.1)",
+                         "cy": "122 + @weathericon3_wxq * 64",
+                         "radius": "2.6 + (j % 3)"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(3, 300 / @weathericon3_s)"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@weathericon3_wxw4"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "$paths.gen_wx_bolt_1"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
              ]
             }
            },
            {
             "box": {
+             "horizontalAlignment": "center",
              "modifiers": [
               {
                "weight": 1
@@ -3157,11 +3740,346 @@
                 "value": 2
                }
               }
+             ],
+             "children": [
+              {
+               "column": {
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "height": 18
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 34
+                    },
+                    {
+                     "semantics": {
+                      "contentDescription": "Weather"
+                     }
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "weathericon4_s",
+                      "value": "min(componentWidth(), componentHeight())"
+                     }
+                    },
+                    {
+                     "translate": {
+                      "dx": "(componentWidth() - @weathericon4_s) / 2",
+                      "dy": "(componentHeight() - @weathericon4_s) / 2"
+                     }
+                    },
+                    {
+                     "scale": {
+                      "sx": "@weathericon4_s / 200",
+                      "sy": "@weathericon4_s / 200"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon4_wxt",
+                      "value": "0"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon4_wxw0",
+                      "value": "1 - min(1, abs(@c2 - 0))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon4_wxw1",
+                      "value": "1 - min(1, abs(@c2 - 1))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon4_wxw2",
+                      "value": "1 - min(1, abs(@c2 - 2))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon4_wxw3",
+                      "value": "1 - min(1, abs(@c2 - 3))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon4_wxw4",
+                      "value": "1 - min(1, abs(@c2 - 4))"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM1",
+                      "path1": "$paths.gen_wx_sun_1",
+                      "path2": "$paths.gen_wx_cloud_1",
+                      "tween": "@weathericon4_wxw1 / max(0.0001, @weathericon4_wxw0 + @weathericon4_wxw1)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM2",
+                      "path1": "wxM1",
+                      "path2": "$paths.gen_wx_rain_1",
+                      "tween": "@weathericon4_wxw2 / max(0.0001, @weathericon4_wxw0 + @weathericon4_wxw1 + @weathericon4_wxw2)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM3",
+                      "path1": "wxM2",
+                      "path2": "$paths.gen_wx_snow_1",
+                      "tween": "@weathericon4_wxw3 / max(0.0001, @weathericon4_wxw0 + @weathericon4_wxw1 + @weathericon4_wxw2 + @weathericon4_wxw3)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxBody",
+                      "path1": "wxM3",
+                      "path2": "$paths.gen_wx_storm_1",
+                      "tween": "@weathericon4_wxw4 / max(0.0001, @weathericon4_wxw0 + @weathericon4_wxw1 + @weathericon4_wxw2 + @weathericon4_wxw3 + @weathericon4_wxw4)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 4
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@weathericon4_wxw0"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "i",
+                      "from": 0,
+                      "until": 12,
+                      "commands": [
+                       {
+                        "save": [
+                         {
+                          "rotate": {
+                           "angle": "i * 30 + @weathericon4_wxt * 14",
+                           "pivotX": 100,
+                           "pivotY": 100
+                          }
+                         },
+                         {
+                          "drawLine": {
+                           "x1": 100,
+                           "y1": "44 - 6 * @weathericon4_wxw0",
+                           "x2": 100,
+                           "y2": "34 - 14 * @weathericon4_wxw0 + 4 * sin(@weathericon4_wxt * 2 + i)"
+                          }
+                         }
+                        ]
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "alpha": 1
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(4, 360 / @weathericon4_s)"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "wxBody"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(3, 300 / @weathericon4_s)"
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "j",
+                      "from": 0,
+                      "until": 7,
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "weathericon4_wxp",
+                         "value": "fract(@weathericon4_wxt * 1.3 + j * 0.382)"
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "alpha": "(@weathericon4_wxw2 + 0.7 * @weathericon4_wxw4) * (1 - @weathericon4_wxp * @weathericon4_wxp)"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawLine": {
+                         "x1": "60 + j * 14 - @weathericon4_wxp * 10",
+                         "y1": "126 + @weathericon4_wxp * 58",
+                         "x2": "57 + j * 14 - @weathericon4_wxp * 10",
+                         "y2": "137 + @weathericon4_wxp * 58"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "fill"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "j",
+                      "from": 0,
+                      "until": 8,
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "weathericon4_wxq",
+                         "value": "fract(@weathericon4_wxt * 0.32 + j * 0.618)"
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "alpha": "@weathericon4_wxw3 * (1 - @weathericon4_wxq * @weathericon4_wxq)"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawCircle": {
+                         "cx": "56 + j * 13 + 6 * sin(@weathericon4_wxt * 1.7 + j * 2.1)",
+                         "cy": "122 + @weathericon4_wxq * 64",
+                         "radius": "2.6 + (j % 3)"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(3, 300 / @weathericon4_s)"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@weathericon4_wxw4"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "$paths.gen_wx_bolt_1"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
              ]
             }
            },
            {
             "box": {
+             "horizontalAlignment": "center",
              "modifiers": [
               {
                "weight": 1
@@ -3180,11 +4098,346 @@
                 "value": 3
                }
               }
+             ],
+             "children": [
+              {
+               "column": {
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "height": 18
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 34
+                    },
+                    {
+                     "semantics": {
+                      "contentDescription": "Weather"
+                     }
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "weathericon5_s",
+                      "value": "min(componentWidth(), componentHeight())"
+                     }
+                    },
+                    {
+                     "translate": {
+                      "dx": "(componentWidth() - @weathericon5_s) / 2",
+                      "dy": "(componentHeight() - @weathericon5_s) / 2"
+                     }
+                    },
+                    {
+                     "scale": {
+                      "sx": "@weathericon5_s / 200",
+                      "sy": "@weathericon5_s / 200"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon5_wxt",
+                      "value": "0"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon5_wxw0",
+                      "value": "1 - min(1, abs(@c3 - 0))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon5_wxw1",
+                      "value": "1 - min(1, abs(@c3 - 1))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon5_wxw2",
+                      "value": "1 - min(1, abs(@c3 - 2))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon5_wxw3",
+                      "value": "1 - min(1, abs(@c3 - 3))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon5_wxw4",
+                      "value": "1 - min(1, abs(@c3 - 4))"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM1",
+                      "path1": "$paths.gen_wx_sun_1",
+                      "path2": "$paths.gen_wx_cloud_1",
+                      "tween": "@weathericon5_wxw1 / max(0.0001, @weathericon5_wxw0 + @weathericon5_wxw1)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM2",
+                      "path1": "wxM1",
+                      "path2": "$paths.gen_wx_rain_1",
+                      "tween": "@weathericon5_wxw2 / max(0.0001, @weathericon5_wxw0 + @weathericon5_wxw1 + @weathericon5_wxw2)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM3",
+                      "path1": "wxM2",
+                      "path2": "$paths.gen_wx_snow_1",
+                      "tween": "@weathericon5_wxw3 / max(0.0001, @weathericon5_wxw0 + @weathericon5_wxw1 + @weathericon5_wxw2 + @weathericon5_wxw3)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxBody",
+                      "path1": "wxM3",
+                      "path2": "$paths.gen_wx_storm_1",
+                      "tween": "@weathericon5_wxw4 / max(0.0001, @weathericon5_wxw0 + @weathericon5_wxw1 + @weathericon5_wxw2 + @weathericon5_wxw3 + @weathericon5_wxw4)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 4
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@weathericon5_wxw0"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "i",
+                      "from": 0,
+                      "until": 12,
+                      "commands": [
+                       {
+                        "save": [
+                         {
+                          "rotate": {
+                           "angle": "i * 30 + @weathericon5_wxt * 14",
+                           "pivotX": 100,
+                           "pivotY": 100
+                          }
+                         },
+                         {
+                          "drawLine": {
+                           "x1": 100,
+                           "y1": "44 - 6 * @weathericon5_wxw0",
+                           "x2": 100,
+                           "y2": "34 - 14 * @weathericon5_wxw0 + 4 * sin(@weathericon5_wxt * 2 + i)"
+                          }
+                         }
+                        ]
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "alpha": 1
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(4, 360 / @weathericon5_s)"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "wxBody"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(3, 300 / @weathericon5_s)"
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "j",
+                      "from": 0,
+                      "until": 7,
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "weathericon5_wxp",
+                         "value": "fract(@weathericon5_wxt * 1.3 + j * 0.382)"
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "alpha": "(@weathericon5_wxw2 + 0.7 * @weathericon5_wxw4) * (1 - @weathericon5_wxp * @weathericon5_wxp)"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawLine": {
+                         "x1": "60 + j * 14 - @weathericon5_wxp * 10",
+                         "y1": "126 + @weathericon5_wxp * 58",
+                         "x2": "57 + j * 14 - @weathericon5_wxp * 10",
+                         "y2": "137 + @weathericon5_wxp * 58"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "fill"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "j",
+                      "from": 0,
+                      "until": 8,
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "weathericon5_wxq",
+                         "value": "fract(@weathericon5_wxt * 0.32 + j * 0.618)"
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "alpha": "@weathericon5_wxw3 * (1 - @weathericon5_wxq * @weathericon5_wxq)"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawCircle": {
+                         "cx": "56 + j * 13 + 6 * sin(@weathericon5_wxt * 1.7 + j * 2.1)",
+                         "cy": "122 + @weathericon5_wxq * 64",
+                         "radius": "2.6 + (j % 3)"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(3, 300 / @weathericon5_s)"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@weathericon5_wxw4"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "$paths.gen_wx_bolt_1"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
              ]
             }
            },
            {
             "box": {
+             "horizontalAlignment": "center",
              "modifiers": [
               {
                "weight": 1
@@ -3201,6 +4454,340 @@
                 "type": "valueFloatChange",
                 "target": "@sel",
                 "value": 4
+               }
+              }
+             ],
+             "children": [
+              {
+               "column": {
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "height": 18
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 34
+                    },
+                    {
+                     "semantics": {
+                      "contentDescription": "Weather"
+                     }
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "weathericon6_s",
+                      "value": "min(componentWidth(), componentHeight())"
+                     }
+                    },
+                    {
+                     "translate": {
+                      "dx": "(componentWidth() - @weathericon6_s) / 2",
+                      "dy": "(componentHeight() - @weathericon6_s) / 2"
+                     }
+                    },
+                    {
+                     "scale": {
+                      "sx": "@weathericon6_s / 200",
+                      "sy": "@weathericon6_s / 200"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon6_wxt",
+                      "value": "0"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon6_wxw0",
+                      "value": "1 - min(1, abs(@c4 - 0))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon6_wxw1",
+                      "value": "1 - min(1, abs(@c4 - 1))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon6_wxw2",
+                      "value": "1 - min(1, abs(@c4 - 2))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon6_wxw3",
+                      "value": "1 - min(1, abs(@c4 - 3))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "weathericon6_wxw4",
+                      "value": "1 - min(1, abs(@c4 - 4))"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM1",
+                      "path1": "$paths.gen_wx_sun_1",
+                      "path2": "$paths.gen_wx_cloud_1",
+                      "tween": "@weathericon6_wxw1 / max(0.0001, @weathericon6_wxw0 + @weathericon6_wxw1)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM2",
+                      "path1": "wxM1",
+                      "path2": "$paths.gen_wx_rain_1",
+                      "tween": "@weathericon6_wxw2 / max(0.0001, @weathericon6_wxw0 + @weathericon6_wxw1 + @weathericon6_wxw2)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxM3",
+                      "path1": "wxM2",
+                      "path2": "$paths.gen_wx_snow_1",
+                      "tween": "@weathericon6_wxw3 / max(0.0001, @weathericon6_wxw0 + @weathericon6_wxw1 + @weathericon6_wxw2 + @weathericon6_wxw3)"
+                     }
+                    },
+                    {
+                     "pathTween": {
+                      "id": "wxBody",
+                      "path1": "wxM3",
+                      "path2": "$paths.gen_wx_storm_1",
+                      "tween": "@weathericon6_wxw4 / max(0.0001, @weathericon6_wxw0 + @weathericon6_wxw1 + @weathericon6_wxw2 + @weathericon6_wxw3 + @weathericon6_wxw4)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 4
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@weathericon6_wxw0"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "i",
+                      "from": 0,
+                      "until": 12,
+                      "commands": [
+                       {
+                        "save": [
+                         {
+                          "rotate": {
+                           "angle": "i * 30 + @weathericon6_wxt * 14",
+                           "pivotX": 100,
+                           "pivotY": 100
+                          }
+                         },
+                         {
+                          "drawLine": {
+                           "x1": 100,
+                           "y1": "44 - 6 * @weathericon6_wxw0",
+                           "x2": 100,
+                           "y2": "34 - 14 * @weathericon6_wxw0 + 4 * sin(@weathericon6_wxt * 2 + i)"
+                          }
+                         }
+                        ]
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "alpha": 1
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(4, 360 / @weathericon6_s)"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "wxBody"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "shader": 0
+                       },
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(3, 300 / @weathericon6_s)"
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "j",
+                      "from": 0,
+                      "until": 7,
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "weathericon6_wxp",
+                         "value": "fract(@weathericon6_wxt * 1.3 + j * 0.382)"
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "alpha": "(@weathericon6_wxw2 + 0.7 * @weathericon6_wxw4) * (1 - @weathericon6_wxp * @weathericon6_wxp)"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawLine": {
+                         "x1": "60 + j * 14 - @weathericon6_wxp * 10",
+                         "y1": "126 + @weathericon6_wxp * 58",
+                         "x2": "57 + j * 14 - @weathericon6_wxp * 10",
+                         "y2": "137 + @weathericon6_wxp * 58"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "fill"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "j",
+                      "from": 0,
+                      "until": 8,
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "weathericon6_wxq",
+                         "value": "fract(@weathericon6_wxt * 0.32 + j * 0.618)"
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "alpha": "@weathericon6_wxw3 * (1 - @weathericon6_wxq * @weathericon6_wxq)"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawCircle": {
+                         "cx": "56 + j * 13 + 6 * sin(@weathericon6_wxt * 1.7 + j * 2.1)",
+                         "cy": "122 + @weathericon6_wxq * 64",
+                         "radius": "2.6 + (j % 3)"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": "max(3, 300 / @weathericon6_s)"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@weathericon6_wxw4"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "$paths.gen_wx_bolt_1"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
                }
               }
              ]

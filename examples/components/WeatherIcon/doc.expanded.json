@@ -2,9 +2,9 @@
  "header": {
   "apiLevel": 7,
   "width": 320,
-  "height": 200,
+  "height": 330,
   "profiles": 513,
-  "contentDescription": "WeatherIcon component: sun, cloud, rain, snow and storm, and a large rain icon"
+  "contentDescription": "WeatherIcon component: sun, cloud, rain, snow and storm, a small storm icon, and a morphing icon that changes condition when tapped"
  },
  "root": {
   "column": {
@@ -812,11 +812,944 @@
        }
       ]
      }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "size": 96
+          },
+          {
+           "semantics": {
+            "contentDescription": "Next condition",
+            "clickable": true
+           }
+          },
+          {
+           "onClick": {
+            "type": "valueFloatExpressionChange",
+            "target": "@wx",
+            "value": "(@wx + 1) % 5"
+           }
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": 96
+             },
+             {
+              "semantics": {
+               "contentDescription": "Weather"
+              }
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "weathericon7_s",
+               "value": "min(componentWidth(), componentHeight())"
+              }
+             },
+             {
+              "translate": {
+               "dx": "(componentWidth() - @weathericon7_s) / 2",
+               "dy": "(componentHeight() - @weathericon7_s) / 2"
+              }
+             },
+             {
+              "scale": {
+               "sx": "@weathericon7_s / 200",
+               "sy": "@weathericon7_s / 200"
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon7_wxt",
+               "value": "0"
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon7_wxw0",
+               "value": {
+                "value": "1 - min(1, abs(@wx - 0))",
+                "anim": 0.8
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon7_wxw1",
+               "value": {
+                "value": "1 - min(1, abs(@wx - 1))",
+                "anim": 0.8
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon7_wxw2",
+               "value": {
+                "value": "1 - min(1, abs(@wx - 2))",
+                "anim": 0.8
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon7_wxw3",
+               "value": {
+                "value": "1 - min(1, abs(@wx - 3))",
+                "anim": 0.8
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon7_wxw4",
+               "value": {
+                "value": "1 - min(1, abs(@wx - 4))",
+                "anim": 0.8
+               }
+              }
+             },
+             {
+              "pathTween": {
+               "id": "wxM1",
+               "path1": "$paths.gen_wx_sun_1",
+               "path2": "$paths.gen_wx_cloud_1",
+               "tween": "@weathericon7_wxw1 / max(0.0001, @weathericon7_wxw0 + @weathericon7_wxw1)"
+              }
+             },
+             {
+              "pathTween": {
+               "id": "wxM2",
+               "path1": "wxM1",
+               "path2": "$paths.gen_wx_rain_1",
+               "tween": "@weathericon7_wxw2 / max(0.0001, @weathericon7_wxw0 + @weathericon7_wxw1 + @weathericon7_wxw2)"
+              }
+             },
+             {
+              "pathTween": {
+               "id": "wxM3",
+               "path1": "wxM2",
+               "path2": "$paths.gen_wx_snow_1",
+               "tween": "@weathericon7_wxw3 / max(0.0001, @weathericon7_wxw0 + @weathericon7_wxw1 + @weathericon7_wxw2 + @weathericon7_wxw3)"
+              }
+             },
+             {
+              "pathTween": {
+               "id": "wxBody",
+               "path1": "wxM3",
+               "path2": "$paths.gen_wx_storm_1",
+               "tween": "@weathericon7_wxw4 / max(0.0001, @weathericon7_wxw0 + @weathericon7_wxw1 + @weathericon7_wxw2 + @weathericon7_wxw3 + @weathericon7_wxw4)"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "@colors.warning"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 7
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "@weathericon7_wxw0"
+                }
+               ]
+              }
+             },
+             {
+              "loop": {
+               "index": "i",
+               "from": 0,
+               "until": 12,
+               "commands": [
+                {
+                 "save": [
+                  {
+                   "rotate": {
+                    "angle": "i * 30 + @weathericon7_wxt * 14",
+                    "pivotX": 100,
+                    "pivotY": 100
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 100,
+                    "y1": "44 - 6 * @weathericon7_wxw0",
+                    "x2": 100,
+                    "y2": "34 - 14 * @weathericon7_wxw0 + 4 * sin(@weathericon7_wxt * 2 + i)"
+                   }
+                  }
+                 ]
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "wxBody"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "@weathericon7_wxw4 / max(0.0001, 1 - @weathericon7_wxw0)"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "wxBody"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.warning"
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "@weathericon7_wxw0"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "wxBody"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 5
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "loop": {
+               "index": "j",
+               "from": 0,
+               "until": 7,
+               "commands": [
+                {
+                 "variable": {
+                  "name": "weathericon7_wxp",
+                  "value": "fract(@weathericon7_wxt * 1.3 + j * 0.382)"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": "(@weathericon7_wxw2 + 0.7 * @weathericon7_wxw4) * (1 - @weathericon7_wxp * @weathericon7_wxp)"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": "60 + j * 14 - @weathericon7_wxp * 10",
+                  "y1": "126 + @weathericon7_wxp * 58",
+                  "x2": "57 + j * 14 - @weathericon7_wxp * 10",
+                  "y2": "137 + @weathericon7_wxp * 58"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "loop": {
+               "index": "j",
+               "from": 0,
+               "until": 8,
+               "commands": [
+                {
+                 "variable": {
+                  "name": "weathericon7_wxq",
+                  "value": "fract(@weathericon7_wxt * 0.32 + j * 0.618)"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": "@weathericon7_wxw3 * (1 - @weathericon7_wxq * @weathericon7_wxq)"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawCircle": {
+                  "cx": "56 + j * 13 + 6 * sin(@weathericon7_wxt * 1.7 + j * 2.1)",
+                  "cy": "122 + @weathericon7_wxq * 64",
+                  "radius": "2.6 + (j % 3)"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.warning"
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "@weathericon7_wxw4"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "$paths.gen_wx_bolt_1"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": 12
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "size": 96
+          },
+          {
+           "clip": {
+            "roundedRect": 16
+           }
+          },
+          {
+           "background": "@colors.sky"
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": 96
+             },
+             {
+              "semantics": {
+               "contentDescription": "Weather"
+              }
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "weathericon8_s",
+               "value": "min(componentWidth(), componentHeight())"
+              }
+             },
+             {
+              "translate": {
+               "dx": "(componentWidth() - @weathericon8_s) / 2",
+               "dy": "(componentHeight() - @weathericon8_s) / 2"
+              }
+             },
+             {
+              "scale": {
+               "sx": "@weathericon8_s / 200",
+               "sy": "@weathericon8_s / 200"
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon8_wxt",
+               "value": "0"
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon8_wxw0",
+               "value": {
+                "value": "1 - min(1, abs(@wx - 0))",
+                "anim": 0.8
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon8_wxw1",
+               "value": {
+                "value": "1 - min(1, abs(@wx - 1))",
+                "anim": 0.8
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon8_wxw2",
+               "value": {
+                "value": "1 - min(1, abs(@wx - 2))",
+                "anim": 0.8
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon8_wxw3",
+               "value": {
+                "value": "1 - min(1, abs(@wx - 3))",
+                "anim": 0.8
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "weathericon8_wxw4",
+               "value": {
+                "value": "1 - min(1, abs(@wx - 4))",
+                "anim": 0.8
+               }
+              }
+             },
+             {
+              "pathTween": {
+               "id": "wxM1",
+               "path1": "$paths.gen_wx_sun_1",
+               "path2": "$paths.gen_wx_cloud_1",
+               "tween": "@weathericon8_wxw1 / max(0.0001, @weathericon8_wxw0 + @weathericon8_wxw1)"
+              }
+             },
+             {
+              "pathTween": {
+               "id": "wxM2",
+               "path1": "wxM1",
+               "path2": "$paths.gen_wx_rain_1",
+               "tween": "@weathericon8_wxw2 / max(0.0001, @weathericon8_wxw0 + @weathericon8_wxw1 + @weathericon8_wxw2)"
+              }
+             },
+             {
+              "pathTween": {
+               "id": "wxM3",
+               "path1": "wxM2",
+               "path2": "$paths.gen_wx_snow_1",
+               "tween": "@weathericon8_wxw3 / max(0.0001, @weathericon8_wxw0 + @weathericon8_wxw1 + @weathericon8_wxw2 + @weathericon8_wxw3)"
+              }
+             },
+             {
+              "pathTween": {
+               "id": "wxBody",
+               "path1": "wxM3",
+               "path2": "$paths.gen_wx_storm_1",
+               "tween": "@weathericon8_wxw4 / max(0.0001, @weathericon8_wxw0 + @weathericon8_wxw1 + @weathericon8_wxw2 + @weathericon8_wxw3 + @weathericon8_wxw4)"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "radialGradient": {
+                  "centerX": 100,
+                  "centerY": 100,
+                  "radius": 96,
+                  "colors": [
+                   "#66FFE082",
+                   "#00FFE082"
+                  ]
+                 }
+                },
+                {
+                 "alpha": "@weathericon8_wxw0"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 100,
+               "cy": 100,
+               "radius": 96
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "#FFFFD54F"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 7
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "@weathericon8_wxw0"
+                }
+               ]
+              }
+             },
+             {
+              "loop": {
+               "index": "i",
+               "from": 0,
+               "until": 12,
+               "commands": [
+                {
+                 "save": [
+                  {
+                   "rotate": {
+                    "angle": "i * 30 + @weathericon8_wxt * 14",
+                    "pivotX": 100,
+                    "pivotY": 100
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 100,
+                    "y1": "44 - 6 * @weathericon8_wxw0",
+                    "x2": 100,
+                    "y2": "34 - 14 * @weathericon8_wxw0 + 4 * sin(@weathericon8_wxt * 2 + i)"
+                   }
+                  }
+                 ]
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                },
+                {
+                 "linearGradient": {
+                  "x1": 0,
+                  "y1": 60,
+                  "x2": 0,
+                  "y2": 140,
+                  "colors": [
+                   "#FFFFE48A",
+                   "#FFFFA726"
+                  ]
+                 }
+                },
+                {
+                 "alpha": "1"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "wxBody"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                },
+                {
+                 "linearGradient": {
+                  "x1": 0,
+                  "y1": 60,
+                  "x2": 0,
+                  "y2": 140,
+                  "colors": [
+                   "#FFFFFFFF",
+                   "#FFDCE4EE"
+                  ]
+                 }
+                },
+                {
+                 "alpha": "@weathericon8_wxw1 / max(0.0001, @weathericon8_wxw0 + @weathericon8_wxw1)"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "wxBody"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                },
+                {
+                 "linearGradient": {
+                  "x1": 0,
+                  "y1": 60,
+                  "x2": 0,
+                  "y2": 140,
+                  "colors": [
+                   "#FFD5DDE6",
+                   "#FF8E9CAD"
+                  ]
+                 }
+                },
+                {
+                 "alpha": "@weathericon8_wxw2 / max(0.0001, @weathericon8_wxw0 + @weathericon8_wxw1 + @weathericon8_wxw2)"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "wxBody"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                },
+                {
+                 "linearGradient": {
+                  "x1": 0,
+                  "y1": 60,
+                  "x2": 0,
+                  "y2": 140,
+                  "colors": [
+                   "#FFFFFFFF",
+                   "#FFD7E4F3"
+                  ]
+                 }
+                },
+                {
+                 "alpha": "@weathericon8_wxw3 / max(0.0001, @weathericon8_wxw0 + @weathericon8_wxw1 + @weathericon8_wxw2 + @weathericon8_wxw3)"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "wxBody"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                },
+                {
+                 "linearGradient": {
+                  "x1": 0,
+                  "y1": 60,
+                  "x2": 0,
+                  "y2": 140,
+                  "colors": [
+                   "#FF77738F",
+                   "#FF3D3A52"
+                  ]
+                 }
+                },
+                {
+                 "alpha": "@weathericon8_wxw4 / max(0.0001, @weathericon8_wxw0 + @weathericon8_wxw1 + @weathericon8_wxw2 + @weathericon8_wxw3 + @weathericon8_wxw4)"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "wxBody"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 2.5
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": 0.18
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "wxBody"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 5
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "loop": {
+               "index": "j",
+               "from": 0,
+               "until": 7,
+               "commands": [
+                {
+                 "variable": {
+                  "name": "weathericon8_wxp",
+                  "value": "fract(@weathericon8_wxt * 1.3 + j * 0.382)"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": "(@weathericon8_wxw2 + 0.7 * @weathericon8_wxw4) * (1 - @weathericon8_wxp * @weathericon8_wxp)"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": "60 + j * 14 - @weathericon8_wxp * 10",
+                  "y1": "126 + @weathericon8_wxp * 58",
+                  "x2": "57 + j * 14 - @weathericon8_wxp * 10",
+                  "y2": "137 + @weathericon8_wxp * 58"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "loop": {
+               "index": "j",
+               "from": 0,
+               "until": 8,
+               "commands": [
+                {
+                 "variable": {
+                  "name": "weathericon8_wxq",
+                  "value": "fract(@weathericon8_wxt * 0.32 + j * 0.618)"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": "@weathericon8_wxw3 * (1 - @weathericon8_wxq * @weathericon8_wxq)"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawCircle": {
+                  "cx": "56 + j * 13 + 6 * sin(@weathericon8_wxt * 1.7 + j * 2.1)",
+                  "cy": "122 + @weathericon8_wxq * 64",
+                  "radius": "2.6 + (j % 3)"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.warning"
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "@weathericon8_wxw4"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "$paths.gen_wx_bolt_1"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
     }
    ]
   }
  },
  "resources": {
+  "variables": {
+   "wx": {
+    "value": 0,
+    "export": true
+   }
+  },
   "colors": {
    "background": {
     "light": "#FFF5F7FA",
@@ -837,7 +1770,1363 @@
    "warning": {
     "light": "#FFA15C00",
     "dark": "#FFFFB74D"
+   },
+   "sky": {
+    "light": "#FF4A90E2",
+    "dark": "#FF2F6DB5"
    }
+  },
+  "paths": {
+   "gen_wx_sun_1": [
+    {
+     "type": "moveTo",
+     "x": 100,
+     "y": 56
+    },
+    {
+     "type": "cubicTo",
+     "x1": 103.5,
+     "y1": 56,
+     "x2": 107.2,
+     "y2": 56.5,
+     "x3": 110.6,
+     "y3": 57.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 114.1,
+     "y1": 58.2,
+     "x2": 117.5,
+     "y2": 59.5,
+     "x3": 120.6,
+     "y3": 61.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 123.7,
+     "y1": 62.8,
+     "x2": 126.7,
+     "y2": 64.9,
+     "x3": 129.3,
+     "y3": 67.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 131.9,
+     "y1": 69.5,
+     "x2": 134.3,
+     "y2": 72.3,
+     "x3": 136.2,
+     "y3": 75.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 138.2,
+     "y1": 77.9,
+     "x2": 139.8,
+     "y2": 81.1,
+     "x3": 141,
+     "y3": 84.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 142.3,
+     "y1": 87.4,
+     "x2": 143.1,
+     "y2": 90.8,
+     "x3": 143.6,
+     "y3": 94.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 144,
+     "y1": 97.3,
+     "x2": 144.1,
+     "y2": 100.8,
+     "x3": 143.8,
+     "y3": 104
+    },
+    {
+     "type": "cubicTo",
+     "x1": 143.5,
+     "y1": 107.2,
+     "x2": 142.8,
+     "y2": 110.5,
+     "x3": 141.8,
+     "y3": 113.5
+    },
+    {
+     "type": "cubicTo",
+     "x1": 140.8,
+     "y1": 116.6,
+     "x2": 139.5,
+     "y2": 119.6,
+     "x3": 137.9,
+     "y3": 122.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 136.3,
+     "y1": 125,
+     "x2": 134.4,
+     "y2": 127.5,
+     "x3": 132.3,
+     "y3": 129.8
+    },
+    {
+     "type": "cubicTo",
+     "x1": 130.2,
+     "y1": 132.1,
+     "x2": 127.9,
+     "y2": 134.1,
+     "x3": 125.4,
+     "y3": 135.9
+    },
+    {
+     "type": "cubicTo",
+     "x1": 123,
+     "y1": 137.7,
+     "x2": 120.3,
+     "y2": 139.2,
+     "x3": 117.5,
+     "y3": 140.4
+    },
+    {
+     "type": "cubicTo",
+     "x1": 114.8,
+     "y1": 141.5,
+     "x2": 111.8,
+     "y2": 142.4,
+     "x3": 108.9,
+     "y3": 143
+    },
+    {
+     "type": "cubicTo",
+     "x1": 106,
+     "y1": 143.6,
+     "x2": 103,
+     "y2": 144,
+     "x3": 100,
+     "y3": 144
+    },
+    {
+     "type": "cubicTo",
+     "x1": 97,
+     "y1": 144,
+     "x2": 94,
+     "y2": 143.6,
+     "x3": 91.1,
+     "y3": 143
+    },
+    {
+     "type": "cubicTo",
+     "x1": 88.2,
+     "y1": 142.4,
+     "x2": 85.2,
+     "y2": 141.5,
+     "x3": 82.5,
+     "y3": 140.4
+    },
+    {
+     "type": "cubicTo",
+     "x1": 79.7,
+     "y1": 139.2,
+     "x2": 77,
+     "y2": 137.7,
+     "x3": 74.6,
+     "y3": 135.9
+    },
+    {
+     "type": "cubicTo",
+     "x1": 72.1,
+     "y1": 134.1,
+     "x2": 69.8,
+     "y2": 132.1,
+     "x3": 67.7,
+     "y3": 129.8
+    },
+    {
+     "type": "cubicTo",
+     "x1": 65.6,
+     "y1": 127.5,
+     "x2": 63.7,
+     "y2": 125,
+     "x3": 62.1,
+     "y3": 122.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 60.5,
+     "y1": 119.6,
+     "x2": 59.2,
+     "y2": 116.6,
+     "x3": 58.2,
+     "y3": 113.5
+    },
+    {
+     "type": "cubicTo",
+     "x1": 57.2,
+     "y1": 110.5,
+     "x2": 56.5,
+     "y2": 107.2,
+     "x3": 56.2,
+     "y3": 104
+    },
+    {
+     "type": "cubicTo",
+     "x1": 55.9,
+     "y1": 100.8,
+     "x2": 56,
+     "y2": 97.3,
+     "x3": 56.4,
+     "y3": 94.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 56.9,
+     "y1": 90.8,
+     "x2": 57.7,
+     "y2": 87.4,
+     "x3": 59,
+     "y3": 84.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 60.2,
+     "y1": 81.1,
+     "x2": 61.8,
+     "y2": 77.9,
+     "x3": 63.8,
+     "y3": 75.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 65.7,
+     "y1": 72.3,
+     "x2": 68.1,
+     "y2": 69.5,
+     "x3": 70.7,
+     "y3": 67.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 73.3,
+     "y1": 64.9,
+     "x2": 76.3,
+     "y2": 62.8,
+     "x3": 79.4,
+     "y3": 61.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 82.5,
+     "y1": 59.5,
+     "x2": 85.9,
+     "y2": 58.2,
+     "x3": 89.4,
+     "y3": 57.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 92.8,
+     "y1": 56.5,
+     "x2": 96.5,
+     "y2": 56,
+     "x3": 100,
+     "y3": 56
+    },
+    {
+     "type": "close"
+    }
+   ],
+   "gen_wx_cloud_1": [
+    {
+     "type": "moveTo",
+     "x": 100,
+     "y": 58.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 103.4,
+     "y1": 57.9,
+     "x2": 107,
+     "y2": 58.2,
+     "x3": 110.3,
+     "y3": 59.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 113.5,
+     "y1": 59.9,
+     "x2": 116.9,
+     "y2": 61.3,
+     "x3": 119.7,
+     "y3": 63
+    },
+    {
+     "type": "cubicTo",
+     "x1": 122.6,
+     "y1": 64.8,
+     "x2": 125.3,
+     "y2": 67.1,
+     "x3": 127.5,
+     "y3": 69.5
+    },
+    {
+     "type": "cubicTo",
+     "x1": 129.7,
+     "y1": 72,
+     "x2": 131.3,
+     "y2": 75,
+     "x3": 132.9,
+     "y3": 77.8
+    },
+    {
+     "type": "cubicTo",
+     "x1": 134.5,
+     "y1": 80.6,
+     "x2": 134.1,
+     "y2": 83.7,
+     "x3": 137,
+     "y3": 86.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 139.9,
+     "y1": 88.6,
+     "x2": 147,
+     "y2": 89.5,
+     "x3": 150.4,
+     "y3": 92.5
+    },
+    {
+     "type": "cubicTo",
+     "x1": 153.8,
+     "y1": 95.5,
+     "x2": 156,
+     "y2": 99.9,
+     "x3": 157.2,
+     "y3": 104
+    },
+    {
+     "type": "cubicTo",
+     "x1": 158.4,
+     "y1": 108.1,
+     "x2": 157.9,
+     "y2": 112.7,
+     "x3": 157.5,
+     "y3": 117.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 157.1,
+     "y1": 121.5,
+     "x2": 157.6,
+     "y2": 127.2,
+     "x3": 154.7,
+     "y3": 130.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 151.8,
+     "y1": 133.5,
+     "x2": 145,
+     "y2": 135,
+     "x3": 140.1,
+     "y3": 136
+    },
+    {
+     "type": "cubicTo",
+     "x1": 135.2,
+     "y1": 136.9,
+     "x2": 129.6,
+     "y2": 136,
+     "x3": 125.5,
+     "y3": 136
+    },
+    {
+     "type": "cubicTo",
+     "x1": 121.4,
+     "y1": 136,
+     "x2": 118.4,
+     "y2": 136,
+     "x3": 115.4,
+     "y3": 136
+    },
+    {
+     "type": "cubicTo",
+     "x1": 112.4,
+     "y1": 136,
+     "x2": 109.9,
+     "y2": 136,
+     "x3": 107.3,
+     "y3": 136
+    },
+    {
+     "type": "cubicTo",
+     "x1": 104.7,
+     "y1": 136,
+     "x2": 102.4,
+     "y2": 136,
+     "x3": 100,
+     "y3": 136
+    },
+    {
+     "type": "cubicTo",
+     "x1": 97.6,
+     "y1": 136,
+     "x2": 95.3,
+     "y2": 136,
+     "x3": 92.7,
+     "y3": 136
+    },
+    {
+     "type": "cubicTo",
+     "x1": 90.1,
+     "y1": 136,
+     "x2": 87.6,
+     "y2": 136,
+     "x3": 84.6,
+     "y3": 136
+    },
+    {
+     "type": "cubicTo",
+     "x1": 81.6,
+     "y1": 136,
+     "x2": 78.6,
+     "y2": 136,
+     "x3": 74.5,
+     "y3": 136
+    },
+    {
+     "type": "cubicTo",
+     "x1": 70.4,
+     "y1": 136,
+     "x2": 64.3,
+     "y2": 137.1,
+     "x3": 59.9,
+     "y3": 136
+    },
+    {
+     "type": "cubicTo",
+     "x1": 55.6,
+     "y1": 134.8,
+     "x2": 50.5,
+     "y2": 132.2,
+     "x3": 48.3,
+     "y3": 128.9
+    },
+    {
+     "type": "cubicTo",
+     "x1": 46,
+     "y1": 125.6,
+     "x2": 46.5,
+     "y2": 120.4,
+     "x3": 46.4,
+     "y3": 116.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 46.2,
+     "y1": 112.1,
+     "x2": 46,
+     "y2": 107.8,
+     "x3": 47.4,
+     "y3": 104
+    },
+    {
+     "type": "cubicTo",
+     "x1": 48.8,
+     "y1": 100.2,
+     "x2": 51.3,
+     "y2": 96.3,
+     "x3": 54.6,
+     "y3": 93.6
+    },
+    {
+     "type": "cubicTo",
+     "x1": 57.9,
+     "y1": 91,
+     "x2": 64.6,
+     "y2": 90.4,
+     "x3": 67.2,
+     "y3": 88.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 69.8,
+     "y1": 85.9,
+     "x2": 68.9,
+     "y2": 82.9,
+     "x3": 70.1,
+     "y3": 80.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 71.4,
+     "y1": 77.5,
+     "x2": 72.6,
+     "y2": 74.5,
+     "x3": 74.5,
+     "y3": 72
+    },
+    {
+     "type": "cubicTo",
+     "x1": 76.4,
+     "y1": 69.5,
+     "x2": 78.7,
+     "y2": 67,
+     "x3": 81.3,
+     "y3": 65.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 83.8,
+     "y1": 63.1,
+     "x2": 86.9,
+     "y2": 61.4,
+     "x3": 90,
+     "y3": 60.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 93.1,
+     "y1": 59.1,
+     "x2": 96.6,
+     "y2": 58.3,
+     "x3": 100,
+     "y3": 58.1
+    },
+    {
+     "type": "close"
+    }
+   ],
+   "gen_wx_rain_1": [
+    {
+     "type": "moveTo",
+     "x": 100,
+     "y": 50.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 103.9,
+     "y1": 49.8,
+     "x2": 108.2,
+     "y2": 50.2,
+     "x3": 112,
+     "y3": 51.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 115.9,
+     "y1": 52.3,
+     "x2": 119.7,
+     "y2": 54.2,
+     "x3": 122.9,
+     "y3": 56.5
+    },
+    {
+     "type": "cubicTo",
+     "x1": 126.1,
+     "y1": 58.8,
+     "x2": 129,
+     "y2": 61.8,
+     "x3": 131.1,
+     "y3": 64.9
+    },
+    {
+     "type": "cubicTo",
+     "x1": 133.3,
+     "y1": 68.1,
+     "x2": 132.5,
+     "y2": 73,
+     "x3": 135.9,
+     "y3": 75.4
+    },
+    {
+     "type": "cubicTo",
+     "x1": 139.3,
+     "y1": 77.7,
+     "x2": 147.4,
+     "y2": 76.7,
+     "x3": 151.7,
+     "y3": 79.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 156,
+     "y1": 81.5,
+     "x2": 159.8,
+     "y2": 85.8,
+     "x3": 161.8,
+     "y3": 89.9
+    },
+    {
+     "type": "cubicTo",
+     "x1": 163.8,
+     "y1": 94.1,
+     "x2": 163.7,
+     "y2": 99.3,
+     "x3": 163.7,
+     "y3": 104
+    },
+    {
+     "type": "cubicTo",
+     "x1": 163.6,
+     "y1": 108.7,
+     "x2": 165.1,
+     "y2": 114.7,
+     "x3": 161.4,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 157.7,
+     "y1": 121.3,
+     "x2": 147.6,
+     "y2": 123,
+     "x3": 141.5,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 135.4,
+     "y1": 125,
+     "x2": 129.3,
+     "y2": 124,
+     "x3": 125.1,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 120.8,
+     "y1": 124,
+     "x2": 118.5,
+     "y2": 124,
+     "x3": 115.9,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 113.4,
+     "y1": 124,
+     "x2": 111.5,
+     "y2": 124,
+     "x3": 109.6,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 107.7,
+     "y1": 124,
+     "x2": 106.2,
+     "y2": 124,
+     "x3": 104.6,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 103,
+     "y1": 124,
+     "x2": 101.5,
+     "y2": 124,
+     "x3": 100,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 98.5,
+     "y1": 124,
+     "x2": 97,
+     "y2": 124,
+     "x3": 95.4,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 93.8,
+     "y1": 124,
+     "x2": 92.3,
+     "y2": 124,
+     "x3": 90.4,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 88.5,
+     "y1": 124,
+     "x2": 86.6,
+     "y2": 124,
+     "x3": 84.1,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 81.5,
+     "y1": 124,
+     "x2": 79.2,
+     "y2": 124,
+     "x3": 74.9,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 70.7,
+     "y1": 124,
+     "x2": 64,
+     "y2": 125.1,
+     "x3": 58.5,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 53,
+     "y1": 122.9,
+     "x2": 44.9,
+     "y2": 120.6,
+     "x3": 42,
+     "y3": 117.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 39.2,
+     "y1": 113.9,
+     "x2": 41.2,
+     "y2": 108.4,
+     "x3": 41.3,
+     "y3": 104
+    },
+    {
+     "type": "cubicTo",
+     "x1": 41.5,
+     "y1": 99.6,
+     "x2": 41.2,
+     "y2": 94.9,
+     "x3": 42.7,
+     "y3": 90.9
+    },
+    {
+     "type": "cubicTo",
+     "x1": 44.3,
+     "y1": 87,
+     "x2": 47.2,
+     "y2": 82.9,
+     "x3": 50.7,
+     "y3": 80.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 54.2,
+     "y1": 77.6,
+     "x2": 60.2,
+     "y2": 76.9,
+     "x3": 63.8,
+     "y3": 75.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 67.4,
+     "y1": 73.3,
+     "x2": 69.8,
+     "y2": 71.8,
+     "x3": 72.3,
+     "y3": 69.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 74.9,
+     "y1": 66.8,
+     "x2": 76.2,
+     "y2": 62.7,
+     "x3": 78.8,
+     "y3": 60.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 81.5,
+     "y1": 57.4,
+     "x2": 84.9,
+     "y2": 55,
+     "x3": 88.4,
+     "y3": 53.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 92,
+     "y1": 51.6,
+     "x2": 96.1,
+     "y2": 50.5,
+     "x3": 100,
+     "y3": 50.1
+    },
+    {
+     "type": "close"
+    }
+   ],
+   "gen_wx_snow_1": [
+    {
+     "type": "moveTo",
+     "x": 100,
+     "y": 60.9
+    },
+    {
+     "type": "cubicTo",
+     "x1": 103.5,
+     "y1": 60.7,
+     "x2": 106.7,
+     "y2": 58.3,
+     "x3": 110.6,
+     "y3": 57.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 114.6,
+     "y1": 56.4,
+     "x2": 119.3,
+     "y2": 54.9,
+     "x3": 123.6,
+     "y3": 55.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 127.8,
+     "y1": 55.3,
+     "x2": 132.4,
+     "y2": 56.6,
+     "x3": 136.1,
+     "y3": 58.7
+    },
+    {
+     "type": "cubicTo",
+     "x1": 139.8,
+     "y1": 60.8,
+     "x2": 143.4,
+     "y2": 64,
+     "x3": 145.8,
+     "y3": 67.5
+    },
+    {
+     "type": "cubicTo",
+     "x1": 148.2,
+     "y1": 71,
+     "x2": 148.2,
+     "y2": 75.8,
+     "x3": 150.6,
+     "y3": 79.6
+    },
+    {
+     "type": "cubicTo",
+     "x1": 153.1,
+     "y1": 83.4,
+     "x2": 157.9,
+     "y2": 86.1,
+     "x3": 160.4,
+     "y3": 90.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 163,
+     "y1": 94.3,
+     "x2": 166,
+     "y2": 99.4,
+     "x3": 166,
+     "y3": 104
+    },
+    {
+     "type": "cubicTo",
+     "x1": 166,
+     "y1": 108.6,
+     "x2": 164.5,
+     "y2": 114.5,
+     "x3": 160.4,
+     "y3": 117.8
+    },
+    {
+     "type": "cubicTo",
+     "x1": 156.4,
+     "y1": 121.1,
+     "x2": 147.4,
+     "y2": 122.9,
+     "x3": 141.5,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 135.6,
+     "y1": 125,
+     "x2": 129.3,
+     "y2": 124,
+     "x3": 125.1,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 120.8,
+     "y1": 124,
+     "x2": 118.5,
+     "y2": 124,
+     "x3": 115.9,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 113.4,
+     "y1": 124,
+     "x2": 111.5,
+     "y2": 124,
+     "x3": 109.6,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 107.7,
+     "y1": 124,
+     "x2": 106.2,
+     "y2": 124,
+     "x3": 104.6,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 103,
+     "y1": 124,
+     "x2": 101.5,
+     "y2": 124,
+     "x3": 100,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 98.5,
+     "y1": 124,
+     "x2": 97,
+     "y2": 124,
+     "x3": 95.4,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 93.8,
+     "y1": 124,
+     "x2": 92.3,
+     "y2": 124,
+     "x3": 90.4,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 88.5,
+     "y1": 124,
+     "x2": 86.6,
+     "y2": 124,
+     "x3": 84.1,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 81.5,
+     "y1": 124,
+     "x2": 79.3,
+     "y2": 124,
+     "x3": 74.9,
+     "y3": 124
+    },
+    {
+     "type": "cubicTo",
+     "x1": 70.6,
+     "y1": 124,
+     "x2": 62.8,
+     "y2": 125.5,
+     "x3": 58.1,
+     "y3": 124.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 53.5,
+     "y1": 122.8,
+     "x2": 49.3,
+     "y2": 119.5,
+     "x3": 46.8,
+     "y3": 116.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 44.3,
+     "y1": 112.8,
+     "x2": 43,
+     "y2": 108,
+     "x3": 43,
+     "y3": 104
+    },
+    {
+     "type": "cubicTo",
+     "x1": 43.1,
+     "y1": 100,
+     "x2": 44.3,
+     "y2": 95.2,
+     "x3": 46.9,
+     "y3": 91.9
+    },
+    {
+     "type": "cubicTo",
+     "x1": 49.4,
+     "y1": 88.5,
+     "x2": 55.1,
+     "y2": 86.5,
+     "x3": 58.1,
+     "y3": 83.8
+    },
+    {
+     "type": "cubicTo",
+     "x1": 61.2,
+     "y1": 81.2,
+     "x2": 62.8,
+     "y2": 78.8,
+     "x3": 64.9,
+     "y3": 76
+    },
+    {
+     "type": "cubicTo",
+     "x1": 67,
+     "y1": 73.3,
+     "x2": 68.3,
+     "y2": 69.7,
+     "x3": 70.7,
+     "y3": 67.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 73.1,
+     "y1": 64.7,
+     "x2": 76.2,
+     "y2": 62.6,
+     "x3": 79.4,
+     "y3": 61.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 82.6,
+     "y1": 59.8,
+     "x2": 86.3,
+     "y2": 59,
+     "x3": 89.7,
+     "y3": 59
+    },
+    {
+     "type": "cubicTo",
+     "x1": 93.2,
+     "y1": 59,
+     "x2": 96.5,
+     "y2": 61.2,
+     "x3": 100,
+     "y3": 60.9
+    },
+    {
+     "type": "close"
+    }
+   ],
+   "gen_wx_storm_1": [
+    {
+     "type": "moveTo",
+     "x": 100,
+     "y": 51.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 104.1,
+     "y1": 51.1,
+     "x2": 107.6,
+     "y2": 51,
+     "x3": 112.3,
+     "y3": 50.1
+    },
+    {
+     "type": "cubicTo",
+     "x1": 116.9,
+     "y1": 49.3,
+     "x2": 122.8,
+     "y2": 46.1,
+     "x3": 127.9,
+     "y3": 46
+    },
+    {
+     "type": "cubicTo",
+     "x1": 133.1,
+     "y1": 46,
+     "x2": 138.7,
+     "y2": 47.5,
+     "x3": 143.2,
+     "y3": 49.9
+    },
+    {
+     "type": "cubicTo",
+     "x1": 147.6,
+     "y1": 52.3,
+     "x2": 151.7,
+     "y2": 56.3,
+     "x3": 154.7,
+     "y3": 60.4
+    },
+    {
+     "type": "cubicTo",
+     "x1": 157.7,
+     "y1": 64.5,
+     "x2": 157.6,
+     "y2": 70.2,
+     "x3": 161,
+     "y3": 74.6
+    },
+    {
+     "type": "cubicTo",
+     "x1": 164.3,
+     "y1": 79.1,
+     "x2": 172.6,
+     "y2": 82.1,
+     "x3": 174.7,
+     "y3": 87
+    },
+    {
+     "type": "cubicTo",
+     "x1": 176.7,
+     "y1": 91.8,
+     "x2": 175.6,
+     "y2": 98.8,
+     "x3": 173.3,
+     "y3": 104
+    },
+    {
+     "type": "cubicTo",
+     "x1": 171,
+     "y1": 109.2,
+     "x2": 168.5,
+     "y2": 115.6,
+     "x3": 161.1,
+     "y3": 117.9
+    },
+    {
+     "type": "cubicTo",
+     "x1": 153.7,
+     "y1": 120.3,
+     "x2": 136.3,
+     "y2": 118,
+     "x3": 129.1,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 121.8,
+     "y1": 118,
+     "x2": 120.5,
+     "y2": 118,
+     "x3": 117.6,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 114.6,
+     "y1": 118,
+     "x2": 113,
+     "y2": 118,
+     "x3": 111.2,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 109.4,
+     "y1": 118,
+     "x2": 108.1,
+     "y2": 118,
+     "x3": 106.7,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 105.4,
+     "y1": 118,
+     "x2": 104.3,
+     "y2": 118,
+     "x3": 103.2,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 102.1,
+     "y1": 118,
+     "x2": 101.1,
+     "y2": 118,
+     "x3": 100,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 98.9,
+     "y1": 118,
+     "x2": 97.9,
+     "y2": 118,
+     "x3": 96.8,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 95.7,
+     "y1": 118,
+     "x2": 94.6,
+     "y2": 118,
+     "x3": 93.3,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 91.9,
+     "y1": 118,
+     "x2": 90.6,
+     "y2": 118,
+     "x3": 88.8,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 87,
+     "y1": 118,
+     "x2": 85.4,
+     "y2": 118,
+     "x3": 82.4,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 79.5,
+     "y1": 118,
+     "x2": 77.7,
+     "y2": 118.1,
+     "x3": 70.9,
+     "y3": 118
+    },
+    {
+     "type": "cubicTo",
+     "x1": 64.2,
+     "y1": 117.9,
+     "x2": 48,
+     "y2": 119.6,
+     "x3": 41.9,
+     "y3": 117.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 35.7,
+     "y1": 114.9,
+     "x2": 34.9,
+     "y2": 108.6,
+     "x3": 34,
+     "y3": 104
+    },
+    {
+     "type": "cubicTo",
+     "x1": 33.2,
+     "y1": 99.4,
+     "x2": 35,
+     "y2": 94,
+     "x3": 37,
+     "y3": 89.6
+    },
+    {
+     "type": "cubicTo",
+     "x1": 38.9,
+     "y1": 85.2,
+     "x2": 41.4,
+     "y2": 80.4,
+     "x3": 45.6,
+     "y3": 77.8
+    },
+    {
+     "type": "cubicTo",
+     "x1": 49.9,
+     "y1": 75.2,
+     "x2": 59,
+     "y2": 76.6,
+     "x3": 62.6,
+     "y3": 74.2
+    },
+    {
+     "type": "cubicTo",
+     "x1": 66.2,
+     "y1": 71.7,
+     "x2": 65,
+     "y2": 66.3,
+     "x3": 67.3,
+     "y3": 63
+    },
+    {
+     "type": "cubicTo",
+     "x1": 69.6,
+     "y1": 59.7,
+     "x2": 72.8,
+     "y2": 56.6,
+     "x3": 76.2,
+     "y3": 54.5
+    },
+    {
+     "type": "cubicTo",
+     "x1": 79.6,
+     "y1": 52.4,
+     "x2": 83.8,
+     "y2": 50.9,
+     "x3": 87.8,
+     "y3": 50.3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 91.7,
+     "y1": 49.8,
+     "x2": 95.9,
+     "y2": 51.1,
+     "x3": 100,
+     "y3": 51.1
+    },
+    {
+     "type": "close"
+    }
+   ],
+   "gen_wx_bolt_1": [
+    {
+     "type": "moveTo",
+     "x": 108,
+     "y": 112
+    },
+    {
+     "type": "lineTo",
+     "x": 88,
+     "y": 146
+    },
+    {
+     "type": "lineTo",
+     "x": 102,
+     "y": 146
+    },
+    {
+     "type": "lineTo",
+     "x": 90,
+     "y": 182
+    },
+    {
+     "type": "lineTo",
+     "x": 124,
+     "y": 136
+    },
+    {
+     "type": "lineTo",
+     "x": 108,
+     "y": 136
+    },
+    {
+     "type": "lineTo",
+     "x": 120,
+     "y": 112
+    },
+    {
+     "type": "close"
+    }
+   ]
   }
  }
 }

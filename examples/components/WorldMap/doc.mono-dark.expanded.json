@@ -4,7 +4,7 @@
   "width": 360,
   "height": 330,
   "profiles": 513,
-  "contentDescription": "WorldMap component: a world with day and night and four cities, and Europe with France and Germany highlighted"
+  "contentDescription": "WorldMap component: a world with day and night, the sun and four cities that light up in daylight, and Europe with France and Germany highlighted"
  },
  "resources": {
   "variables": {
@@ -20,6 +20,9 @@
    "worldmap1_sunLon": "0 - 15 * ((timeInMin() - offsetToUtc() / 60) / 60 - 12)",
    "worldmap1_off": "0 - 180 - @worldmap1_sunLon",
    "worldmap1_nEdge": "ifElse(0, 394.4, @worldmap1_decl)",
+   "worldmap1_na": "1 - pow(1 - 0.32, 0.33333)",
+   "worldmap1_sx": "((@worldmap1_sunLon + 540) % 360 - 180 - (-180)) * 2.777778",
+   "worldmap1_sy": "(84 - @worldmap1_decl * 57.2958) * 2.777778",
    "worldmap2_mx": "(@lon - (-25)) * 14.285714",
    "worldmap2_my": "(71.5 - @lat) * 23.601282"
   },
@@ -6995,11 +6998,56 @@
     }
    ]
   },
+  "floatArrays": {
+   "gen_day_x_1": {
+    "value": [
+     499.7,
+     294.5,
+     888.2,
+     920
+    ]
+   },
+   "gen_day_y_1": {
+    "value": [
+     90.3,
+     120.2,
+     134.2,
+     327.4
+    ]
+   },
+   "gen_day_lon_1": {
+    "value": [
+     -0.119,
+     -73.996,
+     139.749,
+     151.213
+    ]
+   },
+   "gen_day_sinlat_1": {
+    "value": [
+     0.7826,
+     0.6524,
+     0.5834,
+     -0.5573
+    ]
+   },
+   "gen_day_coslat_1": {
+    "value": [
+     0.6225,
+     0.7579,
+     0.8122,
+     0.8303
+    ]
+   }
+  },
   "colors": {
    "background": "#FF000000",
    "error": "#FFFFFFFF",
+   "highlight": "#FFFFFFFF",
    "onSurface": "#FFFFFFFF",
-   "primary": "#FFFFFFFF"
+   "primary": "#FFFFFFFF",
+   "shadow": "#FF424242",
+   "surface": "#FF000000"
   }
  },
  "root": {
@@ -7033,7 +7081,7 @@
        },
        {
         "semantics": {
-         "contentDescription": "World map with day and night, London, New York, Tokyo and Sydney"
+         "contentDescription": "World map with day and night, the sun overhead, and London, New York, Tokyo and Sydney lit where the sun is up"
         }
        }
       ],
@@ -7042,6 +7090,18 @@
         "variable": {
          "name": "worldmap1_s",
          "value": "min(componentWidth() / 1000, componentHeight() / 394.4)"
+        }
+       },
+       {
+        "variable": {
+         "name": "worldmap1_su",
+         "value": "1 / @worldmap1_s"
+        }
+       },
+       {
+        "variable": {
+         "name": "worldmap1_mr",
+         "value": "3 * @worldmap1_su"
         }
        },
        {
@@ -7112,32 +7172,172 @@
               "paint": {
                "ops": [
                 {
-                 "color": "@colors.onSurface"
+                 "color": "@colors.highlight"
                 },
                 {
                  "style": "fill"
                 },
                 {
-                 "alpha": 0.25
+                 "alpha": 0.6
                 }
                ]
               }
              },
              {
               "drawPath": {
-               "path": "worldmap1_wmNight"
+               "path": "$paths.map_world_land_low"
               }
+             },
+             {
+              "save": [
+               {
+                "clipPath": {
+                 "path": "worldmap1_wmNight"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.shadow"
+                  },
+                  {
+                   "alpha": 0.5
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "$paths.map_world_land_low"
+                }
+               }
+              ]
              },
              {
               "paint": {
                "ops": [
                 {
                  "alpha": 1
+                },
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": "1.2 / @worldmap1_s"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "$paths.map_world_land_low"
+              }
+             },
+             {
+              "save": [
+               {
+                "clipRect": {
+                 "left": "1.5 / @worldmap1_s",
+                 "top": "1.5 / @worldmap1_s",
+                 "right": "1000 - 1.5 / @worldmap1_s",
+                 "bottom": "394.4 - 1.5 / @worldmap1_s"
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "worldmap1_wmNight"
+                }
+               }
+              ]
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
                 }
                ]
               }
              }
             ]
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": "1.6 * @worldmap1_su"
+              },
+              {
+               "strokeCap": "round"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "wsr",
+             "from": 0,
+             "until": 8,
+             "commands": [
+              {
+               "save": [
+                {
+                 "rotate": {
+                  "angle": "wsr * 45",
+                  "pivotX": "@worldmap1_sx",
+                  "pivotY": "@worldmap1_sy"
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": "@worldmap1_sx",
+                  "y1": "@worldmap1_sy - 9 * @worldmap1_su",
+                  "x2": "@worldmap1_sx",
+                  "y2": "@worldmap1_sy - 14 * @worldmap1_su"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@worldmap1_sx",
+             "cy": "@worldmap1_sy",
+             "radius": "5.5 * @worldmap1_su"
+            }
            }
           ]
          },
@@ -7218,6 +7418,105 @@
            "y": 327.4,
            "panX": "ifElse(-1.25, 1.25, step((920), 800))",
            "panY": 0
+          }
+         },
+         {
+          "loop": {
+           "index": "wdi",
+           "from": 0,
+           "until": 4,
+           "commands": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onSurface"
+               },
+               {
+                "style": "fill"
+               },
+               {
+                "alpha": "0.35 * step(arrayGet(@gen_day_sinlat_1, wdi) * sin((@worldmap1_decl)) + arrayGet(@gen_day_coslat_1, wdi) * cos((@worldmap1_decl)) * cos((arrayGet(@gen_day_lon_1, wdi) - (@worldmap1_sunLon)) * 0.0174533), 0)"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "arrayGet(@gen_day_x_1, wdi)",
+              "cy": "arrayGet(@gen_day_y_1, wdi)",
+              "radius": "(@worldmap1_mr) * 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "alpha": 1
+               },
+               {
+                "color": "@colors.background"
+               }
+              ]
+             }
+            },
+            {
+             "conditionalOperations": {
+              "condition": "gt",
+              "v1": "arrayGet(@gen_day_sinlat_1, wdi) * sin((@worldmap1_decl)) + arrayGet(@gen_day_coslat_1, wdi) * cos((@worldmap1_decl)) * cos((arrayGet(@gen_day_lon_1, wdi) - (@worldmap1_sunLon)) * 0.0174533)",
+              "v2": 0,
+              "commands": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "arrayGet(@gen_day_x_1, wdi)",
+              "cy": "arrayGet(@gen_day_y_1, wdi)",
+              "radius": "(@worldmap1_mr)"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onSurface"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": "(@worldmap1_mr) * 0.35"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "arrayGet(@gen_day_x_1, wdi)",
+              "cy": "arrayGet(@gen_day_y_1, wdi)",
+              "radius": "(@worldmap1_mr)"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            }
+           ]
           }
          }
         ]

@@ -7,8 +7,8 @@
  "prompt": "Make a world clock: a world map showing where it is day and night right now, with the sun where it is overhead, and a row of cities with their local times that highlights the ones in daylight. It should work on a phone and on a tablet.",
  "level": 5,
  "family": "SHW",
- "hand_built": "WorldMap draws the land and a hard night edge but cannot colour its city dots by daylight or draw the sun; the map here is the same projection built from {\"$map\"} with the city logic (sun elevation per city) shared by the dots and the cards.",
  "components": [
+  "WorldMap",
   "CityCard"
  ],
  "capabilities": {
@@ -52,11 +52,9 @@
   "adaptive grid"
  ],
  "teaches": [
-  "The land is {\"$map\": {\"region\": \"world\", \"detail\": \"medium\"}}: a path in a 1000 x 394.4 box (lat 84 to -58), drawn after a scale of min(w / 1000, h / 394.4); every other mark is placed in the same box, sizes divided by the scale (u = 1 / scale) so dots and text keep their dp size",
+  "The map is one WorldMap call: fill (takes the column's remaining height and rescales), night + twilight (three shades 5 degrees apart: a soft terminator), sun (the subsolar point) and daylight (the city dots glow where the sun is up), coloured through its params with document colours (sea, land, nightColor, markerColor, dayColor, sunColor)",
   "The sun's position from the clock: declination 23.44 * sin(2 pi (284 + dayOfYear()) / 365), subsolar longitude -15 * (UTC hours - 12). On the equirectangular world box (x = (lon + 180) * 2.778, y = (84 - lat) * 2.778) that is the sun's dot",
   "Is the sun up in a city: sin(elevation) = sin(lat) sin(decl) + cos(lat) cos(decl) cos(lon - sunLon), with sin and cos of the latitude stored once in float arrays. Above sin(6 deg) = 0.105 it is day, within plus or minus 0.105 twilight, below night",
-  "One loop of six iterations draws every map dot from the arrays (arrayGet(@cX, i)): a halo whose alpha is step(el, 0), and a conditionalOperations that turns the dot warm when el > 0",
-  "A soft terminator from three night shades a few degrees of longitude apart, each at alpha 0.16: deep night gets all three, the twilight edges one or two",
   "Local time per city from one exported float array of UTC offsets (utcOffsets, the app keeps it right through DST): raw = utcMin + off * 60, the time (raw + 1440) % 1440, the day floor(raw / 1440) cut from \"YesterdayToday    Tomorrow \"",
   "One inline component, CityCard, for the six cards: its sky is a gradient picked by two conditionalOperations, the sun drawn at 0.62 - 0.55 * el of the card's height, so a card's sun rises and sets with the real one",
   "Responsive without branches: cols = 6 on a landscape window from 600 dp, else 2; the card width floor((W - 32) / cols) and its height from what the map leaves (up to 0.8 x its width), in a flow; the map takes the rest (verticalWeight) and keeps its 2.54:1, centred",
@@ -82,14 +80,14 @@
    "note": "UTC minutes from the local time and offsetToUtc()"
   },
   {
-   "pointer": "/root/column/children/1",
-   "shows": "map.world",
-   "note": "the map canvas: land, three night shades, the sun, the city loop"
-  },
-  {
    "pointer": "/resources/floatArrays/utcOffsets",
    "shows": "host.variables",
    "note": "the cities' UTC offsets, exported for the app"
+  },
+  {
+   "pointer": "/root/column/children/1",
+   "shows": "map.world",
+   "note": "WorldMap with night, twilight, sun and daylight"
   }
  ],
  "inputs": {
@@ -173,38 +171,39 @@
  ],
  "derived": {
   "components": [
-   "CityCard"
+   "CityCard",
+   "WorldMap"
   ],
-  "component_instances": 6,
+  "component_instances": 7,
   "component_modes": {
+   "WorldMap": "expand",
    "CityCard": "expand"
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 30244,
+  "bytes": 31104,
   "header": {
    "width": 360,
    "height": 720
   },
-  "op_count": 836,
+  "op_count": 870,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
-   "ANIMATED_FLOAT": 215,
-   "CLIP_RECT": 7,
-   "COLOR_CONSTANT": 21,
-   "COLOR_EXPRESSIONS": 18,
+   "ANIMATED_FLOAT": 233,
+   "CLIP_RECT": 9,
+   "COLOR_CONSTANT": 19,
+   "COLOR_EXPRESSIONS": 16,
    "COMPONENT_VALUE": 14,
    "CanvasContent": 7,
    "ConditionalOperations": 25,
    "CoreText": 20,
-   "DATA_TEXT": 20,
-   "DRAW_CIRCLE": 55,
-   "DRAW_LINE": 4,
+   "DATA_TEXT": 14,
+   "DRAW_CIRCLE": 61,
    "DRAW_PATH": 4,
    "DRAW_RECT": 1,
    "DRAW_ROUND_RECT": 6,
-   "DRAW_TEXT_ANCHOR": 6,
-   "DataListFloat": 6,
+   "DRAW_TEXT_ANCHOR": 12,
+   "DataListFloat": 9,
    "HEADER": 1,
    "LAYOUT_BOX": 19,
    "LAYOUT_CANVAS": 7,
@@ -213,20 +212,20 @@
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 7,
    "LayoutComponentContent": 48,
-   "LoopOperation": 20,
-   "MATRIX_RESTORE": 7,
-   "MATRIX_SAVE": 7,
+   "LoopOperation": 17,
+   "MATRIX_RESTORE": 9,
+   "MATRIX_SAVE": 9,
    "MATRIX_SCALE": 1,
    "MATRIX_TRANSLATE": 1,
    "MODIFIER_BACKGROUND": 1,
    "MODIFIER_HEIGHT": 28,
    "MODIFIER_PADDING": 13,
    "MODIFIER_WIDTH": 41,
-   "NAMED_VARIABLE": 18,
-   "PAINT_VALUES": 76,
+   "NAMED_VARIABLE": 20,
+   "PAINT_VALUES": 89,
    "PATH_DATA": 1,
    "PathExpression": 3,
-   "THEME": 27,
+   "THEME": 24,
    "TextFromFloat": 20,
    "TextMerge": 33,
    "TextSubtext": 12,
@@ -275,30 +274,6 @@
     ]
    },
    {
-    "name": "cX",
-    "type": "float_array",
-    "value": [
-     159.899994,
-     294.399994,
-     499.600006,
-     653.5,
-     888,
-     920
-    ]
-   },
-   {
-    "name": "cY",
-    "type": "float_array",
-    "value": [
-     128.399994,
-     120.199997,
-     90.3000031,
-     163.300003,
-     134.199997,
-     327.399994
-    ]
-   },
-   {
     "name": "cityDay",
     "type": "color",
     "value": "#FFFF9F1C"
@@ -309,14 +284,64 @@
     "value": "#FFB8C7DD"
    },
    {
-    "name": "grid",
-    "type": "color",
-    "value": "#FF16263B"
+    "name": "gen_day_coslat_1",
+    "type": "float_array",
+    "value": [
+     0.790300012,
+     0.7579,
+     0.622500002,
+     0.904699981,
+     0.81220001,
+     0.830299973
+    ]
    },
    {
-    "name": "label",
-    "type": "color",
-    "value": "#FFDCE4EF"
+    "name": "gen_day_lon_1",
+    "type": "float_array",
+    "value": [
+     -122.400002,
+     -73.9960022,
+     -0.119000003,
+     55.2869987,
+     139.748993,
+     151.212997
+    ]
+   },
+   {
+    "name": "gen_day_sinlat_1",
+    "type": "float_array",
+    "value": [
+     0.612699986,
+     0.652400017,
+     0.782599986,
+     0.425999999,
+     0.583400011,
+     -0.557299972
+    ]
+   },
+   {
+    "name": "gen_day_x_1",
+    "type": "float_array",
+    "value": [
+     160,
+     294.5,
+     499.700012,
+     653.599976,
+     888.200012,
+     920
+    ]
+   },
+   {
+    "name": "gen_day_y_1",
+    "type": "float_array",
+    "value": [
+     128.399994,
+     120.199997,
+     90.3000031,
+     163.300003,
+     134.199997,
+     327.399994
+    ]
    },
    {
     "name": "land",
@@ -352,6 +377,11 @@
     "name": "sun",
     "type": "color",
     "value": "#FFFFC93C"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
    },
    {
     "name": "utcOffsets",
@@ -397,11 +427,12 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 26823,
+    "bytes": 27819,
     "component_modes": {
+     "WorldMap": "expand",
      "CityCard": "expand"
     },
-    "op_count": 658,
+    "op_count": 719,
     "host_variables": [
      {
       "name": "background",
@@ -445,19 +476,65 @@
       ]
      },
      {
-      "name": "cX",
+      "name": "cityDay",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "cityNight",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "gen_day_coslat_1",
       "type": "float_array",
       "value": [
-       159.899994,
-       294.399994,
-       499.600006,
-       653.5,
-       888,
+       0.790300012,
+       0.7579,
+       0.622500002,
+       0.904699981,
+       0.81220001,
+       0.830299973
+      ]
+     },
+     {
+      "name": "gen_day_lon_1",
+      "type": "float_array",
+      "value": [
+       -122.400002,
+       -73.9960022,
+       -0.119000003,
+       55.2869987,
+       139.748993,
+       151.212997
+      ]
+     },
+     {
+      "name": "gen_day_sinlat_1",
+      "type": "float_array",
+      "value": [
+       0.612699986,
+       0.652400017,
+       0.782599986,
+       0.425999999,
+       0.583400011,
+       -0.557299972
+      ]
+     },
+     {
+      "name": "gen_day_x_1",
+      "type": "float_array",
+      "value": [
+       160,
+       294.5,
+       499.700012,
+       653.599976,
+       888.200012,
        920
       ]
      },
      {
-      "name": "cY",
+      "name": "gen_day_y_1",
       "type": "float_array",
       "value": [
        128.399994,
@@ -469,22 +546,7 @@
       ]
      },
      {
-      "name": "cityDay",
-      "type": "color",
-      "value": "#FFFFFFFF"
-     },
-     {
-      "name": "cityNight",
-      "type": "color",
-      "value": "#FF000000"
-     },
-     {
-      "name": "grid",
-      "type": "color",
-      "value": "#FF000000"
-     },
-     {
-      "name": "label",
+      "name": "highlight",
       "type": "color",
       "value": "#FFFFFFFF"
      },
@@ -519,9 +581,19 @@
       "value": "#FF000000"
      },
      {
+      "name": "shadow",
+      "type": "color",
+      "value": "#FF424242"
+     },
+     {
       "name": "sun",
       "type": "color",
       "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
      },
      {
       "name": "utcOffsets",
@@ -543,11 +615,12 @@
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 26823,
+    "bytes": 27819,
     "component_modes": {
+     "WorldMap": "expand",
      "CityCard": "expand"
     },
-    "op_count": 658,
+    "op_count": 719,
     "host_variables": [
      {
       "name": "background",
@@ -591,19 +664,65 @@
       ]
      },
      {
-      "name": "cX",
+      "name": "cityDay",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "cityNight",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "gen_day_coslat_1",
       "type": "float_array",
       "value": [
-       159.899994,
-       294.399994,
-       499.600006,
-       653.5,
-       888,
+       0.790300012,
+       0.7579,
+       0.622500002,
+       0.904699981,
+       0.81220001,
+       0.830299973
+      ]
+     },
+     {
+      "name": "gen_day_lon_1",
+      "type": "float_array",
+      "value": [
+       -122.400002,
+       -73.9960022,
+       -0.119000003,
+       55.2869987,
+       139.748993,
+       151.212997
+      ]
+     },
+     {
+      "name": "gen_day_sinlat_1",
+      "type": "float_array",
+      "value": [
+       0.612699986,
+       0.652400017,
+       0.782599986,
+       0.425999999,
+       0.583400011,
+       -0.557299972
+      ]
+     },
+     {
+      "name": "gen_day_x_1",
+      "type": "float_array",
+      "value": [
+       160,
+       294.5,
+       499.700012,
+       653.599976,
+       888.200012,
        920
       ]
      },
      {
-      "name": "cY",
+      "name": "gen_day_y_1",
       "type": "float_array",
       "value": [
        128.399994,
@@ -615,24 +734,9 @@
       ]
      },
      {
-      "name": "cityDay",
-      "type": "color",
-      "value": "#FF000000"
-     },
-     {
-      "name": "cityNight",
+      "name": "highlight",
       "type": "color",
       "value": "#FFFFFFFF"
-     },
-     {
-      "name": "grid",
-      "type": "color",
-      "value": "#FFFFFFFF"
-     },
-     {
-      "name": "label",
-      "type": "color",
-      "value": "#FF000000"
      },
      {
       "name": "land",
@@ -665,9 +769,19 @@
       "value": "#FFFFFFFF"
      },
      {
+      "name": "shadow",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
       "name": "sun",
       "type": "color",
       "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
      },
      {
       "name": "utcOffsets",
@@ -689,11 +803,12 @@
    },
    "tablet-mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 26823,
+    "bytes": 27819,
     "component_modes": {
+     "WorldMap": "expand",
      "CityCard": "expand"
     },
-    "op_count": 658,
+    "op_count": 719,
     "host_variables": [
      {
       "name": "background",
@@ -737,19 +852,65 @@
       ]
      },
      {
-      "name": "cX",
+      "name": "cityDay",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "cityNight",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "gen_day_coslat_1",
       "type": "float_array",
       "value": [
-       159.899994,
-       294.399994,
-       499.600006,
-       653.5,
-       888,
+       0.790300012,
+       0.7579,
+       0.622500002,
+       0.904699981,
+       0.81220001,
+       0.830299973
+      ]
+     },
+     {
+      "name": "gen_day_lon_1",
+      "type": "float_array",
+      "value": [
+       -122.400002,
+       -73.9960022,
+       -0.119000003,
+       55.2869987,
+       139.748993,
+       151.212997
+      ]
+     },
+     {
+      "name": "gen_day_sinlat_1",
+      "type": "float_array",
+      "value": [
+       0.612699986,
+       0.652400017,
+       0.782599986,
+       0.425999999,
+       0.583400011,
+       -0.557299972
+      ]
+     },
+     {
+      "name": "gen_day_x_1",
+      "type": "float_array",
+      "value": [
+       160,
+       294.5,
+       499.700012,
+       653.599976,
+       888.200012,
        920
       ]
      },
      {
-      "name": "cY",
+      "name": "gen_day_y_1",
       "type": "float_array",
       "value": [
        128.399994,
@@ -761,22 +922,7 @@
       ]
      },
      {
-      "name": "cityDay",
-      "type": "color",
-      "value": "#FFFFFFFF"
-     },
-     {
-      "name": "cityNight",
-      "type": "color",
-      "value": "#FF000000"
-     },
-     {
-      "name": "grid",
-      "type": "color",
-      "value": "#FF000000"
-     },
-     {
-      "name": "label",
+      "name": "highlight",
       "type": "color",
       "value": "#FFFFFFFF"
      },
@@ -811,9 +957,19 @@
       "value": "#FF000000"
      },
      {
+      "name": "shadow",
+      "type": "color",
+      "value": "#FF424242"
+     },
+     {
       "name": "sun",
       "type": "color",
       "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
      },
      {
       "name": "utcOffsets",
@@ -837,6 +993,8 @@
      640
     ],
     "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
      "info: size_single_op",
      "info: expression_entries"
     ]
@@ -911,8 +1069,8 @@
   },
   "json_keys": [
    "$if",
-   "$map",
    "CityCard",
+   "WorldMap",
    "alpha",
    "angle",
    "apiLevel",
@@ -924,12 +1082,11 @@
    "cCosLat",
    "cLon",
    "cSinLat",
-   "cX",
-   "cY",
    "call",
    "canvas",
    "ch",
    "children",
+   "cities",
    "cityDay",
    "cityNight",
    "clipRect",
@@ -947,6 +1104,8 @@
    "cx",
    "cy",
    "dark",
+   "dayColor",
+   "daylight",
    "dd",
    "decimal",
    "decl",
@@ -966,6 +1125,7 @@
    "export",
    "expressionX",
    "expressionY",
+   "fill",
    "flags",
    "floatArrays",
    "flow",
@@ -973,8 +1133,12 @@
    "fontWeight",
    "from",
    "fsz",
+   "gen_day_coslat_1",
+   "gen_day_lon_1",
+   "gen_day_sinlat_1",
+   "gen_day_x_1",
+   "gen_day_y_1",
    "global",
-   "grid",
    "header",
    "height",
    "hh",
@@ -984,6 +1148,7 @@
    "index",
    "k",
    "label",
+   "labels",
    "land",
    "left",
    "len",
@@ -992,15 +1157,19 @@
    "lm",
    "locals",
    "loop",
-   "map_world_land_medium",
+   "map_box_land_medium",
+   "markerColor",
+   "markerSize",
    "maxLines",
    "mm",
    "modifiers",
    "mono-dark",
    "mono-light",
    "muted",
-   "nEdge",
    "name",
+   "night",
+   "nightAlpha",
+   "nightColor",
    "nightShade",
    "nsz",
    "off",
@@ -1022,7 +1191,6 @@
    "profiles",
    "radius",
    "raw",
-   "region",
    "required",
    "resources",
    "right",
@@ -1041,12 +1209,15 @@
    "static",
    "stops",
    "strokeCap",
+   "strokeJoin",
    "strokeWidth",
    "style",
    "summary",
    "sun",
+   "sunColor",
    "sunLon",
    "sunY",
+   "surface",
    "sx",
    "sy",
    "text",
@@ -1057,6 +1228,7 @@
    "top",
    "translate",
    "tsz",
+   "twilight",
    "type",
    "until",
    "utcH",
@@ -1074,6 +1246,13 @@
    "weight",
    "whole",
    "width",
+   "worldmap1_decl",
+   "worldmap1_nEdge",
+   "worldmap1_na",
+   "worldmap1_off",
+   "worldmap1_sunLon",
+   "worldmap1_sx",
+   "worldmap1_sy",
    "ww",
    "x",
    "x1",
@@ -1084,7 +1263,7 @@
   ],
   "evidence": {
    "map.world": [
-    "$map"
+    "WorldMap"
    ],
    "map.daynight": [
     "night"
@@ -1128,6 +1307,6 @@
     "textMerge"
    ]
   },
-  "built_at": "2026-11-02T20:22:49.250Z"
+  "built_at": "2026-11-02T22:50:11.774Z"
  }
 }

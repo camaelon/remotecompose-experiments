@@ -1,0 +1,132 @@
+{
+ "component": "Sankey",
+ "version": 1,
+ "summary": "A two-column Sankey diagram, sources on the left flowing into uses on the right: ribbon widths from a row-major float array the host can replace, every ribbon, bar and label easing to new data together, optional particles flowing along each ribbon at a speed proportional to its flow, and each node labelled with its total.",
+ "params": {
+  "flows": {
+   "type": "float",
+   "required": true,
+   "doc": "A float array (\"@name\" of resources.floatArrays, exported so the host can replace it), row-major: flows[s * uses + u] is what source s sends to use u; zeros are fine (no ribbon)"
+  },
+  "sources": {
+   "type": "list",
+   "required": true,
+   "doc": "Left-column nodes in order: \"Solar\", or {\"label\": \"Solar\", \"color\": \"@colors.solar\"}, or [label, color]; colours default to theme colours"
+  },
+  "uses": {
+   "type": "list",
+   "required": true,
+   "doc": "Right-column nodes, as sources"
+  },
+  "unit": {
+   "type": "string",
+   "default": " kW",
+   "doc": "Appended to every node total (keep the leading space)"
+  },
+  "decimals": {
+   "type": "float",
+   "default": 1,
+   "static": true,
+   "doc": "Decimals of the totals"
+  },
+  "whole": {
+   "type": "float",
+   "default": 2,
+   "static": true,
+   "doc": "Integer digits kept in the totals (textFromFloat whole: 2 shows up to 99)"
+  },
+  "anim": {
+   "type": "float",
+   "default": 1.2,
+   "static": true,
+   "doc": "Seconds a change of data eases over (0: jump); also the grow-in at load. Not in mono"
+  },
+  "particles": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Dots flowing along each ribbon (not in mono, which does not repaint continuously)"
+  },
+  "dots": {
+   "type": "float",
+   "default": 7,
+   "static": true,
+   "doc": "Particles per ribbon"
+  },
+  "speed": {
+   "type": "float",
+   "default": 0.16,
+   "doc": "Particle trips per second per unit of flow"
+  },
+  "dotColor": {
+   "type": "color",
+   "default": "@colors.onSurface",
+   "doc": "Particle colour (drawn at 85 % fading in and out at the bars)"
+  },
+  "label": {
+   "type": "string",
+   "doc": "Accessibility description (default: 'Flows from <sources> to <uses>')"
+  },
+  "fill": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Fill the space the caller gives it; false: fillMaxWidth x height"
+  },
+  "height": {
+   "type": "float",
+   "default": 320,
+   "static": true,
+   "doc": "Height in dp when fill is false"
+  }
+ },
+ "capabilities": [
+  "draw.plot",
+  "draw.path",
+  "draw.gradient",
+  "anim.value",
+  "data.array",
+  "host.variables"
+ ],
+ "body": {
+  "$gen": {
+   "kind": "sankey",
+   "flows": "@flows",
+   "sources": "@sources",
+   "uses": "@uses",
+   "unit": "@unit",
+   "decimals": "@decimals",
+   "whole": "@whole",
+   "anim": "@anim",
+   "particles": "@particles",
+   "dots": "@dots",
+   "speed": "@speed",
+   "dotColor": "@dotColor",
+   "label": "@label",
+   "fill": "@fill",
+   "height": "@height"
+  }
+ },
+ "call": {
+  "Sankey": {
+   "flows": "@flows",
+   "sources": [
+    "Solar",
+    "Grid"
+   ],
+   "uses": [
+    "House",
+    "Car",
+    "Export"
+   ]
+  }
+ },
+ "pitfalls": [
+  "flows is the NAME of a float array with sources x uses values, row-major; a wrong length draws missing ribbons as zero rather than failing",
+  "Totals are the sums of the ribbons: a node that both receives and sends (a battery charging and discharging) needs to be split into a source and a use",
+  "The particle speed reads the raw host value while the ribbons ease, so on a data change the dots jump once to their new phase",
+  "Each ribbon costs about 400 B and each particle loop about 300 B: 3 x 4 nodes is about 9 KB with particles, 6 KB without; keep the node count small",
+  "Particles use continuousSec(): the diagram repaints every frame while shown; particles: false makes it idle once the data settles",
+  "Mono: ribbons become outlines over a faint fill and the bars ink; node colours carry no meaning there, the labels do"
+ ]
+}

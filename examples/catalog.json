@@ -1,7 +1,7 @@
 {
  "version": 1,
  "vocabulary": "docs/examples-vocabulary.json",
- "built_at": "2026-11-02T20:29:49.075Z",
+ "built_at": "2026-11-02T22:57:28.119Z",
  "examples": [
   {
    "id": "A11Y-01",
@@ -52687,7 +52687,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 8530,
+      "bytes": 8809,
       "host_variables": [
        {
         "name": "background",
@@ -52696,6 +52696,11 @@
        },
        {
         "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "highlight",
         "type": "color",
         "value": "#FFFFFFFF"
        },
@@ -52710,6 +52715,11 @@
         "value": "#FFFFFFFF"
        },
        {
+        "name": "shadow",
+        "type": "color",
+        "value": "#FF424242"
+       },
+       {
         "name": "surface",
         "type": "color",
         "value": "#FF000000"
@@ -52719,7 +52729,7 @@
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 8530,
+      "bytes": 8809,
       "host_variables": [
        {
         "name": "background",
@@ -52732,12 +52742,22 @@
         "value": "#FF000000"
        },
        {
+        "name": "highlight",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
         "name": "muted",
         "type": "color",
         "value": "#FF616161"
        },
        {
         "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "shadow",
         "type": "color",
         "value": "#FF000000"
        },
@@ -64139,8 +64159,8 @@
    "prompt": "Make a world clock: a world map showing where it is day and night right now, with the sun where it is overhead, and a row of cities with their local times that highlights the ones in daylight. It should work on a phone and on a tablet.",
    "level": 5,
    "family": "SHW",
-   "hand_built": "WorldMap draws the land and a hard night edge but cannot colour its city dots by daylight or draw the sun; the map here is the same projection built from {\"$map\"} with the city logic (sun elevation per city) shared by the dots and the cards.",
    "components": [
+    "WorldMap",
     "CityCard"
    ],
    "capabilities": {
@@ -64184,11 +64204,9 @@
     "adaptive grid"
    ],
    "teaches": [
-    "The land is {\"$map\": {\"region\": \"world\", \"detail\": \"medium\"}}: a path in a 1000 x 394.4 box (lat 84 to -58), drawn after a scale of min(w / 1000, h / 394.4); every other mark is placed in the same box, sizes divided by the scale (u = 1 / scale) so dots and text keep their dp size",
+    "The map is one WorldMap call: fill (takes the column's remaining height and rescales), night + twilight (three shades 5 degrees apart: a soft terminator), sun (the subsolar point) and daylight (the city dots glow where the sun is up), coloured through its params with document colours (sea, land, nightColor, markerColor, dayColor, sunColor)",
     "The sun's position from the clock: declination 23.44 * sin(2 pi (284 + dayOfYear()) / 365), subsolar longitude -15 * (UTC hours - 12). On the equirectangular world box (x = (lon + 180) * 2.778, y = (84 - lat) * 2.778) that is the sun's dot",
     "Is the sun up in a city: sin(elevation) = sin(lat) sin(decl) + cos(lat) cos(decl) cos(lon - sunLon), with sin and cos of the latitude stored once in float arrays. Above sin(6 deg) = 0.105 it is day, within plus or minus 0.105 twilight, below night",
-    "One loop of six iterations draws every map dot from the arrays (arrayGet(@cX, i)): a halo whose alpha is step(el, 0), and a conditionalOperations that turns the dot warm when el > 0",
-    "A soft terminator from three night shades a few degrees of longitude apart, each at alpha 0.16: deep night gets all three, the twilight edges one or two",
     "Local time per city from one exported float array of UTC offsets (utcOffsets, the app keeps it right through DST): raw = utcMin + off * 60, the time (raw + 1440) % 1440, the day floor(raw / 1440) cut from \"YesterdayToday    Tomorrow \"",
     "One inline component, CityCard, for the six cards: its sky is a gradient picked by two conditionalOperations, the sun drawn at 0.62 - 0.55 * el of the card's height, so a card's sun rises and sets with the real one",
     "Responsive without branches: cols = 6 on a landscape window from 600 dp, else 2; the card width floor((W - 32) / cols) and its height from what the map leaves (up to 0.8 x its width), in a flow; the map takes the rest (verticalWeight) and keeps its 2.54:1, centred",
@@ -64214,14 +64232,14 @@
      "note": "UTC minutes from the local time and offsetToUtc()"
     },
     {
-     "pointer": "/root/column/children/1",
-     "shows": "map.world",
-     "note": "the map canvas: land, three night shades, the sun, the city loop"
-    },
-    {
      "pointer": "/resources/floatArrays/utcOffsets",
      "shows": "host.variables",
      "note": "the cities' UTC offsets, exported for the app"
+    },
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "map.world",
+     "note": "WorldMap with night, twilight, sun and daylight"
     }
    ],
    "inputs": {
@@ -64305,8 +64323,8 @@
    ],
    "folder": "SHW-21-world-clock",
    "derived": {
-    "bytes": 30244,
-    "op_count": 836,
+    "bytes": 31104,
+    "op_count": 870,
     "header": {
      "width": 360,
      "height": 720
@@ -64354,30 +64372,6 @@
       ]
      },
      {
-      "name": "cX",
-      "type": "float_array",
-      "value": [
-       159.899994,
-       294.399994,
-       499.600006,
-       653.5,
-       888,
-       920
-      ]
-     },
-     {
-      "name": "cY",
-      "type": "float_array",
-      "value": [
-       128.399994,
-       120.199997,
-       90.3000031,
-       163.300003,
-       134.199997,
-       327.399994
-      ]
-     },
-     {
       "name": "cityDay",
       "type": "color",
       "value": "#FFFF9F1C"
@@ -64388,14 +64382,64 @@
       "value": "#FFB8C7DD"
      },
      {
-      "name": "grid",
-      "type": "color",
-      "value": "#FF16263B"
+      "name": "gen_day_coslat_1",
+      "type": "float_array",
+      "value": [
+       0.790300012,
+       0.7579,
+       0.622500002,
+       0.904699981,
+       0.81220001,
+       0.830299973
+      ]
      },
      {
-      "name": "label",
-      "type": "color",
-      "value": "#FFDCE4EF"
+      "name": "gen_day_lon_1",
+      "type": "float_array",
+      "value": [
+       -122.400002,
+       -73.9960022,
+       -0.119000003,
+       55.2869987,
+       139.748993,
+       151.212997
+      ]
+     },
+     {
+      "name": "gen_day_sinlat_1",
+      "type": "float_array",
+      "value": [
+       0.612699986,
+       0.652400017,
+       0.782599986,
+       0.425999999,
+       0.583400011,
+       -0.557299972
+      ]
+     },
+     {
+      "name": "gen_day_x_1",
+      "type": "float_array",
+      "value": [
+       160,
+       294.5,
+       499.700012,
+       653.599976,
+       888.200012,
+       920
+      ]
+     },
+     {
+      "name": "gen_day_y_1",
+      "type": "float_array",
+      "value": [
+       128.399994,
+       120.199997,
+       90.3000031,
+       163.300003,
+       134.199997,
+       327.399994
+      ]
      },
      {
       "name": "land",
@@ -64433,6 +64477,11 @@
       "value": "#FFFFC93C"
      },
      {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
       "name": "utcOffsets",
       "type": "float_array",
       "value": [
@@ -64446,7 +64495,8 @@
      }
     ],
     "components": [
-     "CityCard"
+     "CityCard",
+     "WorldMap"
     ],
     "java_identical": true,
     "renders": {
@@ -64461,7 +64511,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 26823,
+      "bytes": 27819,
       "host_variables": [
        {
         "name": "background",
@@ -64505,19 +64555,65 @@
         ]
        },
        {
-        "name": "cX",
+        "name": "cityDay",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "cityNight",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "gen_day_coslat_1",
         "type": "float_array",
         "value": [
-         159.899994,
-         294.399994,
-         499.600006,
-         653.5,
-         888,
+         0.790300012,
+         0.7579,
+         0.622500002,
+         0.904699981,
+         0.81220001,
+         0.830299973
+        ]
+       },
+       {
+        "name": "gen_day_lon_1",
+        "type": "float_array",
+        "value": [
+         -122.400002,
+         -73.9960022,
+         -0.119000003,
+         55.2869987,
+         139.748993,
+         151.212997
+        ]
+       },
+       {
+        "name": "gen_day_sinlat_1",
+        "type": "float_array",
+        "value": [
+         0.612699986,
+         0.652400017,
+         0.782599986,
+         0.425999999,
+         0.583400011,
+         -0.557299972
+        ]
+       },
+       {
+        "name": "gen_day_x_1",
+        "type": "float_array",
+        "value": [
+         160,
+         294.5,
+         499.700012,
+         653.599976,
+         888.200012,
          920
         ]
        },
        {
-        "name": "cY",
+        "name": "gen_day_y_1",
         "type": "float_array",
         "value": [
          128.399994,
@@ -64529,22 +64625,7 @@
         ]
        },
        {
-        "name": "cityDay",
-        "type": "color",
-        "value": "#FFFFFFFF"
-       },
-       {
-        "name": "cityNight",
-        "type": "color",
-        "value": "#FF000000"
-       },
-       {
-        "name": "grid",
-        "type": "color",
-        "value": "#FF000000"
-       },
-       {
-        "name": "label",
+        "name": "highlight",
         "type": "color",
         "value": "#FFFFFFFF"
        },
@@ -64579,9 +64660,19 @@
         "value": "#FF000000"
        },
        {
+        "name": "shadow",
+        "type": "color",
+        "value": "#FF424242"
+       },
+       {
         "name": "sun",
         "type": "color",
         "value": "#FFFFFFFF"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
        },
        {
         "name": "utcOffsets",
@@ -64600,7 +64691,7 @@
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 26823,
+      "bytes": 27819,
       "host_variables": [
        {
         "name": "background",
@@ -64644,19 +64735,65 @@
         ]
        },
        {
-        "name": "cX",
+        "name": "cityDay",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "cityNight",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "gen_day_coslat_1",
         "type": "float_array",
         "value": [
-         159.899994,
-         294.399994,
-         499.600006,
-         653.5,
-         888,
+         0.790300012,
+         0.7579,
+         0.622500002,
+         0.904699981,
+         0.81220001,
+         0.830299973
+        ]
+       },
+       {
+        "name": "gen_day_lon_1",
+        "type": "float_array",
+        "value": [
+         -122.400002,
+         -73.9960022,
+         -0.119000003,
+         55.2869987,
+         139.748993,
+         151.212997
+        ]
+       },
+       {
+        "name": "gen_day_sinlat_1",
+        "type": "float_array",
+        "value": [
+         0.612699986,
+         0.652400017,
+         0.782599986,
+         0.425999999,
+         0.583400011,
+         -0.557299972
+        ]
+       },
+       {
+        "name": "gen_day_x_1",
+        "type": "float_array",
+        "value": [
+         160,
+         294.5,
+         499.700012,
+         653.599976,
+         888.200012,
          920
         ]
        },
        {
-        "name": "cY",
+        "name": "gen_day_y_1",
         "type": "float_array",
         "value": [
          128.399994,
@@ -64668,24 +64805,9 @@
         ]
        },
        {
-        "name": "cityDay",
-        "type": "color",
-        "value": "#FF000000"
-       },
-       {
-        "name": "cityNight",
+        "name": "highlight",
         "type": "color",
         "value": "#FFFFFFFF"
-       },
-       {
-        "name": "grid",
-        "type": "color",
-        "value": "#FFFFFFFF"
-       },
-       {
-        "name": "label",
-        "type": "color",
-        "value": "#FF000000"
        },
        {
         "name": "land",
@@ -64718,9 +64840,19 @@
         "value": "#FFFFFFFF"
        },
        {
+        "name": "shadow",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
         "name": "sun",
         "type": "color",
         "value": "#FF000000"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FFFFFFFF"
        },
        {
         "name": "utcOffsets",
@@ -64739,7 +64871,7 @@
      "tablet-mono-dark": {
       "render": "render-tablet-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 26823,
+      "bytes": 27819,
       "host_variables": [
        {
         "name": "background",
@@ -64783,19 +64915,65 @@
         ]
        },
        {
-        "name": "cX",
+        "name": "cityDay",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "cityNight",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "gen_day_coslat_1",
         "type": "float_array",
         "value": [
-         159.899994,
-         294.399994,
-         499.600006,
-         653.5,
-         888,
+         0.790300012,
+         0.7579,
+         0.622500002,
+         0.904699981,
+         0.81220001,
+         0.830299973
+        ]
+       },
+       {
+        "name": "gen_day_lon_1",
+        "type": "float_array",
+        "value": [
+         -122.400002,
+         -73.9960022,
+         -0.119000003,
+         55.2869987,
+         139.748993,
+         151.212997
+        ]
+       },
+       {
+        "name": "gen_day_sinlat_1",
+        "type": "float_array",
+        "value": [
+         0.612699986,
+         0.652400017,
+         0.782599986,
+         0.425999999,
+         0.583400011,
+         -0.557299972
+        ]
+       },
+       {
+        "name": "gen_day_x_1",
+        "type": "float_array",
+        "value": [
+         160,
+         294.5,
+         499.700012,
+         653.599976,
+         888.200012,
          920
         ]
        },
        {
-        "name": "cY",
+        "name": "gen_day_y_1",
         "type": "float_array",
         "value": [
          128.399994,
@@ -64807,22 +64985,7 @@
         ]
        },
        {
-        "name": "cityDay",
-        "type": "color",
-        "value": "#FFFFFFFF"
-       },
-       {
-        "name": "cityNight",
-        "type": "color",
-        "value": "#FF000000"
-       },
-       {
-        "name": "grid",
-        "type": "color",
-        "value": "#FF000000"
-       },
-       {
-        "name": "label",
+        "name": "highlight",
         "type": "color",
         "value": "#FFFFFFFF"
        },
@@ -64857,9 +65020,19 @@
         "value": "#FF000000"
        },
        {
+        "name": "shadow",
+        "type": "color",
+        "value": "#FF424242"
+       },
+       {
         "name": "sun",
         "type": "color",
         "value": "#FFFFFFFF"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
        },
        {
         "name": "utcOffsets",
@@ -64915,7 +65088,7 @@
     },
     "evidence": {
      "map.world": [
-      "$map"
+      "WorldMap"
      ],
      "map.daynight": [
       "night"
@@ -64961,8 +65134,8 @@
     },
     "json_keys": [
      "$if",
-     "$map",
      "CityCard",
+     "WorldMap",
      "alpha",
      "angle",
      "apiLevel",
@@ -64974,12 +65147,11 @@
      "cCosLat",
      "cLon",
      "cSinLat",
-     "cX",
-     "cY",
      "call",
      "canvas",
      "ch",
      "children",
+     "cities",
      "cityDay",
      "cityNight",
      "clipRect",
@@ -64997,6 +65169,8 @@
      "cx",
      "cy",
      "dark",
+     "dayColor",
+     "daylight",
      "dd",
      "decimal",
      "decl",
@@ -65016,6 +65190,7 @@
      "export",
      "expressionX",
      "expressionY",
+     "fill",
      "flags",
      "floatArrays",
      "flow",
@@ -65023,8 +65198,12 @@
      "fontWeight",
      "from",
      "fsz",
+     "gen_day_coslat_1",
+     "gen_day_lon_1",
+     "gen_day_sinlat_1",
+     "gen_day_x_1",
+     "gen_day_y_1",
      "global",
-     "grid",
      "header",
      "height",
      "hh",
@@ -65034,6 +65213,7 @@
      "index",
      "k",
      "label",
+     "labels",
      "land",
      "left",
      "len",
@@ -65042,15 +65222,19 @@
      "lm",
      "locals",
      "loop",
-     "map_world_land_medium",
+     "map_box_land_medium",
+     "markerColor",
+     "markerSize",
      "maxLines",
      "mm",
      "modifiers",
      "mono-dark",
      "mono-light",
      "muted",
-     "nEdge",
      "name",
+     "night",
+     "nightAlpha",
+     "nightColor",
      "nightShade",
      "nsz",
      "off",
@@ -65072,7 +65256,6 @@
      "profiles",
      "radius",
      "raw",
-     "region",
      "required",
      "resources",
      "right",
@@ -65091,12 +65274,15 @@
      "static",
      "stops",
      "strokeCap",
+     "strokeJoin",
      "strokeWidth",
      "style",
      "summary",
      "sun",
+     "sunColor",
      "sunLon",
      "sunY",
+     "surface",
      "sx",
      "sy",
      "text",
@@ -65107,6 +65293,7 @@
      "top",
      "translate",
      "tsz",
+     "twilight",
      "type",
      "until",
      "utcH",
@@ -65124,6 +65311,13 @@
      "weight",
      "whole",
      "width",
+     "worldmap1_decl",
+     "worldmap1_nEdge",
+     "worldmap1_na",
+     "worldmap1_off",
+     "worldmap1_sunLon",
+     "worldmap1_sx",
+     "worldmap1_sy",
      "ww",
      "x",
      "x1",
@@ -66431,7 +66625,6 @@
    "prompt": "Build a home energy flow diagram: sources (solar, grid, battery) to uses (house, car, heat pump, export) as a Sankey, ribbon widths from host data arrays, animated particles flowing along the ribbons at speeds proportional to the flow, and a smooth transition when the data changes. Labels with values; tablet and phone layouts.",
    "level": 5,
    "family": "SHW",
-   "hand_built": "A Sankey needs each ribbon's two stacked offsets computed from all the flows before it; no library chart does that, so the twelve ribbons are generated from one recipe.",
    "capabilities": {
     "primary": [
      "draw.plot",
@@ -66506,12 +66699,10 @@
     "touch": false
    },
    "teaches": [
+    "The diagram is one Sankey call: {\"flows\": \"@flows\", \"sources\": [[\"Solar\", \"@colors.solar\"], ...], \"uses\": [...]}; themed node colours live in resources.colors",
     "Each flow is eased on its own: g_k = arrayGet(@flows, k), then f_k = {value: @g_k, anim: 1.2}. Every offset is a sum of eased flows, so ribbons, bars and labels move together and never overlap mid-transition",
     "A ribbon is ONE closed pathExpression: a in 0..2, x = xs + dx * (1 - abs(1 - a)), y = ya + (yb - ya) * (1 - cos(pi a)) / 2 + w * step(a, 1). The same cosine ease serves the top edge forward and the bottom edge back; flags 4 (linear) keeps the corners square",
-    "Stacking without loops over variables: the source offset of link (s, u) is the sum of the flows before it in its row, the use offset the sum before it in its column, written out by the generator",
-    "Particles: phase = fract(T * 0.16 * arrayGet(@flows, i)) and a loop of 7 dots at fract(phase + j / 7), each with a fixed lateral offset sin(j * 2.39 + i) and alpha sin(pi t) so they fade in and out at the bars",
-    "Zero flows are skipped with conditionalOperations (gt @f_k 0.01), not drawn as hairlines",
-    "Layout scales with the box: label column clamp(70, 150, 0.21 W), gaps clamp(14, 30, 0.06 H), text clamp(11, 14, 0.018 W)"
+    "Particles: phase = fract(T * 0.16 * arrayGet(@flows, i)) and a loop of 7 dots at fract(phase + j / 7), each with a fixed lateral offset sin(j * 2.39 + i) and alpha sin(pi t) so they fade in and out at the bars"
    ],
    "pitfalls": [
     "C++ player (rc-render): an animated variable whose expression reads the array directly ({value: \"arrayGet(@flows, 0)\", anim}) never re-animates when the host replaces the array; route it through a plain variable first (g_k = arrayGet(...), then {value: \"@g_k\", anim})",
@@ -66636,35 +66827,33 @@
      "note": "the 12 exported flows"
     },
     {
-     "pointer": "/root/4/column/children/3/canvas/commands/51",
+     "pointer": "/root/4/column/children/3/box/children/0",
      "shows": "draw.plot",
-     "note": "one ribbon: offsets, the closed band path expression, its gradient"
+     "note": "the Sankey call: flows, sources and uses with their colours"
     },
     {
-     "pointer": "/root/4/column/children/3/canvas/commands/9",
+     "pointer": "/root/4/column/children/3/box/children/0",
      "shows": "anim.value",
-     "note": "an eased flow, read through a plain variable"
+     "note": "every ribbon eases when the host replaces the array"
     },
     {
-     "pointer": "/root/4/column/children/3/canvas/commands/8",
-     "shows": "data.array",
-     "note": "a flow read from the exported host array"
-    },
-    {
-     "pointer": "/root/4/column/children/3/canvas/commands/8",
+     "pointer": "/resources/floatArrays",
      "shows": "host.variables",
-     "note": "the host array drives everything"
+     "note": "exported: the host sets new flows"
     },
     {
-     "pointer": "/root/4/column/children/3/canvas/commands/63",
+     "pointer": "/root/4/column/children/3/box/children/0",
      "shows": "anim.loop",
-     "note": "seven particles on a ribbon, speed proportional to its flow"
+     "note": "particles at a speed proportional to each flow"
     }
+   ],
+   "components": [
+    "Sankey"
    ],
    "folder": "SHW-24-energy-flow",
    "derived": {
-    "bytes": 15502,
-    "op_count": 598,
+    "bytes": 14344,
+    "op_count": 525,
     "header": {
      "width": 800,
      "height": 500
@@ -66681,29 +66870,14 @@
       "value": "#FF35D49A"
      },
      {
-      "name": "batteryR",
-      "type": "color",
-      "value": "#B035D49A"
-     },
-     {
       "name": "car",
       "type": "color",
       "value": "#FF5AA9FF"
      },
      {
-      "name": "carR",
-      "type": "color",
-      "value": "#B05AA9FF"
-     },
-     {
       "name": "export",
       "type": "color",
       "value": "#FFF6E05C"
-     },
-     {
-      "name": "exportR",
-      "type": "color",
-      "value": "#B0F6E05C"
      },
      {
       "name": "flows",
@@ -66729,29 +66903,14 @@
       "value": "#FF8C9DB5"
      },
      {
-      "name": "gridR",
-      "type": "color",
-      "value": "#B08C9DB5"
-     },
-     {
       "name": "heat",
       "type": "color",
       "value": "#FFC77DFF"
      },
      {
-      "name": "heatR",
-      "type": "color",
-      "value": "#B0C77DFF"
-     },
-     {
       "name": "house",
       "type": "color",
       "value": "#FFFF8A5B"
-     },
-     {
-      "name": "houseR",
-      "type": "color",
-      "value": "#B0FF8A5B"
      },
      {
       "name": "muted",
@@ -66767,14 +66926,11 @@
       "name": "solar",
       "type": "color",
       "value": "#FFF6B73C"
-     },
-     {
-      "name": "solarR",
-      "type": "color",
-      "value": "#B0F6B73C"
      }
     ],
-    "components": [],
+    "components": [
+     "Sankey"
+    ],
     "java_identical": true,
     "renders": {
      "light": {
@@ -66788,7 +66944,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 9321,
+      "bytes": 8877,
       "host_variables": [
        {
         "name": "background",
@@ -66801,29 +66957,14 @@
         "value": "#FF35D49A"
        },
        {
-        "name": "batteryR",
-        "type": "color",
-        "value": "#B035D49A"
-       },
-       {
         "name": "car",
         "type": "color",
         "value": "#FF5AA9FF"
        },
        {
-        "name": "carR",
-        "type": "color",
-        "value": "#B05AA9FF"
-       },
-       {
         "name": "export",
         "type": "color",
         "value": "#FFF6E05C"
-       },
-       {
-        "name": "exportR",
-        "type": "color",
-        "value": "#B0F6E05C"
        },
        {
         "name": "flows",
@@ -66849,29 +66990,14 @@
         "value": "#FF8C9DB5"
        },
        {
-        "name": "gridR",
-        "type": "color",
-        "value": "#B08C9DB5"
-       },
-       {
         "name": "heat",
         "type": "color",
         "value": "#FFC77DFF"
        },
        {
-        "name": "heatR",
-        "type": "color",
-        "value": "#B0C77DFF"
-       },
-       {
         "name": "house",
         "type": "color",
         "value": "#FFFF8A5B"
-       },
-       {
-        "name": "houseR",
-        "type": "color",
-        "value": "#B0FF8A5B"
        },
        {
         "name": "muted",
@@ -66887,18 +67013,13 @@
         "name": "solar",
         "type": "color",
         "value": "#FFF6B73C"
-       },
-       {
-        "name": "solarR",
-        "type": "color",
-        "value": "#B0F6B73C"
        }
       ]
      },
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 9321,
+      "bytes": 8877,
       "host_variables": [
        {
         "name": "background",
@@ -66911,29 +67032,14 @@
         "value": "#FF14A372"
        },
        {
-        "name": "batteryR",
-        "type": "color",
-        "value": "#A614A372"
-       },
-       {
         "name": "car",
         "type": "color",
         "value": "#FF2F7FE0"
        },
        {
-        "name": "carR",
-        "type": "color",
-        "value": "#A62F7FE0"
-       },
-       {
         "name": "export",
         "type": "color",
         "value": "#FFD4B21C"
-       },
-       {
-        "name": "exportR",
-        "type": "color",
-        "value": "#A6D4B21C"
        },
        {
         "name": "flows",
@@ -66959,29 +67065,14 @@
         "value": "#FF6A7B96"
        },
        {
-        "name": "gridR",
-        "type": "color",
-        "value": "#A66A7B96"
-       },
-       {
         "name": "heat",
         "type": "color",
         "value": "#FFA457E6"
        },
        {
-        "name": "heatR",
-        "type": "color",
-        "value": "#A6A457E6"
-       },
-       {
         "name": "house",
         "type": "color",
         "value": "#FFF0703C"
-       },
-       {
-        "name": "houseR",
-        "type": "color",
-        "value": "#A6F0703C"
        },
        {
         "name": "muted",
@@ -66997,11 +67088,6 @@
         "name": "solar",
         "type": "color",
         "value": "#FFE39A0B"
-       },
-       {
-        "name": "solarR",
-        "type": "color",
-        "value": "#A6E39A0B"
        }
       ]
      },
@@ -67034,8 +67120,8 @@
     },
     "audit": {
      "error": 0,
-     "warning": 1,
-     "info": 4
+     "warning": 0,
+     "info": 2
     },
     "evidence": {
      "draw.plot": [
@@ -67091,23 +67177,22 @@
      ]
     },
     "json_keys": [
-     "$if",
+     "Sankey",
      "alpha",
      "anim",
      "apiLevel",
      "background",
      "battery",
-     "batteryR",
      "bottom",
      "box",
      "canvas",
      "car",
-     "carR",
      "children",
      "color",
      "colors",
      "column",
      "commands",
+     "commit",
      "condition",
      "conditionalOperations",
      "contentDescription",
@@ -67120,10 +67205,8 @@
      "drawPath",
      "drawRoundRect",
      "drawTextAnchored",
-     "else",
      "end",
      "export",
-     "exportR",
      "expressionX",
      "expressionY",
      "flags",
@@ -67133,17 +67216,15 @@
      "fontWeight",
      "from",
      "grid",
-     "gridR",
      "header",
      "heat",
-     "heatR",
      "height",
      "house",
-     "houseR",
      "id",
      "id1",
      "id2",
      "index",
+     "label",
      "left",
      "light",
      "linearGradient",
@@ -67171,16 +67252,15 @@
      "semantics",
      "shader",
      "solar",
-     "solarR",
+     "sources",
      "start",
-     "strokeWidth",
      "style",
      "text",
      "textSize",
-     "then",
      "top",
      "type",
      "until",
+     "uses",
      "v1",
      "v2",
      "value",
@@ -67208,7 +67288,6 @@
    "prompt": "Build an ICU-style patient monitor: a scrolling ECG trace drawn from a waveform array looping with the clock, with the sweep-and-erase gap of a real monitor, an SpO2 pleth wave, heart rate and SpO2 numbers from host variables, and a flashing red alarm when the heart rate is out of range. Dark, crisp, legible, on a tablet and on a phone.",
    "level": 5,
    "family": "SHW",
-   "hand_built": "A sweep-and-erase trace is two path expressions per wave evaluated against the clock, plus a hand-placed tile grid that switches between landscape and portrait with lerp; no library component draws either.",
    "capabilities": {
     "primary": [
      "draw.plot",
@@ -67257,12 +67336,11 @@
     "telemetry"
    ],
    "teaches": [
+    "The three traces are SweepTrace calls in a column laid over the canvas: offset under the top bar, width and height computed from the screen (componentWidth() in a modifier is the parent's), so the same rows serve landscape and portrait",
     "A sweep-and-erase trace without a sample buffer: the head is x_h = fract(T / D) * width, and the sample at x shows the time T - fract((x_h - x) / width + 1) * D, so the new sweep and the previous one both stay put on screen while the head moves",
-    "Two pathExpressions per wave, 0..head and head+gap..width, are the trace and its erase gap; end and count are expressions (floor(head / step) * step, head / step + 1) so the samples sit on a fixed pixel grid and the trace does not shimmer",
     "The ECG beat is stored as a fixed 0.62 s window (100 samples) read with min(1, fract(phase) * k): the QRS keeps its real width at any heart rate and the baseline fills the rest of the RR interval, so 148 bpm looks like tachycardia rather than a squashed beat",
     "The alarm is data, not layout: hrA = ifElse(0, 1, max(hr - hrHi, hrLo - hr)) and blink = ifElse(0, 1, 0.5 - fract(T * 2)) drive conditionalOperations that paint the tile red, turn its text white and show the banner",
-    "One canvas serves both orientations: land = ifElse(0, 1, W - 1.15 H) and every tile rectangle is lerp(portrait, landscape, @land)",
-    "A soft glow is the same path stroked twice: 2.4x wider at alpha 0.16, then the 2 px trace on top"
+    "One canvas serves both orientations: land = ifElse(0, 1, W - 1.15 H) and every tile rectangle is lerp(portrait, landscape, @land)"
    ],
    "pitfalls": [
     "TypeScript player: PathExpression.evalRPN has no case for splineLoop (op 75), so a pathExpression using splineLoop draws vertical spikes there; use spline(@a, fract(t)) with the first value repeated at the end, which both players evaluate",
@@ -67439,22 +67517,22 @@
      "note": "one beat as a fixed 0.62 s window"
     },
     {
-     "pointer": "/root/canvas/commands/50",
-     "shows": "time.clock",
-     "note": "the sweep head from the clock"
-    },
-    {
-     "pointer": "/root/canvas/commands/54",
+     "pointer": "/root/box/children/1/box/children/0/column/children/0/box/children/0",
      "shows": "draw.plot",
-     "note": "the ECG trace up to the head, sampled on a 1 px grid"
+     "note": "the ECG: a SweepTrace with a beat window and a glow"
     },
     {
-     "pointer": "/root/canvas/commands/54",
+     "pointer": "/root/box/children/1/box/children/0/column/children/1/box/children/0",
      "shows": "data.spline",
-     "note": "beat shape by spline over the waveform array"
+     "note": "pleth trailing the beat by 0.18 cycles"
     },
     {
-     "pointer": "/root/canvas/commands/16",
+     "pointer": "/root/box/children/1/box/children/0/column",
+     "shows": "time.clock",
+     "note": "three traces in a column sized from the screen, swept by the clock"
+    },
+    {
+     "pointer": "/root/box/children/0/canvas/commands/16",
      "shows": "host.variables",
      "note": "alarm state from the host heart rate and its limits"
     },
@@ -67464,10 +67542,13 @@
      "note": "vitals and alarm limits the host sets"
     }
    ],
+   "components": [
+    "SweepTrace"
+   ],
    "folder": "SHW-25-patient-monitor",
    "derived": {
-    "bytes": 11809,
-    "op_count": 472,
+    "bytes": 12122,
+    "op_count": 516,
     "header": {
      "width": 800,
      "height": 480
@@ -67564,7 +67645,9 @@
       "value": 118
      }
     ],
-    "components": [],
+    "components": [
+     "SweepTrace"
+    ],
     "java_identical": true,
     "renders": {
      "light": {
@@ -67578,7 +67661,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 11557,
+      "bytes": 11792,
       "host_variables": [
        {
         "name": "alarm",
@@ -67695,7 +67778,7 @@
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 11557,
+      "bytes": 11792,
       "host_variables": [
        {
         "name": "alarm",
@@ -67845,7 +67928,7 @@
     "audit": {
      "error": 0,
      "warning": 1,
-     "info": 1
+     "info": 2
     },
     "evidence": {
      "draw.plot": [
@@ -67896,13 +67979,18 @@
     },
     "json_keys": [
      "$if",
+     "SweepTrace",
      "alarm",
      "alpha",
      "apiLevel",
+     "baseline",
      "bottom",
+     "box",
      "canvas",
+     "children",
      "color",
      "colors",
+     "column",
      "commands",
      "condition",
      "conditionalOperations",
@@ -67912,6 +68000,7 @@
      "cy",
      "dark",
      "decimal",
+     "delay",
      "dia",
      "drawCircle",
      "drawLine",
@@ -67927,6 +68016,7 @@
      "expressionY",
      "flags",
      "floatArrays",
+     "glow",
      "header",
      "height",
      "hr",
@@ -67935,11 +68025,13 @@
      "id",
      "ink",
      "inkMuted",
+     "label",
      "left",
      "light",
      "line",
      "modifiers",
      "name",
+     "offset",
      "onAlarm",
      "ops",
      "paint",
@@ -67951,6 +68043,7 @@
      "pleth",
      "profiles",
      "radius",
+     "rate",
      "resources",
      "resp",
      "right",
@@ -67958,8 +68051,11 @@
      "rr",
      "rx",
      "ry",
+     "sample",
+     "scale",
      "screen",
      "semantics",
+     "speed",
      "spo2",
      "spo2Lo",
      "start",
@@ -67967,19 +68063,30 @@
      "strokeJoin",
      "strokeWidth",
      "style",
+     "sweeptrace1_T",
+     "sweeptrace1_k",
+     "sweeptrace1_rr",
+     "sweeptrace2_T",
+     "sweeptrace2_rr",
+     "sweeptrace3_T",
+     "sweeptrace3_rr",
      "sys",
      "text",
      "textSize",
      "then",
+     "thickness",
      "top",
      "type",
      "v1",
      "v2",
      "value",
+     "values",
      "variable",
      "variables",
+     "verticalWeight",
      "whole",
      "width",
+     "window",
      "x",
      "x1",
      "x2",
@@ -68531,7 +68638,6 @@
    "prompt": "Make an airport or train station split-flap departure board: rows of departures with time, destination, platform and status, where every character flips through the letters with the mechanical flap animation when a row changes. Boarding and Delayed in their own colours. It should look great on a tablet in landscape and still work on a phone.",
    "level": 5,
    "family": "SHW",
-   "hand_built": "The flap is a per-tile state machine (old code, new code, steps through the drum, the half-flap fold) evaluated inside nested loops over float arrays; no library component draws tiles from arrays, and a component per tile would multiply the document by 300.",
    "capabilities": {
     "primary": [
      "data.loop",
@@ -68583,9 +68689,9 @@
     "kiosk"
    ],
    "teaches": [
+    "Three SplitFlap calls over one canvas: the rows (tiles = the layout's column count, rows = what fits, tileX and tileY read from the layout's cx/cy arrays), the status column (a word drum, glyphWidth 8, align start) and the clock (code from timeInHr/timeInMin, since continuousSec() % 60). The board canvas below draws the header, labels and ticker; one canvas above draws the status colours and lamps once each status has settled",
+    "Per tile, as expressions of i (tile) and r (row): code = arrayGet(@chars, ((@k + r) % 12) * 26 + arrayGet(@cols, @cbase + i)), prev the same for the previous cycle, since = the time into the 9 s cycle; SplitFlap steps forward through the drum ((code - prev) mod 40 flaps at 22 a second) and draws the half-flap fold",
     "Text as numbers: each train is 26 character codes into a 40-character drum (space, A-Z, 0-9, ':', '-', '.'), all twelve in one float array; textSubtext(drum, code, 1) turns a code back into its glyph inside the loop, and the status words are 8-letter slices of one string",
-    "A real split-flap moves forward only: steps = (new - old + 40) % 40, progress f = clamp((tc - delay) * 22, steps, 0); the shown glyph is (old + floor(f)) % 40 and the next one is that plus one until f reaches steps",
-    "The fold in four draws per tile: the next glyph's top half and the current glyph's bottom half (clipRect), then the flap — the current top half shrinking to the split (scale sy = 1 - 2s about the split) or, past half way, the next bottom half opening — darkened as it turns edge-on",
     "The board cycle is floor(animationTime() / 9): row r shows train (k + r) % 12 and flips from train (k + r - 1) % 12, so the top train leaves and the list moves up; at load everything flips in from blank",
     "A per-tile delay (row * 0.16 + column * 0.035 + a hashed jitter fract(sin(r * 12.9 + c * 78.2) * 437.5) * 0.25) makes the flurry ripple across the board instead of flipping in lockstep",
     "The status is a whole-word flap (ON TIME, BOARDING, DELAYED, CANCELED) on its own five-entry list; once settled the word is redrawn in its colour through a clip whose width is zero for every other status, with a lamp that blinks for BOARDING",
@@ -68598,8 +68704,8 @@
     "clamp is clamp(value, max, min) in these players: clamp(x, 1, 12) is always 1",
     "step(a, b) is a > b, strictly: step(@k, 1) is 0 for the first cycle after the intro",
     "ifElse is ifElse(else, then, condition)",
-    "Never declare the same variable name twice in one document — the second declaration does not make a new value — so every flap call uses its own prefix for its variables",
-    "The tiles are redrawn every frame (about 270 tiles, roughly 10 000 operations a frame on the wide board): fine on a tablet or a kiosk, heavier than a normal screen"
+    "The tiles are redrawn every frame (about 270 tiles, roughly 10 000 operations a frame on the wide board): fine on a tablet or a kiosk, heavier than a normal screen",
+    "Variables the board canvas declares (@cw, @th, @k, @tc ...) are read by the SplitFlap canvases drawn after it in the same box: keep the board canvas first"
    ],
    "inputs": {
     "variables": {},
@@ -68608,9 +68714,9 @@
    },
    "snippets": [
     {
-     "pointer": "/root/commands/39",
+     "pointer": "/root/box/children/2",
      "shows": "data.loop",
-     "note": "the rows: an outer loop over rows, an inner loop over tiles, then the status flap"
+     "note": "the rows: one SplitFlap call, codes per tile and row from the float array"
     },
     {
      "pointer": "/resources/floatArrays",
@@ -68618,22 +68724,22 @@
      "note": "twelve trains as character codes, the status codes, and the three layouts' column tables"
     },
     {
-     "pointer": "/root/commands/16",
+     "pointer": "/root/box/children/0/canvas/commands/16",
      "shows": "time.animation",
      "note": "the board cycle from animationTime()"
     },
     {
-     "pointer": "/root/commands/39",
+     "pointer": "/root/box/children/2",
      "shows": "expr.string",
-     "note": "each tile slices its glyph out of the 40-character drum string with textSubtext"
+     "note": "the rows: one SplitFlap call, codes per tile and row from the float array"
     },
     {
-     "pointer": "/root/commands/31",
+     "pointer": "/root/box/children/1",
      "shows": "time.clock",
-     "note": "the flap clock: HH:MM digits from the clock, flipping from the previous minute"
+     "note": "the flap clock: a SplitFlap fed from the clock"
     },
     {
-     "pointer": "/root/commands/45",
+     "pointer": "/root/box/children/0/canvas/commands/41",
      "shows": "text.measure",
      "note": "the ticker, repeated at its measured width"
     }
@@ -68727,10 +68833,13 @@
     "TIM-01",
     "DRW-12"
    ],
+   "components": [
+    "SplitFlap"
+   ],
    "folder": "SHW-27-split-flap-board",
    "derived": {
-    "bytes": 12985,
-    "op_count": 480,
+    "bytes": 13989,
+    "op_count": 516,
     "header": {
      "width": 1280,
      "height": 800
@@ -69360,7 +69469,9 @@
       "value": "#FF1C1D21"
      }
     ],
-    "components": [],
+    "components": [
+     "SplitFlap"
+    ],
     "java_identical": true,
     "renders": {
      "light": {
@@ -69374,7 +69485,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 12104,
+      "bytes": 9597,
       "host_variables": [
        {
         "name": "accent",
@@ -70019,7 +70130,7 @@
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 12104,
+      "bytes": 9597,
       "host_variables": [
        {
         "name": "accent",
@@ -70700,7 +70811,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 4
+     "info": 3
     },
     "evidence": {
      "data.loop": [
@@ -70750,15 +70861,21 @@
     },
     "json_keys": [
      "$if",
+     "SplitFlap",
      "accent",
+     "align",
      "alpha",
      "apiLevel",
      "background",
      "band",
      "bandText",
      "bottom",
+     "box",
+     "canvas",
      "chars",
+     "children",
      "clipRect",
+     "code",
      "color",
      "colors",
      "cols",
@@ -70767,20 +70884,28 @@
      "cx",
      "cy",
      "dark",
+     "delay",
      "drawCircle",
      "drawLine",
      "drawRect",
      "drawRoundRect",
      "drawSector",
      "drawTextAnchored",
+     "drum",
      "else",
+     "fill",
      "flap",
+     "flapColor",
      "floatArrays",
      "from",
+     "glyphWidth",
      "header",
      "height",
      "index",
      "ink",
+     "inset",
+     "jitter",
+     "label",
      "left",
      "len",
      "light",
@@ -70795,11 +70920,15 @@
      "panY",
      "pivotX",
      "pivotY",
+     "prev",
      "profiles",
      "radius",
      "resources",
      "right",
+     "ripple",
      "root",
+     "rowPitch",
+     "rows",
      "rx",
      "ry",
      "sBoarding",
@@ -70808,7 +70937,10 @@
      "sOnTime",
      "save",
      "scale",
+     "semantics",
+     "since",
      "split",
+     "splitColor",
      "start",
      "startAngle",
      "status",
@@ -70823,8 +70955,13 @@
      "textSubtext",
      "then",
      "tile",
+     "tileColor",
+     "tileHeight",
+     "tileWidth",
+     "tileX",
+     "tileY",
+     "tiles",
      "top",
-     "type",
      "until",
      "value",
      "varName",
@@ -71754,20 +71891,16 @@
    "prompt": "Make a Tinder-style card stack of travel destinations with drawn art: I drag a card sideways and it rotates with my finger, if I fling it past a threshold it flies off left or right with a Like/Nope stamp, the next card scales up from behind, and it counts my likes. It should feel physical: fling and spring back.",
    "level": 5,
    "family": "SHW",
-   "hand_built": "The library has no swipeable stack: the gesture state machine (press, release speed, fling-or-spring decision, flight, the stack's lift) and the card art are hand-built; the Pass and Save buttons are the library IconButton (outlined, 64 dp).",
    "capabilities": {
     "primary": [
      "input.press",
      "time.animation",
-     "data.loop",
-     "anim.trigger"
+     "data.loop"
     ],
     "secondary": [
      "input.tap",
      "draw.path",
      "draw.gradient",
-     "draw.transform",
-     "draw.clip",
      "data.array",
      "expr.trig",
      "expr.select",
@@ -71800,76 +71933,47 @@
     "showcase"
    ],
    "teaches": [
-    "Run a swipe without touchExpression: onTouchDown stores touchX(), touchY() and animationTime(); the card follows touchX() - downX while @drag is 1",
-    "Decide fling or spring at release in onTouchUp from the gesture alone: speed = distance / max(time held, 0.04), dismiss when |dx| > 110 or (speed > 700 and |dx| > 36), and store the direction, the release offset and upT = animationTime()",
-    "Spring back with a damped oscillator of the time since release: offset · e^(-7t) · (cos 13t + 0.54 sin 13t), and fly off with x = release + dir · (v·t + 2600 t²)",
-    "Draw a stack with one loop: i = 0..3 is depth 2, 1, 0 and the card in flight; each depth's scale, offset and dimming come from k + a shared lift that follows the drag (and finishes after a fling)",
+    "Build a swipe deck from the library SwipeStack: bind liked and passed to resources variables for the header counts, name the card index (\"index\": \"@card\") and draw the scene in the card slot from it",
     "Paint five different scenes from one body: per-card float arrays drive layer alphas (night, warm, day skies, aurora, sea, landmarks) and ridge parameters for pathExpression",
     "Close a pathExpression ridge to the bottom by running a[0] slightly past 0..1 with x clamped and y = ifElse(card height, ridge, inside)",
-    "Fire wakeIn only while a card moves: 0.016 + 3600 · step(t, 1.4)",
     "Give a picture-led card stack four looks: light and dark keep the painted art and theme only the page, header, counters and buttons; mono redraws each scene as hidden-line art (fill each ridge with the page colour, stroke it in onSurface) with outlined stamps and card edges instead of colour"
    ],
    "pitfalls": [
-    "Modifier actions are parsed before the canvas commands and cannot read tree variables (componentWidth(), touchExpression values): keep the gesture state in root variables and do geometry in the tree",
-    "The notch stop modes of touchExpression need touchSpec, which the Java JSON parser drops, and a notched touch value cannot be reset by the document: this is why the stack uses actions and time instead",
-    "touchVelX() is only loaded by the C++ player at touch-up (not Java, not TS): measure the speed yourself",
-    "A button tap also reaches the canvas behind it (TS), so the canvas's touch-up only commits when the finger moved more than 8 px",
     "step(x, edge) is strict: step(1, 1) is 0, so test a direction with step(@dir, 0.5)",
     "A computed colour is evaluated once per frame, not per loop iteration: vary paint alpha and gradients by the loop index instead",
-    "Taps are ignored for 0.3 s after a fling so two cards are never in flight",
     "Java's addDataList drops the list id, so textLookup cannot reach it from JSON: each card's texts are five drawTextAnchored per field, the right one shown by alpha 1 - min(1, |c - j|)",
-    "Numbers that a component reads (IconButton's onClick) belong in resources.variables, not root variable commands (U57)"
+    "The card slot is drawn for every visible card each frame (up to four): the scene is one loop-free body driven by float arrays, not five copies"
    ],
    "snippets": [
     {
-     "pointer": "/root/0/box/children/0/canvas/modifiers/3",
+     "pointer": "/root/column/children/1/box/children/0/SwipeStack/liked",
      "shows": "input.press",
-     "note": "release: distance, speed, fling-or-spring decision, counts"
+     "note": "the swipe deck's counts land in the document's own variables"
     },
     {
-     "pointer": "/root/0/box/children/0/canvas/modifiers/2",
-     "shows": "input.press",
-     "note": "press: where and when the finger went down"
-    },
-    {
-     "pointer": "/root/0/box/children/0/canvas/commands/11",
+     "pointer": "/root/column/children/1/box/children/0/SwipeStack",
      "shows": "time.animation",
-     "note": "the damped spring of the time since release"
+     "note": "the library SwipeStack: drag, tilt, fling or spring back, stamps, the stack's lift and the Pass / Save buttons"
     },
     {
-     "pointer": "/root/0/box/children/0/canvas/commands/16",
-     "shows": "time.animation",
-     "note": "the flight: release offset plus speed and acceleration"
-    },
-    {
-     "pointer": "/root/0/box/children/0/canvas/commands/52",
+     "pointer": "/root/column/children/1/box/children/0/SwipeStack/slots/card",
      "shows": "data.loop",
-     "note": "four iterations: three stacked cards and the one in flight"
+     "note": "one card's scene drawn from @card: the mono hidden-line drawing and the painted one"
     },
     {
-     "pointer": "/root/0/box/children/0/canvas/commands/52/loop/commands/8/save/commands/4/else/62",
-     "shows": "draw.path",
-     "note": "a ridge from per-card arrays, closed to the card bottom"
+     "pointer": "/root/column/children/1/box/children/0/SwipeStack/slots/card/0/else/0",
+     "shows": "draw.gradient",
+     "note": "the base dusk sky; night, warm and day skies are faded over it by per-card alphas"
     },
     {
-     "pointer": "/root/0/box/children/0/canvas/commands/52/loop/commands/8/save/commands/4/then/46",
-     "shows": "draw.path",
-     "note": "mono: the same ridge as a hidden-line drawing (page-colour fill, onSurface stroke)"
+     "pointer": "/resources/floatArrays",
+     "shows": "data.array",
+     "note": "per-destination sky, sun, ridge and landmark parameters"
     },
     {
-     "pointer": "/root/0/box/children/0/canvas/commands/52/loop/commands/8/save/commands/5",
-     "shows": "expr.select",
-     "note": "the LIKE stamp fades in with the drag"
-    },
-    {
-     "pointer": "/root/0/box/children/1/row/children/1",
-     "shows": "input.tap",
-     "note": "Save: library IconButton running the same fling, guarded while a card flies"
-    },
-    {
-     "pointer": "/root/0/box/children/0/canvas/commands/22",
-     "shows": "anim.trigger",
-     "note": "frames only while a card moves"
+     "pointer": "/root/column/children/0/canvas",
+     "shows": "text.dynamic",
+     "note": "the header with the saved and passed counts the stack writes"
     }
    ],
    "inputs": {
@@ -72199,12 +72303,13 @@
     "VAR-06"
    ],
    "components": [
+    "SwipeStack",
     "IconButton"
    ],
    "folder": "SHW-29-swipe-card-stack",
    "derived": {
-    "bytes": 15733,
-    "op_count": 685,
+    "bytes": 15451,
+    "op_count": 672,
     "header": {
      "width": 360,
      "height": 720
@@ -72238,16 +72343,6 @@
       ]
      },
      {
-      "name": "cardShadow",
-      "type": "color",
-      "value": "#55000000"
-     },
-     {
-      "name": "cardShadow2",
-      "type": "color",
-      "value": "#33000000"
-     },
-     {
       "name": "day",
       "type": "float_array",
       "value": [
@@ -72257,16 +72352,6 @@
        0,
        0.600000024
       ]
-     },
-     {
-      "name": "glow",
-      "type": "color",
-      "value": "#FF1F1B2E"
-     },
-     {
-      "name": "glow0",
-      "type": "color",
-      "value": "#000F1115"
      },
      {
       "name": "houses",
@@ -72281,11 +72366,6 @@
      },
      {
       "name": "like",
-      "type": "color",
-      "value": "#FF3DDC97"
-     },
-     {
-      "name": "likeStamp",
       "type": "color",
       "value": "#FF3DDC97"
      },
@@ -72318,11 +72398,6 @@
      },
      {
       "name": "nope",
-      "type": "color",
-      "value": "#FFFF5A6A"
-     },
-     {
-      "name": "nopeStamp",
       "type": "color",
       "value": "#FFFF5A6A"
      },
@@ -72448,6 +72523,11 @@
       ]
      },
      {
+      "name": "shadow",
+      "type": "color",
+      "value": "#FF263042"
+     },
+     {
       "name": "sunR",
       "type": "float_array",
       "value": [
@@ -72481,6 +72561,11 @@
       ]
      },
      {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
       "name": "torii",
       "type": "float_array",
       "value": [
@@ -72504,7 +72589,8 @@
      }
     ],
     "components": [
-     "IconButton"
+     "IconButton",
+     "SwipeStack"
     ],
     "java_identical": true,
     "renders": {
@@ -72519,7 +72605,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 13808,
+      "bytes": 13868,
       "host_variables": [
        {
         "name": "aur",
@@ -72549,16 +72635,6 @@
         ]
        },
        {
-        "name": "cardShadow",
-        "type": "color",
-        "value": "#55000000"
-       },
-       {
-        "name": "cardShadow2",
-        "type": "color",
-        "value": "#33000000"
-       },
-       {
         "name": "day",
         "type": "float_array",
         "value": [
@@ -72568,16 +72644,6 @@
          0,
          0.600000024
         ]
-       },
-       {
-        "name": "glow",
-        "type": "color",
-        "value": "#FF1F1B2E"
-       },
-       {
-        "name": "glow0",
-        "type": "color",
-        "value": "#000F1115"
        },
        {
         "name": "houses",
@@ -72592,11 +72658,6 @@
        },
        {
         "name": "like",
-        "type": "color",
-        "value": "#FF3DDC97"
-       },
-       {
-        "name": "likeStamp",
         "type": "color",
         "value": "#FF3DDC97"
        },
@@ -72633,11 +72694,6 @@
         "value": "#FFFF5A6A"
        },
        {
-        "name": "nopeStamp",
-        "type": "color",
-        "value": "#FFFF5A6A"
-       },
-       {
         "name": "onSurface",
         "type": "color",
         "value": "#FFFFFFFF"
@@ -72792,6 +72848,11 @@
         ]
        },
        {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
         "name": "torii",
         "type": "float_array",
         "value": [
@@ -72818,7 +72879,7 @@
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 13808,
+      "bytes": 13868,
       "host_variables": [
        {
         "name": "aur",
@@ -72848,16 +72909,6 @@
         ]
        },
        {
-        "name": "cardShadow",
-        "type": "color",
-        "value": "#26202838"
-       },
-       {
-        "name": "cardShadow2",
-        "type": "color",
-        "value": "#14202838"
-       },
-       {
         "name": "day",
         "type": "float_array",
         "value": [
@@ -72867,16 +72918,6 @@
          0,
          0.600000024
         ]
-       },
-       {
-        "name": "glow",
-        "type": "color",
-        "value": "#FFE6E3F2"
-       },
-       {
-        "name": "glow0",
-        "type": "color",
-        "value": "#00F5F7FA"
        },
        {
         "name": "houses",
@@ -72893,11 +72934,6 @@
         "name": "like",
         "type": "color",
         "value": "#FF0E8A55"
-       },
-       {
-        "name": "likeStamp",
-        "type": "color",
-        "value": "#FF3DDC97"
        },
        {
         "name": "lw",
@@ -72930,11 +72966,6 @@
         "name": "nope",
         "type": "color",
         "value": "#FFD0303F"
-       },
-       {
-        "name": "nopeStamp",
-        "type": "color",
-        "value": "#FFFF5A6A"
        },
        {
         "name": "onSurface",
@@ -73089,6 +73120,11 @@
          0.419999987,
          0.180000007
         ]
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FFFFFFFF"
        },
        {
         "name": "torii",
@@ -73167,9 +73203,6 @@
      "data.loop": [
       "loop"
      ],
-     "anim.trigger": [
-      "wakeIn"
-     ],
      "input.tap": [
       "onClick",
       "valueFloatChange"
@@ -73183,15 +73216,6 @@
      "draw.gradient": [
       "linearGradient",
       "radialGradient"
-     ],
-     "draw.transform": [
-      "save",
-      "rotate",
-      "scale",
-      "translate"
-     ],
-     "draw.clip": [
-      "clipPath"
      ],
      "data.array": [
       "floatArrays",
@@ -73214,7 +73238,7 @@
     },
     "json_keys": [
      "$if",
-     "IconButton",
+     "SwipeStack",
      "alpha",
      "angle",
      "apiLevel",
@@ -73224,8 +73248,9 @@
      "box",
      "cabins",
      "canvas",
-     "cardShadow",
-     "cardShadow2",
+     "card",
+     "cardHeight",
+     "cardWidth",
      "centerX",
      "centerY",
      "children",
@@ -73234,6 +73259,7 @@
      "clipPath",
      "color",
      "colors",
+     "column",
      "commands",
      "contentDescription",
      "count",
@@ -73242,11 +73268,7 @@
      "dark",
      "day",
      "decimal",
-     "dir",
-     "downT",
-     "downX",
-     "downY",
-     "drag",
+     "description",
      "drawCircle",
      "drawLine",
      "drawPath",
@@ -73263,38 +73285,29 @@
      "flags",
      "floatArrays",
      "from",
-     "glow",
-     "glow0",
      "graphicsLayer",
-     "gx",
-     "gy",
      "header",
-     "heart",
      "height",
      "horizontalAlignment",
      "houses",
-     "icon",
      "id",
      "index",
-     "label",
      "left",
      "light",
      "like",
-     "likeStamp",
+     "likeButtonLabel",
+     "likeColor",
+     "liked",
      "likes",
      "linearGradient",
      "loop",
      "lw",
      "modifiers",
      "muted",
-     "mv",
-     "n",
      "name",
      "night",
      "nope",
-     "nopeStamp",
      "nopes",
-     "ok",
      "onClick",
      "onSurface",
      "onTouchDown",
@@ -73304,13 +73317,15 @@
      "paint",
      "panX",
      "panY",
+     "passButtonLabel",
+     "passColor",
+     "passed",
      "path",
      "pathAppendClose",
      "pathAppendLineTo",
      "pathAppendQuadTo",
      "pathCreate",
      "pathExpression",
-     "paths",
      "pivotX",
      "pivotY",
      "profiles",
@@ -73319,8 +73334,6 @@
      "radialGradient",
      "radius",
      "rb",
-     "relX",
-     "relY",
      "resources",
      "rf1",
      "rf2",
@@ -73338,6 +73351,7 @@
      "seconds",
      "semantics",
      "shader",
+     "shadow",
      "size",
      "slots",
      "spacedBy",
@@ -73348,6 +73362,22 @@
      "sunR",
      "sunX",
      "sunY",
+     "surface",
+     "swipestack1_decision",
+     "swipestack1_dir",
+     "swipestack1_downT",
+     "swipestack1_downX",
+     "swipestack1_downY",
+     "swipestack1_drag",
+     "swipestack1_gx",
+     "swipestack1_gy",
+     "swipestack1_mv",
+     "swipestack1_n",
+     "swipestack1_ok",
+     "swipestack1_relX",
+     "swipestack1_relY",
+     "swipestack1_upT",
+     "swipestack1_vel",
      "sx",
      "sy",
      "target",
@@ -73359,23 +73389,20 @@
      "translate",
      "type",
      "until",
-     "upT",
      "value",
      "variable",
      "variables",
-     "vel",
      "verticalAlignment",
+     "verticalWeight",
      "warm",
      "whole",
      "width",
      "x",
      "x1",
      "x2",
-     "x3",
      "y",
      "y1",
-     "y2",
-     "y3"
+     "y2"
     ]
    }
   },
@@ -73388,7 +73415,10 @@
    "prompt": "A weather screen whose big icon morphs smoothly between sun, cloud, rain, snow and storm when the condition changes or when I tap a day in the forecast strip, with animated details (spinning sun rays, falling drops), the temperature counting to the new value and the background gradient shifting. It should also work as a 4x2 widget.",
    "level": 5,
    "family": "SHW",
-   "hand_built": "The morph is the point: five same-shaped outlines blended by eased per-condition weights through a chain of pathTweens, which no library component does (WeatherIcon switches icons; it does not morph)",
+   "hand_built": "The sky, text and forecast strip are one canvas laid out by expressions (phone or widget arrangement) and blended by the same eased weights as the icon; the icons themselves are WeatherIcon in morph mode",
+   "components": [
+    "WeatherIcon"
+   ],
    "capabilities": {
     "primary": [
      "anim.morph",
@@ -73439,19 +73469,18 @@
     "showcase"
    ],
    "teaches": [
-    "Pairwise morph between any two of five paths: give each condition an eased weight w_i = anim(1 - min(1, |c - i|)); when c jumps from a to b, w_a eases 1 to 0 while w_b eases 0 to 1 on the same curve, so the blend is a pure a to b morph even from sun straight to storm",
-    "Turn the five weights into a chain of four pathTweens: m1 = tween(s0, s1, k1), m2 = tween(m1, s2, k2), ... with k_i = w_i / (w_0 + ... + w_i); the last tween gives every outline exactly its weight. A pathTween output can feed the next pathTween in both players",
-    "Make outlines that morph well by sampling each shape the same way: here every outline is 28 cubic segments through points ray-cast from one centre at the same 28 angles, so point k of the sun sits at the same angle as point k of every cloud",
-    "Blend colours without colour expressions: draw the morphing path (and the sky rectangle) once per condition, each with its own gradient and paint alpha k_i, the same chain values: layer i over the previous ones leaves exactly weight w_i of its colour",
-    "Details that belong to one condition (rays, drops, flakes, bolt) are drawn always with alpha w_i, so they fade with the morph; loops over 7 to 12 items with fract(t * speed + i * 0.382) phases make the rain and snow",
+    "The big icon is {\"WeatherIcon\": {\"morph\": true, \"value\": \"@dc\", \"look\": \"rich\", \"animate\": true}}: one outline that morphs pairwise between sun, cloud, rain, snow and storm whenever @dc changes (a host condition or a tapped day), with turning rays, falling rain, drifting snow and a flickering bolt",
+    "The strip's mini icons are the same component in the flat look, one per day, value = that day's condition and colours from the document's themed mini0..mini4, drop, flake and bolt: a host update of the forecast arrays morphs them too",
+    "Size the icon from an expression: the call sits in a box whose width and height are @isz (a resources variable from windowWidth()/windowHeight()), with a large size; the component scales its drawing to the box it gets. Spacer boxes of @ixl and @iyt place it",
+    "The sky blends with the icon: five eased weights w_i = anim(1 - |dc - i|, 0.8 s), the same as WeatherIcon's, turned into chain alphas k_i = w_i / (w_0 + ... + w_i) over five gradient rectangles, so sky and icon change together",
     "The temperature, high/low and stats are anim'd values ({value, anim: 0.9}) printed with textFromFloat: the number counts to the new value",
-    "Four looks: the skies are themed colours (light: pale daylight skies under dark ink text; dark: deep dusk skies under white text); text uses the theme tokens onSurface/muted/track, overridden with the art's own light/dark values, so the mono palettes remap them. In mono ({\"$if\": \"theme.mono\"} forks) there is no sky and no fill: the same morphing path is stroked in onSurface, rays, drops and flakes are onSurface strokes and dots, the strip and its selection are outlines, and t = 0 holds every ambient motion still (repaint idle) while the morph itself still runs",
+    "Four looks: the skies are themed colours (light: pale daylight skies under dark ink text; dark: deep dusk skies under white text); text uses the theme tokens onSurface/muted/track, overridden with the art's own light/dark values, so the mono palettes remap them. In mono ({\"$if\": \"theme.mono\"} forks) there is no sky and no fill: the same morphing path is stroked in onSurface, rays, drops and flakes are onSurface strokes and dots, the strip and its selection are outlines, and t = 0 holds every ambient motion still (repaint idle); the morph switches",
     "One canvas does both layouts: wide = max(step(W / heroHeight, 1.6), step(400, heroHeight)) picks the widget arrangement (icon left, text right) over the phone one, and the two text blocks are scaled by wide and 1 - wide",
     "The forecast strip is drawn in the canvas; its tap targets are five transparent weighted boxes over it in a column, each with semantics and valueFloatChange sel = i"
    ],
    "pitfalls": [
-    "The outlines must have the same verbs and point count: all five are moveTo + 28 cubicTo + close. A shape that is not star-shaped from the ray-cast centre (an overhang) loses its concave part",
-    "pathTween tweens linearly; the easing comes from the weights, which are anim'd values (the default anim easing). An anim on the condition index itself would morph through the intermediate shapes (sun to storm via cloud, rain and snow)",
+    "Six morph calls (the hero and five minis) cost about 1.7 KB each beyond the shared outlines (about 5 KB once): the document grew from 18.8 KB (hand-drawn) to 28.3 KB with the component",
+    "Mono has no motion (the expansion removes every anim): the icons and the sky switch instead of morphing",
     "Paint alpha is reset by a following color op in the same paint: set alpha in every paint that sets a colour",
     "Expressions are capped at 32 entries on Android: the chain weights are split into ws, k1..k4",
     "A paint's alpha op overrides the alpha of its colour: a translucent themed colour (#33FFFFFF) drawn with alpha 1 in the same paint comes out opaque. Set the alpha in an earlier paint, then the colour",
@@ -73460,22 +73489,22 @@
    ],
    "snippets": [
     {
-     "pointer": "/root/1/box/children/0/canvas/commands/11",
-     "shows": "anim.value",
-     "note": "w0: an eased weight per condition"
-    },
-    {
-     "pointer": "/root/1/box/children/0/canvas/commands/21",
+     "pointer": "/root/1/box/children/1/column/children/1/row/children/1/box/children/0",
      "shows": "anim.morph",
-     "note": "the first pathTween of the chain sun -> cloud by k1"
+     "note": "the big icon: WeatherIcon morph mode, rich look, animated details"
     },
     {
-     "pointer": "/root/1/box/children/0/canvas/commands/24",
+     "pointer": "/root/1/box/children/2/column/children/1/row/children/0/box/children/0/column/children/1",
      "shows": "draw.morph",
-     "note": "the last pathTween: body, drawn five times with chain alphas"
+     "note": "a mini icon: the flat look in the document's colours"
     },
     {
-     "pointer": "/root/1/box/children/0/canvas/commands/10",
+     "pointer": "/root/1/box/children/0/canvas/commands/3",
+     "shows": "anim.value",
+     "note": "w0: the sky's eased weight, as the icon's"
+    },
+    {
+     "pointer": "/root/1/box/children/0/canvas/commands/2",
      "shows": "anim.value",
      "note": "the temperature counts to the selected day's value"
     },
@@ -73747,8 +73776,8 @@
    ],
    "folder": "SHW-30-morphing-weather",
    "derived": {
-    "bytes": 18826,
-    "op_count": 707,
+    "bytes": 28292,
+    "op_count": 1094,
     "header": {
      "width": 360,
      "height": 640
@@ -74075,7 +74104,9 @@
       ]
      }
     ],
-    "components": [],
+    "components": [
+     "WeatherIcon"
+    ],
     "java_identical": true,
     "renders": {
      "light": {
@@ -74089,7 +74120,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 15245,
+      "bytes": 24100,
       "host_variables": [
        {
         "name": "background",
@@ -74416,7 +74447,7 @@
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 15245,
+      "bytes": 24100,
       "host_variables": [
        {
         "name": "background",
@@ -74842,14 +74873,24 @@
     },
     "json_keys": [
      "$if",
+     "H",
+     "W",
+     "WeatherIcon",
      "alpha",
      "angle",
      "anim",
+     "animate",
      "apiLevel",
      "background",
      "bolt",
+     "boltColor",
      "bottom",
      "box",
+     "c0",
+     "c1",
+     "c2",
+     "c3",
+     "c4",
      "canvas",
      "centerX",
      "centerY",
@@ -74857,6 +74898,7 @@
      "chip",
      "chipSel",
      "clickable",
+     "cloudColor",
      "cname_n",
      "cname_s",
      "color",
@@ -74868,6 +74910,7 @@
      "cx",
      "cy",
      "dark",
+     "dc",
      "decimal",
      "dname_n",
      "dname_s",
@@ -74878,6 +74921,7 @@
      "drawRoundRect",
      "drawTextAnchored",
      "drop",
+     "dropColor",
      "dx",
      "dy",
      "edge",
@@ -74886,21 +74930,37 @@
      "fc",
      "flags",
      "flake",
+     "flakeColor",
      "floatArrays",
      "from",
+     "gen_wx_bolt_1",
+     "gen_wx_cloud_1",
+     "gen_wx_rain_1",
+     "gen_wx_snow_1",
+     "gen_wx_storm_1",
+     "gen_wx_sun_1",
      "header",
      "height",
+     "hh",
      "hi",
+     "horizontalAlignment",
      "hum",
+     "icx",
+     "icy",
      "id",
      "id1",
      "id2",
      "index",
+     "isz",
+     "ixl",
+     "iyt",
+     "label",
      "left",
      "len",
      "light",
      "linearGradient",
      "lo",
+     "look",
      "loop",
      "mini0",
      "mini1",
@@ -74910,6 +74970,7 @@
      "mname_n",
      "mname_s",
      "modifiers",
+     "morph",
      "muted",
      "name",
      "onClick",
@@ -74937,16 +74998,12 @@
      "row",
      "rx",
      "ry",
-     "s0",
-     "s1",
-     "s2",
-     "s3",
-     "s4",
      "save",
      "scale",
      "sel",
      "semantics",
      "shader",
+     "size",
      "sky0a",
      "sky0b",
      "sky1a",
@@ -74958,10 +75015,11 @@
      "sky4a",
      "sky4b",
      "start",
+     "stormColor",
      "strokeCap",
-     "strokeJoin",
      "strokeWidth",
      "style",
+     "sunColor",
      "sx",
      "sy",
      "target",
@@ -74986,6 +75044,7 @@
      "vtype",
      "weight",
      "whole",
+     "wide",
      "width",
      "wind",
      "x",
@@ -113215,6 +113274,505 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "Sankey",
+   "name": "sankey",
+   "version": 1,
+   "title": "Sankey",
+   "prompt": "Show where this week's visitors came from (search, social, direct) and what they did (browsed, signed up, left) as a flow diagram whose ribbons follow the numbers the app sends, with something moving along them.",
+   "level": 4,
+   "use_cases": [
+    "chart",
+    "dashboard",
+    "iot-panel"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "sankey",
+    "flow diagram",
+    "alluvial",
+    "energy flow",
+    "sources and uses",
+    "funnel",
+    "budget flow",
+    "traffic sources",
+    "conversion flow",
+    "ribbons",
+    "particles",
+    "where it goes"
+   ],
+   "teaches": [
+    "{\"Sankey\": {\"flows\": \"@visits\", \"sources\": [...], \"uses\": [...]}}: one exported row-major float array, sources x uses",
+    "The host replaces the array and every ribbon, bar and total eases to the new layout in 1.2 s, still stacked",
+    "Particles run at a speed proportional to their ribbon's flow; particles: false makes the diagram idle",
+    "It fills the box it is given: label columns, gaps and text scale with it"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/3/box/children/0",
+     "shows": "draw.plot",
+     "note": "the call"
+    },
+    {
+     "pointer": "/resources/floatArrays",
+     "shows": "data.array",
+     "note": "the flows, row-major"
+    },
+    {
+     "pointer": "/resources/floatArrays",
+     "shows": "host.variables",
+     "note": "exported: the host sets new flows"
+    },
+    {
+     "pointer": "/root/column/children/3/box/children/0",
+     "shows": "anim.value",
+     "note": "eased on every data change"
+    },
+    {
+     "pointer": "/root/column/children/3/box/children/0",
+     "shows": "draw.path",
+     "note": "each ribbon is one closed pathExpression"
+    },
+    {
+     "pointer": "/root/column/children/3/box/children/0",
+     "shows": "draw.gradient",
+     "note": "source-to-use gradient per ribbon"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "visits": {
+      "type": "float_array",
+      "meaning": "thousands of visits, channel x outcome",
+      "default": [
+       4.2,
+       2.6,
+       1.1,
+       1.4,
+       0.9,
+       2.3,
+       1.8,
+       0.6,
+       0.4
+      ]
+     }
+    },
+    "clock": "drives the particles",
+    "touch": false
+   },
+   "check": {
+    "describe": "Title 'Where visitors went'; Search 7.9k, Social 4.6k, Direct 2.8k on the left, Browsed 7.4k, Signed up 4.1k, Left 3.8k on the right; gradient ribbons from each channel's colour to each outcome's, dots along them. New data (0.5 s): half-way to the new layout; settled (2.5 s): Social the largest source. Mono: outlined ribbons, ink bars, no dots.",
+    "render": {
+     "clock": "2026-11-02T13:20:00",
+     "duration": 2
+    },
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light",
+      "clock": "2026-11-02T13:20:00",
+      "duration": 2
+     },
+     {
+      "name": "dark",
+      "theme": "dark",
+      "clock": "2026-11-02T13:20:00",
+      "duration": 2
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark",
+      "clock": "2026-11-02T13:20:00",
+      "duration": 2
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light",
+      "clock": "2026-11-02T13:20:00",
+      "duration": 2
+     },
+     {
+      "name": "transition-mid",
+      "clock": "2026-11-02T13:20:00",
+      "duration": 0.5,
+      "variables": {
+       "visits": [
+        2,
+        1.2,
+        2.8,
+        3.1,
+        1.9,
+        0.5,
+        0.9,
+        0.4,
+        0.2
+       ]
+      }
+     },
+     {
+      "name": "new-data",
+      "clock": "2026-11-02T13:20:00",
+      "duration": 2.5,
+      "variables": {
+       "visits": [
+        2,
+        1.2,
+        2.8,
+        3.1,
+        1.9,
+        0.5,
+        0.9,
+        0.4,
+        0.2
+       ]
+      }
+     },
+     {
+      "name": "landscape",
+      "width": 640,
+      "height": 360,
+      "clock": "2026-11-02T13:20:00",
+      "duration": 2
+     },
+     {
+      "name": "widget",
+      "width": 360,
+      "height": 220,
+      "clock": "2026-11-02T13:20:00",
+      "duration": 2
+     }
+    ]
+   },
+   "related": [
+    "SHW-24",
+    "DonutChart",
+    "AllocationBar",
+    "FlowDiagram"
+   ],
+   "summary": "A two-column Sankey diagram, sources on the left flowing into uses on the right: ribbon widths from a row-major float array the host can replace, every ribbon, bar and label easing to new data together, optional particles flowing along each ribbon at a speed proportional to its flow, and each node labelled with its total.",
+   "capabilities": {
+    "primary": [
+     "draw.plot",
+     "draw.path",
+     "draw.gradient",
+     "anim.value",
+     "data.array",
+     "host.variables"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "Sankey"
+   ],
+   "pitfalls": [
+    "flows is the NAME of a float array with sources x uses values, row-major; a wrong length draws missing ribbons as zero rather than failing",
+    "Totals are the sums of the ribbons: a node that both receives and sends (a battery charging and discharging) needs to be split into a source and a use",
+    "The particle speed reads the raw host value while the ribbons ease, so on a data change the dots jump once to their new phase",
+    "Each ribbon costs about 400 B and each particle loop about 300 B: 3 x 4 nodes is about 9 KB with particles, 6 KB without; keep the node count small",
+    "Particles use continuousSec(): the diagram repaints every frame while shown; particles: false makes it idle once the data settles",
+    "Mono: ribbons become outlines over a faint fill and the bars ink; node colours carry no meaning there, the labels do"
+   ],
+   "folder": "components/Sankey",
+   "derived": {
+    "bytes": 10956,
+    "op_count": 406,
+    "header": {
+     "width": 360,
+     "height": 420
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF7C4DFF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF66BB6A"
+     },
+     {
+      "name": "visits",
+      "type": "float_array",
+      "value": [
+       4.19999981,
+       2.5999999,
+       1.10000002,
+       1.39999998,
+       0.899999976,
+       2.29999995,
+       1.79999995,
+       0.600000024,
+       0.400000006
+      ]
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
+     }
+    ],
+    "components": [
+     "Sankey"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 6673,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "visits",
+        "type": "float_array",
+        "value": [
+         4.19999981,
+         2.5999999,
+         1.10000002,
+         1.39999998,
+         0.899999976,
+         2.29999995,
+         1.79999995,
+         0.600000024,
+         0.400000006
+        ]
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 6673,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "visits",
+        "type": "float_array",
+        "value": [
+         4.19999981,
+         2.5999999,
+         1.10000002,
+         1.39999998,
+         0.899999976,
+         2.29999995,
+         1.79999995,
+         0.600000024,
+         0.400000006
+        ]
+       }
+      ]
+     },
+     "transition-mid": {
+      "render": "render-transition-mid.png"
+     },
+     "new-data": {
+      "render": "render-new-data.png"
+     },
+     "landscape": {
+      "render": "render-landscape.png"
+     },
+     "widget": {
+      "render": "render-widget.png"
+     }
+    },
+    "repaint": "continuous",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 2
+    },
+    "evidence": {
+     "draw.plot": [
+      "pathExpression"
+     ],
+     "draw.path": [
+      "drawPath"
+     ],
+     "draw.gradient": [
+      "linearGradient"
+     ],
+     "anim.value": [
+      "anim"
+     ],
+     "data.array": [
+      "floatArrays",
+      "arrayGet"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ]
+    },
+    "json_keys": [
+     "Sankey",
+     "alpha",
+     "anim",
+     "apiLevel",
+     "background",
+     "bottom",
+     "box",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "commit",
+     "condition",
+     "conditionalOperations",
+     "contentDescription",
+     "count",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "drawCircle",
+     "drawPath",
+     "drawRoundRect",
+     "drawTextAnchored",
+     "end",
+     "error",
+     "export",
+     "expressionX",
+     "expressionY",
+     "flags",
+     "floatArrays",
+     "flows",
+     "fontSize",
+     "fontWeight",
+     "from",
+     "header",
+     "height",
+     "id",
+     "id1",
+     "id2",
+     "index",
+     "label",
+     "left",
+     "light",
+     "linearGradient",
+     "loop",
+     "modifiers",
+     "muted",
+     "name",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "path",
+     "pathExpression",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "right",
+     "root",
+     "rx",
+     "ry",
+     "secondary",
+     "semantics",
+     "shader",
+     "sources",
+     "start",
+     "style",
+     "success",
+     "text",
+     "textSize",
+     "top",
+     "type",
+     "unit",
+     "until",
+     "uses",
+     "v1",
+     "v2",
+     "value",
+     "variable",
+     "verticalWeight",
+     "visits",
+     "warning",
+     "whole",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "ScaledAmount",
    "name": "scaledamount",
    "version": 1,
@@ -115969,6 +116527,665 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "SplitFlap",
+   "name": "split-flap",
+   "version": 1,
+   "title": "SplitFlap",
+   "prompt": "Show text on split-flap tiles, like an old station departure board, that flip through the letters to the new text when it changes.",
+   "level": 3,
+   "use_cases": [
+    "transit",
+    "dashboard",
+    "travel"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "split flap",
+    "split-flap",
+    "solari",
+    "solari board",
+    "flap display",
+    "flip display",
+    "flip board",
+    "flip clock",
+    "flip text",
+    "departure board",
+    "station board",
+    "airport board",
+    "mechanical letters",
+    "char drum",
+    "word flap",
+    "retro display",
+    "letters flipping",
+    "ticker tiles"
+   ],
+   "teaches": [
+    "Smallest call {\"SplitFlap\": {\"text\": \"DEPARTURES\"}}: one tile per letter, flipping in from blank when the document appears",
+    "Changing text: code is the drum index per tile, an expression of i (tile) and r (row); prev is the index before; since restarts at the change. The tiles step forward through the drum like a real flap unit",
+    "A clock: code and prev from timeInHr()/timeInMin() of now and the previous minute, since continuousSec() % 60, so it flips in the first second of each minute",
+    "Word flaps: a drum of equal-width words (glyphWidth 8) and align start; rows: a float array of codes read as arrayGet(@cities, row * 8 + i), cycling every 6 s",
+    "Mono: outlined tiles showing the final glyph, the split cut as a gap, no flipping"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "expr.string",
+     "note": "the smallest call: a fixed word"
+    },
+    {
+     "pointer": "/root/column/children/3",
+     "shows": "time.animation",
+     "note": "a clock that flips on the minute"
+    },
+    {
+     "pointer": "/root/column/children/5",
+     "shows": "anim.stagger",
+     "note": "a word flap cycling every 4 s"
+    },
+    {
+     "pointer": "/root/column/children/7",
+     "shows": "data.loop",
+     "note": "three rows from a float array"
+    },
+    {
+     "pointer": "/root/column/children/3",
+     "shows": "draw.clip",
+     "note": "each tile's halves are clipped to either side of the split"
+    },
+    {
+     "pointer": "/root/column/children/3",
+     "shows": "draw.transform",
+     "note": "the flap is a half tile scaled toward the split"
+    }
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": "the clock row reads timeInHr/timeInMin; everything else animationTime",
+    "touch": false
+   },
+   "check": {
+    "describe": "Light and dark: DEPARTURES on ten tiles; a five-tile clock still reading 08:41 at 0.3 s into 08:42 (its tiles flip from 0.34 s on; mono shows 08:42 at once); a DELAYED word flap (ON TIME at the intro); three rows of destinations (PORTO, MADRID, SEVILLA after the first move, some tiles still flipping). Mono dark and light: the same tiles as outlines with the final glyphs. intro (0.35 s): most tiles blank or on early letters. flip (6.5 s): the rows caught mid-flip. Landscape 640x400: the same column, scrolled to the top (the rows below the fold).",
+    "render": {
+     "animation_time": 6.5,
+     "clock": "2026-11-02T08:42:00.3",
+     "theme": "dark"
+    },
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light",
+      "animation_time": 9,
+      "clock": "2026-11-02T08:42:00.3"
+     },
+     {
+      "name": "dark",
+      "theme": "dark",
+      "animation_time": 9,
+      "clock": "2026-11-02T08:42:00.3"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark",
+      "animation_time": 9,
+      "clock": "2026-11-02T08:42:00.3"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light",
+      "animation_time": 9,
+      "clock": "2026-11-02T08:42:00.3"
+     },
+     {
+      "name": "intro",
+      "theme": "dark",
+      "animation_time": 0.35,
+      "clock": "2026-11-02T08:42:00.3"
+     },
+     {
+      "name": "flip",
+      "theme": "light",
+      "animation_time": 6.5,
+      "clock": "2026-11-02T08:42:00.3"
+     },
+     {
+      "name": "landscape",
+      "theme": "dark",
+      "width": 640,
+      "height": 400,
+      "animation_time": 9,
+      "clock": "2026-11-02T08:42:00.3"
+     }
+    ]
+   },
+   "related": [
+    "SHW-27",
+    "DigitalClock",
+    "TXT-10",
+    "CMP-15"
+   ],
+   "summary": "Split-flap tiles (a Solari board): a fixed number of tiles that, when the text they show changes, flip forward through a drum of characters (or whole words) to the new ones, with the mechanical half-flap fold, rippling across the tiles and down the rows.",
+   "capabilities": {
+    "primary": [
+     "time.animation",
+     "data.loop",
+     "expr.string",
+     "draw.clip",
+     "draw.transform",
+     "anim.stagger"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "SplitFlap"
+   ],
+   "pitfalls": [
+    "A real flap only moves forward: from prev to code it shows every glyph in between, (code - prev) mod the drum size steps at speed flaps a second, so a long jump takes longer. Order the drum so frequent changes are short",
+    "SplitFlap does not remember what it showed: when code changes, pass the old index as prev and restart since (a board cycling through an array passes the previous entry and animationTime() % period)",
+    "Inside code, prev and tileX, i is the tile and r the row (the component's loop indices); don't name document variables i or r",
+    "The tiles redraw every frame while since moves (about 25 draw operations a tile): a 26 x 9 board is around 6 000 operations a frame. Fine for a board or a kiosk, heavy for a small widget",
+    "Mono shows code as it is, with no flip and no shading: outlined tiles and a split cut through them"
+   ],
+   "folder": "components/SplitFlap",
+   "derived": {
+    "bytes": 8576,
+    "op_count": 354,
+    "header": {
+     "width": 360,
+     "height": 640
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "cities",
+      "type": "float_array",
+      "value": [
+       12,
+       9,
+       19,
+       2,
+       15,
+       1,
+       0,
+       0,
+       16,
+       15,
+       18,
+       20,
+       15,
+       0,
+       0,
+       0,
+       13,
+       1,
+       4,
+       18,
+       9,
+       4,
+       0,
+       0,
+       19,
+       5,
+       22,
+       9,
+       12,
+       12,
+       1,
+       0,
+       16,
+       1,
+       18,
+       9,
+       19,
+       0,
+       0,
+       0,
+       2,
+       15,
+       18,
+       4,
+       5,
+       1,
+       21,
+       24,
+       12,
+       25,
+       15,
+       14,
+       0,
+       0,
+       0,
+       0,
+       7,
+       5,
+       14,
+       5,
+       22,
+       5,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "gen_sf1_text_1",
+      "type": "float_array",
+      "value": [
+       4,
+       5,
+       16,
+       1,
+       18,
+       20,
+       21,
+       18,
+       5,
+       19
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     }
+    ],
+    "components": [
+     "SplitFlap"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 4553,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "cities",
+        "type": "float_array",
+        "value": [
+         12,
+         9,
+         19,
+         2,
+         15,
+         1,
+         0,
+         0,
+         16,
+         15,
+         18,
+         20,
+         15,
+         0,
+         0,
+         0,
+         13,
+         1,
+         4,
+         18,
+         9,
+         4,
+         0,
+         0,
+         19,
+         5,
+         22,
+         9,
+         12,
+         12,
+         1,
+         0,
+         16,
+         1,
+         18,
+         9,
+         19,
+         0,
+         0,
+         0,
+         2,
+         15,
+         18,
+         4,
+         5,
+         1,
+         21,
+         24,
+         12,
+         25,
+         15,
+         14,
+         0,
+         0,
+         0,
+         0,
+         7,
+         5,
+         14,
+         5,
+         22,
+         5,
+         0,
+         0
+        ]
+       },
+       {
+        "name": "gen_sf1_text_1",
+        "type": "float_array",
+        "value": [
+         4,
+         5,
+         16,
+         1,
+         18,
+         20,
+         21,
+         18,
+         5,
+         19
+        ]
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 4553,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "cities",
+        "type": "float_array",
+        "value": [
+         12,
+         9,
+         19,
+         2,
+         15,
+         1,
+         0,
+         0,
+         16,
+         15,
+         18,
+         20,
+         15,
+         0,
+         0,
+         0,
+         13,
+         1,
+         4,
+         18,
+         9,
+         4,
+         0,
+         0,
+         19,
+         5,
+         22,
+         9,
+         12,
+         12,
+         1,
+         0,
+         16,
+         1,
+         18,
+         9,
+         19,
+         0,
+         0,
+         0,
+         2,
+         15,
+         18,
+         4,
+         5,
+         1,
+         21,
+         24,
+         12,
+         25,
+         15,
+         14,
+         0,
+         0,
+         0,
+         0,
+         7,
+         5,
+         14,
+         5,
+         22,
+         5,
+         0,
+         0
+        ]
+       },
+       {
+        "name": "gen_sf1_text_1",
+        "type": "float_array",
+        "value": [
+         4,
+         5,
+         16,
+         1,
+         18,
+         20,
+         21,
+         18,
+         5,
+         19
+        ]
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF616161"
+       }
+      ]
+     },
+     "intro": {
+      "render": "render-intro.png",
+      "theme": "dark"
+     },
+     "flip": {
+      "render": "render-flip.png",
+      "theme": "light"
+     },
+     "landscape": {
+      "render": "render-landscape.png",
+      "theme": "dark"
+     }
+    },
+    "repaint": "continuous",
+    "interaction_targets": {
+     "total": 1,
+     "click": 0,
+     "area": 0,
+     "touch": 1
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 2
+    },
+    "evidence": {
+     "time.animation": [
+      "animationTime()",
+      "animationTime",
+      "continuousSec"
+     ],
+     "data.loop": [
+      "loop"
+     ],
+     "expr.string": [
+      "textSubtext"
+     ],
+     "draw.clip": [
+      "clipRect"
+     ],
+     "draw.transform": [
+      "save",
+      "scale"
+     ],
+     "anim.stagger": [
+      "animationTime()"
+     ]
+    },
+    "json_keys": [
+     "SplitFlap",
+     "align",
+     "alpha",
+     "apiLevel",
+     "background",
+     "bottom",
+     "canvas",
+     "children",
+     "cities",
+     "clipRect",
+     "code",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "cyc",
+     "dark",
+     "delay",
+     "drawRect",
+     "drawRoundRect",
+     "drawTextAnchored",
+     "drum",
+     "floatArrays",
+     "fontSize",
+     "from",
+     "gap",
+     "gen_sf1_text_1",
+     "glyphWidth",
+     "header",
+     "height",
+     "hm",
+     "hmo",
+     "index",
+     "jitter",
+     "label",
+     "left",
+     "len",
+     "light",
+     "loop",
+     "mo",
+     "modifiers",
+     "muted",
+     "name",
+     "onSurface",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "pivotX",
+     "pivotY",
+     "prev",
+     "profiles",
+     "resources",
+     "right",
+     "ripple",
+     "root",
+     "rowGap",
+     "rows",
+     "rx",
+     "ry",
+     "save",
+     "scale",
+     "scroll",
+     "semantics",
+     "since",
+     "size",
+     "spacedBy",
+     "start",
+     "strokeWidth",
+     "style",
+     "sx",
+     "sy",
+     "text",
+     "textSize",
+     "textSubtext",
+     "tileHeight",
+     "tileWidth",
+     "tiles",
+     "top",
+     "track",
+     "until",
+     "value",
+     "varName",
+     "variable",
+     "variables",
+     "verticalScroll",
+     "width",
+     "word",
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "StatTile",
    "name": "stat-tile",
    "version": 2,
@@ -117565,6 +118782,1066 @@
      "width",
      "x1",
      "x2",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "SweepTrace",
+   "name": "sweep-trace",
+   "version": 1,
+   "title": "SweepTrace",
+   "prompt": "Show live ECG, pleth and respiration waveforms that sweep across the screen and erase ahead of themselves like a bedside monitor, at a heart rate the app sets.",
+   "level": 4,
+   "use_cases": [
+    "dashboard",
+    "fitness",
+    "chart"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "sweep",
+    "waveform",
+    "ecg",
+    "ekg",
+    "oscilloscope",
+    "patient monitor",
+    "heartbeat",
+    "pulse wave",
+    "pleth",
+    "respiration",
+    "live trace",
+    "scrolling trace",
+    "erase bar",
+    "vital signs",
+    "signal",
+    "scope"
+   ],
+   "teaches": [
+    "One cycle in a float array and a rate: {\"SweepTrace\": {\"values\": \"@ecg\", \"rate\": \"@hr / 60\", \"window\": 0.62}}; the array is repeated at the rate, so a host variable re-times it live",
+    "window keeps a sharp shape its real width: the beat is stored as 0.62 s and the baseline fills the rest of each cycle, so 150 bpm reads as tachycardia rather than a squashed beat",
+    "No buffer: the sample at x shows time T - fract((head - x) / W + 1) * W / speed, two pathExpressions (before the head and after the gap) on a fixed sample grid",
+    "delay lags one trace behind another (pleth after ECG); speed 25 gives a slow respiration sweep"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/3/box/children/0",
+     "shows": "draw.plot",
+     "note": "ECG with a fixed-width beat window and a glow"
+    },
+    {
+     "pointer": "/root/column/children/4/box/children/0",
+     "shows": "data.spline",
+     "note": "pleth trailing the heartbeat by 0.18 cycles"
+    },
+    {
+     "pointer": "/root/column/children/5/box/children/0",
+     "shows": "time.clock",
+     "note": "a slow sweep at 25 dp/s"
+    },
+    {
+     "pointer": "/resources/floatArrays",
+     "shows": "data.array",
+     "note": "one cycle per wave"
+    },
+    {
+     "pointer": "/root/column/children/3/box/children/0",
+     "shows": "anim.loop",
+     "note": "the sweep loops with the clock"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "hr": {
+      "type": "float",
+      "meaning": "heart rate, bpm",
+      "default": 72,
+      "min": 30,
+      "max": 200
+     }
+    },
+    "clock": "drives the sweep",
+    "touch": false
+   },
+   "check": {
+    "describe": "Title 'Live waveforms', then three traces each with a label at the top left, an erase gap and a head dot: a green ECG with narrow R waves (glow), a blue pulse wave with a dicrotic notch, an amber breathing wave sweeping four times slower. Two seconds later the heads have moved 200 dp (50 dp for breathing). hr 150: twice as many beats, same QRS width. Mono: white or black lines, no glow, the head steps once a second.",
+    "render": {
+     "clock": "2026-11-02T14:37:04"
+    },
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light",
+      "clock": "2026-11-02T14:37:04"
+     },
+     {
+      "name": "dark",
+      "theme": "dark",
+      "clock": "2026-11-02T14:37:04"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark",
+      "clock": "2026-11-02T14:37:04"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light",
+      "clock": "2026-11-02T14:37:04"
+     },
+     {
+      "name": "later",
+      "clock": "2026-11-02T14:37:06"
+     },
+     {
+      "name": "fast",
+      "clock": "2026-11-02T14:37:04",
+      "variables": {
+       "hr": 150
+      }
+     },
+     {
+      "name": "landscape",
+      "width": 640,
+      "height": 360,
+      "clock": "2026-11-02T14:37:04"
+     },
+     {
+      "name": "widget",
+      "width": 360,
+      "height": 180,
+      "clock": "2026-11-02T14:37:04"
+     }
+    ]
+   },
+   "related": [
+    "SHW-25",
+    "Sparkline",
+    "LineChart"
+   ],
+   "summary": "A live waveform that sweeps left to right and overwrites itself, like a patient monitor or an oscilloscope: one cycle of a float array repeated at a rate, drawn up to a moving head with an erase gap ahead of it, rebuilt every frame from the clock.",
+   "capabilities": {
+    "primary": [
+     "draw.plot",
+     "data.spline",
+     "data.array",
+     "time.clock",
+     "anim.loop"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "SweepTrace"
+   ],
+   "pitfalls": [
+    "values is the NAME of a float array holding one cycle; repeat its first value at the end, or the trace jumps at every cycle seam",
+    "Nothing is stored: each frame redraws the visible sweep from the clock, so changing rate re-times the history already on screen once, and continuousSec() wraps at the hour (one jump an hour)",
+    "In mono (always-on, e-ink) the clock is timeInSec(): the head steps forward once a second instead of gliding, and there is no glow",
+    "For sharp waves keep sample 1 and use window: a QRS stored as a fraction of the cycle aliases (peaks of varying height) at high rates",
+    "The trace repaints every frame (continuousSec()); put one or a few on a screen, not dozens",
+    "The TypeScript player cannot evaluate splineLoop inside a pathExpression (no op 75 in PathExpression.evalRPN), which is why the trace uses spline(fract(...))"
+   ],
+   "folder": "components/SweepTrace",
+   "derived": {
+    "bytes": 5009,
+    "op_count": 205,
+    "header": {
+     "width": 360,
+     "height": 400
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "hr",
+      "type": "float",
+      "value": 72
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF66BB6A"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
+     }
+    ],
+    "components": [
+     "SweepTrace"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 4066,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "hr",
+        "type": "float",
+        "value": 72
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 4066,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "hr",
+        "type": "float",
+        "value": 72
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "later": {
+      "render": "render-later.png"
+     },
+     "fast": {
+      "render": "render-fast.png"
+     },
+     "landscape": {
+      "render": "render-landscape.png"
+     },
+     "widget": {
+      "render": "render-widget.png"
+     }
+    },
+    "repaint": "continuous",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "draw.plot": [
+      "pathExpression"
+     ],
+     "data.spline": [
+      "spline"
+     ],
+     "data.array": [
+      "floatArrays"
+     ],
+     "time.clock": [
+      "continuousSec"
+     ],
+     "anim.loop": [
+      "continuousSec"
+     ]
+    },
+    "json_keys": [
+     "SweepTrace",
+     "alpha",
+     "apiLevel",
+     "background",
+     "baseline",
+     "box",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "condition",
+     "conditionalOperations",
+     "contentDescription",
+     "count",
+     "cx",
+     "cy",
+     "dark",
+     "delay",
+     "drawCircle",
+     "drawPath",
+     "drawTextAnchored",
+     "ecg",
+     "end",
+     "export",
+     "expressionX",
+     "expressionY",
+     "flags",
+     "floatArrays",
+     "fontSize",
+     "fontWeight",
+     "glow",
+     "head",
+     "header",
+     "height",
+     "hr",
+     "id",
+     "label",
+     "light",
+     "modifiers",
+     "muted",
+     "name",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "path",
+     "pathExpression",
+     "pleth",
+     "primary",
+     "profiles",
+     "radius",
+     "rate",
+     "resources",
+     "resp",
+     "root",
+     "sample",
+     "scale",
+     "semantics",
+     "speed",
+     "start",
+     "strokeCap",
+     "strokeJoin",
+     "strokeWidth",
+     "style",
+     "success",
+     "sweeptrace1_T",
+     "sweeptrace1_k",
+     "sweeptrace1_rr",
+     "sweeptrace2_T",
+     "sweeptrace2_rr",
+     "sweeptrace3_T",
+     "text",
+     "textSize",
+     "thickness",
+     "v1",
+     "v2",
+     "value",
+     "values",
+     "variable",
+     "variables",
+     "verticalWeight",
+     "warning",
+     "width",
+     "window",
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "SwipeStack",
+   "name": "swipe-stack",
+   "version": 1,
+   "title": "SwipeStack: a stack of cards to swipe right to like or left to pass",
+   "prompt": "Show tonight's dinner ideas as a Tinder-style card stack: swipe right for yum, left to pass, with buttons and a count of each.",
+   "level": 3,
+   "use_cases": [
+    "card",
+    "game",
+    "list"
+   ],
+   "form_factor": "phone",
+   "components": [
+    "SwipeStack",
+    "IconButton"
+   ],
+   "keywords": [
+    "swipe",
+    "swipe cards",
+    "card stack",
+    "tinder",
+    "deck",
+    "like",
+    "pass",
+    "nope",
+    "fling",
+    "dismiss",
+    "spring back",
+    "stamp",
+    "swipeable",
+    "card swipe",
+    "hot or not",
+    "decide"
+   ],
+   "teaches": [
+    "Draw each card in the card slot from the index variable you name (\"index\": \"@card\"): per-card colours, sizes and arrays read @card, and per-card texts are drawn once each and shown with alpha 1 - min(1, abs(@card - j))",
+    "Bind liked, passed and decision to resources variables to show the counts and to send the last verdict to the app in onSwipe (a hostAction carrying @verdict: +(i + 1) liked, -(i + 1) passed, 0 sprang back)",
+    "Wrap the call in a box with verticalWeight to give it the space under a header; the card keeps its design aspect and scales to fit"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1/box/children/0/SwipeStack",
+     "shows": "input.press",
+     "note": "the whole call: four recipe cards, counts and a host action; drag, fling and spring-back are built in"
+    },
+    {
+     "pointer": "/root/column/children/1/box/children/0/SwipeStack/onSwipe",
+     "shows": "input.tap",
+     "note": "the verdict sent to the app after each release or button tap"
+    },
+    {
+     "pointer": "/root/column/children/1/box/children/0/SwipeStack/slots/card",
+     "shows": "time.animation",
+     "note": "the card slot, drawn from @card for every card in the stack, the one flying away included"
+    }
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "Tonight's dinner, 0 liked · 0 passed, a stack of recipe cards (Ramen on top, Tacos and Paella behind) and Pass / Like buttons. Dragging right tilts Ramen, fades in YUM and lifts Tacos. A flick flies Ramen off and the header reads 1 liked; a slow drag springs back; the Pass button flings the top card left. Mono: outlined cards, an outlined stamp and outlined buttons; no motion after release.",
+    "render": {
+     "clock": "2026-11-02T10:00:00",
+     "theme": "light"
+    },
+    "interact": [
+     {
+      "drag": [
+       180,
+       300,
+       300,
+       290
+      ],
+      "steps": 3
+     },
+     {
+      "wait": 1
+     },
+     {
+      "tap": [
+       124,
+       594
+      ]
+     },
+     {
+      "wait": 1
+     }
+    ],
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light",
+      "clock": "2026-11-02T10:00:00",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "down",
+        "x": 180,
+        "y": 300
+       },
+       {
+        "t": 0.3,
+        "type": "move",
+        "x": 230,
+        "y": 310
+       },
+       {
+        "t": 0.5,
+        "type": "move",
+        "x": 270,
+        "y": 320
+       }
+      ],
+      "duration": 0.55
+     },
+     {
+      "name": "dark",
+      "theme": "dark",
+      "clock": "2026-11-02T10:00:00",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "down",
+        "x": 180,
+        "y": 300
+       },
+       {
+        "t": 0.3,
+        "type": "move",
+        "x": 230,
+        "y": 310
+       },
+       {
+        "t": 0.5,
+        "type": "move",
+        "x": 270,
+        "y": 320
+       }
+      ],
+      "duration": 0.55
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark",
+      "clock": "2026-11-02T10:00:00",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "down",
+        "x": 180,
+        "y": 300
+       },
+       {
+        "t": 0.3,
+        "type": "move",
+        "x": 230,
+        "y": 310
+       },
+       {
+        "t": 0.5,
+        "type": "move",
+        "x": 270,
+        "y": 320
+       }
+      ],
+      "duration": 0.55
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light",
+      "clock": "2026-11-02T10:00:00",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "down",
+        "x": 180,
+        "y": 300
+       },
+       {
+        "t": 0.3,
+        "type": "move",
+        "x": 230,
+        "y": 310
+       },
+       {
+        "t": 0.5,
+        "type": "move",
+        "x": 270,
+        "y": 320
+       }
+      ],
+      "duration": 0.55
+     },
+     {
+      "name": "fling",
+      "theme": "dark",
+      "clock": "2026-11-02T10:00:00",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "down",
+        "x": 180,
+        "y": 300
+       },
+       {
+        "t": 0.14,
+        "type": "move",
+        "x": 215,
+        "y": 296
+       },
+       {
+        "t": 0.18,
+        "type": "up",
+        "x": 250,
+        "y": 290
+       }
+      ],
+      "duration": 0.3
+     },
+     {
+      "name": "after-fling",
+      "theme": "light",
+      "clock": "2026-11-02T10:00:00",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "down",
+        "x": 180,
+        "y": 300
+       },
+       {
+        "t": 0.14,
+        "type": "move",
+        "x": 215,
+        "y": 296
+       },
+       {
+        "t": 0.18,
+        "type": "up",
+        "x": 250,
+        "y": 290
+       }
+      ],
+      "duration": 1.2
+     },
+     {
+      "name": "spring-back",
+      "theme": "light",
+      "clock": "2026-11-02T10:00:00",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "down",
+        "x": 180,
+        "y": 300
+       },
+       {
+        "t": 0.15,
+        "type": "move",
+        "x": 210,
+        "y": 296
+       },
+       {
+        "t": 0.2,
+        "type": "up",
+        "x": 245,
+        "y": 290
+       }
+      ],
+      "duration": 0.32
+     },
+     {
+      "name": "pass-button",
+      "theme": "dark",
+      "clock": "2026-11-02T10:00:00",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "tap",
+        "x": 124,
+        "y": 594
+       }
+      ],
+      "duration": 0.3
+     },
+     {
+      "name": "landscape",
+      "theme": "light",
+      "clock": "2026-11-02T10:00:00",
+      "width": 720,
+      "height": 400
+     },
+     {
+      "name": "small",
+      "theme": "dark",
+      "clock": "2026-11-02T10:00:00",
+      "width": 280,
+      "height": 420
+     },
+     {
+      "name": "tablet",
+      "theme": "light",
+      "clock": "2026-11-02T10:00:00",
+      "width": 800,
+      "height": 1100
+     }
+    ]
+   },
+   "related": [
+    "SHW-29",
+    "IconButton",
+    "INT-05"
+   ],
+   "java_difference": "the onSwipe hostAction name (swipe) is used three times, by the swipe release and both buttons: json2rc declares it once before the tree so every one sends it (Parser.ts EXTENSION, EXAMPLES_FINDINGS U58); the Java parser writes it inside the first action list only. Without onSwipe the bytes are identical",
+   "summary": "A Tinder-style stack of cards you swipe: the top card follows the finger and tilts, a like or pass stamp fades in and the card behind scales up; a flick or a drag past the threshold flies it off left or right with its release speed, anything else springs back with a damped spring. Optional Pass / Like buttons fling it too. Each card is drawn by the card slot from the index variable; counts and the last decision are variables, and onSwipe can tell the host.",
+   "capabilities": {
+    "primary": [
+     "input.press",
+     "input.tap",
+     "time.animation"
+    ],
+    "secondary": []
+   },
+   "pitfalls": [
+    "One SwipeStack per document: its paths (swsCard, swsHeart) have fixed names",
+    "The card slot is drawn for every visible card each frame: keep it to a few dozen commands and use loops and float arrays, not one copy per card",
+    "Choose texts per card by alpha, not textLookup: Java's addDataList drops the list id, so textLookup cannot reach it from JSON",
+    "A paint color resets alpha: write the alpha after the colour in each paint that fades",
+    "onSwipe also runs for a spring-back and a plain tap, with decision 0: test the sign of decision in the app",
+    "Taps on the buttons are ignored for 0.3 s after a fling, so two cards never fly at once",
+    "Mono has no motion: a fling or a spring-back settles at once, the drag still follows the finger"
+   ],
+   "folder": "components/SwipeStack",
+   "derived": {
+    "bytes": 7517,
+    "op_count": 402,
+    "header": {
+     "width": 360,
+     "height": 640
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "shadow",
+      "type": "color",
+      "value": "#FF263042"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF66BB6A"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     }
+    ],
+    "components": [
+     "IconButton",
+     "SwipeStack"
+    ],
+    "java_identical": false,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 6465,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 6465,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "fling": {
+      "render": "render-fling.png",
+      "theme": "dark"
+     },
+     "after-fling": {
+      "render": "render-after-fling.png",
+      "theme": "light"
+     },
+     "spring-back": {
+      "render": "render-spring-back.png",
+      "theme": "light"
+     },
+     "pass-button": {
+      "render": "render-pass-button.png",
+      "theme": "dark"
+     },
+     "landscape": {
+      "render": "render-landscape.png",
+      "theme": "light"
+     },
+     "small": {
+      "render": "render-small.png",
+      "theme": "dark"
+     },
+     "tablet": {
+      "render": "render-tablet.png",
+      "theme": "light"
+     }
+    },
+    "repaint": "scheduled",
+    "interaction_targets": {
+     "total": 2,
+     "click": 2,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "input.press": [
+      "onTouchDown",
+      "onTouchUp"
+     ],
+     "input.tap": [
+      "onClick",
+      "valueFloatChange"
+     ],
+     "time.animation": [
+      "animationTime()",
+      "animationTime"
+     ]
+    },
+    "json_keys": [
+     "$if",
+     "SwipeStack",
+     "actionType",
+     "alpha",
+     "angle",
+     "apiLevel",
+     "background",
+     "bottom",
+     "box",
+     "canvas",
+     "card",
+     "children",
+     "clickable",
+     "clip",
+     "clipPath",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "count",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "decision",
+     "drawCircle",
+     "drawLine",
+     "drawPath",
+     "drawRect",
+     "drawRoundRect",
+     "drawTextAnchored",
+     "dx",
+     "dy",
+     "else",
+     "enabled",
+     "error",
+     "flags",
+     "from",
+     "graphicsLayer",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "id",
+     "id1",
+     "id2",
+     "index",
+     "left",
+     "light",
+     "likeLabel",
+     "liked",
+     "likes",
+     "loop",
+     "modifiers",
+     "muted",
+     "name",
+     "onClick",
+     "onSurface",
+     "onSwipe",
+     "onTouchDown",
+     "onTouchUp",
+     "ops",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "passLabel",
+     "passed",
+     "passes",
+     "path",
+     "pathAppendClose",
+     "pathAppendLineTo",
+     "pathAppendQuadTo",
+     "pathCreate",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "right",
+     "root",
+     "rotate",
+     "row",
+     "rx",
+     "ry",
+     "save",
+     "scale",
+     "scaleX",
+     "scaleY",
+     "seconds",
+     "semantics",
+     "shader",
+     "shadow",
+     "size",
+     "slots",
+     "spacedBy",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "success",
+     "surface",
+     "swipestack1_dir",
+     "swipestack1_downT",
+     "swipestack1_downX",
+     "swipestack1_downY",
+     "swipestack1_drag",
+     "swipestack1_gx",
+     "swipestack1_gy",
+     "swipestack1_mv",
+     "swipestack1_n",
+     "swipestack1_ok",
+     "swipestack1_relX",
+     "swipestack1_relY",
+     "swipestack1_upT",
+     "swipestack1_vel",
+     "sx",
+     "sy",
+     "target",
+     "text",
+     "textSize",
+     "then",
+     "top",
+     "translate",
+     "type",
+     "until",
+     "value",
+     "valueType",
+     "variable",
+     "variables",
+     "verdict",
+     "verticalAlignment",
+     "verticalWeight",
+     "whole",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
      "y1",
      "y2"
     ]
@@ -121189,7 +123466,7 @@
    "kind": "component",
    "id": "WeatherIcon",
    "name": "weather-icon",
-   "version": 1,
+   "version": 2,
    "title": "Weather icon",
    "prompt": "Draw weather symbols for sunny, cloudy, rain, snow and thunderstorm, without images or SVG paths, labelled underneath.",
    "level": 1,
@@ -121214,14 +123491,23 @@
     "mist",
     "night",
     "moon",
-    "clear night"
+    "clear night",
+    "morph",
+    "morphing weather icon",
+    "animated weather icon",
+    "weather animation",
+    "icon transition",
+    "condition change"
    ],
    "teaches": [
     "{\"WeatherIcon\": {\"condition\": \"rain\"}} draws a 48 dp symbol; condition is static (sun, cloud, rain, snow, storm, partly, fog) and size scales the 24-unit drawing",
     "A cloud is three circles over a rounded rectangle; the mono outline is the same shapes drawn larger in onSurface and then in the background colour, which outlines their union",
     "Sun rays are one line in a loop that rotates the canvas 45° per pass, so the paint is set once",
     "night: \"@isNight\" swaps the sun for a crescent moon (sun and partly) at run time: both drawings are written, each in a conditionalOperations block on the variable",
-    "The crescent is a pathData op list of cubics (two circular arcs), about 200 B, so it needs no background-coloured bite and mono strokes the same path"
+    "The crescent is a pathData op list of cubics (two circular arcs), about 200 B, so it needs no background-coloured bite and mono strokes the same path",
+    "{\"WeatherIcon\": {\"morph\": true, \"value\": \"@cond\"}} is one outline that morphs between sun, cloud, rain, snow and storm whenever @cond (0..4) changes: per-condition eased weights and four chained pathTweens, so any pair morphs directly",
+    "look \"rich\" gives gradient bodies and a sun glow for icons on a coloured sky; animate: true turns the rays and makes the rain fall, the snow drift and the bolt flicker (continuous repaint)",
+    "The morph outlines come from the weather-outline generator ($gen): one shared path per shape in the document, whatever the number of calls"
    ],
    "snippets": [
     {
@@ -121238,15 +123524,38 @@
      "pointer": "/root/column/children/2/row/children/0",
      "shows": "draw.transform",
      "note": "storm at 32 dp with its own label"
+    },
+    {
+     "pointer": "/root/column/children/3/row/children/0/box/children/0",
+     "shows": "anim.morph",
+     "note": "morph mode, driven by @wx; the box around it cycles @wx on tap"
+    },
+    {
+     "pointer": "/root/column/children/3/row/children/0/box/children/0",
+     "shows": "draw.morph",
+     "note": "four chained pathTweens between the generator's outlines"
+    },
+    {
+     "pointer": "/root/column/children/3/row/children/0/box/children/0",
+     "shows": "anim.value",
+     "note": "one eased weight per condition"
     }
    ],
    "inputs": {
-    "variables": {},
+    "variables": {
+     "wx": {
+      "type": "float",
+      "meaning": "the morphing icons' condition, 0 sun to 4 storm",
+      "default": 0,
+      "min": 0,
+      "max": 4
+     }
+    },
     "clock": null,
-    "touch": false
+    "touch": true
    },
    "check": {
-    "describe": "Five distinct 48 dp icons in equal columns, each labelled: an amber sun with eight rays, a grey cloud centred in its square, a cloud over three slanted blue drops, a cloud over three blue dots, and a cloud over an amber bolt; below, a 32 dp storm icon. In mono the sun is a ring with rays and the clouds are white outlines. The columns are weighted: at 260 dp they get closer, at 480 dp they spread out; the icons keep their size.",
+    "describe": "Five distinct 48 dp icons in equal columns, each labelled: an amber sun with eight rays, a grey cloud centred in its square, a cloud over three slanted blue drops, a cloud over three blue dots, and a cloud over an amber bolt; below, a 32 dp storm icon. In mono the sun is a ring with rays and the clouds are white outlines. The columns are weighted: at 260 dp they get closer, at 480 dp they spread out; the icons keep their size. Below: two 96 dp morph icons (flat on the background, rich on a blue sky tile, an outlined drawing in mono) showing the sun; tapping the first steps @wx (sun -> cloud -> rain -> snow -> storm), and both morph to it: mid-morph the disc swells into the cloud outline.",
     "render": {},
     "renders": [
      {
@@ -121268,24 +123577,56 @@
      {
       "name": "narrow",
       "width": 280,
-      "height": 200
+      "height": 330
      },
      {
       "name": "wide",
       "width": 480,
-      "height": 200
+      "height": 330
+     },
+     {
+      "name": "morph-rain",
+      "variables": {
+       "wx": 2
+      },
+      "duration": 1.2
+     },
+     {
+      "name": "morph-storm-dark",
+      "theme": "dark",
+      "variables": {
+       "wx": 4
+      },
+      "duration": 1.2
+     },
+     {
+      "name": "morph-mid",
+      "touch_events": [
+       {
+        "t": 0.3,
+        "type": "tap",
+        "x": 64,
+        "y": 260
+       }
+      ],
+      "duration": 0.62
      }
     ]
    },
    "related": [
-    "CMP-11"
+    "ANM-09",
+    "CMP-11",
+    "SHW-30"
    ],
-   "summary": "A square weather symbol drawn with circles, rounded rectangles, lines and a crescent path: sun, cloud, rain, snow, storm, partly cloudy or fog, with a moon instead of the sun at night.",
+   "summary": "A square weather symbol drawn with circles, rounded rectangles, lines and a crescent path: sun, cloud, rain, snow, storm, partly cloudy or fog, with a moon instead of the sun at night. Opt-in morph mode: one outline that morphs smoothly between sun, cloud, rain, snow and storm when a value changes, with optional animated rays, rain, snow and lightning.",
    "capabilities": {
     "primary": [
      "draw.shapes",
      "draw.transform",
-     "data.loop"
+     "data.loop",
+     "anim.morph",
+     "draw.morph",
+     "anim.value"
     ],
     "secondary": []
    },
@@ -121299,15 +123640,20 @@
     "Mono draws the cloud as an outline: the same shapes 1.25 units larger in onSurface, then the shapes themselves in @colors.background, so the ring follows their union. It assumes the icon sits on the background colour, which every surface is in mono",
     "The sun's eight rays are one line drawn in a loop that rotates the canvas 45° per pass (8 × 45° = 360°, back to the start)",
     "The drawing is scaled to the box the layout actually gives the canvas (min of its width and height, centred), so a call clamped by a smaller parent shrinks instead of being cut off",
-    "partly draws the small sun or moon first and the cloud over it: the filled cloud (or, in mono, its background-filled outline) hides the part behind it"
+    "partly draws the small sun or moon first and the cloud over it: the filled cloud (or, in mono, its background-filled outline) hides the part behind it",
+    "Morph mode (morph: true) reads value (0 sun, 1 cloud, 2 rain, 3 snow, 4 storm) at run time: one call follows a host variable or a tap, no stateLayout needed. Each condition has an eased weight (anim of 1 - |value - i|) and four chained pathTweens give each outline its weight, so a change from a to b is a pure a-to-b morph. Fractions blend outlines (2.5 is half rain cloud, half snow cloud)",
+    "The five outlines are op-list paths from the weather-outline generator, written once per document (about 4.5 KB for the five, shared by every morph call); each morph call adds about 1.5 KB (flat) or 2 KB (rich) for the tweens and details. For a row of icons that never changes at run time, the static condition is much smaller",
+    "Morph mode names its variables wxw0..wxw4, wxt, wxp, wxq and wxf and its paths wxM1..wxM3 and wxBody: every call redefines them in its own canvas, so several calls coexist, but don't use those names in the document",
+    "animate repaints every frame while the icon is on screen (continuousSec); leave it off for widgets and lists. Mono is always still and has no morph motion (the expansion removes every anim): the outline switches",
+    "In morph mode size is still what the canvas asks for, and the drawing scales to the box it gets: to size it from an expression, put the call in a box whose width and height are that expression and give size a large value"
    ],
    "folder": "components/WeatherIcon",
    "derived": {
-    "bytes": 3814,
-    "op_count": 247,
+    "bytes": 13583,
+    "op_count": 438,
     "header": {
      "width": 320,
-     "height": 200
+     "height": 330
     },
     "host_variables": [
      {
@@ -121331,9 +123677,19 @@
       "value": "#FF4DA3FF"
      },
      {
+      "name": "sky",
+      "type": "color",
+      "value": "#FF2F6DB5"
+     },
+     {
       "name": "warning",
       "type": "color",
       "value": "#FFFFB74D"
+     },
+     {
+      "name": "wx",
+      "type": "float",
+      "value": 0
      }
     ],
     "components": [
@@ -121352,7 +123708,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 3667,
+      "bytes": 12826,
       "host_variables": [
        {
         "name": "background",
@@ -121375,16 +123731,26 @@
         "value": "#FFFFFFFF"
        },
        {
+        "name": "sky",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
         "name": "warning",
         "type": "color",
         "value": "#FFFFFFFF"
+       },
+       {
+        "name": "wx",
+        "type": "float",
+        "value": 0
        }
       ]
      },
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 3667,
+      "bytes": 12826,
       "host_variables": [
        {
         "name": "background",
@@ -121407,9 +123773,19 @@
         "value": "#FF000000"
        },
        {
+        "name": "sky",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
         "name": "warning",
         "type": "color",
         "value": "#FF000000"
+       },
+       {
+        "name": "wx",
+        "type": "float",
+        "value": 0
        }
       ]
      },
@@ -121418,12 +123794,22 @@
      },
      "wide": {
       "render": "render-wide.png"
+     },
+     "morph-rain": {
+      "render": "render-morph-rain.png"
+     },
+     "morph-storm-dark": {
+      "render": "render-morph-storm-dark.png",
+      "theme": "dark"
+     },
+     "morph-mid": {
+      "render": "render-morph-mid.png"
      }
     },
     "repaint": "idle",
     "interaction_targets": {
-     "total": 0,
-     "click": 0,
+     "total": 1,
+     "click": 1,
      "area": 0,
      "touch": 0
     },
@@ -121446,16 +123832,32 @@
      ],
      "data.loop": [
       "loop"
+     ],
+     "anim.morph": [
+      "pathTween"
+     ],
+     "draw.morph": [
+      "pathTween"
+     ],
+     "anim.value": [
+      "anim"
      ]
     },
     "json_keys": [
      "WeatherIcon",
+     "alpha",
      "angle",
+     "anim",
      "apiLevel",
      "background",
      "bottom",
+     "box",
      "canvas",
+     "centerX",
+     "centerY",
      "children",
+     "clickable",
+     "clip",
      "color",
      "colors",
      "column",
@@ -121467,42 +123869,66 @@
      "dark",
      "drawCircle",
      "drawLine",
+     "drawPath",
      "drawRoundRect",
      "dx",
      "dy",
+     "export",
      "fontSize",
      "from",
+     "gen_wx_bolt_1",
+     "gen_wx_cloud_1",
+     "gen_wx_rain_1",
+     "gen_wx_snow_1",
+     "gen_wx_storm_1",
+     "gen_wx_sun_1",
      "header",
      "height",
      "horizontalAlignment",
+     "id",
      "index",
      "label",
      "left",
      "light",
+     "linearGradient",
+     "look",
      "loop",
      "modifiers",
+     "mono-dark",
+     "mono-light",
+     "morph",
      "muted",
      "name",
+     "onClick",
      "onSurface",
      "ops",
      "padding",
      "paint",
+     "path",
+     "path1",
+     "path2",
+     "pathTween",
+     "paths",
      "pivotX",
      "pivotY",
      "primary",
      "profiles",
+     "radialGradient",
      "radius",
      "resources",
      "right",
      "root",
      "rotate",
+     "roundedRect",
      "row",
      "rx",
      "ry",
      "save",
      "scale",
      "semantics",
+     "shader",
      "size",
+     "sky",
      "spacedBy",
      "step",
      "strokeCap",
@@ -121511,20 +123937,29 @@
      "style",
      "sx",
      "sy",
+     "target",
      "text",
      "top",
      "translate",
+     "tween",
+     "type",
      "until",
      "value",
      "variable",
+     "variables",
      "verticalAlignment",
      "warning",
      "weight",
      "width",
+     "wx",
+     "x",
      "x1",
      "x2",
+     "x3",
+     "y",
      "y1",
-     "y2"
+     "y2",
+     "y3"
     ]
    }
   },
@@ -121533,7 +123968,7 @@
    "kind": "component",
    "id": "WorldMap",
    "name": "world map",
-   "version": 1,
+   "version": 2,
    "title": "WorldMap",
    "prompt": "A world map with day and night and four cities, and a map of Europe with two countries highlighted and a marker the app moves.",
    "level": 2,
@@ -121567,11 +124002,18 @@
     "highlight country",
     "choropleth",
     "region map",
-    "tracker map"
+    "tracker map",
+    "world clock",
+    "sun position",
+    "subsolar point",
+    "daylight cities",
+    "twilight",
+    "soft terminator"
    ],
    "teaches": [
     "Call it with a region and what to mark: {\"WorldMap\": {\"cities\": [\"Tokyo\"], \"labels\": true}}; region takes world, a continent, a country (ISO code) or a lon/lat box",
     "night: true shades the night side from the clock (world maps)",
+    "For a world clock add twilight: true (a soft night edge), sun: true (the sun over the subsolar point) and daylight: true (city dots in dayColor with a halo where the sun is up, markerColor elsewhere; mono: filled or hollow)",
     "markLon/markLat take host variables: one marker the app moves",
     "{\"$map\"}, {\"$mapHeight\"} and {\"$mapPoint\"} are the building blocks for a map of your own in a canvas"
    ],
@@ -121598,7 +124040,7 @@
     "touch": false
    },
    "check": {
-    "describe": "Top: a world in plate carrée with the night side shaded for the pinned clock and four labelled cities; bottom: Europe with borders, France and Germany in the primary colour and a marker on Paris (lon/lat host variables).",
+    "describe": "Top: a world in plate carrée at 10:30 on 31 October: the night side shaded with a soft edge, the sun over southern Africa, London lit (warm dot with a halo), New York, Tokyo and Sydney at night (red dots); bottom: Europe with borders, France and Germany in the primary colour and a marker on Paris (lon/lat host variables). evening (19:45): the day over the Americas, New York lit, London dark. Mono: the night edge as a line, the sun a disc in a ring, lit cities filled and the others hollow.",
     "render": {
      "clock": "2026-10-31T10:30:00"
     },
@@ -121628,6 +124070,10 @@
       "name": "wide",
       "width": 560,
       "height": 330
+     },
+     {
+      "name": "evening",
+      "clock": "2026-10-31T19:45:00"
      }
     ]
    },
@@ -121635,7 +124081,7 @@
     "TIM-08",
     "TIM-12"
    ],
-   "summary": "A map of the world, a continent, a country or a frame fitted to a list of places (Natural Earth, public domain): land or countries with borders, highlighted countries, countries coloured through a ramp with a legend, city markers with labels, a route or several labelled legs, a marker from host lon/lat, and an optional day/night shade from the clock. It scales to fit the box it gets.",
+   "summary": "A map of the world, a continent, a country or a frame fitted to a list of places (Natural Earth, public domain): land or countries with borders, highlighted countries, countries coloured through a ramp with a legend, city markers with labels, a route or several labelled legs, a marker from host lon/lat, and an optional day/night shade from the clock. It scales to fit the box it gets, and opt-in for a world clock: a soft twilight edge on the night shade, the sun over the subsolar point and city markers that light up where the sun is up.",
    "capabilities": {
     "primary": [],
     "secondary": []
@@ -121653,12 +124099,13 @@
     "A list region frames those places, not a continent: [\"Dubai\", \"London\", \"Singapore\"]. Name the legs' cities in it (or [from, to] pairs, which add the arc's bulge): an arc to a place outside the frame leaves the map, routes are not clipped",
     "legs draws each leg's arc and end dots; labels and the hub's name come from cities + labels (draw them too, the leg labels avoid them). With region, a label is placed for a map about 300 dp wide at the given height and a much smaller map can crowd them; with fit, text scales with the map and labels that would collide at a small size are hidden",
     "fit + fill is the map that follows the window: {\"fit\": [\"Dubai\", \"London\"], \"fill\": true} takes the column's remaining height (put it last or give its siblings fixed sizes) and frames the places at whatever size the window has; the geometry covers boxes from 0.9:1 to 2.6:1 (outside that, blank bands)",
-    "ramp needs values + valueCountries; the values are raw (valueMin..valueMax, e.g. 0..250 €/MWh), not 0..1. Start the ramp with a colour unlike the land (not @colors.track), or the lowest values read as no data. Use borders: true so neighbours of close values stay apart, and legend: true for the scale"
+    "ramp needs values + valueCountries; the values are raw (valueMin..valueMax, e.g. 0..250 €/MWh), not 0..1. Start the ramp with a colour unlike the land (not @colors.track), or the lowest values read as no data. Use borders: true so neighbours of close values stay apart, and legend: true for the scale",
+    "A world clock: night + twilight + sun + daylight with cities is the whole map of SHW-21: the soft edge (three shades), the sun over the subsolar point and city dots that glow where the sun is up. All three new options assume the world box (region \"world\" or \"world-full\") and repaint once a minute with the clock; the subsolar longitude ignores the equation of time (up to 4 degrees)"
    ],
    "folder": "components/WorldMap",
    "derived": {
-    "bytes": 29291,
-    "op_count": 164,
+    "bytes": 31207,
+    "op_count": 238,
     "header": {
      "width": 360,
      "height": 330
@@ -121673,6 +124120,61 @@
       "name": "error",
       "type": "color",
       "value": "#FFEF5350"
+     },
+     {
+      "name": "gen_day_coslat_1",
+      "type": "float_array",
+      "value": [
+       0.622500002,
+       0.7579,
+       0.81220001,
+       0.830299973
+      ]
+     },
+     {
+      "name": "gen_day_lon_1",
+      "type": "float_array",
+      "value": [
+       -0.119000003,
+       -73.9960022,
+       139.748993,
+       151.212997
+      ]
+     },
+     {
+      "name": "gen_day_sinlat_1",
+      "type": "float_array",
+      "value": [
+       0.782599986,
+       0.652400017,
+       0.583400011,
+       -0.557299972
+      ]
+     },
+     {
+      "name": "gen_day_x_1",
+      "type": "float_array",
+      "value": [
+       499.700012,
+       294.5,
+       888.200012,
+       920
+      ]
+     },
+     {
+      "name": "gen_day_y_1",
+      "type": "float_array",
+      "value": [
+       90.3000031,
+       120.199997,
+       134.199997,
+       327.399994
+      ]
+     },
+     {
+      "name": "highlight",
+      "type": "color",
+      "value": "#FFFFD180"
      },
      {
       "name": "lat",
@@ -121703,6 +124205,11 @@
       "name": "track",
       "type": "color",
       "value": "#FF2A3342"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
      }
     ],
     "components": [
@@ -121721,7 +124228,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 28681,
+      "bytes": 30316,
       "host_variables": [
        {
         "name": "background",
@@ -121730,6 +124237,61 @@
        },
        {
         "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "gen_day_coslat_1",
+        "type": "float_array",
+        "value": [
+         0.622500002,
+         0.7579,
+         0.81220001,
+         0.830299973
+        ]
+       },
+       {
+        "name": "gen_day_lon_1",
+        "type": "float_array",
+        "value": [
+         -0.119000003,
+         -73.9960022,
+         139.748993,
+         151.212997
+        ]
+       },
+       {
+        "name": "gen_day_sinlat_1",
+        "type": "float_array",
+        "value": [
+         0.782599986,
+         0.652400017,
+         0.583400011,
+         -0.557299972
+        ]
+       },
+       {
+        "name": "gen_day_x_1",
+        "type": "float_array",
+        "value": [
+         499.700012,
+         294.5,
+         888.200012,
+         920
+        ]
+       },
+       {
+        "name": "gen_day_y_1",
+        "type": "float_array",
+        "value": [
+         90.3000031,
+         120.199997,
+         134.199997,
+         327.399994
+        ]
+       },
+       {
+        "name": "highlight",
         "type": "color",
         "value": "#FFFFFFFF"
        },
@@ -121752,13 +124314,23 @@
         "name": "primary",
         "type": "color",
         "value": "#FFFFFFFF"
+       },
+       {
+        "name": "shadow",
+        "type": "color",
+        "value": "#FF424242"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
        }
       ]
      },
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 28681,
+      "bytes": 30316,
       "host_variables": [
        {
         "name": "background",
@@ -121769,6 +124341,61 @@
         "name": "error",
         "type": "color",
         "value": "#FF000000"
+       },
+       {
+        "name": "gen_day_coslat_1",
+        "type": "float_array",
+        "value": [
+         0.622500002,
+         0.7579,
+         0.81220001,
+         0.830299973
+        ]
+       },
+       {
+        "name": "gen_day_lon_1",
+        "type": "float_array",
+        "value": [
+         -0.119000003,
+         -73.9960022,
+         139.748993,
+         151.212997
+        ]
+       },
+       {
+        "name": "gen_day_sinlat_1",
+        "type": "float_array",
+        "value": [
+         0.782599986,
+         0.652400017,
+         0.583400011,
+         -0.557299972
+        ]
+       },
+       {
+        "name": "gen_day_x_1",
+        "type": "float_array",
+        "value": [
+         499.700012,
+         294.5,
+         888.200012,
+         920
+        ]
+       },
+       {
+        "name": "gen_day_y_1",
+        "type": "float_array",
+        "value": [
+         90.3000031,
+         120.199997,
+         134.199997,
+         327.399994
+        ]
+       },
+       {
+        "name": "highlight",
+        "type": "color",
+        "value": "#FFFFFFFF"
        },
        {
         "name": "lat",
@@ -121789,6 +124416,16 @@
         "name": "primary",
         "type": "color",
         "value": "#FF000000"
+       },
+       {
+        "name": "shadow",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FFFFFFFF"
        }
       ]
      },
@@ -121797,6 +124434,9 @@
      },
      "wide": {
       "render": "render-wide.png"
+     },
+     "evening": {
+      "render": "render-evening.png"
      }
     },
     "repaint": "scheduled",
@@ -121809,7 +124449,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 2
+     "info": 3
     },
     "evidence": {},
     "json_keys": [
@@ -121827,11 +124467,14 @@
      "colors",
      "column",
      "commands",
+     "condition",
+     "conditionalOperations",
      "contentDescription",
      "count",
      "cx",
      "cy",
      "dark",
+     "daylight",
      "drawCircle",
      "drawPath",
      "drawTextAnchored",
@@ -121842,17 +124485,26 @@
      "export",
      "expressionX",
      "expressionY",
+     "floatArrays",
      "fontSize",
+     "from",
+     "gen_day_coslat_1",
+     "gen_day_lon_1",
+     "gen_day_sinlat_1",
+     "gen_day_x_1",
+     "gen_day_y_1",
      "header",
      "height",
      "highlight",
      "id",
+     "index",
      "label",
      "labels",
      "lat",
      "left",
      "light",
      "lon",
+     "loop",
      "map_europe_countries_low_1",
      "map_europe_countries_low_2",
      "map_world_land_low",
@@ -121884,6 +124536,7 @@
      "start",
      "strokeWidth",
      "style",
+     "sun",
      "surface",
      "sx",
      "sy",
@@ -121892,15 +124545,23 @@
      "top",
      "track",
      "translate",
+     "twilight",
      "type",
+     "until",
+     "v1",
+     "v2",
      "value",
      "variable",
      "variables",
+     "warning",
      "width",
      "worldmap1_decl",
      "worldmap1_nEdge",
+     "worldmap1_na",
      "worldmap1_off",
      "worldmap1_sunLon",
+     "worldmap1_sx",
+     "worldmap1_sy",
      "worldmap2_mx",
      "worldmap2_my",
      "x",

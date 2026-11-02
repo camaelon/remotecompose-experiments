@@ -1,7 +1,7 @@
 {
  "component": "WorldMap",
- "version": 1,
- "summary": "A map of the world, a continent, a country or a frame fitted to a list of places (Natural Earth, public domain): land or countries with borders, highlighted countries, countries coloured through a ramp with a legend, city markers with labels, a route or several labelled legs, a marker from host lon/lat, and an optional day/night shade from the clock. It scales to fit the box it gets.",
+ "version": 2,
+ "summary": "A map of the world, a continent, a country or a frame fitted to a list of places (Natural Earth, public domain): land or countries with borders, highlighted countries, countries coloured through a ramp with a legend, city markers with labels, a route or several labelled legs, a marker from host lon/lat, and an optional day/night shade from the clock. It scales to fit the box it gets, and opt-in for a world clock: a soft twilight edge on the night shade, the sun over the subsolar point and city markers that light up where the sun is up.",
  "params": {
   "region": {
    "type": "string",
@@ -103,7 +103,7 @@
    "type": "string",
    "default": "",
    "static": true,
-   "doc": "Written after valueMax on the legend (\"%\", \"€/MWh\")"
+   "doc": "Written after valueMax on the legend (\"%\", \"\u20ac/MWh\")"
   },
   "pointsLon": {
    "type": "float",
@@ -226,6 +226,31 @@
    "type": "float",
    "default": 0.32,
    "doc": "Night shade opacity"
+  },
+  "twilight": {
+   "type": "bool",
+   "default": false,
+   "doc": "With night: a soft terminator, the shade drawn three times 5 degrees of longitude apart (deep night gets all three, the edges one or two; together they make nightAlpha). In mono the night edge is also drawn as a line"
+  },
+  "sun": {
+   "type": "bool",
+   "default": false,
+   "doc": "Draw the sun over the subsolar point (where it is overhead now), from the clock: a disc in sunColor with a soft glow (mono: a disc in a ring). World regions only"
+  },
+  "sunColor": {
+   "type": "color",
+   "default": "@colors.highlight",
+   "doc": "The sun's disc and glow (mono: onSurface)"
+  },
+  "daylight": {
+   "type": "bool",
+   "default": false,
+   "doc": "The city markers (cities) light up where the sun is up: dayColor with a halo by day, markerColor by night (mono: filled by day, hollow by night). The sun's elevation at each city is computed at run time from the clock. World regions only"
+  },
+  "dayColor": {
+   "type": "color",
+   "default": "@colors.warning",
+   "doc": "A city's marker and halo while the sun is up there (daylight)"
   },
   "label": {
    "type": "text",
@@ -420,12 +445,12 @@
    }
   },
   "decl": {
-   "$if": "night",
+   "$if": "night || sun || daylight",
    "then": "23.44 * sin(6.283185 * (284 + dayOfYear()) / 365) * 0.0174533",
    "else": 0
   },
   "sunLon": {
-   "$if": "night",
+   "$if": "night || sun || daylight",
    "then": "0 - 15 * ((timeInMin() - offsetToUtc() / 60) / 60 - 12)",
    "else": 0
   },
@@ -515,6 +540,88 @@
   "dk": {
    "$if": "fit || fill",
    "then": "@ts * @s / @labelSize",
+   "else": 0
+  },
+  "su": {
+   "$if": "sun || daylight",
+   "then": {
+    "$if": "fit || fill",
+    "then": "@dk / @s",
+    "else": "1 / @s"
+   },
+   "else": 0
+  },
+  "mr": {
+   "$if": "daylight",
+   "then": "@markerSize * @su",
+   "else": 0
+  },
+  "na": {
+   "$if": "twilight",
+   "then": "1 - pow(1 - @nightAlpha, 0.33333)",
+   "else": 0
+  },
+  "sx": {
+   "$if": "sun",
+   "then": {
+    "$mapPoint": {
+     "region": {
+      "$if": "fit || fill",
+      "then": {
+       "$if": "fit",
+       "then": [
+        {
+         "fit": "@fit"
+        }
+       ],
+       "else": [
+        {
+         "fit": [
+          "@region"
+         ],
+         "frame": true,
+         "night": "@night"
+        }
+       ]
+      },
+      "else": "@region"
+     },
+     "lon": "(@sunLon + 540) % 360 - 180",
+     "lat": "@decl * 57.2958"
+    }
+   },
+   "else": 0
+  },
+  "sy": {
+   "$if": "sun",
+   "then": {
+    "$mapPoint": {
+     "region": {
+      "$if": "fit || fill",
+      "then": {
+       "$if": "fit",
+       "then": [
+        {
+         "fit": "@fit"
+        }
+       ],
+       "else": [
+        {
+         "fit": [
+          "@region"
+         ],
+         "frame": true,
+         "night": "@night"
+        }
+       ]
+      },
+      "else": "@region"
+     },
+     "lon": "(@sunLon + 540) % 360 - 180",
+     "lat": "@decl * 57.2958",
+     "axis": "y"
+    }
+   },
    "else": 0
   },
   "nr": {
@@ -1510,65 +1617,461 @@
          "$if": "night",
          "then": [
           {
-           "save": [
+           "$if": "theme.mono",
+           "then": [
             {
-             "clipRect": {
-              "left": 0,
-              "top": 0,
-              "right": 1000,
-              "bottom": "@mh"
-             }
-            },
-            {
-             "pathExpression": {
-              "id": "wmNight",
-              "expressionX": "ifElse(a[0] * 1000, (2 - a[0]) * 1000, step(a[0], 1))",
-              "expressionY": "ifElse(233.333 - atan((0 - cos((a[0] * 360 + @off) * 0.0174533)) / tan(@decl)) * 159.155, @nEdge, step(a[0], 1))",
-              "start": 0,
-              "end": 2,
-              "count": 240
-             }
-            },
-            {
-             "paint": {
-              "ops": [
-               {
-                "$if": "theme.mono",
-                "then": {
-                 "color": "@colors.onSurface"
-                },
-                "else": {
-                 "color": "@nightColor"
+             "save": [
+              {
+               "clipRect": {
+                "left": 0,
+                "top": 0,
+                "right": 1000,
+                "bottom": "@mh"
+               }
+              },
+              {
+               "pathExpression": {
+                "id": "wmNight",
+                "expressionX": "ifElse(a[0] * 1000, (2 - a[0]) * 1000, step(a[0], 1))",
+                "expressionY": "ifElse(233.333 - atan((0 - cos((a[0] * 360 + @off) * 0.0174533)) / tan(@decl)) * 159.155, @nEdge, step(a[0], 1))",
+                "start": 0,
+                "end": 2,
+                "count": 240
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.highlight"
+                 },
+                 {
+                  "style": "fill"
+                 },
+                 {
+                  "alpha": 0.6
+                 }
+                ]
+               }
+              },
+              {
+               "$if": "borders",
+               "then": {
+                "drawPath": {
+                 "path": {
+                  "$map": {
+                   "region": {
+                    "$if": "fit || fill",
+                    "then": {
+                     "$if": "fit",
+                     "then": [
+                      {
+                       "fit": "@fit"
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": "@night"
+                      }
+                     ]
+                    },
+                    "else": "@region"
+                   },
+                   "layer": "countries",
+                   "detail": "@detail"
+                  }
+                 }
                 }
                },
-               {
-                "style": "fill"
-               },
-               {
-                "$if": "theme.mono",
-                "then": {
-                 "alpha": 0.25
-                },
-                "else": {
-                 "alpha": "@nightAlpha"
+               "else": {
+                "drawPath": {
+                 "path": {
+                  "$map": {
+                   "region": {
+                    "$if": "fit || fill",
+                    "then": {
+                     "$if": "fit",
+                     "then": [
+                      {
+                       "fit": "@fit"
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": "@night"
+                      }
+                     ]
+                    },
+                    "else": "@region"
+                   },
+                   "layer": "land",
+                   "detail": "@detail"
+                  }
+                 }
                 }
                }
-              ]
-             }
-            },
-            {
-             "drawPath": {
-              "path": "wmNight"
-             }
-            },
-            {
-             "paint": {
-              "ops": [
-               {
-                "alpha": 1
+              },
+              {
+               "save": [
+                {
+                 "clipPath": {
+                  "path": "wmNight"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.shadow"
+                   },
+                   {
+                    "alpha": 0.5
+                   }
+                  ]
+                 }
+                },
+                {
+                 "$if": "borders",
+                 "then": {
+                  "drawPath": {
+                   "path": {
+                    "$map": {
+                     "region": {
+                      "$if": "fit || fill",
+                      "then": {
+                       "$if": "fit",
+                       "then": [
+                        {
+                         "fit": "@fit"
+                        }
+                       ],
+                       "else": [
+                        {
+                         "fit": [
+                          "@region"
+                         ],
+                         "frame": true,
+                         "night": "@night"
+                        }
+                       ]
+                      },
+                      "else": "@region"
+                     },
+                     "layer": "countries",
+                     "detail": "@detail"
+                    }
+                   }
+                  }
+                 },
+                 "else": {
+                  "drawPath": {
+                   "path": {
+                    "$map": {
+                     "region": {
+                      "$if": "fit || fill",
+                      "then": {
+                       "$if": "fit",
+                       "then": [
+                        {
+                         "fit": "@fit"
+                        }
+                       ],
+                       "else": [
+                        {
+                         "fit": [
+                          "@region"
+                         ],
+                         "frame": true,
+                         "night": "@night"
+                        }
+                       ]
+                      },
+                      "else": "@region"
+                     },
+                     "layer": "land",
+                     "detail": "@detail"
+                    }
+                   }
+                  }
+                 }
+                }
+               ]
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "alpha": 1
+                 },
+                 {
+                  "color": "@colors.onSurface"
+                 },
+                 {
+                  "style": "stroke"
+                 },
+                 {
+                  "strokeWidth": {
+                   "$if": "fit || fill",
+                   "then": "1.2 * @dk / @s",
+                   "else": "1.2 / @s"
+                  }
+                 }
+                ]
                }
-              ]
-             }
+              },
+              {
+               "$if": "borders",
+               "then": {
+                "drawPath": {
+                 "path": {
+                  "$map": {
+                   "region": {
+                    "$if": "fit || fill",
+                    "then": {
+                     "$if": "fit",
+                     "then": [
+                      {
+                       "fit": "@fit"
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": "@night"
+                      }
+                     ]
+                    },
+                    "else": "@region"
+                   },
+                   "layer": "countries",
+                   "detail": "@detail"
+                  }
+                 }
+                }
+               },
+               "else": {
+                "drawPath": {
+                 "path": {
+                  "$map": {
+                   "region": {
+                    "$if": "fit || fill",
+                    "then": {
+                     "$if": "fit",
+                     "then": [
+                      {
+                       "fit": "@fit"
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": "@night"
+                      }
+                     ]
+                    },
+                    "else": "@region"
+                   },
+                   "layer": "land",
+                   "detail": "@detail"
+                  }
+                 }
+                }
+               }
+              },
+              {
+               "save": [
+                {
+                 "clipRect": {
+                  "left": "1.5 / @s",
+                  "top": "1.5 / @s",
+                  "right": "1000 - 1.5 / @s",
+                  "bottom": "@mh - 1.5 / @s"
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "wmNight"
+                 }
+                }
+               ]
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "style": "fill"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ],
+           "else": [
+            {
+             "$if": "twilight",
+             "then": [
+              {
+               "save": [
+                {
+                 "clipRect": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 1000,
+                  "bottom": "@mh"
+                 }
+                },
+                {
+                 "pathExpression": {
+                  "id": "wmNightW",
+                  "expressionX": "ifElse(a[0] * 1000, (2 - a[0]) * 1000, step(a[0], 1))",
+                  "expressionY": "ifElse(233.333 - atan((0 - cos((a[0] * 360 + (@off + -5)) * 0.0174533)) / tan(@decl)) * 159.155, @nEdge, step(a[0], 1))",
+                  "start": 0,
+                  "end": 2,
+                  "count": 240
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@nightColor"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": "@na"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "wmNightW"
+                 }
+                },
+                {
+                 "pathExpression": {
+                  "id": "wmNight",
+                  "expressionX": "ifElse(a[0] * 1000, (2 - a[0]) * 1000, step(a[0], 1))",
+                  "expressionY": "ifElse(233.333 - atan((0 - cos((a[0] * 360 + @off) * 0.0174533)) / tan(@decl)) * 159.155, @nEdge, step(a[0], 1))",
+                  "start": 0,
+                  "end": 2,
+                  "count": 240
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "wmNight"
+                 }
+                },
+                {
+                 "pathExpression": {
+                  "id": "wmNightE",
+                  "expressionX": "ifElse(a[0] * 1000, (2 - a[0]) * 1000, step(a[0], 1))",
+                  "expressionY": "ifElse(233.333 - atan((0 - cos((a[0] * 360 + (@off + 5)) * 0.0174533)) / tan(@decl)) * 159.155, @nEdge, step(a[0], 1))",
+                  "start": 0,
+                  "end": 2,
+                  "count": 240
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "wmNightE"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ],
+             "else": [
+              {
+               "save": [
+                {
+                 "clipRect": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 1000,
+                  "bottom": "@mh"
+                 }
+                },
+                {
+                 "pathExpression": {
+                  "id": "wmNight",
+                  "expressionX": "ifElse(a[0] * 1000, (2 - a[0]) * 1000, step(a[0], 1))",
+                  "expressionY": "ifElse(233.333 - atan((0 - cos((a[0] * 360 + @off) * 0.0174533)) / tan(@decl)) * 159.155, @nEdge, step(a[0], 1))",
+                  "start": 0,
+                  "end": 2,
+                  "count": 240
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "$if": "theme.mono",
+                    "then": {
+                     "color": "@colors.onSurface"
+                    },
+                    "else": {
+                     "color": "@nightColor"
+                    }
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "$if": "theme.mono",
+                    "then": {
+                     "alpha": 0.25
+                    },
+                    "else": {
+                     "alpha": "@nightAlpha"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "wmNight"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
             }
            ]
           }
@@ -1631,6 +2134,152 @@
               "detail": "@detail"
              }
             }
+           }
+          }
+         ]
+        },
+        {
+         "$if": "sun",
+         "then": [
+          {
+           "$if": "theme.mono",
+           "then": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onSurface"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": "1.6 * @su"
+               },
+               {
+                "strokeCap": "round"
+               }
+              ]
+             }
+            },
+            {
+             "loop": {
+              "index": "wsr",
+              "from": 0,
+              "until": 8,
+              "commands": [
+               {
+                "save": [
+                 {
+                  "rotate": {
+                   "angle": "wsr * 45",
+                   "pivotX": "@sx",
+                   "pivotY": "@sy"
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": "@sx",
+                   "y1": "@sy - 9 * @su",
+                   "x2": "@sx",
+                   "y2": "@sy - 14 * @su"
+                  }
+                 }
+                ]
+               }
+              ]
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            }
+           ],
+           "else": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@sunColor"
+               },
+               {
+                "style": "fill"
+               },
+               {
+                "alpha": 0.1
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@sx",
+              "cy": "@sy",
+              "radius": "26 * @su"
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@sx",
+              "cy": "@sy",
+              "radius": "17 * @su"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "alpha": 0.25
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@sx",
+              "cy": "@sy",
+              "radius": "10 * @su"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "alpha": 1
+               }
+              ]
+             }
+            }
+           ]
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "$if": "theme.mono",
+              "then": {
+               "color": "@colors.onSurface"
+              },
+              "else": {
+               "color": "@sunColor"
+              }
+             },
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@sx",
+            "cy": "@sy",
+            "radius": "5.5 * @su"
            }
           }
          ]
@@ -4218,6 +4867,24 @@
        }
       },
       {
+       "$if": "daylight",
+       "then": [
+        {
+         "$gen": {
+          "kind": "daylight",
+          "cities": "@cities",
+          "region": "@region",
+          "decl": "@decl",
+          "sunLon": "@sunLon",
+          "radius": "@mr",
+          "dayColor": "@dayColor",
+          "nightColor": "@markerColor",
+          "ringColor": "@colors.surface"
+         }
+        }
+       ]
+      },
+      {
        "$if": "markLat",
        "then": [
         {
@@ -4330,7 +4997,7 @@
  },
  "pitfalls": [
   "Geometry is fixed when the document is built (region, detail, borders, highlight, cities, states, the route's ends); at run time the app can colour countries (values + valueCountries), move points (pointsLon/pointsLat arrays), move the marker (markLon/markLat), advance the route (progress) and the clock moves the night",
-  "night assumes the world box (\"world\": latitudes 84 to -58, plate carrée): on a continent or a country it is not drawn correctly; leave it off there. The night side is one filled pathExpression along the terminator (atan(-cos(H) / tan(declination)))",
+  "night assumes the world box (\"world\": latitudes 84 to -58, plate carr\u00e9e): on a continent or a country it is not drawn correctly; leave it off there. The night side is one filled pathExpression along the terminator (atan(-cos(H) / tan(declination)))",
   "Bytes grow with detail and borders: a world of land at low detail is ~6 KB, countries ~10 KB; Europe with borders at medium ~28 KB; each valueCountries entry adds its own outline (Europe's 48 at low ~30 KB). Prefer land for a backdrop and borders only where they matter",
   "For anything else at map coordinates draw in your own canvas inside the same translate/scale: {\"$mapPoint\": {\"region\": ..., \"lon\": \"@lon\", \"lat\": \"@lat\"}} (x; \"axis\": \"y\" for y), {\"$mapHeight\": region} (the box height for width 1000), {\"$mapRoute\": {region, from, to, axis: \"path\" | \"x\" | \"y\" | \"angle\"}} (a great circle, or its samples as an array for arraySpline(@array, t)). In your own canvas use {\"$map\": {..., \"outline\": true}} for a stroked coast (a clipped fill's straight edges would show)",
   "In mono the land is an outline (no fills), the highlight a fill, the night a grey shade",
@@ -4338,6 +5005,7 @@
   "A list region frames those places, not a continent: [\"Dubai\", \"London\", \"Singapore\"]. Name the legs' cities in it (or [from, to] pairs, which add the arc's bulge): an arc to a place outside the frame leaves the map, routes are not clipped",
   "legs draws each leg's arc and end dots; labels and the hub's name come from cities + labels (draw them too, the leg labels avoid them). With region, a label is placed for a map about 300 dp wide at the given height and a much smaller map can crowd them; with fit, text scales with the map and labels that would collide at a small size are hidden",
   "fit + fill is the map that follows the window: {\"fit\": [\"Dubai\", \"London\"], \"fill\": true} takes the column's remaining height (put it last or give its siblings fixed sizes) and frames the places at whatever size the window has; the geometry covers boxes from 0.9:1 to 2.6:1 (outside that, blank bands)",
-  "ramp needs values + valueCountries; the values are raw (valueMin..valueMax, e.g. 0..250 €/MWh), not 0..1. Start the ramp with a colour unlike the land (not @colors.track), or the lowest values read as no data. Use borders: true so neighbours of close values stay apart, and legend: true for the scale"
+  "ramp needs values + valueCountries; the values are raw (valueMin..valueMax, e.g. 0..250 \u20ac/MWh), not 0..1. Start the ramp with a colour unlike the land (not @colors.track), or the lowest values read as no data. Use borders: true so neighbours of close values stay apart, and legend: true for the scale",
+  "A world clock: night + twilight + sun + daylight with cities is the whole map of SHW-21: the soft edge (three shades), the sun over the subsolar point and city dots that glow where the sun is up. All three new options assume the world box (region \"world\" or \"world-full\") and repaint once a minute with the clock; the subsolar longitude ignores the equation of time (up to 4 degrees)"
  ]
 }

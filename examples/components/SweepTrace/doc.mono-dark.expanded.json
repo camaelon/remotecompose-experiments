@@ -1,0 +1,851 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 400,
+  "profiles": 513,
+  "contentDescription": "Three sweeping waveforms: an ECG beat at 72 per minute, a pulse wave trailing it, and a slow breathing wave"
+ },
+ "resources": {
+  "floatArrays": {
+   "ecg": {
+    "value": [
+     0,
+     0,
+     0.001,
+     0.002,
+     0.005,
+     0.011,
+     0.023,
+     0.04,
+     0.063,
+     0.088,
+     0.109,
+     0.119,
+     0.116,
+     0.101,
+     0.078,
+     0.053,
+     0.032,
+     0.017,
+     0.008,
+     0.004,
+     0.001,
+     0,
+     0,
+     -0.006,
+     -0.02,
+     0.018,
+     0.258,
+     0.684,
+     0.968,
+     0.818,
+     0.348,
+     -0.045,
+     -0.143,
+     -0.076,
+     -0.019,
+     -0.003,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0.001,
+     0.001,
+     0.002,
+     0.004,
+     0.006,
+     0.01,
+     0.015,
+     0.023,
+     0.034,
+     0.048,
+     0.065,
+     0.087,
+     0.111,
+     0.139,
+     0.168,
+     0.196,
+     0.222,
+     0.244,
+     0.26,
+     0.269,
+     0.269,
+     0.261,
+     0.245,
+     0.223,
+     0.197,
+     0.168,
+     0.14,
+     0.112,
+     0.087,
+     0.066,
+     0.048,
+     0.034,
+     0.023,
+     0.016,
+     0.01,
+     0.006,
+     0.004,
+     0.002,
+     0.001,
+     0.001,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "export": false
+   },
+   "pleth": {
+    "value": [
+     0.131,
+     0.16,
+     0.21,
+     0.298,
+     0.435,
+     0.615,
+     0.805,
+     0.95,
+     1,
+     0.936,
+     0.781,
+     0.59,
+     0.421,
+     0.311,
+     0.27,
+     0.284,
+     0.329,
+     0.38,
+     0.417,
+     0.425,
+     0.402,
+     0.352,
+     0.284,
+     0.212,
+     0.146,
+     0.091,
+     0.052,
+     0.026,
+     0.011,
+     0.003,
+     0,
+     0.001,
+     0.005,
+     0.012,
+     0.023,
+     0.037,
+     0.054,
+     0.072,
+     0.092,
+     0.111,
+     0.131
+    ],
+    "export": false
+   },
+   "resp": {
+    "value": [
+     0,
+     0.06,
+     0.174,
+     0.314,
+     0.464,
+     0.609,
+     0.741,
+     0.849,
+     0.931,
+     0.981,
+     1,
+     0.987,
+     0.946,
+     0.881,
+     0.795,
+     0.694,
+     0.584,
+     0.472,
+     0.362,
+     0.26,
+     0.171,
+     0.098,
+     0.044,
+     0.011,
+     0
+    ],
+    "export": false
+   }
+  },
+  "variables": {
+   "hr": {
+    "value": 72,
+    "export": true
+   },
+   "sweeptrace1_T": "timeInSec()",
+   "sweeptrace1_rr": "@hr / 60",
+   "sweeptrace1_k": "max(1 / (0.62 * @sweeptrace1_rr), 1 / 0.95)",
+   "sweeptrace2_T": "timeInSec()",
+   "sweeptrace2_rr": "@hr / 60",
+   "sweeptrace3_T": "timeInSec()"
+  },
+  "colors": {
+   "background": "#FF000000",
+   "muted": "#FF9E9E9E",
+   "onSurface": "#FFFFFFFF"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "Live waveforms",
+      "fontSize": 18,
+      "fontWeight": 600,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "text": {
+      "value": "Heart rate from a host variable",
+      "fontSize": 13,
+      "color": "@colors.muted"
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       {
+        "height": 10
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "verticalWeight": 0.4
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "semantics": {
+            "contentDescription": "ECG II"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "sweeptrace1_W",
+            "value": "componentWidth()"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace1_y0",
+            "value": "componentHeight() * 0.7"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace1_a",
+            "value": "componentHeight() * 0.5"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace1_d",
+            "value": "@sweeptrace1_W / 100"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace1_h",
+            "value": "fract(@sweeptrace1_T / @sweeptrace1_d) * @sweeptrace1_W"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace1_e",
+            "value": "floor(@sweeptrace1_h / 1) * 1"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace1_s",
+            "value": "(floor((@sweeptrace1_h + 18) / 1) + 1) * 1"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace1_z",
+            "value": "floor(@sweeptrace1_W / 1) * 1"
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "sweeptrace1_p1",
+            "expressionX": "a[0]",
+            "expressionY": "@sweeptrace1_y0 - @sweeptrace1_a * spline(@ecg, min(1, fract((@sweeptrace1_T - fract((@sweeptrace1_h - a[0]) / @sweeptrace1_W + 1) * @sweeptrace1_d) * @sweeptrace1_rr) * @sweeptrace1_k))",
+            "start": 0,
+            "end": "@sweeptrace1_e",
+            "count": "@sweeptrace1_e / 1 + 1",
+            "flags": 2
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "sweeptrace1_p2",
+            "expressionX": "a[0]",
+            "expressionY": "@sweeptrace1_y0 - @sweeptrace1_a * spline(@ecg, min(1, fract((@sweeptrace1_T - fract((@sweeptrace1_h - a[0]) / @sweeptrace1_W + 1) * @sweeptrace1_d) * @sweeptrace1_rr) * @sweeptrace1_k))",
+            "start": "@sweeptrace1_s",
+            "end": "@sweeptrace1_z",
+            "count": "max(2, (@sweeptrace1_z - @sweeptrace1_s) / 1 + 1)",
+            "flags": 2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeWidth": 2
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "sweeptrace1_p1"
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "gt",
+            "v1": "@sweeptrace1_z - @sweeptrace1_s",
+            "v2": 1,
+            "commands": [
+             {
+              "drawPath": {
+               "path": "sweeptrace1_p2"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace1_q",
+            "value": "@sweeptrace1_y0 - @sweeptrace1_a * spline(@ecg, min(1, fract(@sweeptrace1_T * @sweeptrace1_rr) * @sweeptrace1_k))"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@sweeptrace1_e",
+            "cy": "@sweeptrace1_q",
+            "radius": 3.1
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": 12
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "ECG II",
+            "x": 2,
+            "y": 14,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "verticalWeight": 0.32
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "semantics": {
+            "contentDescription": "Pleth"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "sweeptrace2_W",
+            "value": "componentWidth()"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace2_y0",
+            "value": "componentHeight() * 0.84"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace2_a",
+            "value": "componentHeight() * 0.62"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace2_d",
+            "value": "@sweeptrace2_W / 100"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace2_h",
+            "value": "fract(@sweeptrace2_T / @sweeptrace2_d) * @sweeptrace2_W"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace2_e",
+            "value": "floor(@sweeptrace2_h / 2) * 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace2_s",
+            "value": "(floor((@sweeptrace2_h + 18) / 2) + 1) * 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace2_z",
+            "value": "floor(@sweeptrace2_W / 2) * 2"
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "sweeptrace2_p1",
+            "expressionX": "a[0]",
+            "expressionY": "@sweeptrace2_y0 - @sweeptrace2_a * spline(@pleth, fract((@sweeptrace2_T - fract((@sweeptrace2_h - a[0]) / @sweeptrace2_W + 1) * @sweeptrace2_d) * @sweeptrace2_rr - 0.18))",
+            "start": 0,
+            "end": "@sweeptrace2_e",
+            "count": "@sweeptrace2_e / 2 + 1",
+            "flags": 2
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "sweeptrace2_p2",
+            "expressionX": "a[0]",
+            "expressionY": "@sweeptrace2_y0 - @sweeptrace2_a * spline(@pleth, fract((@sweeptrace2_T - fract((@sweeptrace2_h - a[0]) / @sweeptrace2_W + 1) * @sweeptrace2_d) * @sweeptrace2_rr - 0.18))",
+            "start": "@sweeptrace2_s",
+            "end": "@sweeptrace2_z",
+            "count": "max(2, (@sweeptrace2_z - @sweeptrace2_s) / 2 + 1)",
+            "flags": 2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeWidth": 2
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "sweeptrace2_p1"
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "gt",
+            "v1": "@sweeptrace2_z - @sweeptrace2_s",
+            "v2": 2,
+            "commands": [
+             {
+              "drawPath": {
+               "path": "sweeptrace2_p2"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace2_q",
+            "value": "@sweeptrace2_y0 - @sweeptrace2_a * spline(@pleth, fract(@sweeptrace2_T * @sweeptrace2_rr - 0.18))"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@sweeptrace2_e",
+            "cy": "@sweeptrace2_q",
+            "radius": 3.1
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": 12
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Pleth",
+            "x": 2,
+            "y": 14,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "verticalWeight": 0.28
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "semantics": {
+            "contentDescription": "Resp"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "sweeptrace3_W",
+            "value": "componentWidth()"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace3_y0",
+            "value": "componentHeight() * 0.82"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace3_a",
+            "value": "componentHeight() * 0.55"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace3_d",
+            "value": "@sweeptrace3_W / 25"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace3_h",
+            "value": "fract(@sweeptrace3_T / @sweeptrace3_d) * @sweeptrace3_W"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace3_e",
+            "value": "floor(@sweeptrace3_h / 3) * 3"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace3_s",
+            "value": "(floor((@sweeptrace3_h + 18) / 3) + 1) * 3"
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace3_z",
+            "value": "floor(@sweeptrace3_W / 3) * 3"
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "sweeptrace3_p1",
+            "expressionX": "a[0]",
+            "expressionY": "@sweeptrace3_y0 - @sweeptrace3_a * spline(@resp, fract((@sweeptrace3_T - fract((@sweeptrace3_h - a[0]) / @sweeptrace3_W + 1) * @sweeptrace3_d) * 0.27))",
+            "start": 0,
+            "end": "@sweeptrace3_e",
+            "count": "@sweeptrace3_e / 3 + 1",
+            "flags": 2
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "sweeptrace3_p2",
+            "expressionX": "a[0]",
+            "expressionY": "@sweeptrace3_y0 - @sweeptrace3_a * spline(@resp, fract((@sweeptrace3_T - fract((@sweeptrace3_h - a[0]) / @sweeptrace3_W + 1) * @sweeptrace3_d) * 0.27))",
+            "start": "@sweeptrace3_s",
+            "end": "@sweeptrace3_z",
+            "count": "max(2, (@sweeptrace3_z - @sweeptrace3_s) / 3 + 1)",
+            "flags": 2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeWidth": 1.6
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "sweeptrace3_p1"
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "gt",
+            "v1": "@sweeptrace3_z - @sweeptrace3_s",
+            "v2": 3,
+            "commands": [
+             {
+              "drawPath": {
+               "path": "sweeptrace3_p2"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "variable": {
+            "name": "sweeptrace3_q",
+            "value": "@sweeptrace3_y0 - @sweeptrace3_a * spline(@resp, fract(@sweeptrace3_T * 0.27))"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@sweeptrace3_e",
+            "cy": "@sweeptrace3_q",
+            "radius": 2.58
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": 12
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Resp",
+            "x": 2,
+            "y": 14,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

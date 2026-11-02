@@ -1,0 +1,1448 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "SwipeStack demo: four recipe cards to like or pass, with counts"
+ },
+ "resources": {
+  "variables": {
+   "likes": 0,
+   "passes": 0,
+   "verdict": 0,
+   "swipestack1_drag": 0,
+   "swipestack1_downX": 0,
+   "swipestack1_downY": 0,
+   "swipestack1_downT": -10,
+   "swipestack1_upT": -10,
+   "swipestack1_relX": 0,
+   "swipestack1_relY": 0,
+   "swipestack1_vel": 0,
+   "swipestack1_dir": 0,
+   "swipestack1_ok": 0,
+   "swipestack1_gx": 0,
+   "swipestack1_gy": 0,
+   "swipestack1_mv": 0,
+   "swipestack1_n": 0
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "muted": "#FF616161",
+   "onSurface": "#FF000000",
+   "surface": "#FFFFFFFF"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 72
+       }
+      ],
+      "commands": [
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "textSize": 22
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "Tonight's dinner",
+         "x": 20,
+         "y": 34,
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "textSize": 14
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@likes",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": " liked · ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@passes",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " passed"
+           }
+          }
+         },
+         "x": 20,
+         "y": 60,
+         "panX": -1,
+         "panY": 0
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "verticalWeight": 1
+       }
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "semantics": {
+               "contentDescription": "Card stack. Swipe right to like, left to pass"
+              }
+             },
+             {
+              "onTouchDown": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_downX",
+                "value": "touchX()"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_downY",
+                "value": "touchY()"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_downT",
+                "value": "animationTime()"
+               },
+               {
+                "type": "valueFloatChange",
+                "target": "@swipestack1_drag",
+                "value": 1
+               }
+              ]
+             },
+             {
+              "onTouchUp": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_gx",
+                "value": "touchX() - @swipestack1_downX"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_gy",
+                "value": "touchY() - @swipestack1_downY"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_mv",
+                "value": "step(abs(@swipestack1_gx) + abs(@swipestack1_gy), 8)"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_relX",
+                "value": "ifElse(@swipestack1_relX, @swipestack1_gx, @swipestack1_mv)"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_relY",
+                "value": "ifElse(@swipestack1_relY, @swipestack1_gy, @swipestack1_mv)"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_vel",
+                "value": "ifElse(@swipestack1_vel, @swipestack1_gx / max(animationTime() - @swipestack1_downT, 0.04), @swipestack1_mv)"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_dir",
+                "value": "ifElse(@swipestack1_dir, sign(@swipestack1_gx) * max(step(abs(@swipestack1_gx), 110), step(abs(@swipestack1_vel), 700) * step(abs(@swipestack1_gx), 36)), @swipestack1_mv)"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@verdict",
+                "value": "@swipestack1_mv * @swipestack1_dir * (@swipestack1_n % 4 + 1)"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_n",
+                "value": "@swipestack1_n + @swipestack1_mv * abs(@swipestack1_dir)"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@likes",
+                "value": "@likes + @swipestack1_mv * step(@swipestack1_dir, 0.5)"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@passes",
+                "value": "@passes + @swipestack1_mv * step(-@swipestack1_dir, 0.5)"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@swipestack1_upT",
+                "value": "ifElse(@swipestack1_upT, animationTime(), @swipestack1_mv)"
+               },
+               {
+                "type": "valueFloatChange",
+                "target": "@swipestack1_drag",
+                "value": 0
+               },
+               {
+                "type": "hostAction",
+                "name": "swipe",
+                "value": "@verdict",
+                "valueType": "float",
+                "actionType": 0
+               }
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "swipestack1_swsW",
+               "value": "componentWidth()"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsH",
+               "value": "componentHeight()"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsB",
+               "value": 120
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsCh",
+               "value": "max(120, min(@swipestack1_swsH - @swipestack1_swsB - 44, (@swipestack1_swsW - 40) * 470 / 320))"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsCw",
+               "value": "@swipestack1_swsCh * 320 / 470"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsU",
+               "value": "@swipestack1_swsCw / 320"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsCx",
+               "value": "@swipestack1_swsW / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsCy",
+               "value": "(@swipestack1_swsH - @swipestack1_swsB - 18) / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsTh",
+               "value": "@swipestack1_swsCw * 0.32"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsT",
+               "value": "10"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsSp",
+               "value": "exp(-7 * @swipestack1_swsT) * (cos(13 * @swipestack1_swsT) + 0.54 * sin(13 * @swipestack1_swsT))"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsOx0",
+               "value": "ifElse((1 - abs(@swipestack1_dir)) * @swipestack1_relX * @swipestack1_swsSp, touchX() - @swipestack1_downX, @swipestack1_drag)"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsOy0",
+               "value": "ifElse((1 - abs(@swipestack1_dir)) * @swipestack1_relY * @swipestack1_swsSp, (touchY() - @swipestack1_downY) * 0.6, @swipestack1_drag)"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsF",
+               "value": "abs(@swipestack1_dir) * (1 - @swipestack1_drag)"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsFx",
+               "value": "@swipestack1_relX + @swipestack1_dir * (max(abs(@swipestack1_vel), 1100) * @swipestack1_swsT + 2600 * @swipestack1_swsT * @swipestack1_swsT)"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsFy",
+               "value": "@swipestack1_relY * 0.6 + @swipestack1_relY * 1.5 * @swipestack1_swsT + 120 * @swipestack1_swsT * @swipestack1_swsT"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsHide",
+               "value": "100000 * (1 - @swipestack1_swsF * step(0.8, @swipestack1_swsT))"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsLd",
+               "value": "min(1, abs(@swipestack1_swsOx0) / @swipestack1_swsTh)"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsLf",
+               "value": "min(1, min(1, abs(@swipestack1_relX) / @swipestack1_swsTh) + @swipestack1_swsT / 0.28)"
+              }
+             },
+             {
+              "variable": {
+               "name": "swipestack1_swsG",
+               "value": "ifElse(-@swipestack1_swsLd, 1 - @swipestack1_swsLf, @swipestack1_swsF)"
+              }
+             },
+             {
+              "pathCreate": {
+               "id": "swsCard",
+               "x": 22,
+               "y": 0
+              }
+             },
+             {
+              "pathAppendLineTo": {
+               "path": "swsCard",
+               "x": 298,
+               "y": 0
+              }
+             },
+             {
+              "pathAppendQuadTo": {
+               "path": "swsCard",
+               "x1": 320,
+               "y1": 0,
+               "x2": 320,
+               "y2": 22
+              }
+             },
+             {
+              "pathAppendLineTo": {
+               "path": "swsCard",
+               "x": 320,
+               "y": 448
+              }
+             },
+             {
+              "pathAppendQuadTo": {
+               "path": "swsCard",
+               "x1": 320,
+               "y1": 470,
+               "x2": 298,
+               "y2": 470
+              }
+             },
+             {
+              "pathAppendLineTo": {
+               "path": "swsCard",
+               "x": 22,
+               "y": 470
+              }
+             },
+             {
+              "pathAppendQuadTo": {
+               "path": "swsCard",
+               "x1": 0,
+               "y1": 470,
+               "x2": 0,
+               "y2": 448
+              }
+             },
+             {
+              "pathAppendLineTo": {
+               "path": "swsCard",
+               "x": 0,
+               "y": 22
+              }
+             },
+             {
+              "pathAppendQuadTo": {
+               "path": "swsCard",
+               "x1": 0,
+               "y1": 0,
+               "x2": 22,
+               "y2": 0
+              }
+             },
+             {
+              "pathAppendClose": {
+               "path": "swsCard"
+              }
+             },
+             {
+              "loop": {
+               "index": "swsI",
+               "from": 0,
+               "until": 4,
+               "commands": [
+                {
+                 "variable": {
+                  "name": "swipestack1_swsK",
+                  "value": "2 - swsI"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "card",
+                  "value": "(@swipestack1_n + @swipestack1_swsK + 5 * 4) % 4"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "swipestack1_swsFly",
+                  "value": "step(-@swipestack1_swsK, 0.5)"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "swipestack1_swsTop",
+                  "value": "step(@swipestack1_swsK, -0.5) * step(0.5, @swipestack1_swsK)"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "swipestack1_swsD",
+                  "value": "min(2, max(0, @swipestack1_swsK + @swipestack1_swsG)) * (1 - @swipestack1_swsFly)"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "swipestack1_swsOx",
+                  "value": "@swipestack1_swsFly * (@swipestack1_swsFx + @swipestack1_swsHide) + @swipestack1_swsTop * @swipestack1_swsOx0"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "swipestack1_swsOy",
+                  "value": "@swipestack1_swsFly * @swipestack1_swsFy + @swipestack1_swsTop * @swipestack1_swsOy0"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "swipestack1_swsSc",
+                  "value": "1 - 0.055 * @swipestack1_swsD"
+                 }
+                },
+                {
+                 "save": {
+                  "commands": [
+                   {
+                    "translate": {
+                     "dx": "@swipestack1_swsCx + @swipestack1_swsOx",
+                     "dy": "@swipestack1_swsCy + @swipestack1_swsOy + @swipestack1_swsD * 13"
+                    }
+                   },
+                   {
+                    "rotate": {
+                     "angle": "@swipestack1_swsOx / @swipestack1_swsCw * 17"
+                    }
+                   },
+                   {
+                    "scale": {
+                     "sx": "@swipestack1_swsSc * @swipestack1_swsU",
+                     "sy": "@swipestack1_swsSc * @swipestack1_swsU"
+                    }
+                   },
+                   {
+                    "translate": {
+                     "dx": -160,
+                     "dy": -235
+                    }
+                   },
+                   {
+                    "save": {
+                     "commands": [
+                      {
+                       "clipPath": {
+                        "path": "swsCard"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.surface"
+                         },
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "alpha": 1
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRect": {
+                        "left": 0,
+                        "top": 0,
+                        "right": 320,
+                        "bottom": 470
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onSurface"
+                         },
+                         {
+                          "style": "stroke"
+                         },
+                         {
+                          "strokeWidth": 2
+                         },
+                         {
+                          "alpha": 1
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawCircle": {
+                        "cx": 160,
+                        "cy": 190,
+                        "radius": "70 + 12 * @card"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "color": "@colors.onSurface"
+                         },
+                         {
+                          "alpha": 1
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onSurface"
+                         },
+                         {
+                          "alpha": "1 - min(1, abs(@card - 0))"
+                         },
+                         {
+                          "textSize": 32
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": "Ramen",
+                        "x": 24,
+                        "y": 392,
+                        "panX": -1,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.muted"
+                         },
+                         {
+                          "alpha": "1 - min(1, abs(@card - 0))"
+                         },
+                         {
+                          "textSize": 14
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": "Tokyo · 25 min",
+                        "x": 24,
+                        "y": 422,
+                        "panX": -1,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onSurface"
+                         },
+                         {
+                          "alpha": "1 - min(1, abs(@card - 1))"
+                         },
+                         {
+                          "textSize": 32
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": "Tacos",
+                        "x": 24,
+                        "y": 392,
+                        "panX": -1,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.muted"
+                         },
+                         {
+                          "alpha": "1 - min(1, abs(@card - 1))"
+                         },
+                         {
+                          "textSize": 14
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": "Mexico City · 15 min",
+                        "x": 24,
+                        "y": 422,
+                        "panX": -1,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onSurface"
+                         },
+                         {
+                          "alpha": "1 - min(1, abs(@card - 2))"
+                         },
+                         {
+                          "textSize": 32
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": "Paella",
+                        "x": 24,
+                        "y": 392,
+                        "panX": -1,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.muted"
+                         },
+                         {
+                          "alpha": "1 - min(1, abs(@card - 2))"
+                         },
+                         {
+                          "textSize": 14
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": "Valencia · 45 min",
+                        "x": 24,
+                        "y": 422,
+                        "panX": -1,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onSurface"
+                         },
+                         {
+                          "alpha": "1 - min(1, abs(@card - 3))"
+                         },
+                         {
+                          "textSize": 32
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": "Pho",
+                        "x": 24,
+                        "y": 392,
+                        "panX": -1,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.muted"
+                         },
+                         {
+                          "alpha": "1 - min(1, abs(@card - 3))"
+                         },
+                         {
+                          "textSize": 14
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": "Hanoi · 30 min",
+                        "x": 24,
+                        "y": 422,
+                        "panX": -1,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "alpha": 1
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "shader": 0
+                      },
+                      {
+                       "alpha": 1
+                      },
+                      {
+                       "style": "fill"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "swipestack1_swsLk",
+                     "value": "ifElse(@swipestack1_swsTop * max(0, min(1, @swipestack1_swsOx / @swipestack1_swsTh)), step(@swipestack1_dir, 0.5), @swipestack1_swsFly)"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "swipestack1_swsNp",
+                     "value": "ifElse(@swipestack1_swsTop * max(0, min(1, -@swipestack1_swsOx / @swipestack1_swsTh)), step(-@swipestack1_dir, 0.5), @swipestack1_swsFly)"
+                    }
+                   },
+                   {
+                    "save": {
+                     "commands": [
+                      {
+                       "rotate": {
+                        "angle": -14,
+                        "pivotX": 70,
+                        "pivotY": 60
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.background"
+                         },
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "alpha": "@swipestack1_swsLk"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRoundRect": {
+                        "left": 22,
+                        "top": 34,
+                        "right": 124,
+                        "bottom": 84,
+                        "rx": 10,
+                        "ry": 10
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onSurface"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "alpha": "@swipestack1_swsLk"
+                         },
+                         {
+                          "style": "stroke"
+                         },
+                         {
+                          "strokeWidth": 4
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRoundRect": {
+                        "left": 22,
+                        "top": 34,
+                        "right": 124,
+                        "bottom": 84,
+                        "rx": 10,
+                        "ry": 10
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "textSize": 30
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": "YUM",
+                        "x": 73,
+                        "y": 60,
+                        "panX": 0,
+                        "panY": 0
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "save": {
+                     "commands": [
+                      {
+                       "rotate": {
+                        "angle": 14,
+                        "pivotX": 250,
+                        "pivotY": 60
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.background"
+                         },
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "alpha": "@swipestack1_swsNp"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRoundRect": {
+                        "left": 192,
+                        "top": 34,
+                        "right": 302,
+                        "bottom": 84,
+                        "rx": 10,
+                        "ry": 10
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onSurface"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "alpha": "@swipestack1_swsNp"
+                         },
+                         {
+                          "style": "stroke"
+                         },
+                         {
+                          "strokeWidth": 4
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRoundRect": {
+                        "left": 192,
+                        "top": 34,
+                        "right": 302,
+                        "bottom": 84,
+                        "rx": 10,
+                        "ry": 10
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "textSize": 30
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": "NOPE",
+                        "x": 247,
+                        "y": 60,
+                        "panX": 0,
+                        "panY": 0
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onSurface"
+                      },
+                      {
+                       "style": "stroke"
+                      },
+                      {
+                       "strokeWidth": 1.5
+                      },
+                      {
+                       "alpha": 1
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": "swsCard"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "alpha": 1
+                      },
+                      {
+                       "style": "fill"
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "padding": {
+               "bottom": 28
+              }
+             },
+             {
+              "spacedBy": 48
+             }
+            ],
+            "horizontalAlignment": "center",
+            "verticalAlignment": "bottom",
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "padding": 0
+                },
+                {
+                 "size": 64
+                },
+                {
+                 "clip": 32
+                },
+                {
+                 "background": "@colors.onSurface"
+                },
+                {
+                 "padding": 1
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "Pass",
+                  "enabled": true,
+                  "clickable": true
+                 }
+                },
+                {
+                 "onClick": [
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_ok",
+                   "value": "step(animationTime() - @swipestack1_upT, 0.3)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_dir",
+                   "value": "ifElse(@swipestack1_dir, -1, @swipestack1_ok)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@verdict",
+                   "value": "@swipestack1_ok * -1 * (@swipestack1_n % 4 + 1)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_relX",
+                   "value": "ifElse(@swipestack1_relX, 0, @swipestack1_ok)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_relY",
+                   "value": "ifElse(@swipestack1_relY, 0, @swipestack1_ok)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_vel",
+                   "value": "ifElse(@swipestack1_vel, 0, @swipestack1_ok)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_upT",
+                   "value": "ifElse(@swipestack1_upT, animationTime(), @swipestack1_ok)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_n",
+                   "value": "@swipestack1_n + @swipestack1_ok"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@passes",
+                   "value": "@passes + @swipestack1_ok"
+                  },
+                  {
+                   "type": "hostAction",
+                   "name": "swipe",
+                   "value": "@verdict",
+                   "valueType": "float",
+                   "actionType": 0
+                  }
+                 ]
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "horizontalAlignment": "center",
+                  "verticalAlignment": "center",
+                  "modifiers": [
+                   "fillMaxSize",
+                   {
+                    "clip": 31
+                   },
+                   {
+                    "background": "@colors.background"
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "graphicsLayer": {
+                        "scaleX": 1.6,
+                        "scaleY": 1.6
+                       }
+                      }
+                     ],
+                     "children": [
+                      {
+                       "canvas": {
+                        "modifiers": [
+                         {
+                          "size": [
+                           28,
+                           28
+                          ]
+                         }
+                        ],
+                        "commands": [
+                         {
+                          "paint": {
+                           "ops": [
+                            {
+                             "color": "@colors.onSurface"
+                            },
+                            {
+                             "style": "stroke"
+                            },
+                            {
+                             "strokeWidth": 3.5
+                            },
+                            {
+                             "strokeCap": "round"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "drawLine": {
+                           "x1": 6,
+                           "y1": 6,
+                           "x2": 22,
+                           "y2": 22
+                          }
+                         },
+                         {
+                          "drawLine": {
+                           "x1": 22,
+                           "y1": 6,
+                           "x2": 6,
+                           "y2": 22
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "padding": 0
+                },
+                {
+                 "size": 64
+                },
+                {
+                 "clip": 32
+                },
+                {
+                 "background": "@colors.onSurface"
+                },
+                {
+                 "padding": 1
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "Like",
+                  "enabled": true,
+                  "clickable": true
+                 }
+                },
+                {
+                 "onClick": [
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_ok",
+                   "value": "step(animationTime() - @swipestack1_upT, 0.3)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_dir",
+                   "value": "ifElse(@swipestack1_dir, 1, @swipestack1_ok)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@verdict",
+                   "value": "@swipestack1_ok * 1 * (@swipestack1_n % 4 + 1)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_relX",
+                   "value": "ifElse(@swipestack1_relX, 0, @swipestack1_ok)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_relY",
+                   "value": "ifElse(@swipestack1_relY, 0, @swipestack1_ok)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_vel",
+                   "value": "ifElse(@swipestack1_vel, 0, @swipestack1_ok)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_upT",
+                   "value": "ifElse(@swipestack1_upT, animationTime(), @swipestack1_ok)"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@swipestack1_n",
+                   "value": "@swipestack1_n + @swipestack1_ok"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@likes",
+                   "value": "@likes + @swipestack1_ok"
+                  },
+                  {
+                   "type": "hostAction",
+                   "name": "swipe",
+                   "value": "@verdict",
+                   "valueType": "float",
+                   "actionType": 0
+                  }
+                 ]
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "horizontalAlignment": "center",
+                  "verticalAlignment": "center",
+                  "modifiers": [
+                   "fillMaxSize",
+                   {
+                    "clip": 31
+                   },
+                   {
+                    "background": "@colors.background"
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "graphicsLayer": {
+                        "scaleX": 1.6,
+                        "scaleY": 1.6
+                       }
+                      }
+                     ],
+                     "children": [
+                      {
+                       "canvas": {
+                        "modifiers": [
+                         {
+                          "size": [
+                           28,
+                           28
+                          ]
+                         }
+                        ],
+                        "commands": [
+                         {
+                          "paint": {
+                           "ops": [
+                            {
+                             "color": "@colors.onSurface"
+                            },
+                            {
+                             "style": "fill"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "drawCircle": {
+                           "cx": 9,
+                           "cy": 10.5,
+                           "radius": 5.6
+                          }
+                         },
+                         {
+                          "drawCircle": {
+                           "cx": 19,
+                           "cy": 10.5,
+                           "radius": 5.6
+                          }
+                         },
+                         {
+                          "pathCreate": {
+                           "id": "swsHeart",
+                           "x": 3.9,
+                           "y": 12.8
+                          }
+                         },
+                         {
+                          "pathAppendLineTo": {
+                           "path": "swsHeart",
+                           "x": 14,
+                           "y": 24
+                          }
+                         },
+                         {
+                          "pathAppendLineTo": {
+                           "path": "swsHeart",
+                           "x": 24.1,
+                           "y": 12.8
+                          }
+                         },
+                         {
+                          "pathAppendLineTo": {
+                           "path": "swsHeart",
+                           "x": 14,
+                           "y": 9
+                          }
+                         },
+                         {
+                          "pathAppendClose": {
+                           "path": "swsHeart"
+                          }
+                         },
+                         {
+                          "drawPath": {
+                           "path": "swsHeart"
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,712 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Split-flap tiles: a word that flips in, a clock that flips on the minute, a status flap cycling through four words, and three rows of destinations moving up every six seconds"
+ },
+ "resources": {
+  "variables": {
+   "hm": "timeInHr() * 100 + timeInMin() % 60",
+   "mo": "(timeInHr() * 60 + timeInMin() % 60 + 1439) % 1440",
+   "hmo": "floor(@mo / 60) * 100 + @mo % 60",
+   "word": "floor(animationTime() / 4)",
+   "cyc": "floor(animationTime() / 6)",
+   "scroll": 0
+  },
+  "floatArrays": {
+   "gen_sf1_text_1": {
+    "value": [
+     4,
+     5,
+     16,
+     1,
+     18,
+     20,
+     21,
+     18,
+     5,
+     19
+    ]
+   },
+   "cities": {
+    "value": [
+     12,
+     9,
+     19,
+     2,
+     15,
+     1,
+     0,
+     0,
+     16,
+     15,
+     18,
+     20,
+     15,
+     0,
+     0,
+     0,
+     13,
+     1,
+     4,
+     18,
+     9,
+     4,
+     0,
+     0,
+     19,
+     5,
+     22,
+     9,
+     12,
+     12,
+     1,
+     0,
+     16,
+     1,
+     18,
+     9,
+     19,
+     0,
+     0,
+     0,
+     2,
+     15,
+     18,
+     4,
+     5,
+     1,
+     21,
+     24,
+     12,
+     25,
+     15,
+     14,
+     0,
+     0,
+     0,
+     0,
+     7,
+     5,
+     14,
+     5,
+     22,
+     5,
+     0,
+     0
+    ]
+   }
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "muted": "#FF616161",
+   "onSurface": "#FF000000",
+   "outline": "#FF616161"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "verticalScroll": "@scroll"
+    },
+    {
+     "padding": 20
+    },
+    {
+     "spacedBy": 10
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "A word, flipping in",
+      "fontSize": 13,
+      "color": "@colors.muted"
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         307,
+         42
+        ]
+       },
+       {
+        "semantics": {
+         "contentDescription": "DEPARTURES"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "loop": {
+         "index": "r",
+         "from": 0,
+         "until": "1",
+         "commands": [
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "10",
+            "commands": [
+             {
+              "variable": {
+               "name": "sf1x0",
+               "value": "0 + i * (28 + 3)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1x1",
+               "value": "@sf1x0 + 28"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1y0",
+               "value": "0 + r * 42 + 8 + 0"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1y1",
+               "value": "@sf1y0 + 42"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1md",
+               "value": "@sf1y0 + 42 / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1cur",
+               "value": "arrayGet(@gen_sf1_text_1, i)"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
+               "start": "@sf1cur",
+               "len": 1,
+               "varName": "sf1gC"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.outline",
+               "style": "stroke",
+               "strokeWidth": 1,
+               "alpha": 1
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": "@sf1x0",
+               "top": "@sf1y0",
+               "right": "@sf1x1",
+               "bottom": "@sf1y1",
+               "rx": "min(28, 42) * 0.1",
+               "ry": "min(28, 42) * 0.1"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.onSurface",
+               "style": "fillAndStroke",
+               "strokeWidth": "42 * 0.025",
+               "textSize": "42 * 0.62",
+               "alpha": 1
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "@sf1gC",
+               "x": "(@sf1x0 + @sf1x1) / 2",
+               "y": "@sf1md",
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.background",
+               "style": "fill"
+              }
+             },
+             {
+              "drawRect": {
+               "left": "@sf1x0 - 1",
+               "top": "@sf1md - 42 * 0.02",
+               "right": "@sf1x1 + 1",
+               "bottom": "@sf1md + 42 * 0.02"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "text": {
+      "value": "The clock, flipping on the minute",
+      "fontSize": 13,
+      "color": "@colors.muted",
+      "modifiers": [
+       {
+        "padding": [
+         0,
+         14,
+         0,
+         0
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         236,
+         64
+        ]
+       },
+       {
+        "semantics": {
+         "contentDescription": "Time"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "loop": {
+         "index": "r",
+         "from": 0,
+         "until": "1",
+         "commands": [
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "5",
+            "commands": [
+             {
+              "variable": {
+               "name": "sf2x0",
+               "value": "0 + i * (44 + 4)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2x1",
+               "value": "@sf2x0 + 44"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2y0",
+               "value": "0 + r * 64 + 8 + 0"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2y1",
+               "value": "@sf2y0 + 64"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2md",
+               "value": "@sf2y0 + 64 / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2cur",
+               "value": "ifElse(27 + floor(@hm / pow(10, 3 - i + step(i, 2))) % 10, 37, 1 - min(1, abs(i - 2)))"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
+               "start": "@sf2cur",
+               "len": 1,
+               "varName": "sf2gC"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.outline",
+               "style": "stroke",
+               "strokeWidth": 1,
+               "alpha": 1
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": "@sf2x0",
+               "top": "@sf2y0",
+               "right": "@sf2x1",
+               "bottom": "@sf2y1",
+               "rx": "min(44, 64) * 0.1",
+               "ry": "min(44, 64) * 0.1"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.onSurface",
+               "style": "fillAndStroke",
+               "strokeWidth": "64 * 0.025",
+               "textSize": "64 * 0.62",
+               "alpha": 1
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "@sf2gC",
+               "x": "(@sf2x0 + @sf2x1) / 2",
+               "y": "@sf2md",
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.background",
+               "style": "fill"
+              }
+             },
+             {
+              "drawRect": {
+               "left": "@sf2x0 - 1",
+               "top": "@sf2md - 64 * 0.02",
+               "right": "@sf2x1 + 1",
+               "bottom": "@sf2md + 64 * 0.02"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "text": {
+      "value": "Word flaps: a drum of whole words",
+      "fontSize": 13,
+      "color": "@colors.muted",
+      "modifiers": [
+       {
+        "padding": [
+         0,
+         14,
+         0,
+         0
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         170,
+         40
+        ]
+       },
+       {
+        "semantics": {
+         "contentDescription": "Status"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "loop": {
+         "index": "r",
+         "from": 0,
+         "until": "1",
+         "commands": [
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "1",
+            "commands": [
+             {
+              "variable": {
+               "name": "sf3x0",
+               "value": "0 + i * (170 + 4)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3x1",
+               "value": "@sf3x0 + 170"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3y0",
+               "value": "0 + r * 40 + 8 + 0"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3y1",
+               "value": "@sf3y0 + 40"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3md",
+               "value": "@sf3y0 + 40 / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3cur",
+               "value": "@word % 4 + 1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "        ON TIME BOARDINGDELAYED CANCELED",
+               "start": "(@sf3cur) * 8",
+               "len": 8,
+               "varName": "sf3gC"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.outline",
+               "style": "stroke",
+               "strokeWidth": 1,
+               "alpha": 1
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": "@sf3x0",
+               "top": "@sf3y0",
+               "right": "@sf3x1",
+               "bottom": "@sf3y1",
+               "rx": "min(170, 40) * 0.1",
+               "ry": "min(170, 40) * 0.1"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.onSurface",
+               "style": "fillAndStroke",
+               "strokeWidth": "40 * 0.025",
+               "textSize": "40 * 0.5",
+               "alpha": 1
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "@sf3gC",
+               "x": "@sf3x0 + 40 * 0.3",
+               "y": "@sf3md",
+               "panX": -1,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.background",
+               "style": "fill"
+              }
+             },
+             {
+              "drawRect": {
+               "left": "@sf3x0 - 1",
+               "top": "@sf3md - 40 * 0.02",
+               "right": "@sf3x1 + 1",
+               "bottom": "@sf3md + 40 * 0.02"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "text": {
+      "value": "Rows from a float array, moving up every 6 s",
+      "fontSize": 13,
+      "color": "@colors.muted",
+      "modifiers": [
+       {
+        "padding": [
+         0,
+         14,
+         0,
+         0
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         229,
+         126
+        ]
+       },
+       {
+        "semantics": {
+         "contentDescription": "Destinations"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "loop": {
+         "index": "r",
+         "from": 0,
+         "until": "3",
+         "commands": [
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "8",
+            "commands": [
+             {
+              "variable": {
+               "name": "sf4x0",
+               "value": "0 + i * (26 + 3)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf4x1",
+               "value": "@sf4x0 + 26"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf4y0",
+               "value": "0 + r * 38 + 6 + 0"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf4y1",
+               "value": "@sf4y0 + 38"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf4md",
+               "value": "@sf4y0 + 38 / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf4cur",
+               "value": "arrayGet(@cities, ((@cyc + r) % 8) * 8 + i)"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
+               "start": "@sf4cur",
+               "len": 1,
+               "varName": "sf4gC"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.outline",
+               "style": "stroke",
+               "strokeWidth": 1,
+               "alpha": 1
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": "@sf4x0",
+               "top": "@sf4y0",
+               "right": "@sf4x1",
+               "bottom": "@sf4y1",
+               "rx": "min(26, 38) * 0.1",
+               "ry": "min(26, 38) * 0.1"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.onSurface",
+               "style": "fillAndStroke",
+               "strokeWidth": "38 * 0.025",
+               "textSize": "38 * 0.62",
+               "alpha": 1
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "@sf4gC",
+               "x": "(@sf4x0 + @sf4x1) / 2",
+               "y": "@sf4md",
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.background",
+               "style": "fill"
+              }
+             },
+             {
+              "drawRect": {
+               "left": "@sf4x0 - 1",
+               "top": "@sf4md - 38 * 0.02",
+               "right": "@sf4x1 + 1",
+               "bottom": "@sf4md + 38 * 0.02"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

@@ -1846,7 +1846,8 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
     // (An animated local — {"value": ..., "anim": s} — repaints while it eases: that is how a
     // start/stop motion keeps frames coming without repainting forever.)
     const easedLocal = Object.values(def.locals ?? {}).some((v) => v && typeof v === "object" && "anim" in v);
-    if (/animationTime\(\)/.test(text) && !/continuousSec\(\)/.test(text) && !easedLocal) warnings.push("animationTime() alone never schedules a repaint: drive start/stop motion with an animated local ({\"value\": \"@target\", \"anim\": 0.75}, it repaints while it eases), or continuousSec() for motion that never stops");
+    // (A canvas wakeIn schedules its own frames: animationTime() then repaints while it is asked to.)
+    if (/animationTime\(\)/.test(text) && !/continuousSec\(\)/.test(text) && !JSON.stringify(def.body ?? {}).includes('"wakeIn"') && !easedLocal) warnings.push("animationTime() alone never schedules a repaint: drive start/stop motion with an animated local ({\"value\": \"@target\", \"anim\": 0.75}, it repaints while it eases), or continuousSec() for motion that never stops");
     if (JSON.stringify(def.body ?? null).match(/"(drawPath|path)"\s*:\s*\{[^}]*"path"\s*:\s*"M/)) warnings.push("an SVG path string costs ~4 KB in Java (padded to 1024 floats); use drawLine/primitives or the op-list path form");
     if (!def.call) warnings.push("no `call` example (get and check_component use it)");
     // A "@name" inside a longer text ("Step @n. ") is not filled in: only a whole "@name" value

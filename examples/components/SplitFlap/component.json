@@ -1,0 +1,244 @@
+{
+ "component": "SplitFlap",
+ "version": 1,
+ "summary": "Split-flap tiles (a Solari board): a fixed number of tiles that, when the text they show changes, flip forward through a drum of characters (or whole words) to the new ones, with the mechanical half-flap fold, rippling across the tiles and down the rows.",
+ "capabilities": [
+  "time.animation",
+  "data.loop",
+  "expr.string",
+  "draw.clip",
+  "draw.transform",
+  "anim.stagger"
+ ],
+ "params": {
+  "text": {
+   "type": "string",
+   "static": true,
+   "doc": "A fixed text, one tile per character, flipping in from blank when the document appears (characters must be on the drum; lower case is shown upper case). For text that changes, pass code and tiles instead"
+  },
+  "code": {
+   "type": "float",
+   "doc": "The drum index each tile shows now, as an expression of i (the tile, from 0) and r (the row, from 0): \"arrayGet(@chars, @row * 5 + i)\", or a digit of the clock \"27 + floor(@hhmm / pow(10, 3 - i)) % 10\". When it changes, set prev to the old index and restart since"
+  },
+  "prev": {
+   "type": "float",
+   "doc": "The drum index each tile showed before the change, an expression of i and r (default 0, the drum's first glyph: blank), so the tiles flip forward from prev to code"
+  },
+  "since": {
+   "type": "float",
+   "doc": "Seconds since the change (default animationTime(): the tiles flip in when the document appears). A board that changes every 9 s passes \"animationTime() % 9\"; a clock that flips on the minute \"continuousSec() % 60\""
+  },
+  "tiles": {
+   "type": "float",
+   "doc": "How many tiles a row has (with code; text gives its length). May be an expression"
+  },
+  "rows": {
+   "type": "float",
+   "default": 1,
+   "doc": "How many rows of tiles: r runs from 0 to rows - 1, each row tileHeight + rowGap below the last"
+  },
+  "drum": {
+   "type": "string",
+   "static": true,
+   "default": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
+   "doc": "The glyphs on the drum, in flip order, the first one blank. Indices (code, prev) count glyphs on this string"
+  },
+  "glyphWidth": {
+   "type": "float",
+   "static": true,
+   "default": 1,
+   "doc": "Characters per glyph: 1 for letters, more for word flaps (a drum of equal-width words, padded with spaces: \"        ON TIME BOARDINGDELAYED \" with glyphWidth 8)"
+  },
+  "align": {
+   "type": "enum",
+   "values": [
+    "center",
+    "start"
+   ],
+   "default": "center",
+   "static": true,
+   "doc": "Where the glyph sits on its tile: centred (letters) or from the start, inset by inset x tileHeight (words)"
+  },
+  "inset": {
+   "type": "float",
+   "default": 0.3,
+   "doc": "With align start: the glyph's left inset, as a fraction of tileHeight"
+  },
+  "tileWidth": {
+   "type": "float",
+   "default": 28,
+   "doc": "A tile's width in dp"
+  },
+  "tileHeight": {
+   "type": "float",
+   "default": 40,
+   "doc": "A tile's height in dp; the glyph is textSize x this"
+  },
+  "gap": {
+   "type": "float",
+   "default": 4,
+   "doc": "Space between tiles in dp"
+  },
+  "rowGap": {
+   "type": "float",
+   "default": 8,
+   "doc": "Space between rows in dp"
+  },
+  "textSize": {
+   "type": "float",
+   "default": 0.62,
+   "static": false,
+   "doc": "Glyph size as a fraction of tileHeight (may be an expression)"
+  },
+  "bold": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Thicken the glyphs with a stroke (canvas text has no font weight)"
+  },
+  "speed": {
+   "type": "float",
+   "default": 22,
+   "static": true,
+   "doc": "Flaps a second"
+  },
+  "delay": {
+   "type": "float",
+   "default": 0.25,
+   "doc": "Seconds from the change to the first tile's first flap"
+  },
+  "ripple": {
+   "type": "float",
+   "default": 0.035,
+   "doc": "Extra delay per tile along a row, in seconds"
+  },
+  "rowRipple": {
+   "type": "float",
+   "default": 0.16,
+   "doc": "Extra delay per row, in seconds"
+  },
+  "jitter": {
+   "type": "float",
+   "default": 0.25,
+   "static": true,
+   "doc": "Up to this many seconds of hashed per-tile delay, so the flurry looks mechanical; 0 for lockstep"
+  },
+  "tileX": {
+   "type": "float",
+   "doc": "A tile's x in dp, an expression of i (default i x (tileWidth + gap)): for groups of tiles with wider gaps between fields, read from an array"
+  },
+  "tileY": {
+   "type": "float",
+   "doc": "Extra y in dp for a tile, an expression of i (default 0): a second line of tiles in the same row"
+  },
+  "rowPitch": {
+   "type": "float",
+   "doc": "Distance from one row's top to the next in dp (default tileHeight + rowGap)"
+  },
+  "x": {
+   "type": "float",
+   "doc": "With fill: the first tile's left in dp inside the canvas"
+  },
+  "y": {
+   "type": "float",
+   "doc": "With fill: the first row's top in dp inside the canvas"
+  },
+  "fill": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Fill the space it is given (fillMaxSize) and draw at x, y instead of sizing itself to the tiles: for a board that lays tiles out itself with expressions"
+  },
+  "width": {
+   "type": "float",
+   "static": true,
+   "doc": "Width in dp when the size cannot be computed from tiles (tiles or tileX an expression)"
+  },
+  "height": {
+   "type": "float",
+   "static": true,
+   "doc": "Height in dp when the size cannot be computed from rows"
+  },
+  "label": {
+   "type": "string",
+   "doc": "What a screen reader says (default text)"
+  },
+  "tileColor": {
+   "type": "color",
+   "default": "@colors.track",
+   "doc": "The tile, behind the flap (default track: a mid grey that stands off the page and carries onSurface glyphs at 8:1 or more in light and dark)"
+  },
+  "flapColor": {
+   "type": "color",
+   "default": "@colors.track",
+   "doc": "The flap's face (the top half at rest); a shade lighter than tileColor gives the classic two-tone tile"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.onSurface",
+   "doc": "The glyphs"
+  },
+  "splitColor": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "The split between the halves"
+  },
+  "shadeColor": {
+   "type": "color",
+   "default": "#FF000000",
+   "doc": "The shadow on the flap as it turns edge-on (faded by paint alpha)"
+  }
+ },
+ "body": {
+  "$gen": {
+   "kind": "split-flap",
+   "text": "@text",
+   "code": "@code",
+   "prev": "@prev",
+   "since": "@since",
+   "tiles": "@tiles",
+   "rows": "@rows",
+   "drum": "@drum",
+   "glyphWidth": "@glyphWidth",
+   "align": "@align",
+   "inset": "@inset",
+   "tileWidth": "@tileWidth",
+   "tileHeight": "@tileHeight",
+   "gap": "@gap",
+   "rowGap": "@rowGap",
+   "textSize": "@textSize",
+   "bold": "@bold",
+   "speed": "@speed",
+   "delay": "@delay",
+   "ripple": "@ripple",
+   "rowRipple": "@rowRipple",
+   "jitter": "@jitter",
+   "tileX": "@tileX",
+   "tileY": "@tileY",
+   "rowPitch": "@rowPitch",
+   "x": "@x",
+   "y": "@y",
+   "fill": "@fill",
+   "width": "@width",
+   "height": "@height",
+   "label": "@label",
+   "tileColor": "@tileColor",
+   "flapColor": "@flapColor",
+   "color": "@color",
+   "splitColor": "@splitColor",
+   "shadeColor": "@shadeColor"
+  }
+ },
+ "call": {
+  "SplitFlap": {
+   "text": "DEPARTURES"
+  }
+ },
+ "pitfalls": [
+  "A real flap only moves forward: from prev to code it shows every glyph in between, (code - prev) mod the drum size steps at speed flaps a second, so a long jump takes longer. Order the drum so frequent changes are short",
+  "SplitFlap does not remember what it showed: when code changes, pass the old index as prev and restart since (a board cycling through an array passes the previous entry and animationTime() % period)",
+  "Inside code, prev and tileX, i is the tile and r the row (the component's loop indices); don't name document variables i or r",
+  "The tiles redraw every frame while since moves (about 25 draw operations a tile): a 26 x 9 board is around 6 000 operations a frame. Fine for a board or a kiosk, heavy for a small widget",
+  "Mono shows code as it is, with no flip and no shading: outlined tiles and a split cut through them"
+ ]
+}

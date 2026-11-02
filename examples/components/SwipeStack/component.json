@@ -1,0 +1,1327 @@
+{
+ "component": "SwipeStack",
+ "version": 1,
+ "summary": "A Tinder-style stack of cards you swipe: the top card follows the finger and tilts, a like or pass stamp fades in and the card behind scales up; a flick or a drag past the threshold flies it off left or right with its release speed, anything else springs back with a damped spring. Optional Pass / Like buttons fling it too. Each card is drawn by the card slot from the index variable; counts and the last decision are variables, and onSwipe can tell the host.",
+ "params": {
+  "index": {
+   "type": "variable",
+   "required": true,
+   "doc": "The name the card slot reads for the card being drawn, 0..count-1: pass a name nothing else declares (\"@card\"); the stack declares it itself, once per card it draws, so do not put it in resources.variables"
+  },
+  "count": {
+   "type": "float",
+   "default": 5,
+   "doc": "How many different cards there are; the stack cycles through them (card n after the last is card 0 again)"
+  },
+  "cardWidth": {
+   "type": "float",
+   "default": 320,
+   "static": true,
+   "doc": "Width of the card's design box: the card slot draws in 0..cardWidth x 0..cardHeight and the whole card is scaled to fit the space"
+  },
+  "cardHeight": {
+   "type": "float",
+   "default": 470,
+   "static": true,
+   "doc": "Height of the card's design box (the aspect ratio is kept)"
+  },
+  "radius": {
+   "type": "float",
+   "default": 22,
+   "static": true,
+   "doc": "Card corner radius, in design units"
+  },
+  "liked": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "Count of cards swiped (or tapped) to the like side; bind a resources variable (\"@likes\") to show or read it"
+  },
+  "passed": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "Count of cards passed"
+  },
+  "decision": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "Set on every release and button tap, before onSwipe runs: +(i + 1) when card i was liked, -(i + 1) when passed, 0 when it sprang back or was only tapped"
+  },
+  "onSwipe": {
+   "type": "action",
+   "doc": "Runs after every release and every button tap, once decision is set: a hostAction carrying @decision tells the app which card went which way ({\"type\": \"hostAction\", \"name\": \"swipe\", \"value\": \"@verdict\", \"valueType\": \"float\", \"actionType\": 0})"
+  },
+  "threshold": {
+   "type": "float",
+   "default": 0.32,
+   "doc": "Drag distance, as a fraction of the card width, at which the stamp is fully shown and the card behind fully lifted"
+  },
+  "flingDistance": {
+   "type": "float",
+   "default": 110,
+   "doc": "A release past this many dp dismisses the card"
+  },
+  "flingSpeed": {
+   "type": "float",
+   "default": 700,
+   "doc": "A release faster than this (dp/s, over a drag of at least 36 dp) dismisses the card"
+  },
+  "likeLabel": {
+   "type": "string",
+   "default": "LIKE",
+   "doc": "The stamp on the right-swipe side (upper left of the card)"
+  },
+  "passLabel": {
+   "type": "string",
+   "default": "NOPE",
+   "doc": "The stamp on the left-swipe side (upper right)"
+  },
+  "likeColor": {
+   "type": "color",
+   "default": "@colors.success",
+   "doc": "Like stamp, heart and button ring"
+  },
+  "passColor": {
+   "type": "color",
+   "default": "@colors.error",
+   "doc": "Pass stamp, cross and button ring"
+  },
+  "dim": {
+   "type": "float",
+   "default": 0.22,
+   "doc": "Darkening per step back in the stack (0: none)"
+  },
+  "buttons": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Pass and Like buttons under the stack (64 dp outlined IconButtons); false: swipe only"
+  },
+  "passButtonLabel": {
+   "type": "string",
+   "default": "Pass",
+   "doc": "Spoken label of the pass button"
+  },
+  "likeButtonLabel": {
+   "type": "string",
+   "default": "Like",
+   "doc": "Spoken label of the like button"
+  },
+  "description": {
+   "type": "string",
+   "default": "Card stack. Swipe right to like, left to pass",
+   "doc": "Spoken description of the stack"
+  }
+ },
+ "slots": {
+  "card": {
+   "doc": "Canvas commands drawing one card in 0..cardWidth x 0..cardHeight, already clipped to the rounded card on a surface fill. Read the index variable (0..count-1) to choose what to draw: per-card float arrays with arrayGet(@arr, @card), or several texts each shown with alpha 1 - min(1, abs(@card - j)). It is drawn up to four times a frame (three stacked cards and the one flying away)"
+  }
+ },
+ "locals": {
+  "drag": 0,
+  "downX": 0,
+  "downY": 0,
+  "downT": -10,
+  "upT": -10,
+  "relX": 0,
+  "relY": 0,
+  "vel": 0,
+  "dir": 0,
+  "ok": 0,
+  "gx": 0,
+  "gy": 0,
+  "mv": 0,
+  "n": 0
+ },
+ "capabilities": [
+  "input.press",
+  "input.tap",
+  "time.animation"
+ ],
+ "body": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize"
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "semantics": {
+         "contentDescription": "@description"
+        }
+       },
+       {
+        "onTouchDown": [
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@downX",
+          "value": "touchX()"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@downY",
+          "value": "touchY()"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@downT",
+          "value": "animationTime()"
+         },
+         {
+          "type": "valueFloatChange",
+          "target": "@drag",
+          "value": 1
+         }
+        ]
+       },
+       {
+        "onTouchUp": [
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@gx",
+          "value": "touchX() - @downX"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@gy",
+          "value": "touchY() - @downY"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@mv",
+          "value": "step(abs(@gx) + abs(@gy), 8)"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@relX",
+          "value": "ifElse(@relX, @gx, @mv)"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@relY",
+          "value": "ifElse(@relY, @gy, @mv)"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@vel",
+          "value": "ifElse(@vel, @gx / max(animationTime() - @downT, 0.04), @mv)"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@dir",
+          "value": "ifElse(@dir, sign(@gx) * max(step(abs(@gx), @flingDistance), step(abs(@vel), @flingSpeed) * step(abs(@gx), 36)), @mv)"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@decision",
+          "value": "@mv * @dir * (@n % @count + 1)"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@n",
+          "value": "@n + @mv * abs(@dir)"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@liked",
+          "value": "@liked + @mv * step(@dir, 0.5)"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@passed",
+          "value": "@passed + @mv * step(-@dir, 0.5)"
+         },
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@upT",
+          "value": "ifElse(@upT, animationTime(), @mv)"
+         },
+         {
+          "type": "valueFloatChange",
+          "target": "@drag",
+          "value": 0
+         },
+         {
+          "$if": "onSwipe",
+          "then": "@onSwipe"
+         }
+        ]
+       }
+      ],
+      "commands": [
+       {
+        "variable": {
+         "name": "swsW",
+         "value": "componentWidth()"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsH",
+         "value": "componentHeight()"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsB",
+         "value": {
+          "$if": "buttons",
+          "then": 120,
+          "else": 8
+         }
+        }
+       },
+       {
+        "variable": {
+         "name": "swsCh",
+         "value": "max(120, min(@swsH - @swsB - 44, (@swsW - 40) * @cardHeight / @cardWidth))"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsCw",
+         "value": "@swsCh * @cardWidth / @cardHeight"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsU",
+         "value": "@swsCw / @cardWidth"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsCx",
+         "value": "@swsW / 2"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsCy",
+         "value": "(@swsH - @swsB - 18) / 2"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsTh",
+         "value": "@swsCw * @threshold"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsT",
+         "value": {
+          "$if": "theme.mono",
+          "then": "10",
+          "else": "animationTime() - @upT"
+         }
+        }
+       },
+       {
+        "variable": {
+         "name": "swsSp",
+         "value": "exp(-7 * @swsT) * (cos(13 * @swsT) + 0.54 * sin(13 * @swsT))"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsOx0",
+         "value": "ifElse((1 - abs(@dir)) * @relX * @swsSp, touchX() - @downX, @drag)"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsOy0",
+         "value": "ifElse((1 - abs(@dir)) * @relY * @swsSp, (touchY() - @downY) * 0.6, @drag)"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsF",
+         "value": "abs(@dir) * (1 - @drag)"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsFx",
+         "value": "@relX + @dir * (max(abs(@vel), 1100) * @swsT + 2600 * @swsT * @swsT)"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsFy",
+         "value": "@relY * 0.6 + @relY * 1.5 * @swsT + 120 * @swsT * @swsT"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsHide",
+         "value": "100000 * (1 - @swsF * step(0.8, @swsT))"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsLd",
+         "value": "min(1, abs(@swsOx0) / @swsTh)"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsLf",
+         "value": "min(1, min(1, abs(@relX) / @swsTh) + @swsT / 0.28)"
+        }
+       },
+       {
+        "variable": {
+         "name": "swsG",
+         "value": "ifElse(-@swsLd, 1 - @swsLf, @swsF)"
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": [],
+        "else": [
+         {
+          "type": "wakeIn",
+          "seconds": "0.016 + 3600 * step(@swsT, 1.4)"
+         }
+        ]
+       },
+       {
+        "pathCreate": {
+         "id": "swsCard",
+         "x": "@radius",
+         "y": 0
+        }
+       },
+       {
+        "pathAppendLineTo": {
+         "path": "swsCard",
+         "x": "@cardWidth - @radius",
+         "y": 0
+        }
+       },
+       {
+        "pathAppendQuadTo": {
+         "path": "swsCard",
+         "x1": "@cardWidth",
+         "y1": 0,
+         "x2": "@cardWidth",
+         "y2": "@radius"
+        }
+       },
+       {
+        "pathAppendLineTo": {
+         "path": "swsCard",
+         "x": "@cardWidth",
+         "y": "@cardHeight - @radius"
+        }
+       },
+       {
+        "pathAppendQuadTo": {
+         "path": "swsCard",
+         "x1": "@cardWidth",
+         "y1": "@cardHeight",
+         "x2": "@cardWidth - @radius",
+         "y2": "@cardHeight"
+        }
+       },
+       {
+        "pathAppendLineTo": {
+         "path": "swsCard",
+         "x": "@radius",
+         "y": "@cardHeight"
+        }
+       },
+       {
+        "pathAppendQuadTo": {
+         "path": "swsCard",
+         "x1": 0,
+         "y1": "@cardHeight",
+         "x2": 0,
+         "y2": "@cardHeight - @radius"
+        }
+       },
+       {
+        "pathAppendLineTo": {
+         "path": "swsCard",
+         "x": 0,
+         "y": "@radius"
+        }
+       },
+       {
+        "pathAppendQuadTo": {
+         "path": "swsCard",
+         "x1": 0,
+         "y1": 0,
+         "x2": "@radius",
+         "y2": 0
+        }
+       },
+       {
+        "pathAppendClose": {
+         "path": "swsCard"
+        }
+       },
+       {
+        "loop": {
+         "index": "swsI",
+         "from": 0,
+         "until": 4,
+         "commands": [
+          {
+           "variable": {
+            "name": "swsK",
+            "value": "2 - swsI"
+           }
+          },
+          {
+           "variable": {
+            "name": {
+             "$name": "index"
+            },
+            "value": "(@n + @swsK + 5 * @count) % @count"
+           }
+          },
+          {
+           "variable": {
+            "name": "swsFly",
+            "value": "step(-@swsK, 0.5)"
+           }
+          },
+          {
+           "variable": {
+            "name": "swsTop",
+            "value": "step(@swsK, -0.5) * step(0.5, @swsK)"
+           }
+          },
+          {
+           "variable": {
+            "name": "swsD",
+            "value": "min(2, max(0, @swsK + @swsG)) * (1 - @swsFly)"
+           }
+          },
+          {
+           "variable": {
+            "name": "swsOx",
+            "value": "@swsFly * (@swsFx + @swsHide) + @swsTop * @swsOx0"
+           }
+          },
+          {
+           "variable": {
+            "name": "swsOy",
+            "value": "@swsFly * @swsFy + @swsTop * @swsOy0"
+           }
+          },
+          {
+           "variable": {
+            "name": "swsSc",
+            "value": "1 - 0.055 * @swsD"
+           }
+          },
+          {
+           "save": {
+            "commands": [
+             {
+              "translate": {
+               "dx": "@swsCx + @swsOx",
+               "dy": "@swsCy + @swsOy + @swsD * 13"
+              }
+             },
+             {
+              "rotate": {
+               "angle": "@swsOx / @swsCw * 17"
+              }
+             },
+             {
+              "scale": {
+               "sx": "@swsSc * @swsU",
+               "sy": "@swsSc * @swsU"
+              }
+             },
+             {
+              "translate": {
+               "dx": "-@cardWidth / 2",
+               "dy": "-@cardHeight / 2"
+              }
+             },
+             {
+              "$if": "theme.mono",
+              "then": [],
+              "else": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.shadow"
+                  },
+                  {
+                   "style": "fill"
+                  },
+                  {
+                   "alpha": 0.35
+                  }
+                 ]
+                }
+               },
+               {
+                "drawRoundRect": {
+                 "left": -2,
+                 "top": 10,
+                 "right": "@cardWidth + 2",
+                 "bottom": "@cardHeight + 14",
+                 "rx": "@radius + 4",
+                 "ry": "@radius + 4"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "alpha": 0.18
+                  }
+                 ]
+                }
+               },
+               {
+                "drawRoundRect": {
+                 "left": -6,
+                 "top": 18,
+                 "right": "@cardWidth + 6",
+                 "bottom": "@cardHeight + 24",
+                 "rx": "@radius + 8",
+                 "ry": "@radius + 8"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "alpha": 1
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "clipPath": {
+                  "path": "swsCard"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.surface"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRect": {
+                  "left": 0,
+                  "top": 0,
+                  "right": "@cardWidth",
+                  "bottom": "@cardHeight"
+                 }
+                },
+                {
+                 "$slot": "card"
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "variable": {
+               "name": "swsLk",
+               "value": "ifElse(@swsTop * max(0, min(1, @swsOx / @swsTh)), step(@dir, 0.5), @swsFly)"
+              }
+             },
+             {
+              "variable": {
+               "name": "swsNp",
+               "value": "ifElse(@swsTop * max(0, min(1, -@swsOx / @swsTh)), step(-@dir, 0.5), @swsFly)"
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "rotate": {
+                  "angle": -14,
+                  "pivotX": 70,
+                  "pivotY": 60
+                 }
+                },
+                {
+                 "$if": "theme.mono",
+                 "then": [
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.background"
+                     },
+                     {
+                      "style": "fill"
+                     },
+                     {
+                      "alpha": "@swsLk"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawRoundRect": {
+                    "left": 22,
+                    "top": 34,
+                    "right": 124,
+                    "bottom": 84,
+                    "rx": 10,
+                    "ry": 10
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.onSurface"
+                     }
+                    ]
+                   }
+                  }
+                 ],
+                 "else": [
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@likeColor"
+                     }
+                    ]
+                   }
+                  }
+                 ]
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": "@swsLk"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 4
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 22,
+                  "top": 34,
+                  "right": 124,
+                  "bottom": 84,
+                  "rx": 10,
+                  "ry": 10
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "textSize": 30
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "@likeLabel",
+                  "x": 73,
+                  "y": 60,
+                  "panX": 0,
+                  "panY": 0
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "rotate": {
+                  "angle": 14,
+                  "pivotX": "@cardWidth - 70",
+                  "pivotY": 60
+                 }
+                },
+                {
+                 "$if": "theme.mono",
+                 "then": [
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.background"
+                     },
+                     {
+                      "style": "fill"
+                     },
+                     {
+                      "alpha": "@swsNp"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawRoundRect": {
+                    "left": "@cardWidth - 128",
+                    "top": 34,
+                    "right": "@cardWidth - 18",
+                    "bottom": 84,
+                    "rx": 10,
+                    "ry": 10
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.onSurface"
+                     }
+                    ]
+                   }
+                  }
+                 ],
+                 "else": [
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@passColor"
+                     }
+                    ]
+                   }
+                  }
+                 ]
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": "@swsNp"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 4
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": "@cardWidth - 128",
+                  "top": 34,
+                  "right": "@cardWidth - 18",
+                  "bottom": 84,
+                  "rx": 10,
+                  "ry": 10
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "textSize": 30
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "@passLabel",
+                  "x": "@cardWidth - 73",
+                  "y": 60,
+                  "panX": 0,
+                  "panY": 0
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "$if": "theme.mono",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 1.5
+                  },
+                  {
+                   "alpha": 1
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "swsCard"
+                }
+               }
+              ],
+              "else": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#FF000000"
+                  },
+                  {
+                   "style": "fill"
+                  },
+                  {
+                   "alpha": "@swsD * @dim"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "swsCard"
+                }
+               }
+              ]
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": 1
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "buttons",
+     "then": {
+      "row": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "padding": {
+          "bottom": 28
+         }
+        },
+        {
+         "spacedBy": 48
+        }
+       ],
+       "horizontalAlignment": "center",
+       "verticalAlignment": "bottom",
+       "children": [
+        {
+         "IconButton": {
+          "label": "@passButtonLabel",
+          "style": "outlined",
+          "size": 64,
+          "color": {
+           "$if": "theme.mono",
+           "then": "@colors.onSurface",
+           "else": "@passColor"
+          },
+          "onClick": [
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@ok",
+            "value": "step(animationTime() - @upT, 0.3)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@dir",
+            "value": "ifElse(@dir, -1, @ok)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@decision",
+            "value": "@ok * -1 * (@n % @count + 1)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@relX",
+            "value": "ifElse(@relX, 0, @ok)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@relY",
+            "value": "ifElse(@relY, 0, @ok)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@vel",
+            "value": "ifElse(@vel, 0, @ok)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@upT",
+            "value": "ifElse(@upT, animationTime(), @ok)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@n",
+            "value": "@n + @ok"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@passed",
+            "value": "@passed + @ok"
+           },
+           {
+            "$if": "onSwipe",
+            "then": "@onSwipe"
+           }
+          ],
+          "slots": {
+           "icon": [
+            {
+             "canvas": {
+              "modifiers": [
+               {
+                "size": [
+                 28,
+                 28
+                ]
+               }
+              ],
+              "commands": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": {
+                    "$if": "theme.mono",
+                    "then": "@colors.onSurface",
+                    "else": "@passColor"
+                   }
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 3.5
+                  },
+                  {
+                   "strokeCap": "round"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawLine": {
+                 "x1": 6,
+                 "y1": 6,
+                 "x2": 22,
+                 "y2": 22
+                }
+               },
+               {
+                "drawLine": {
+                 "x1": 22,
+                 "y1": 6,
+                 "x2": 6,
+                 "y2": 22
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        },
+        {
+         "IconButton": {
+          "label": "@likeButtonLabel",
+          "style": "outlined",
+          "size": 64,
+          "color": {
+           "$if": "theme.mono",
+           "then": "@colors.onSurface",
+           "else": "@likeColor"
+          },
+          "onClick": [
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@ok",
+            "value": "step(animationTime() - @upT, 0.3)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@dir",
+            "value": "ifElse(@dir, 1, @ok)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@decision",
+            "value": "@ok * 1 * (@n % @count + 1)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@relX",
+            "value": "ifElse(@relX, 0, @ok)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@relY",
+            "value": "ifElse(@relY, 0, @ok)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@vel",
+            "value": "ifElse(@vel, 0, @ok)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@upT",
+            "value": "ifElse(@upT, animationTime(), @ok)"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@n",
+            "value": "@n + @ok"
+           },
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@liked",
+            "value": "@liked + @ok"
+           },
+           {
+            "$if": "onSwipe",
+            "then": "@onSwipe"
+           }
+          ],
+          "slots": {
+           "icon": [
+            {
+             "canvas": {
+              "modifiers": [
+               {
+                "size": [
+                 28,
+                 28
+                ]
+               }
+              ],
+              "commands": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": {
+                    "$if": "theme.mono",
+                    "then": "@colors.onSurface",
+                    "else": "@likeColor"
+                   }
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": 9,
+                 "cy": 10.5,
+                 "radius": 5.6
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": 19,
+                 "cy": 10.5,
+                 "radius": 5.6
+                }
+               },
+               {
+                "pathCreate": {
+                 "id": "swsHeart",
+                 "x": 3.9,
+                 "y": 12.8
+                }
+               },
+               {
+                "pathAppendLineTo": {
+                 "path": "swsHeart",
+                 "x": 14,
+                 "y": 24
+                }
+               },
+               {
+                "pathAppendLineTo": {
+                 "path": "swsHeart",
+                 "x": 24.1,
+                 "y": 12.8
+                }
+               },
+               {
+                "pathAppendLineTo": {
+                 "path": "swsHeart",
+                 "x": 14,
+                 "y": 9
+                }
+               },
+               {
+                "pathAppendClose": {
+                 "path": "swsHeart"
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "swsHeart"
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ },
+ "call": {
+  "SwipeStack": {
+   "index": "@card",
+   "count": 3,
+   "slots": {
+    "card": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.primary"
+        },
+        {
+         "style": "fill"
+        },
+        {
+         "alpha": "0.25 + 0.25 * @card"
+        }
+       ]
+      }
+     },
+     {
+      "drawRect": {
+       "left": 0,
+       "top": 0,
+       "right": 320,
+       "bottom": 470
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.onSurface"
+        },
+        {
+         "alpha": 1
+        },
+        {
+         "textSize": 40
+        }
+       ]
+      }
+     },
+     {
+      "drawTextAnchored": {
+       "text": {
+        "type": "textFromFloat",
+        "value": "@card + 1",
+        "whole": 1,
+        "decimal": 0
+       },
+       "x": 160,
+       "y": 235,
+       "panX": 0,
+       "panY": 0
+      }
+     }
+    ]
+   }
+  }
+ },
+ "pitfalls": [
+  "One SwipeStack per document: its paths (swsCard, swsHeart) have fixed names",
+  "The card slot is drawn for every visible card each frame: keep it to a few dozen commands and use loops and float arrays, not one copy per card",
+  "Choose texts per card by alpha, not textLookup: Java's addDataList drops the list id, so textLookup cannot reach it from JSON",
+  "A paint color resets alpha: write the alpha after the colour in each paint that fades",
+  "onSwipe also runs for a spring-back and a plain tap, with decision 0: test the sign of decision in the app",
+  "Taps on the buttons are ignored for 0.3 s after a fling, so two cards never fly at once",
+  "Mono has no motion: a fling or a spring-back settles at once, the drag still follows the finger"
+ ]
+}

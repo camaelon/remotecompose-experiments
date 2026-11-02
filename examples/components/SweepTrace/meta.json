@@ -1,0 +1,456 @@
+{
+ "id": "SweepTrace",
+ "name": "sweep-trace",
+ "version": 1,
+ "title": "SweepTrace",
+ "prompt": "Show live ECG, pleth and respiration waveforms that sweep across the screen and erase ahead of themselves like a bedside monitor, at a heart rate the app sets.",
+ "level": 4,
+ "use_cases": [
+  "dashboard",
+  "fitness",
+  "chart"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "sweep",
+  "waveform",
+  "ecg",
+  "ekg",
+  "oscilloscope",
+  "patient monitor",
+  "heartbeat",
+  "pulse wave",
+  "pleth",
+  "respiration",
+  "live trace",
+  "scrolling trace",
+  "erase bar",
+  "vital signs",
+  "signal",
+  "scope"
+ ],
+ "teaches": [
+  "One cycle in a float array and a rate: {\"SweepTrace\": {\"values\": \"@ecg\", \"rate\": \"@hr / 60\", \"window\": 0.62}}; the array is repeated at the rate, so a host variable re-times it live",
+  "window keeps a sharp shape its real width: the beat is stored as 0.62 s and the baseline fills the rest of each cycle, so 150 bpm reads as tachycardia rather than a squashed beat",
+  "No buffer: the sample at x shows time T - fract((head - x) / W + 1) * W / speed, two pathExpressions (before the head and after the gap) on a fixed sample grid",
+  "delay lags one trace behind another (pleth after ECG); speed 25 gives a slow respiration sweep"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/3/box/children/0",
+   "shows": "draw.plot",
+   "note": "ECG with a fixed-width beat window and a glow"
+  },
+  {
+   "pointer": "/root/column/children/4/box/children/0",
+   "shows": "data.spline",
+   "note": "pleth trailing the heartbeat by 0.18 cycles"
+  },
+  {
+   "pointer": "/root/column/children/5/box/children/0",
+   "shows": "time.clock",
+   "note": "a slow sweep at 25 dp/s"
+  },
+  {
+   "pointer": "/resources/floatArrays",
+   "shows": "data.array",
+   "note": "one cycle per wave"
+  },
+  {
+   "pointer": "/root/column/children/3/box/children/0",
+   "shows": "anim.loop",
+   "note": "the sweep loops with the clock"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "hr": {
+    "type": "float",
+    "meaning": "heart rate, bpm",
+    "default": 72,
+    "min": 30,
+    "max": 200
+   }
+  },
+  "clock": "drives the sweep",
+  "touch": false
+ },
+ "check": {
+  "describe": "Title 'Live waveforms', then three traces each with a label at the top left, an erase gap and a head dot: a green ECG with narrow R waves (glow), a blue pulse wave with a dicrotic notch, an amber breathing wave sweeping four times slower. Two seconds later the heads have moved 200 dp (50 dp for breathing). hr 150: twice as many beats, same QRS width. Mono: white or black lines, no glow, the head steps once a second.",
+  "render": {
+   "clock": "2026-11-02T14:37:04"
+  },
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "clock": "2026-11-02T14:37:04"
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "clock": "2026-11-02T14:37:04"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "clock": "2026-11-02T14:37:04"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "clock": "2026-11-02T14:37:04"
+   },
+   {
+    "name": "later",
+    "clock": "2026-11-02T14:37:06"
+   },
+   {
+    "name": "fast",
+    "clock": "2026-11-02T14:37:04",
+    "variables": {
+     "hr": 150
+    }
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360,
+    "clock": "2026-11-02T14:37:04"
+   },
+   {
+    "name": "widget",
+    "width": 360,
+    "height": 180,
+    "clock": "2026-11-02T14:37:04"
+   }
+  ]
+ },
+ "related": [
+  "SHW-25",
+  "Sparkline",
+  "LineChart"
+ ],
+ "derived": {
+  "components": [
+   "SweepTrace"
+  ],
+  "component_instances": 3,
+  "component_modes": {
+   "SweepTrace": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 5009,
+  "header": {
+   "width": 360,
+   "height": 400
+  },
+  "op_count": 205,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATED_FLOAT": 38,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
+   "COMPONENT_VALUE": 6,
+   "CanvasContent": 3,
+   "ConditionalOperations": 5,
+   "CoreText": 2,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 5,
+   "DRAW_CIRCLE": 6,
+   "DRAW_PATH": 10,
+   "DRAW_TEXT_ANCHOR": 3,
+   "DataListFloat": 3,
+   "HEADER": 1,
+   "LAYOUT_BOX": 4,
+   "LAYOUT_CANVAS": 3,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 9,
+   "LoopOperation": 12,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 8,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 7,
+   "NAMED_VARIABLE": 7,
+   "PAINT_VALUES": 17,
+   "PathExpression": 6,
+   "THEME": 18
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "hr",
+    "type": "float",
+    "value": 72
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: repaint_continuous"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 4066,
+    "component_modes": {
+     "SweepTrace": "expand"
+    },
+    "op_count": 135,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "hr",
+      "type": "float",
+      "value": 72
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 4066,
+    "component_modes": {
+     "SweepTrace": "expand"
+    },
+    "op_count": 135,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "hr",
+      "type": "float",
+      "value": 72
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "later": {
+    "render": "render-later.png",
+    "render_findings": []
+   },
+   "fast": {
+    "render": "render-fast.png",
+    "render_findings": []
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "widget": {
+    "render": "render-widget.png",
+    "render_findings": [],
+    "size": [
+     360,
+     180
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "SweepTrace",
+   "alpha",
+   "apiLevel",
+   "background",
+   "baseline",
+   "box",
+   "canvas",
+   "children",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "dark",
+   "delay",
+   "drawCircle",
+   "drawPath",
+   "drawTextAnchored",
+   "ecg",
+   "end",
+   "export",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "floatArrays",
+   "fontSize",
+   "fontWeight",
+   "glow",
+   "head",
+   "header",
+   "height",
+   "hr",
+   "id",
+   "label",
+   "light",
+   "modifiers",
+   "muted",
+   "name",
+   "onSurface",
+   "ops",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "pathExpression",
+   "pleth",
+   "primary",
+   "profiles",
+   "radius",
+   "rate",
+   "resources",
+   "resp",
+   "root",
+   "sample",
+   "scale",
+   "semantics",
+   "speed",
+   "start",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "success",
+   "sweeptrace1_T",
+   "sweeptrace1_k",
+   "sweeptrace1_rr",
+   "sweeptrace2_T",
+   "sweeptrace2_rr",
+   "sweeptrace3_T",
+   "text",
+   "textSize",
+   "thickness",
+   "v1",
+   "v2",
+   "value",
+   "values",
+   "variable",
+   "variables",
+   "verticalWeight",
+   "warning",
+   "width",
+   "window",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "draw.plot": [
+    "pathExpression"
+   ],
+   "data.spline": [
+    "spline"
+   ],
+   "data.array": [
+    "floatArrays"
+   ],
+   "time.clock": [
+    "continuousSec"
+   ],
+   "anim.loop": [
+    "continuousSec"
+   ]
+  },
+  "built_at": "2026-11-02T22:56:57.495Z"
+ }
+}

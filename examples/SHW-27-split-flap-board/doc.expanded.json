@@ -613,1389 +613,1521 @@
   }
  },
  "root": {
-  "type": "canvas",
-  "modifiers": [
-   "fillMaxSize",
-   {
-    "background": "@colors.page"
-   }
-  ],
-  "commands": [
-   {
-    "variable": {
-     "name": "W",
-     "value": "componentWidth()"
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.page"
     }
-   },
-   {
-    "variable": {
-     "name": "H",
-     "value": "componentHeight()"
-    }
-   },
-   {
-    "variable": {
-     "name": "tall",
-     "value": "step(@H, @W * 1.2)"
-    }
-   },
-   {
-    "variable": {
-     "name": "nar",
-     "value": "max(step(700, @W), @tall)"
-    }
-   },
-   {
-    "variable": {
-     "name": "m",
-     "value": "max(12, @W * 0.03)"
-    }
-   },
-   {
-    "variable": {
-     "name": "cw",
-     "value": "(@W - 2 * @m) / ifElse(36.8, ifElse(26.2, 17.6, @tall), @nar)"
-    }
-   },
-   {
-    "variable": {
-     "name": "th",
-     "value": "@cw * 1.42"
-    }
-   },
-   {
-    "variable": {
-     "name": "lh",
-     "value": "@th + @cw * 0.22"
-    }
-   },
-   {
-    "variable": {
-     "name": "dh",
-     "value": "@th + @lh * @tall"
-    }
-   },
-   {
-    "variable": {
-     "name": "hy",
-     "value": "@m + @th * 0.1"
-    }
-   },
-   {
-    "variable": {
-     "name": "top",
-     "value": "@hy + @th * 2"
-    }
-   },
-   {
-    "variable": {
-     "name": "tk",
-     "value": "max(22, @cw * 1.3)"
-    }
-   },
-   {
-    "variable": {
-     "name": "room",
-     "value": "@H - @top - @tk - @m * 1.5"
-    }
-   },
-   {
-    "variable": {
-     "name": "rows",
-     "value": "clamp(floor((@room + @cw * 0.5) / (@dh + @cw * 0.5)), 10, 1)"
-    }
-   },
-   {
-    "variable": {
-     "name": "pitch",
-     "value": "@dh + min(@th * 0.6, (@room - @rows * @dh) / max(1, @rows - 1))"
-    }
-   },
-   {
-    "variable": {
-     "name": "t",
-     "value": "animationTime()"
-    }
-   },
-   {
-    "variable": {
-     "name": "k",
-     "value": "floor(@t / 9)"
-    }
-   },
-   {
-    "variable": {
-     "name": "tc",
-     "value": "@t - @k * 9"
-    }
-   },
-   {
-    "variable": {
-     "name": "hasOld",
-     "value": "step(@k, 0.5)"
-    }
-   },
-   {
-    "variable": {
-     "name": "ncol",
-     "value": "ifElse(26, ifElse(16, 26, @tall), @nar)"
-    }
-   },
-   {
-    "variable": {
-     "name": "cbase",
-     "value": "ifElse(0, 26 + 16 * @tall, @nar)"
-    }
-   },
-   {
-    "variable": {
-     "name": "sx",
-     "value": "@m + @cw * ifElse(28.4, 17.8, @nar) * (1 - @tall)"
-    }
-   },
-   {
-    "variable": {
-     "name": "sw",
-     "value": "@cw * ifElse(8.3, 4.9, @tall)"
-    }
-   },
-   {
-    "paint": {
-     "color": "@colors.accent",
-     "style": "fill",
-     "textSize": "@th * 0.78"
-    }
-   },
-   {
-    "drawTextAnchored": {
-     "text": "DEPARTURES",
-     "x": "@m",
-     "y": "@hy + @th * 0.42",
-     "panX": -1,
-     "panY": 0
-    }
-   },
-   {
-    "paint": {
-     "color": "@colors.muted",
-     "textSize": "@th * 0.3"
-    }
-   },
-   {
-    "drawTextAnchored": {
-     "text": "ABFAHRT  ·  DÉPARTS  ·  PARTENZE",
-     "x": "@m",
-     "y": "@hy + @th * 1.08",
-     "panX": -1,
-     "panY": 0
-    }
-   },
-   {
-    "variable": {
-     "name": "hm",
-     "value": "timeInHr() * 100 + timeInMin() % 60"
-    }
-   },
-   {
-    "variable": {
-     "name": "mo",
-     "value": "(timeInHr() * 60 + timeInMin() % 60 + 1439) % 1440"
-    }
-   },
-   {
-    "variable": {
-     "name": "hmo",
-     "value": "floor(@mo / 60) * 100 + @mo % 60"
-    }
-   },
-   {
-    "variable": {
-     "name": "cs",
-     "value": "continuousSec() % 60"
-    }
-   },
-   {
-    "loop": {
-     "index": "j",
-     "from": 0,
-     "until": 5,
-     "commands": [
-      {
-       "variable": {
-        "name": "jj",
-        "value": "j - step(j, 2)"
-       }
-      },
-      {
-       "variable": {
-        "name": "isc",
-        "value": "1 - min(1, abs(j - 2))"
-       }
-      },
-      {
-       "variable": {
-        "name": "ho",
-        "value": "ifElse(27 + floor(@hmo / pow(10, 3 - @jj)) % 10, 37, @isc)"
-       }
-      },
-      {
-       "variable": {
-        "name": "hnw",
-        "value": "ifElse(27 + floor(@hm / pow(10, 3 - @jj)) % 10, 37, @isc)"
-       }
-      },
-      {
-       "variable": {
-        "name": "hn",
-        "value": "(@hnw - @ho + 40) % 40"
-       }
-      },
-      {
-       "variable": {
-        "name": "hf",
-        "value": "clamp((@cs - j * 0.06 + 0.1) * 22, @hn, 0)"
-       }
-      },
-      {
-       "variable": {
-        "name": "hcur",
-        "value": "(@ho + floor(@hf)) % 40"
-       }
-      },
-      {
-       "variable": {
-        "name": "hnx",
-        "value": "(@hcur + 1 - step(@hf, @hn)) % 40"
-       }
-      },
-      {
-       "variable": {
-        "name": "hs",
-        "value": "@hf - floor(@hf)"
-       }
-      },
-      {
-       "variable": {
-        "name": "hlo",
-        "value": "step(0.5, @hs)"
-       }
-      },
-      {
-       "variable": {
-        "name": "hx0",
-        "value": "@W - @m - (5 - j) * @cw"
-       }
-      },
-      {
-       "variable": {
-        "name": "hx1",
-        "value": "@hx0 + @cw * 0.9"
-       }
-      },
-      {
-       "variable": {
-        "name": "hy1",
-        "value": "@hy + @th"
-       }
-      },
-      {
-       "variable": {
-        "name": "hmd",
-        "value": "@hy + @th / 2"
-       }
-      },
-      {
-       "textSubtext": {
-        "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
-        "start": "(@hnx) * 1",
-        "len": 1,
-        "varName": "hgN"
-       }
-      },
-      {
-       "textSubtext": {
-        "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
-        "start": "(@hcur) * 1",
-        "len": 1,
-        "varName": "hgC"
-       }
-      },
-      {
-       "textSubtext": {
-        "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
-        "start": "(ifElse(@hnx, @hcur, @hlo)) * 1",
-        "len": 1,
-        "varName": "hgF"
-       }
-      },
-      {
-       "paint": {
-        "color": "@colors.tile",
-        "style": "fill"
-       }
-      },
-      {
-       "drawRoundRect": {
-        "left": "@hx0",
-        "top": "@hy",
-        "right": "@hx1",
-        "bottom": "@hy1",
-        "rx": "@cw * 0.12",
-        "ry": "@cw * 0.12"
-       }
-      },
-      {
-       "paint": {
-        "color": "@colors.ink",
-        "style": "fillAndStroke",
-        "strokeWidth": "@cw * 0.035",
-        "textSize": "@th * 0.62"
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@hx0",
-           "top": "@hy",
-           "right": "@hx1",
-           "bottom": "@hmd"
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "commands": [
+       {
+        "variable": {
+         "name": "W",
+         "value": "componentWidth()"
+        }
+       },
+       {
+        "variable": {
+         "name": "H",
+         "value": "componentHeight()"
+        }
+       },
+       {
+        "variable": {
+         "name": "tall",
+         "value": "step(@H, @W * 1.2)"
+        }
+       },
+       {
+        "variable": {
+         "name": "nar",
+         "value": "max(step(700, @W), @tall)"
+        }
+       },
+       {
+        "variable": {
+         "name": "m",
+         "value": "max(12, @W * 0.03)"
+        }
+       },
+       {
+        "variable": {
+         "name": "cw",
+         "value": "(@W - 2 * @m) / ifElse(36.8, ifElse(26.2, 17.6, @tall), @nar)"
+        }
+       },
+       {
+        "variable": {
+         "name": "th",
+         "value": "@cw * 1.42"
+        }
+       },
+       {
+        "variable": {
+         "name": "lh",
+         "value": "@th + @cw * 0.22"
+        }
+       },
+       {
+        "variable": {
+         "name": "dh",
+         "value": "@th + @lh * @tall"
+        }
+       },
+       {
+        "variable": {
+         "name": "hy",
+         "value": "@m + @th * 0.1"
+        }
+       },
+       {
+        "variable": {
+         "name": "top",
+         "value": "@hy + @th * 2"
+        }
+       },
+       {
+        "variable": {
+         "name": "tk",
+         "value": "max(22, @cw * 1.3)"
+        }
+       },
+       {
+        "variable": {
+         "name": "room",
+         "value": "@H - @top - @tk - @m * 1.5"
+        }
+       },
+       {
+        "variable": {
+         "name": "rows",
+         "value": "clamp(floor((@room + @cw * 0.5) / (@dh + @cw * 0.5)), 10, 1)"
+        }
+       },
+       {
+        "variable": {
+         "name": "pitch",
+         "value": "@dh + min(@th * 0.6, (@room - @rows * @dh) / max(1, @rows - 1))"
+        }
+       },
+       {
+        "variable": {
+         "name": "t",
+         "value": "animationTime()"
+        }
+       },
+       {
+        "variable": {
+         "name": "k",
+         "value": "floor(@t / 9)"
+        }
+       },
+       {
+        "variable": {
+         "name": "tc",
+         "value": "@t - @k * 9"
+        }
+       },
+       {
+        "variable": {
+         "name": "hasOld",
+         "value": "step(@k, 0.5)"
+        }
+       },
+       {
+        "variable": {
+         "name": "ncol",
+         "value": "ifElse(26, ifElse(16, 26, @tall), @nar)"
+        }
+       },
+       {
+        "variable": {
+         "name": "cbase",
+         "value": "ifElse(0, 26 + 16 * @tall, @nar)"
+        }
+       },
+       {
+        "variable": {
+         "name": "sx",
+         "value": "@m + @cw * ifElse(28.4, 17.8, @nar) * (1 - @tall)"
+        }
+       },
+       {
+        "variable": {
+         "name": "sw",
+         "value": "@cw * ifElse(8.3, 4.9, @tall)"
+        }
+       },
+       {
+        "paint": {
+         "color": "@colors.accent",
+         "style": "fill",
+         "textSize": "@th * 0.78"
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "DEPARTURES",
+         "x": "@m",
+         "y": "@hy + @th * 0.42",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "color": "@colors.muted",
+         "textSize": "@th * 0.3"
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "ABFAHRT  ·  DÉPARTS  ·  PARTENZE",
+         "x": "@m",
+         "y": "@hy + @th * 1.08",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "variable": {
+         "name": "hm",
+         "value": "timeInHr() * 100 + timeInMin() % 60"
+        }
+       },
+       {
+        "variable": {
+         "name": "mo",
+         "value": "(timeInHr() * 60 + timeInMin() % 60 + 1439) % 1440"
+        }
+       },
+       {
+        "variable": {
+         "name": "hmo",
+         "value": "floor(@mo / 60) * 100 + @mo % 60"
+        }
+       },
+       {
+        "variable": {
+         "name": "cs",
+         "value": "continuousSec() % 60"
+        }
+       },
+       {
+        "paint": {
+         "color": "@colors.muted",
+         "style": "fill",
+         "textSize": "@cw * 0.42"
+        }
+       },
+       {
+        "variable": {
+         "name": "ly",
+         "value": "@top - @cw * 0.55"
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "TIME",
+         "x": "@m + @cw * ifElse(0.0, 0.0, @nar)",
+         "y": "@ly",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "DESTINATION",
+         "x": "@m + @cw * ifElse(5.6, 5.6, @nar)",
+         "y": "@ly",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "save": {
+         "commands": [
+          {
+           "clipRect": {
+            "left": 0,
+            "top": 0,
+            "right": "@W * (1 - @nar)",
+            "bottom": "@H"
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "TRAIN",
+            "x": "@m + @cw * 18.2",
+            "y": "@ly",
+            "panX": -1,
+            "panY": 0
+           }
           }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@hgN",
-           "x": "(@hx0 + @hx1) / 2",
-           "y": "@hmd",
-           "panX": 0,
-           "panY": 0
+         ]
+        }
+       },
+       {
+        "save": {
+         "commands": [
+          {
+           "clipRect": {
+            "left": 0,
+            "top": 0,
+            "right": "@W * (1 - @tall)",
+            "bottom": "@H"
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "PLAT",
+            "x": "@m + @cw * ifElse(25.8, 15.2, @nar)",
+            "y": "@ly",
+            "panX": -1,
+            "panY": 0
+           }
           }
-         }
-        ]
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@hx0",
-           "top": "@hmd",
-           "right": "@hx1",
-           "bottom": "@hy1"
+         ]
+        }
+       },
+       {
+        "save": {
+         "commands": [
+          {
+           "clipRect": {
+            "left": 0,
+            "top": 0,
+            "right": "@W * (1 - @tall)",
+            "bottom": "@H"
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "STATUS",
+            "x": "@m + @cw * ifElse(28.4, 17.8, @nar)",
+            "y": "@ly",
+            "panX": -1,
+            "panY": 0
+           }
           }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@hgC",
-           "x": "(@hx0 + @hx1) / 2",
-           "y": "@hmd",
-           "panX": 0,
-           "panY": 0
-          }
-         }
-        ]
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@hx0",
-           "top": "ifElse(@hmd, @hy, @hlo)",
-           "right": "@hx1",
-           "bottom": "ifElse(@hy1, @hmd, @hlo)"
-          }
-         },
-         {
-          "scale": {
-           "sx": 1,
-           "sy": "max(0.001, abs(1 - 2 * @hs))",
-           "pivotX": "@hx0",
-           "pivotY": "@hmd"
-          }
-         },
-         {
-          "paint": {
-           "color": "@colors.flap",
-           "style": "fill"
-          }
-         },
-         {
-          "drawRoundRect": {
-           "left": "@hx0",
-           "top": "@hy",
-           "right": "@hx1",
-           "bottom": "@hy1",
-           "rx": "@cw * 0.12",
-           "ry": "@cw * 0.12"
-          }
-         },
-         {
-          "paint": {
-           "color": "@colors.ink",
-           "style": "fillAndStroke",
-           "strokeWidth": "@cw * 0.035",
-           "textSize": "@th * 0.62"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@hgF",
-           "x": "(@hx0 + @hx1) / 2",
-           "y": "@hmd",
-           "panX": 0,
-           "panY": 0
-          }
-         },
-         {
-          "paint": {
-           "color": "#FF000000",
-           "style": "fill",
-           "alpha": "(1 - abs(1 - 2 * @hs)) * 0.6"
-          }
-         },
-         {
-          "drawRect": {
-           "left": "@hx0",
-           "top": "@hy",
-           "right": "@hx1",
-           "bottom": "@hy1"
-          }
-         }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "color": "@colors.split",
-        "alpha": 1,
-        "style": "fill"
-       }
-      },
-      {
-       "drawRect": {
-        "left": "@hx0",
-        "top": "@hmd - @cw * 0.03",
-        "right": "@hx1",
-        "bottom": "@hmd + @cw * 0.03"
-       }
-      }
-     ]
-    }
-   },
-   {
-    "paint": {
-     "color": "@colors.muted",
-     "style": "fill",
-     "textSize": "@cw * 0.42"
-    }
-   },
-   {
-    "variable": {
-     "name": "ly",
-     "value": "@top - @cw * 0.55"
-    }
-   },
-   {
-    "drawTextAnchored": {
-     "text": "TIME",
-     "x": "@m + @cw * ifElse(0.0, 0.0, @nar)",
-     "y": "@ly",
-     "panX": -1,
-     "panY": 0
-    }
-   },
-   {
-    "drawTextAnchored": {
-     "text": "DESTINATION",
-     "x": "@m + @cw * ifElse(5.6, 5.6, @nar)",
-     "y": "@ly",
-     "panX": -1,
-     "panY": 0
-    }
-   },
-   {
-    "save": {
-     "commands": [
-      {
-       "clipRect": {
-        "left": 0,
-        "top": 0,
-        "right": "@W * (1 - @nar)",
-        "bottom": "@H"
-       }
-      },
-      {
-       "drawTextAnchored": {
-        "text": "TRAIN",
-        "x": "@m + @cw * 18.2",
-        "y": "@ly",
-        "panX": -1,
-        "panY": 0
-       }
-      }
-     ]
-    }
-   },
-   {
-    "save": {
-     "commands": [
-      {
-       "clipRect": {
-        "left": 0,
-        "top": 0,
-        "right": "@W * (1 - @tall)",
-        "bottom": "@H"
-       }
-      },
-      {
-       "drawTextAnchored": {
-        "text": "PLAT",
-        "x": "@m + @cw * ifElse(25.8, 15.2, @nar)",
-        "y": "@ly",
-        "panX": -1,
-        "panY": 0
-       }
-      }
-     ]
-    }
-   },
-   {
-    "save": {
-     "commands": [
-      {
-       "clipRect": {
-        "left": 0,
-        "top": 0,
-        "right": "@W * (1 - @tall)",
-        "bottom": "@H"
-       }
-      },
-      {
-       "drawTextAnchored": {
-        "text": "STATUS",
-        "x": "@m + @cw * ifElse(28.4, 17.8, @nar)",
-        "y": "@ly",
-        "panX": -1,
-        "panY": 0
-       }
-      }
-     ]
-    }
-   },
-   {
-    "loop": {
-     "index": "r",
-     "from": 0,
-     "until": "@rows",
-     "commands": [
-      {
-       "variable": {
-        "name": "y",
-        "value": "@top + r * @pitch"
-       }
-      },
-      {
-       "variable": {
-        "name": "sy",
-        "value": "@y + @lh * @tall"
-       }
-      },
-      {
-       "variable": {
-        "name": "dn",
-        "value": "(@k + r) % 12"
-       }
-      },
-      {
-       "variable": {
-        "name": "dp",
-        "value": "(@k + r + 11) % 12"
-       }
-      },
-      {
-       "loop": {
-        "index": "c",
-        "from": 0,
-        "until": "@ncol",
-        "commands": [
-         {
-          "variable": {
-           "name": "ci",
-           "value": "arrayGet(@cols, @cbase + c)"
-          }
-         },
-         {
-          "variable": {
-           "name": "cyv",
-           "value": "@y + @lh * arrayGet(@cy, @cbase + c)"
-          }
-         },
-         {
-          "variable": {
-           "name": "qo",
-           "value": "arrayGet(@chars, @dp * 26 + @ci) * @hasOld"
-          }
-         },
-         {
-          "variable": {
-           "name": "qnw",
-           "value": "arrayGet(@chars, @dn * 26 + @ci)"
-          }
-         },
-         {
-          "variable": {
-           "name": "qn",
-           "value": "(@qnw - @qo + 40) % 40"
-          }
-         },
-         {
-          "variable": {
-           "name": "qf",
-           "value": "clamp((@tc - 0.25 + r * 0.16 + c * 0.035 + fract(sin(r * 12.9 + c * 78.2) * 437.5) * 0.25) * 22, @qn, 0)"
-          }
-         },
-         {
-          "variable": {
-           "name": "qcur",
-           "value": "(@qo + floor(@qf)) % 40"
-          }
-         },
-         {
-          "variable": {
-           "name": "qnx",
-           "value": "(@qcur + 1 - step(@qf, @qn)) % 40"
-          }
-         },
-         {
-          "variable": {
-           "name": "qs",
-           "value": "@qf - floor(@qf)"
-          }
-         },
-         {
-          "variable": {
-           "name": "qlo",
-           "value": "step(0.5, @qs)"
-          }
-         },
-         {
-          "variable": {
-           "name": "qx0",
-           "value": "@m + @cw * arrayGet(@cx, @cbase + c)"
-          }
-         },
-         {
-          "variable": {
-           "name": "qx1",
-           "value": "@qx0 + @cw * 0.9"
-          }
-         },
-         {
-          "variable": {
-           "name": "qy1",
-           "value": "@cyv + @th"
-          }
-         },
-         {
-          "variable": {
-           "name": "qmd",
-           "value": "@cyv + @th / 2"
-          }
-         },
-         {
-          "textSubtext": {
-           "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
-           "start": "(@qnx) * 1",
-           "len": 1,
-           "varName": "qgN"
-          }
-         },
-         {
-          "textSubtext": {
-           "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
-           "start": "(@qcur) * 1",
-           "len": 1,
-           "varName": "qgC"
-          }
-         },
-         {
-          "textSubtext": {
-           "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
-           "start": "(ifElse(@qnx, @qcur, @qlo)) * 1",
-           "len": 1,
-           "varName": "qgF"
-          }
-         },
-         {
-          "paint": {
-           "color": "@colors.tile",
-           "style": "fill"
-          }
-         },
-         {
-          "drawRoundRect": {
-           "left": "@qx0",
-           "top": "@cyv",
-           "right": "@qx1",
-           "bottom": "@qy1",
-           "rx": "@cw * 0.12",
-           "ry": "@cw * 0.12"
-          }
-         },
-         {
-          "paint": {
-           "color": "@colors.ink",
-           "style": "fillAndStroke",
-           "strokeWidth": "@cw * 0.035",
-           "textSize": "@th * 0.62"
-          }
-         },
-         {
-          "save": {
-           "commands": [
-            {
-             "clipRect": {
-              "left": "@qx0",
-              "top": "@cyv",
-              "right": "@qx1",
-              "bottom": "@qmd"
+         ]
+        }
+       },
+       {
+        "variable": {
+         "name": "tky",
+         "value": "@H - @m * 0.5 - @tk"
+        }
+       },
+       {
+        "paint": {
+         "color": "@colors.band",
+         "style": "fill"
+        }
+       },
+       {
+        "drawRect": {
+         "left": 0,
+         "top": "@tky",
+         "right": "@W",
+         "bottom": "@tky + @tk"
+        }
+       },
+       {
+        "paint": {
+         "color": "@colors.bandText",
+         "style": "fill",
+         "textSize": "@tk * 0.5"
+        }
+       },
+       {
+        "textMeasure": {
+         "text": "IC 718 TO ZURICH HB IS NOW BOARDING AT PLATFORM 7   •   RJ 64 TO MUNCHEN HBF IS DELAYED BY ABOUT 15 MINUTES   •   IR 15 TO GENEVE IS CANCELED: PLEASE USE IC 8 TO BERN AND CHANGE   •   ",
+         "mode": 0,
+         "name": "tw"
+        }
+       },
+       {
+        "variable": {
+         "name": "tx",
+         "value": "-((@t * 70) % @tw)"
+        }
+       },
+       {
+        "save": {
+         "commands": [
+          {
+           "clipRect": {
+            "left": 0,
+            "top": "@tky",
+            "right": "@W",
+            "bottom": "@tky + @tk"
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "ceil(@W / @tw) + 1",
+            "commands": [
+             {
+              "drawTextAnchored": {
+               "text": "IC 718 TO ZURICH HB IS NOW BOARDING AT PLATFORM 7   •   RJ 64 TO MUNCHEN HBF IS DELAYED BY ABOUT 15 MINUTES   •   IR 15 TO GENEVE IS CANCELED: PLEASE USE IC 8 TO BERN AND CHANGE   •   ",
+               "x": "@tx + i * @tw",
+               "y": "@tky + @tk / 2",
+               "panX": -1,
+               "panY": 0
+              }
              }
-            },
-            {
-             "drawTextAnchored": {
-              "text": "@qgN",
-              "x": "(@qx0 + @qx1) / 2",
-              "y": "@qmd",
-              "panX": 0,
-              "panY": 0
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "semantics": {
+         "contentDescription": "Time"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "loop": {
+         "index": "r",
+         "from": 0,
+         "until": "1",
+         "commands": [
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "5",
+            "commands": [
+             {
+              "variable": {
+               "name": "sf1x0",
+               "value": "@W - @m - 5 * @cw + i * @cw"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1x1",
+               "value": "@sf1x0 + @cw * 0.9"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1y0",
+               "value": "@hy + r * @th + 8 + 0"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1y1",
+               "value": "@sf1y0 + @th"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1md",
+               "value": "@sf1y0 + @th / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1o",
+               "value": "ifElse(27 + floor(@hmo / pow(10, 3 - i + step(i, 2))) % 10, 37, 1 - min(1, abs(i - 2)))"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1nw",
+               "value": "ifElse(27 + floor(@hm / pow(10, 3 - i + step(i, 2))) % 10, 37, 1 - min(1, abs(i - 2)))"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1n",
+               "value": "(@sf1nw - @sf1o + 40) % 40"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1f",
+               "value": "clamp((@cs - (0.1 + r * 0.16 + i * 0.06)) * 22, @sf1n, 0)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1cur",
+               "value": "(@sf1o + floor(@sf1f)) % 40"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1nx",
+               "value": "(@sf1cur + 1 - step(@sf1f, @sf1n)) % 40"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1s",
+               "value": "@sf1f - floor(@sf1f)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf1lo",
+               "value": "step(0.5, @sf1s)"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
+               "start": "@sf1nx",
+               "len": 1,
+               "varName": "sf1gN"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
+               "start": "@sf1cur",
+               "len": 1,
+               "varName": "sf1gC"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
+               "start": "ifElse(@sf1nx, @sf1cur, @sf1lo)",
+               "len": 1,
+               "varName": "sf1gF"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.tile",
+               "style": "fill",
+               "alpha": 1
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": "@sf1x0",
+               "top": "@sf1y0",
+               "right": "@sf1x1",
+               "bottom": "@sf1y1",
+               "rx": "min(@cw * 0.9, @th) * 0.1",
+               "ry": "min(@cw * 0.9, @th) * 0.1"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.ink",
+               "style": "fillAndStroke",
+               "strokeWidth": "@th * 0.025",
+               "textSize": "@th * 0.62",
+               "alpha": 1
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "clipRect": {
+                  "left": "@sf1x0",
+                  "top": "@sf1y0",
+                  "right": "@sf1x1",
+                  "bottom": "@sf1md"
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "@sf1gN",
+                  "x": "(@sf1x0 + @sf1x1) / 2",
+                  "y": "@sf1md",
+                  "panX": 0,
+                  "panY": 0
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "clipRect": {
+                  "left": "@sf1x0",
+                  "top": "@sf1md",
+                  "right": "@sf1x1",
+                  "bottom": "@sf1y1"
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "@sf1gC",
+                  "x": "(@sf1x0 + @sf1x1) / 2",
+                  "y": "@sf1md",
+                  "panX": 0,
+                  "panY": 0
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "clipRect": {
+                  "left": "@sf1x0",
+                  "top": "ifElse(@sf1md, @sf1y0, @sf1lo)",
+                  "right": "@sf1x1",
+                  "bottom": "ifElse(@sf1y1, @sf1md, @sf1lo)"
+                 }
+                },
+                {
+                 "scale": {
+                  "sx": 1,
+                  "sy": "max(0.001, abs(1 - 2 * @sf1s))",
+                  "pivotX": "@sf1x0",
+                  "pivotY": "@sf1md"
+                 }
+                },
+                {
+                 "paint": {
+                  "color": "@colors.flap",
+                  "style": "fill"
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": "@sf1x0",
+                  "top": "@sf1y0",
+                  "right": "@sf1x1",
+                  "bottom": "@sf1y1",
+                  "rx": "min(@cw * 0.9, @th) * 0.1",
+                  "ry": "min(@cw * 0.9, @th) * 0.1"
+                 }
+                },
+                {
+                 "paint": {
+                  "color": "@colors.ink",
+                  "style": "fillAndStroke",
+                  "strokeWidth": "@th * 0.025",
+                  "textSize": "@th * 0.62",
+                  "alpha": 1
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "@sf1gF",
+                  "x": "(@sf1x0 + @sf1x1) / 2",
+                  "y": "@sf1md",
+                  "panX": 0,
+                  "panY": 0
+                 }
+                },
+                {
+                 "paint": {
+                  "color": "#FF000000",
+                  "style": "fill",
+                  "alpha": "(1 - abs(1 - 2 * @sf1s)) * 0.6"
+                 }
+                },
+                {
+                 "drawRect": {
+                  "left": "@sf1x0",
+                  "top": "@sf1y0",
+                  "right": "@sf1x1",
+                  "bottom": "@sf1y1"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.split",
+               "style": "fill",
+               "alpha": 1
+              }
+             },
+             {
+              "drawRect": {
+               "left": "@sf1x0",
+               "top": "@sf1md - @th * 0.02",
+               "right": "@sf1x1",
+               "bottom": "@sf1md + @th * 0.02"
+              }
              }
-            }
-           ]
+            ]
+           }
           }
-         },
-         {
-          "save": {
-           "commands": [
-            {
-             "clipRect": {
-              "left": "@qx0",
-              "top": "@qmd",
-              "right": "@qx1",
-              "bottom": "@qy1"
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "semantics": {
+         "contentDescription": "Departures"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "loop": {
+         "index": "r",
+         "from": 0,
+         "until": "@rows",
+         "commands": [
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "@ncol",
+            "commands": [
+             {
+              "variable": {
+               "name": "sf2x0",
+               "value": "@m + @cw * arrayGet(@cx, @cbase + i)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2x1",
+               "value": "@sf2x0 + @cw * 0.9"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2y0",
+               "value": "@top + r * @pitch + @lh * arrayGet(@cy, @cbase + i)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2y1",
+               "value": "@sf2y0 + @th"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2md",
+               "value": "@sf2y0 + @th / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2o",
+               "value": "arrayGet(@chars, ((@k + r + 11) % 12) * 26 + arrayGet(@cols, @cbase + i)) * @hasOld"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2nw",
+               "value": "arrayGet(@chars, ((@k + r) % 12) * 26 + arrayGet(@cols, @cbase + i))"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2n",
+               "value": "(@sf2nw - @sf2o + 40) % 40"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2f",
+               "value": "clamp((@tc - (0.25 + r * 0.16 + i * 0.035 + fract(sin(r * 12.9 + i * 78.2) * 437.5) * 0.25)) * 22, @sf2n, 0)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2cur",
+               "value": "(@sf2o + floor(@sf2f)) % 40"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2nx",
+               "value": "(@sf2cur + 1 - step(@sf2f, @sf2n)) % 40"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2s",
+               "value": "@sf2f - floor(@sf2f)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf2lo",
+               "value": "step(0.5, @sf2s)"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
+               "start": "@sf2nx",
+               "len": 1,
+               "varName": "sf2gN"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
+               "start": "@sf2cur",
+               "len": 1,
+               "varName": "sf2gC"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:-.",
+               "start": "ifElse(@sf2nx, @sf2cur, @sf2lo)",
+               "len": 1,
+               "varName": "sf2gF"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.tile",
+               "style": "fill",
+               "alpha": 1
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": "@sf2x0",
+               "top": "@sf2y0",
+               "right": "@sf2x1",
+               "bottom": "@sf2y1",
+               "rx": "min(@cw * 0.9, @th) * 0.1",
+               "ry": "min(@cw * 0.9, @th) * 0.1"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.ink",
+               "style": "fillAndStroke",
+               "strokeWidth": "@th * 0.025",
+               "textSize": "@th * 0.62",
+               "alpha": 1
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "clipRect": {
+                  "left": "@sf2x0",
+                  "top": "@sf2y0",
+                  "right": "@sf2x1",
+                  "bottom": "@sf2md"
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "@sf2gN",
+                  "x": "(@sf2x0 + @sf2x1) / 2",
+                  "y": "@sf2md",
+                  "panX": 0,
+                  "panY": 0
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "clipRect": {
+                  "left": "@sf2x0",
+                  "top": "@sf2md",
+                  "right": "@sf2x1",
+                  "bottom": "@sf2y1"
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "@sf2gC",
+                  "x": "(@sf2x0 + @sf2x1) / 2",
+                  "y": "@sf2md",
+                  "panX": 0,
+                  "panY": 0
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "clipRect": {
+                  "left": "@sf2x0",
+                  "top": "ifElse(@sf2md, @sf2y0, @sf2lo)",
+                  "right": "@sf2x1",
+                  "bottom": "ifElse(@sf2y1, @sf2md, @sf2lo)"
+                 }
+                },
+                {
+                 "scale": {
+                  "sx": 1,
+                  "sy": "max(0.001, abs(1 - 2 * @sf2s))",
+                  "pivotX": "@sf2x0",
+                  "pivotY": "@sf2md"
+                 }
+                },
+                {
+                 "paint": {
+                  "color": "@colors.flap",
+                  "style": "fill"
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": "@sf2x0",
+                  "top": "@sf2y0",
+                  "right": "@sf2x1",
+                  "bottom": "@sf2y1",
+                  "rx": "min(@cw * 0.9, @th) * 0.1",
+                  "ry": "min(@cw * 0.9, @th) * 0.1"
+                 }
+                },
+                {
+                 "paint": {
+                  "color": "@colors.ink",
+                  "style": "fillAndStroke",
+                  "strokeWidth": "@th * 0.025",
+                  "textSize": "@th * 0.62",
+                  "alpha": 1
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "@sf2gF",
+                  "x": "(@sf2x0 + @sf2x1) / 2",
+                  "y": "@sf2md",
+                  "panX": 0,
+                  "panY": 0
+                 }
+                },
+                {
+                 "paint": {
+                  "color": "#FF000000",
+                  "style": "fill",
+                  "alpha": "(1 - abs(1 - 2 * @sf2s)) * 0.6"
+                 }
+                },
+                {
+                 "drawRect": {
+                  "left": "@sf2x0",
+                  "top": "@sf2y0",
+                  "right": "@sf2x1",
+                  "bottom": "@sf2y1"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.split",
+               "style": "fill",
+               "alpha": 1
+              }
+             },
+             {
+              "drawRect": {
+               "left": "@sf2x0",
+               "top": "@sf2md - @th * 0.02",
+               "right": "@sf2x1",
+               "bottom": "@sf2md + @th * 0.02"
+              }
              }
-            },
-            {
-             "drawTextAnchored": {
-              "text": "@qgC",
-              "x": "(@qx0 + @qx1) / 2",
-              "y": "@qmd",
-              "panX": 0,
-              "panY": 0
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "semantics": {
+         "contentDescription": "Status"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "loop": {
+         "index": "r",
+         "from": 0,
+         "until": "@rows",
+         "commands": [
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "1",
+            "commands": [
+             {
+              "variable": {
+               "name": "sf3x0",
+               "value": "@sx + i * (@sw + 4)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3x1",
+               "value": "@sf3x0 + @sw"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3y0",
+               "value": "@top + @lh * @tall + r * @pitch + 0"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3y1",
+               "value": "@sf3y0 + @th"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3md",
+               "value": "@sf3y0 + @th / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3o",
+               "value": "arrayGet(@status, (@k + r + 11) % 12) * @hasOld"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3nw",
+               "value": "arrayGet(@status, (@k + r) % 12)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3n",
+               "value": "(@sf3nw - @sf3o + 5) % 5"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3f",
+               "value": "clamp((@tc - (1.2 + r * 0.16 + i * 0)) * 22, @sf3n, 0)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3cur",
+               "value": "(@sf3o + floor(@sf3f)) % 5"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3nx",
+               "value": "(@sf3cur + 1 - step(@sf3f, @sf3n)) % 5"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3s",
+               "value": "@sf3f - floor(@sf3f)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sf3lo",
+               "value": "step(0.5, @sf3s)"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "        ON TIME BOARDINGDELAYED CANCELED",
+               "start": "(@sf3nx) * 8",
+               "len": 8,
+               "varName": "sf3gN"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "        ON TIME BOARDINGDELAYED CANCELED",
+               "start": "(@sf3cur) * 8",
+               "len": 8,
+               "varName": "sf3gC"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "        ON TIME BOARDINGDELAYED CANCELED",
+               "start": "(ifElse(@sf3nx, @sf3cur, @sf3lo)) * 8",
+               "len": 8,
+               "varName": "sf3gF"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.tile",
+               "style": "fill",
+               "alpha": 1
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": "@sf3x0",
+               "top": "@sf3y0",
+               "right": "@sf3x1",
+               "bottom": "@sf3y1",
+               "rx": "min(@sw, @th) * 0.1",
+               "ry": "min(@sw, @th) * 0.1"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.ink",
+               "style": "fillAndStroke",
+               "strokeWidth": "@th * 0.025",
+               "textSize": "@th * ifElse(0.46, 0.38, @tall)",
+               "alpha": 1
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "clipRect": {
+                  "left": "@sf3x0",
+                  "top": "@sf3y0",
+                  "right": "@sf3x1",
+                  "bottom": "@sf3md"
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "@sf3gN",
+                  "x": "@sf3x0 + @th * ifElse(0.986, 0.6, @tall)",
+                  "y": "@sf3md",
+                  "panX": -1,
+                  "panY": 0
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "clipRect": {
+                  "left": "@sf3x0",
+                  "top": "@sf3md",
+                  "right": "@sf3x1",
+                  "bottom": "@sf3y1"
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "@sf3gC",
+                  "x": "@sf3x0 + @th * ifElse(0.986, 0.6, @tall)",
+                  "y": "@sf3md",
+                  "panX": -1,
+                  "panY": 0
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "clipRect": {
+                  "left": "@sf3x0",
+                  "top": "ifElse(@sf3md, @sf3y0, @sf3lo)",
+                  "right": "@sf3x1",
+                  "bottom": "ifElse(@sf3y1, @sf3md, @sf3lo)"
+                 }
+                },
+                {
+                 "scale": {
+                  "sx": 1,
+                  "sy": "max(0.001, abs(1 - 2 * @sf3s))",
+                  "pivotX": "@sf3x0",
+                  "pivotY": "@sf3md"
+                 }
+                },
+                {
+                 "paint": {
+                  "color": "@colors.flap",
+                  "style": "fill"
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": "@sf3x0",
+                  "top": "@sf3y0",
+                  "right": "@sf3x1",
+                  "bottom": "@sf3y1",
+                  "rx": "min(@sw, @th) * 0.1",
+                  "ry": "min(@sw, @th) * 0.1"
+                 }
+                },
+                {
+                 "paint": {
+                  "color": "@colors.ink",
+                  "style": "fillAndStroke",
+                  "strokeWidth": "@th * 0.025",
+                  "textSize": "@th * ifElse(0.46, 0.38, @tall)",
+                  "alpha": 1
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": "@sf3gF",
+                  "x": "@sf3x0 + @th * ifElse(0.986, 0.6, @tall)",
+                  "y": "@sf3md",
+                  "panX": -1,
+                  "panY": 0
+                 }
+                },
+                {
+                 "paint": {
+                  "color": "#FF000000",
+                  "style": "fill",
+                  "alpha": "(1 - abs(1 - 2 * @sf3s)) * 0.6"
+                 }
+                },
+                {
+                 "drawRect": {
+                  "left": "@sf3x0",
+                  "top": "@sf3y0",
+                  "right": "@sf3x1",
+                  "bottom": "@sf3y1"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.split",
+               "style": "fill",
+               "alpha": 1
+              }
+             },
+             {
+              "drawRect": {
+               "left": "@sf3x0",
+               "top": "@sf3md - @th * 0.02",
+               "right": "@sf3x1",
+               "bottom": "@sf3md + @th * 0.02"
+              }
              }
-            }
-           ]
+            ]
+           }
           }
-         },
-         {
-          "save": {
-           "commands": [
-            {
-             "clipRect": {
-              "left": "@qx0",
-              "top": "ifElse(@qmd, @cyv, @qlo)",
-              "right": "@qx1",
-              "bottom": "ifElse(@qy1, @qmd, @qlo)"
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "commands": [
+       {
+        "loop": {
+         "index": "r",
+         "from": 0,
+         "until": "@rows",
+         "commands": [
+          {
+           "variable": {
+            "name": "wy",
+            "value": "@top + r * @pitch + @lh * @tall"
+           }
+          },
+          {
+           "variable": {
+            "name": "wx0",
+            "value": "@sx"
+           }
+          },
+          {
+           "variable": {
+            "name": "wx1",
+            "value": "@sx + @sw"
+           }
+          },
+          {
+           "variable": {
+            "name": "wy1",
+            "value": "@wy + @th"
+           }
+          },
+          {
+           "variable": {
+            "name": "wmd",
+            "value": "@wy + @th / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "wcur",
+            "value": "arrayGet(@status, (@k + r) % 12)"
+           }
+          },
+          {
+           "variable": {
+            "name": "wn",
+            "value": "(@wcur - arrayGet(@status, (@k + r + 11) % 12) * @hasOld + 5) % 5"
+           }
+          },
+          {
+           "variable": {
+            "name": "wf",
+            "value": "(@tc - 1.2 - r * 0.16) * 22"
+           }
+          },
+          {
+           "variable": {
+            "name": "wdone",
+            "value": "step(max(@wf, 0) - @wn, -0.001)"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "        ON TIME BOARDINGDELAYED CANCELED",
+            "start": "@wcur * 8",
+            "len": 8,
+            "varName": "wgC"
+           }
+          },
+          {
+           "paint": {
+            "color": "@colors.sOnTime",
+            "style": "fillAndStroke",
+            "strokeWidth": "@cw * 0.035",
+            "textSize": "@th * ifElse(0.46, 0.38, @tall)"
+           }
+          },
+          {
+           "save": {
+            "commands": [
+             {
+              "clipRect": {
+               "left": "@wx0",
+               "top": "@wy1 - @th",
+               "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 1))) * @wdone",
+               "bottom": "@wy1"
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "@wgC",
+               "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
+               "y": "@wmd",
+               "panX": -1,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "style": "fill",
+               "alpha": 1
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+               "cy": "@wmd",
+               "radius": "@cw * ifElse(0.2, 0.13, @tall)"
+              }
              }
-            },
-            {
-             "scale": {
-              "sx": 1,
-              "sy": "max(0.001, abs(1 - 2 * @qs))",
-              "pivotX": "@qx0",
-              "pivotY": "@qmd"
+            ]
+           }
+          },
+          {
+           "paint": {
+            "color": "@colors.sBoarding",
+            "style": "fillAndStroke",
+            "strokeWidth": "@cw * 0.035",
+            "textSize": "@th * ifElse(0.46, 0.38, @tall)"
+           }
+          },
+          {
+           "save": {
+            "commands": [
+             {
+              "clipRect": {
+               "left": "@wx0",
+               "top": "@wy1 - @th",
+               "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 2))) * @wdone",
+               "bottom": "@wy1"
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "@wgC",
+               "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
+               "y": "@wmd",
+               "panX": -1,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "style": "fill",
+               "alpha": "0.55 + 0.45 * sin(@t * 6)"
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+               "cy": "@wmd",
+               "radius": "@cw * ifElse(0.2, 0.13, @tall)"
+              }
              }
-            },
-            {
-             "paint": {
-              "color": "@colors.flap",
-              "style": "fill"
+            ]
+           }
+          },
+          {
+           "paint": {
+            "color": "@colors.sDelayed",
+            "style": "fillAndStroke",
+            "strokeWidth": "@cw * 0.035",
+            "textSize": "@th * ifElse(0.46, 0.38, @tall)"
+           }
+          },
+          {
+           "save": {
+            "commands": [
+             {
+              "clipRect": {
+               "left": "@wx0",
+               "top": "@wy1 - @th",
+               "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 3))) * @wdone",
+               "bottom": "@wy1"
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "@wgC",
+               "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
+               "y": "@wmd",
+               "panX": -1,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "style": "fill",
+               "alpha": 1
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+               "cy": "@wmd",
+               "radius": "@cw * ifElse(0.2, 0.13, @tall)"
+              }
              }
-            },
-            {
-             "drawRoundRect": {
-              "left": "@qx0",
-              "top": "@cyv",
-              "right": "@qx1",
-              "bottom": "@qy1",
-              "rx": "@cw * 0.12",
-              "ry": "@cw * 0.12"
+            ]
+           }
+          },
+          {
+           "paint": {
+            "color": "@colors.sCanceled",
+            "style": "fillAndStroke",
+            "strokeWidth": "@cw * 0.035",
+            "textSize": "@th * ifElse(0.46, 0.38, @tall)"
+           }
+          },
+          {
+           "save": {
+            "commands": [
+             {
+              "clipRect": {
+               "left": "@wx0",
+               "top": "@wy1 - @th",
+               "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 4))) * @wdone",
+               "bottom": "@wy1"
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "@wgC",
+               "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
+               "y": "@wmd",
+               "panX": -1,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "style": "fill",
+               "alpha": 1
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+               "cy": "@wmd",
+               "radius": "@cw * ifElse(0.2, 0.13, @tall)"
+              }
              }
-            },
-            {
-             "paint": {
-              "color": "@colors.ink",
-              "style": "fillAndStroke",
-              "strokeWidth": "@cw * 0.035",
-              "textSize": "@th * 0.62"
-             }
-            },
-            {
-             "drawTextAnchored": {
-              "text": "@qgF",
-              "x": "(@qx0 + @qx1) / 2",
-              "y": "@qmd",
-              "panX": 0,
-              "panY": 0
-             }
-            },
-            {
-             "paint": {
-              "color": "#FF000000",
-              "style": "fill",
-              "alpha": "(1 - abs(1 - 2 * @qs)) * 0.6"
-             }
-            },
-            {
-             "drawRect": {
-              "left": "@qx0",
-              "top": "@cyv",
-              "right": "@qx1",
-              "bottom": "@qy1"
-             }
-            }
-           ]
+            ]
+           }
           }
-         },
-         {
-          "paint": {
-           "color": "@colors.split",
-           "alpha": 1,
-           "style": "fill"
-          }
-         },
-         {
-          "drawRect": {
-           "left": "@qx0",
-           "top": "@qmd - @cw * 0.03",
-           "right": "@qx1",
-           "bottom": "@qmd + @cw * 0.03"
-          }
-         }
-        ]
+         ]
+        }
        }
-      },
-      {
-       "variable": {
-        "name": "wo",
-        "value": "arrayGet(@status, @dp) * @hasOld"
-       }
-      },
-      {
-       "variable": {
-        "name": "wnw",
-        "value": "arrayGet(@status, @dn)"
-       }
-      },
-      {
-       "variable": {
-        "name": "wn",
-        "value": "(@wnw - @wo + 5) % 5"
-       }
-      },
-      {
-       "variable": {
-        "name": "wf",
-        "value": "clamp((@tc - 1.2 + r * 0.16) * 22, @wn, 0)"
-       }
-      },
-      {
-       "variable": {
-        "name": "wcur",
-        "value": "(@wo + floor(@wf)) % 5"
-       }
-      },
-      {
-       "variable": {
-        "name": "wnx",
-        "value": "(@wcur + 1 - step(@wf, @wn)) % 5"
-       }
-      },
-      {
-       "variable": {
-        "name": "ws",
-        "value": "@wf - floor(@wf)"
-       }
-      },
-      {
-       "variable": {
-        "name": "wlo",
-        "value": "step(0.5, @ws)"
-       }
-      },
-      {
-       "variable": {
-        "name": "wx0",
-        "value": "@sx"
-       }
-      },
-      {
-       "variable": {
-        "name": "wx1",
-        "value": "@wx0 + @sw"
-       }
-      },
-      {
-       "variable": {
-        "name": "wy1",
-        "value": "@sy + @th"
-       }
-      },
-      {
-       "variable": {
-        "name": "wmd",
-        "value": "@sy + @th / 2"
-       }
-      },
-      {
-       "textSubtext": {
-        "text": "        ON TIME BOARDINGDELAYED CANCELED",
-        "start": "(@wnx) * 8",
-        "len": 8,
-        "varName": "wgN"
-       }
-      },
-      {
-       "textSubtext": {
-        "text": "        ON TIME BOARDINGDELAYED CANCELED",
-        "start": "(@wcur) * 8",
-        "len": 8,
-        "varName": "wgC"
-       }
-      },
-      {
-       "textSubtext": {
-        "text": "        ON TIME BOARDINGDELAYED CANCELED",
-        "start": "(ifElse(@wnx, @wcur, @wlo)) * 8",
-        "len": 8,
-        "varName": "wgF"
-       }
-      },
-      {
-       "paint": {
-        "color": "@colors.tile",
-        "style": "fill"
-       }
-      },
-      {
-       "drawRoundRect": {
-        "left": "@wx0",
-        "top": "@sy",
-        "right": "@wx1",
-        "bottom": "@wy1",
-        "rx": "@cw * 0.12",
-        "ry": "@cw * 0.12"
-       }
-      },
-      {
-       "paint": {
-        "color": "@colors.ink",
-        "style": "fillAndStroke",
-        "strokeWidth": "@cw * 0.035",
-        "textSize": "@th * ifElse(0.46, 0.38, @tall)"
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@wx0",
-           "top": "@sy",
-           "right": "@wx1",
-           "bottom": "@wmd"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@wgN",
-           "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
-           "y": "@wmd",
-           "panX": -1,
-           "panY": 0
-          }
-         }
-        ]
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@wx0",
-           "top": "@wmd",
-           "right": "@wx1",
-           "bottom": "@wy1"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@wgC",
-           "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
-           "y": "@wmd",
-           "panX": -1,
-           "panY": 0
-          }
-         }
-        ]
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@wx0",
-           "top": "ifElse(@wmd, @sy, @wlo)",
-           "right": "@wx1",
-           "bottom": "ifElse(@wy1, @wmd, @wlo)"
-          }
-         },
-         {
-          "scale": {
-           "sx": 1,
-           "sy": "max(0.001, abs(1 - 2 * @ws))",
-           "pivotX": "@wx0",
-           "pivotY": "@wmd"
-          }
-         },
-         {
-          "paint": {
-           "color": "@colors.flap",
-           "style": "fill"
-          }
-         },
-         {
-          "drawRoundRect": {
-           "left": "@wx0",
-           "top": "@sy",
-           "right": "@wx1",
-           "bottom": "@wy1",
-           "rx": "@cw * 0.12",
-           "ry": "@cw * 0.12"
-          }
-         },
-         {
-          "paint": {
-           "color": "@colors.ink",
-           "style": "fillAndStroke",
-           "strokeWidth": "@cw * 0.035",
-           "textSize": "@th * ifElse(0.46, 0.38, @tall)"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@wgF",
-           "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
-           "y": "@wmd",
-           "panX": -1,
-           "panY": 0
-          }
-         },
-         {
-          "paint": {
-           "color": "#FF000000",
-           "style": "fill",
-           "alpha": "(1 - abs(1 - 2 * @ws)) * 0.6"
-          }
-         },
-         {
-          "drawRect": {
-           "left": "@wx0",
-           "top": "@sy",
-           "right": "@wx1",
-           "bottom": "@wy1"
-          }
-         }
-        ]
-       }
-      },
-      {
-       "variable": {
-        "name": "wdone",
-        "value": "1 - step(@wn - @wf, 0)"
-       }
-      },
-      {
-       "paint": {
-        "color": "@colors.sOnTime",
-        "style": "fillAndStroke",
-        "strokeWidth": "@cw * 0.035",
-        "textSize": "@th * ifElse(0.46, 0.38, @tall)"
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@wx0",
-           "top": "@wy1 - @th",
-           "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 1))) * @wdone",
-           "bottom": "@wy1"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@wgC",
-           "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
-           "y": "@wmd",
-           "panX": -1,
-           "panY": 0
-          }
-         },
-         {
-          "paint": {
-           "style": "fill",
-           "alpha": 1
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
-           "cy": "@wmd",
-           "radius": "@cw * ifElse(0.2, 0.13, @tall)"
-          }
-         }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "color": "@colors.sBoarding",
-        "style": "fillAndStroke",
-        "strokeWidth": "@cw * 0.035",
-        "textSize": "@th * ifElse(0.46, 0.38, @tall)"
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@wx0",
-           "top": "@wy1 - @th",
-           "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 2))) * @wdone",
-           "bottom": "@wy1"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@wgC",
-           "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
-           "y": "@wmd",
-           "panX": -1,
-           "panY": 0
-          }
-         },
-         {
-          "paint": {
-           "style": "fill",
-           "alpha": "0.55 + 0.45 * sin(@t * 6)"
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
-           "cy": "@wmd",
-           "radius": "@cw * ifElse(0.2, 0.13, @tall)"
-          }
-         }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "color": "@colors.sDelayed",
-        "style": "fillAndStroke",
-        "strokeWidth": "@cw * 0.035",
-        "textSize": "@th * ifElse(0.46, 0.38, @tall)"
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@wx0",
-           "top": "@wy1 - @th",
-           "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 3))) * @wdone",
-           "bottom": "@wy1"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@wgC",
-           "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
-           "y": "@wmd",
-           "panX": -1,
-           "panY": 0
-          }
-         },
-         {
-          "paint": {
-           "style": "fill",
-           "alpha": 1
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
-           "cy": "@wmd",
-           "radius": "@cw * ifElse(0.2, 0.13, @tall)"
-          }
-         }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "color": "@colors.sCanceled",
-        "style": "fillAndStroke",
-        "strokeWidth": "@cw * 0.035",
-        "textSize": "@th * ifElse(0.46, 0.38, @tall)"
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@wx0",
-           "top": "@wy1 - @th",
-           "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 4))) * @wdone",
-           "bottom": "@wy1"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@wgC",
-           "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
-           "y": "@wmd",
-           "panX": -1,
-           "panY": 0
-          }
-         },
-         {
-          "paint": {
-           "style": "fill",
-           "alpha": 1
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
-           "cy": "@wmd",
-           "radius": "@cw * ifElse(0.2, 0.13, @tall)"
-          }
-         }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "color": "@colors.split",
-        "alpha": 1,
-        "style": "fill"
-       }
-      },
-      {
-       "drawRect": {
-        "left": "@wx0",
-        "top": "@wmd - @cw * 0.03",
-        "right": "@wx1",
-        "bottom": "@wmd + @cw * 0.03"
-       }
-      }
-     ]
+      ]
+     }
     }
-   },
-   {
-    "variable": {
-     "name": "tky",
-     "value": "@H - @m * 0.5 - @tk"
-    }
-   },
-   {
-    "paint": {
-     "color": "@colors.band",
-     "style": "fill"
-    }
-   },
-   {
-    "drawRect": {
-     "left": 0,
-     "top": "@tky",
-     "right": "@W",
-     "bottom": "@tky + @tk"
-    }
-   },
-   {
-    "paint": {
-     "color": "@colors.bandText",
-     "style": "fill",
-     "textSize": "@tk * 0.5"
-    }
-   },
-   {
-    "textMeasure": {
-     "text": "IC 718 TO ZURICH HB IS NOW BOARDING AT PLATFORM 7   •   RJ 64 TO MUNCHEN HBF IS DELAYED BY ABOUT 15 MINUTES   •   IR 15 TO GENEVE IS CANCELED: PLEASE USE IC 8 TO BERN AND CHANGE   •   ",
-     "mode": 0,
-     "name": "tw"
-    }
-   },
-   {
-    "variable": {
-     "name": "tx",
-     "value": "-((@t * 70) % @tw)"
-    }
-   },
-   {
-    "save": {
-     "commands": [
-      {
-       "clipRect": {
-        "left": 0,
-        "top": "@tky",
-        "right": "@W",
-        "bottom": "@tky + @tk"
-       }
-      },
-      {
-       "loop": {
-        "index": "i",
-        "from": 0,
-        "until": "ceil(@W / @tw) + 1",
-        "commands": [
-         {
-          "drawTextAnchored": {
-           "text": "IC 718 TO ZURICH HB IS NOW BOARDING AT PLATFORM 7   •   RJ 64 TO MUNCHEN HBF IS DELAYED BY ABOUT 15 MINUTES   •   IR 15 TO GENEVE IS CANCELED: PLEASE USE IC 8 TO BERN AND CHANGE   •   ",
-           "x": "@tx + i * @tw",
-           "y": "@tky + @tk / 2",
-           "panX": -1,
-           "panY": 0
-          }
-         }
-        ]
-       }
-      }
-     ]
-    }
-   }
-  ]
+   ]
+  }
  }
 }

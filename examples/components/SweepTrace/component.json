@@ -1,0 +1,476 @@
+{
+ "component": "SweepTrace",
+ "version": 1,
+ "summary": "A live waveform that sweeps left to right and overwrites itself, like a patient monitor or an oscilloscope: one cycle of a float array repeated at a rate, drawn up to a moving head with an erase gap ahead of it, rebuilt every frame from the clock.",
+ "params": {
+  "values": {
+   "type": "float",
+   "required": true,
+   "doc": "A float array (\"@name\" of resources.floatArrays): one cycle of the wave, repeat the first value at the end so the cycle closes; 0 is the baseline, 1 is `scale` of the height above it"
+  },
+  "rate": {
+   "type": "float",
+   "default": 1,
+   "doc": "Cycles per second, e.g. \"@hr / 60\" for a heartbeat; a host variable re-times the trace live"
+  },
+  "window": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Seconds of each cycle the array covers (0: the array spans the whole cycle and stretches with the rate). With a window (an ECG beat is about 0.62 s) the shape keeps its real width at any rate and the last value fills the rest of the cycle; above 0.95 cycles it is squeezed to fit"
+  },
+  "speed": {
+   "type": "float",
+   "default": 100,
+   "doc": "Sweep speed in dp per second (a monitor's 25 mm/s is about 100 dp/s; respiration is usually a quarter of that)"
+  },
+  "gap": {
+   "type": "float",
+   "default": 18,
+   "doc": "Width of the erase gap ahead of the head, dp"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Trace colour (onSurface in mono)"
+  },
+  "thickness": {
+   "type": "float",
+   "default": 2,
+   "static": true,
+   "doc": "Line width, dp"
+  },
+  "glow": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "A soft halo under the line (a wider stroke at 16 %); none in mono"
+  },
+  "head": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "A bright dot on the newest sample"
+  },
+  "baseline": {
+   "type": "float",
+   "default": 0.7,
+   "doc": "Where the value 0 sits, as a fraction of the height from the top"
+  },
+  "scale": {
+   "type": "float",
+   "default": 0.5,
+   "doc": "Height of the value 1 above the baseline, as a fraction of the height"
+  },
+  "delay": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Phase lag in cycles (a pleth wave trails the ECG by about 0.18)"
+  },
+  "sample": {
+   "type": "float",
+   "default": 1,
+   "static": true,
+   "doc": "Sample spacing in dp; keep 1 for a sharp wave (ECG), 2\u20133 for smooth ones"
+  },
+  "label": {
+   "type": "string",
+   "doc": "Optional name drawn at the top left (\"II\", \"Pleth\") and read as the trace's description"
+  },
+  "fill": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Fill the space the caller gives it (fillMaxSize); false: fillMaxWidth \u00d7 height"
+  },
+  "height": {
+   "type": "float",
+   "default": 96,
+   "static": true,
+   "doc": "Height in dp when fill is false"
+  }
+ },
+ "locals": {
+  "T": {
+   "$if": "theme.mono",
+   "then": "timeInSec()",
+   "else": "continuousSec()"
+  },
+  "rr": "@rate",
+  "k": {
+   "$if": "window",
+   "then": "max(1 / (@window * @rr), 1 / 0.95)",
+   "else": 1
+  }
+ },
+ "capabilities": [
+  "draw.plot",
+  "data.spline",
+  "data.array",
+  "time.clock",
+  "anim.loop"
+ ],
+ "call": {
+  "SweepTrace": {
+   "values": "@ecg",
+   "rate": "@hr / 60",
+   "window": 0.62,
+   "color": "@colors.success",
+   "glow": true,
+   "label": "II"
+  }
+ },
+ "pitfalls": [
+  "values is the NAME of a float array holding one cycle; repeat its first value at the end, or the trace jumps at every cycle seam",
+  "Nothing is stored: each frame redraws the visible sweep from the clock, so changing rate re-times the history already on screen once, and continuousSec() wraps at the hour (one jump an hour)",
+  "In mono (always-on, e-ink) the clock is timeInSec(): the head steps forward once a second instead of gliding, and there is no glow",
+  "For sharp waves keep sample 1 and use window: a QRS stored as a fraction of the cycle aliases (peaks of varying height) at high rates",
+  "The trace repaints every frame (continuousSec()); put one or a few on a screen, not dozens",
+  "The TypeScript player cannot evaluate splineLoop inside a pathExpression (no op 75 in PathExpression.evalRPN), which is why the trace uses spline(fract(...))"
+ ],
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "$if": "fill",
+     "then": "fillMaxSize",
+     "else": [
+      "fillMaxWidth",
+      {
+       "height": "@height"
+      }
+     ]
+    },
+    {
+     "semantics": {
+      "contentDescription": {
+       "$if": "label",
+       "then": "@label",
+       "else": "Live waveform"
+      }
+     }
+    }
+   ],
+   "commands": [
+    {
+     "variable": {
+      "name": "W",
+      "value": "componentWidth()"
+     }
+    },
+    {
+     "variable": {
+      "name": "y0",
+      "value": "componentHeight() * @baseline"
+     }
+    },
+    {
+     "variable": {
+      "name": "a",
+      "value": "componentHeight() * @scale"
+     }
+    },
+    {
+     "variable": {
+      "name": "d",
+      "value": "@W / @speed"
+     }
+    },
+    {
+     "variable": {
+      "name": "h",
+      "value": "fract(@T / @d) * @W"
+     }
+    },
+    {
+     "variable": {
+      "name": "e",
+      "value": "floor(@h / @sample) * @sample"
+     }
+    },
+    {
+     "variable": {
+      "name": "s",
+      "value": "(floor((@h + @gap) / @sample) + 1) * @sample"
+     }
+    },
+    {
+     "variable": {
+      "name": "z",
+      "value": "floor(@W / @sample) * @sample"
+     }
+    },
+    {
+     "pathExpression": {
+      "id": "p1",
+      "expressionX": "a[0]",
+      "expressionY": {
+       "$if": "window",
+       "then": {
+        "$if": "delay",
+        "then": "@y0 - @a * spline(@values, min(1, fract((@T - fract((@h - a[0]) / @W + 1) * @d) * @rr - @delay) * @k))",
+        "else": "@y0 - @a * spline(@values, min(1, fract((@T - fract((@h - a[0]) / @W + 1) * @d) * @rr) * @k))"
+       },
+       "else": {
+        "$if": "delay",
+        "then": "@y0 - @a * spline(@values, fract((@T - fract((@h - a[0]) / @W + 1) * @d) * @rr - @delay))",
+        "else": "@y0 - @a * spline(@values, fract((@T - fract((@h - a[0]) / @W + 1) * @d) * @rr))"
+       }
+      },
+      "start": 0,
+      "end": "@e",
+      "count": "@e / @sample + 1",
+      "flags": 2
+     }
+    },
+    {
+     "pathExpression": {
+      "id": "p2",
+      "expressionX": "a[0]",
+      "expressionY": {
+       "$if": "window",
+       "then": {
+        "$if": "delay",
+        "then": "@y0 - @a * spline(@values, min(1, fract((@T - fract((@h - a[0]) / @W + 1) * @d) * @rr - @delay) * @k))",
+        "else": "@y0 - @a * spline(@values, min(1, fract((@T - fract((@h - a[0]) / @W + 1) * @d) * @rr) * @k))"
+       },
+       "else": {
+        "$if": "delay",
+        "then": "@y0 - @a * spline(@values, fract((@T - fract((@h - a[0]) / @W + 1) * @d) * @rr - @delay))",
+        "else": "@y0 - @a * spline(@values, fract((@T - fract((@h - a[0]) / @W + 1) * @d) * @rr))"
+       }
+      },
+      "start": "@s",
+      "end": "@z",
+      "count": "max(2, (@z - @s) / @sample + 1)",
+      "flags": 2
+     }
+    },
+    {
+     "$if": "glow",
+     "then": {
+      "$if": "theme.mono",
+      "then": [],
+      "else": [
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": {
+            "$if": "theme.mono",
+            "then": "@colors.onSurface",
+            "else": "@color"
+           }
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeJoin": "round"
+          },
+          {
+           "strokeCap": "round"
+          },
+          {
+           "strokeWidth": "@thickness * 2.4"
+          },
+          {
+           "alpha": 0.16
+          }
+         ]
+        }
+       },
+       {
+        "drawPath": {
+         "path": "p1"
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "gt",
+         "v1": "@z - @s",
+         "v2": "@sample",
+         "commands": [
+          {
+           "drawPath": {
+            "path": "p2"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     },
+     "else": []
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.onSurface",
+         "else": "@color"
+        }
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeJoin": "round"
+       },
+       {
+        "strokeCap": "round"
+       },
+       {
+        "strokeWidth": "@thickness"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawPath": {
+      "path": "p1"
+     }
+    },
+    {
+     "conditionalOperations": {
+      "condition": "gt",
+      "v1": "@z - @s",
+      "v2": "@sample",
+      "commands": [
+       {
+        "drawPath": {
+         "path": "p2"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "head",
+     "then": [
+      {
+       "variable": {
+        "name": "q",
+        "value": {
+         "$if": "window",
+         "then": {
+          "$if": "delay",
+          "then": "@y0 - @a * spline(@values, min(1, fract(@T * @rr - @delay) * @k))",
+          "else": "@y0 - @a * spline(@values, min(1, fract(@T * @rr) * @k))"
+         },
+         "else": {
+          "$if": "delay",
+          "then": "@y0 - @a * spline(@values, fract(@T * @rr - @delay))",
+          "else": "@y0 - @a * spline(@values, fract(@T * @rr))"
+         }
+        }
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": {
+           "$if": "theme.mono",
+           "then": 1,
+           "else": 0.25
+          }
+         }
+        ]
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": [],
+       "else": [
+        {
+         "drawCircle": {
+          "cx": "@e",
+          "cy": "@q",
+          "radius": "@thickness * 3"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "drawCircle": {
+        "cx": "@e",
+        "cy": "@q",
+        "radius": "@thickness * 1.3 + 0.5"
+       }
+      }
+     ],
+     "else": []
+    },
+    {
+     "$if": "label",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": {
+           "$if": "theme.mono",
+           "then": "@colors.onSurface",
+           "else": "@color"
+          }
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 12
+         },
+         {
+          "alpha": {
+           "$if": "theme.mono",
+           "then": 1,
+           "else": 0.85
+          }
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "@label",
+        "x": 2,
+        "y": 14,
+        "panX": -1,
+        "panY": 0
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ],
+     "else": []
+    }
+   ]
+  }
+ }
+}
