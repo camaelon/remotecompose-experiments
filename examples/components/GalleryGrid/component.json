@@ -1,0 +1,662 @@
+{
+ "component": "GalleryGrid",
+ "version": 1,
+ "summary": "A whole gallery screen from data: an optional header, then a scrolling grid of visual items (a picture or drawn tile, a title, a caption and a price or count), with optional section headings. The column count follows the width (2 on a phone, 3 on a landscape phone, 4 on a portrait tablet, up to 6 on a wide window, more when the window is short so a whole tile fits), every tile keeps its picture's aspect ratio, and a tap sets the selected index (ringed) and runs onClick.",
+ "params": {
+  "items": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One object per tile: {\"title\", \"caption\", \"meta\", \"art\", \"color\", \"symbol\", \"badge\", \"section\", \"label\"}, all optional but title is usual. title is one line under the picture, caption a muted line under it (\"25 min, easy\", \"12 photos\"), meta a short bold value at the caption line's end (\"$24\", \"4.8\"). art is any node filling the picture box (a drawing, a canvas with a bitmap, CoverArt); without art a CoverArt in color (default primary) with symbol (default the symbol param) is drawn, turned by the index so tiles differ. badge is a short text on the picture's top-start corner (\"New\", \"-20%\"), a pill in onSurface that reads on any picture. section starts a new full-width heading before this tile (\"October 2026\"). label replaces the spoken text"
+  },
+  "title": {
+   "type": "string",
+   "doc": "The screen's heading (\"Library\"). Omit for no header"
+  },
+  "subtitle": {
+   "type": "string",
+   "doc": "A muted line under the title (\"248 photos\")"
+  },
+  "style": {
+   "type": "enum",
+   "values": [
+    "plain",
+    "card"
+   ],
+   "default": "plain",
+   "static": true,
+   "doc": "plain: a rounded picture with the text under it on the background (photos, covers). card: picture and text inside one rounded surface card (products, recipes)"
+  },
+  "aspect": {
+   "type": "float",
+   "default": 1,
+   "static": true,
+   "doc": "The picture's height over its width: 1 square, 0.75 landscape 4:3, 0.5625 16:9, 1.33 portrait 3:4 (book or game covers)"
+  },
+  "minTile": {
+   "type": "float",
+   "default": 150,
+   "static": true,
+   "doc": "Narrowest tile in dp: columns = floor(usable width / (minTile + gap)), between minColumns and maxColumns"
+  },
+  "minColumns": {
+   "type": "float",
+   "default": 2,
+   "static": true,
+   "doc": "Fewest columns, even on a narrow window"
+  },
+  "maxColumns": {
+   "type": "float",
+   "default": 6,
+   "static": true,
+   "doc": "Most columns on a wide window"
+  },
+  "gap": {
+   "type": "float",
+   "default": 12,
+   "static": true,
+   "doc": "Space between tiles, across and down"
+  },
+  "radius": {
+   "type": "float",
+   "default": 14,
+   "static": true,
+   "doc": "Corner radius of the picture (plain) or the card"
+  },
+  "symbol": {
+   "type": "string",
+   "default": "image",
+   "static": true,
+   "doc": "Material Symbols name drawn on the generated cover of a tile without art or its own symbol"
+  },
+  "selected": {
+   "type": "variable",
+   "initial": -1,
+   "doc": "The tapped tile, from 0 (-1: none). Bind a resources variable (\"@sel\") to read it, preset it or show the item elsewhere. Do not name it step"
+  },
+  "highlight": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Ring the selected tile's picture in primary. false: a tap only sets selected and runs onClick"
+  },
+  "onClick": {
+   "type": "action",
+   "doc": "Actions run on every tile tap after selected is set, so they see the NEW index: {\"type\": \"hostNamedAction\", \"name\": \"openPhoto\", \"value\": \"@sel\", \"valueType\": \"float\", \"actionType\": 0} with \"selected\": \"@sel\" tells the app which one"
+  },
+  "background": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "The screen's background"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width it has, when it is not the whole window; the column count follows it"
+  },
+  "height": {
+   "type": "float",
+   "default": "windowHeight()",
+   "doc": "The height it has; the grid scrolls inside it"
+  }
+ },
+ "slots": {
+  "headerEnd": {
+   "optional": true,
+   "doc": "At the end of the header: an IconButton (search, sort), a Badge"
+  },
+  "footer": {
+   "optional": true,
+   "doc": "Written once, under the grid: a note, a Button that acts on the selected variable (Open, Add to cart)"
+  }
+ },
+ "locals": {
+  "hh": {
+   "$if": "title",
+   "then": {
+    "$if": "subtitle",
+    "then": 64,
+    "else": 56
+   },
+   "else": 0
+  },
+  "pad": "16 - @gap / 2",
+  "iw": "@width - 2 * @pad",
+  "th": {
+   "$if": "style == 'card'",
+   "then": 60,
+   "else": 48
+  },
+  "amax": "(@height - @hh) * 0.85 - @th - @gap",
+  "cols": "clamp(@minColumns, @maxColumns, max(floor(@iw / (@minTile + @gap)), ceil(@iw / (@amax / @aspect + @gap))))",
+  "cell": "floor(@iw / @cols)",
+  "tw": "@cell - @gap",
+  "ah": "floor(@tw * @aspect)",
+  "gh": "@height - @hh"
+ },
+ "capabilities": [
+  "layout.flow",
+  "layout.scroll",
+  "input.tap",
+  "a11y.labels"
+ ],
+ "call": {
+  "GalleryGrid": {
+   "title": "Albums",
+   "items": [
+    {
+     "title": "Lisbon",
+     "caption": "48 photos"
+    },
+    {
+     "title": "Hiking",
+     "caption": "112 photos"
+    }
+   ]
+  }
+ },
+ "body": {
+  "column": {
+   "modifiers": [
+    {
+     "width": "@width"
+    },
+    {
+     "height": "@height"
+    },
+    {
+     "background": "@background"
+    }
+   ],
+   "children": [
+    {
+     "variable": {
+      "name": "sy",
+      "value": 0
+     }
+    },
+    {
+     "$if": "title",
+     "then": {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": "@hh"
+        },
+        {
+         "padding": [
+          16,
+          0
+         ]
+        }
+       ],
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@title",
+             "fontSize": "@theme.text_lg",
+             "fontWeight": 700,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           },
+           {
+            "$if": "subtitle",
+            "then": {
+             "text": {
+              "value": "@subtitle",
+              "fontSize": "@theme.text_sm",
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "overflow": "ellipsis",
+              "modifiers": [
+               {
+                "padding": {
+                 "top": 2
+                }
+               }
+              ]
+             }
+            }
+           }
+          ]
+         }
+        },
+        {
+         "$slot": "headerEnd"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": "@gh"
+       },
+       {
+        "verticalScroll": "@sy"
+       },
+       {
+        "padding": [
+         "@pad",
+         0,
+         "@pad",
+         12
+        ]
+       }
+      ],
+      "children": [
+       {
+        "flow": {
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "children": [
+          {
+           "$each": "items",
+           "as": "r",
+           "index": "i",
+           "fields": [
+            "title",
+            "caption",
+            "meta",
+            "art",
+            "color",
+            "symbol",
+            "badge",
+            "section",
+            "label"
+           ],
+           "do": [
+            {
+             "$if": "r_section",
+             "then": {
+              "box": {
+               "modifiers": [
+                {
+                 "width": "@iw"
+                },
+                {
+                 "padding": [
+                  "@gap / 2",
+                  10,
+                  "@gap / 2",
+                  8
+                 ]
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "@r_section",
+                  "fontSize": "@theme.text_md",
+                  "fontWeight": 700,
+                  "color": "@colors.onSurface",
+                  "maxLines": 1,
+                  "overflow": "ellipsis"
+                 }
+                }
+               ]
+              }
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               {
+                "width": "@cell"
+               },
+               {
+                "padding": [
+                 "@gap / 2",
+                 "@gap / 2"
+                ]
+               }
+              ],
+              "children": [
+               {
+                "column": {
+                 "modifiers": [
+                  "fillMaxWidth",
+                  {
+                   "clip": {
+                    "roundedRect": "@radius"
+                   }
+                  },
+                  {
+                   "$if": "style == 'card'",
+                   "then": {
+                    "$if": "theme.mono",
+                    "then": {
+                     "background": "@colors.background"
+                    },
+                    "else": {
+                     "background": "@colors.surface"
+                    }
+                   }
+                  },
+                  {
+                   "semantics": {
+                    "clickable": true,
+                    "contentDescription": {
+                     "$if": "r_label",
+                     "then": "@r_label",
+                     "else": {
+                      "$if": "r_caption",
+                      "then": {
+                       "type": "textMerge",
+                       "id1": "@r_title",
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": ", ",
+                        "id2": "@r_caption"
+                       }
+                      },
+                      "else": "@r_title"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "onClick": [
+                    {
+                     "type": "valueFloatChange",
+                     "target": "@selected",
+                     "value": "@i"
+                    },
+                    {
+                     "$if": "onClick",
+                     "then": "@onClick"
+                    }
+                   ]
+                  }
+                 ],
+                 "children": [
+                  {
+                   "box": {
+                    "modifiers": [
+                     "fillMaxWidth",
+                     {
+                      "height": "@ah"
+                     }
+                    ],
+                    "children": [
+                     {
+                      "$if": "r_art",
+                      "then": {
+                       "box": {
+                        "modifiers": [
+                         "fillMaxSize",
+                         {
+                          "$if": "style == 'card'",
+                          "else": {
+                           "clip": {
+                            "roundedRect": "@radius"
+                           }
+                          }
+                         }
+                        ],
+                        "children": [
+                         "@r_art"
+                        ]
+                       }
+                      },
+                      "else": {
+                       "CoverArt": {
+                        "seed": "@i",
+                        "symbol": {
+                         "$if": "r_symbol",
+                         "then": "@r_symbol",
+                         "else": "@symbol"
+                        },
+                        "color": {
+                         "$if": "r_color",
+                         "then": "@r_color",
+                         "else": "@colors.primary"
+                        },
+                        "radius": {
+                         "$if": "style == 'card'",
+                         "then": 0,
+                         "else": "@radius"
+                        },
+                        "label": {
+                         "$if": "r_title",
+                         "then": "@r_title",
+                         "else": "Picture"
+                        }
+                       }
+                      }
+                     },
+                     {
+                      "$if": "r_badge",
+                      "then": {
+                       "box": {
+                        "modifiers": [
+                         {
+                          "padding": 8
+                         }
+                        ],
+                        "children": [
+                         {
+                          "Badge": {
+                           "text": "@r_badge",
+                           "color": "@colors.onSurface"
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     },
+                     {
+                      "$if": "highlight",
+                      "then": {
+                       "canvas": {
+                        "modifiers": [
+                         {
+                          "visibility": "1 - min(1, abs(@selected - @i))"
+                         },
+                         "fillMaxSize"
+                        ],
+                        "commands": [
+                         {
+                          "paint": {
+                           "ops": [
+                            {
+                             "color": "@colors.primary"
+                            },
+                            {
+                             "style": "stroke"
+                            },
+                            {
+                             "strokeWidth": 4
+                            },
+                            {
+                             "alpha": 1
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "drawRoundRect": {
+                           "left": 2,
+                           "top": 2,
+                           "right": "componentWidth() - 2",
+                           "bottom": "componentHeight() - 2",
+                           "rx": {
+                            "$if": "style == 'card'",
+                            "then": 0,
+                            "else": "@radius - 2"
+                           },
+                           "ry": {
+                            "$if": "style == 'card'",
+                            "then": 0,
+                            "else": "@radius - 2"
+                           }
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "column": {
+                    "modifiers": [
+                     "fillMaxWidth",
+                     {
+                      "$if": "style == 'card'",
+                      "then": {
+                       "padding": [
+                        12,
+                        10,
+                        12,
+                        12
+                       ]
+                      },
+                      "else": {
+                       "padding": [
+                        2,
+                        8,
+                        2,
+                        2
+                       ]
+                      }
+                     }
+                    ],
+                    "children": [
+                     {
+                      "$if": "r_title",
+                      "then": {
+                       "text": {
+                        "value": "@r_title",
+                        "fontSize": 15,
+                        "fontWeight": 600,
+                        "color": "@colors.onSurface",
+                        "maxLines": 1,
+                        "overflow": "ellipsis"
+                       }
+                      }
+                     },
+                     {
+                      "$if": "r_caption || r_meta",
+                      "then": {
+                       "row": {
+                        "verticalAlignment": "center",
+                        "modifiers": [
+                         "fillMaxWidth",
+                         {
+                          "padding": {
+                           "top": 2
+                          }
+                         }
+                        ],
+                        "children": [
+                         {
+                          "$if": "r_caption",
+                          "then": {
+                           "text": {
+                            "value": "@r_caption",
+                            "fontSize": 13,
+                            "color": "@colors.muted",
+                            "maxLines": 1,
+                            "overflow": "ellipsis",
+                            "modifiers": [
+                             {
+                              "weight": 1
+                             }
+                            ]
+                           }
+                          }
+                         },
+                         {
+                          "$if": "r_meta",
+                          "then": {
+                           "text": {
+                            "value": "@r_meta",
+                            "fontSize": 14,
+                            "fontWeight": 700,
+                            "color": "@colors.onSurface",
+                            "maxLines": 1,
+                            "modifiers": [
+                             {
+                              "padding": {
+                               "start": 6
+                              }
+                             }
+                            ]
+                           }
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "$if": "footer",
+        "then": {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "padding": [
+             "@gap / 2",
+             8
+            ]
+           }
+          ],
+          "children": [
+           {
+            "$slot": "footer"
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Columns follow the window, never the content: floor((width - 2 * (16 - gap / 2)) / (minTile + gap)), raised when the window is short so a whole tile (picture and text) takes at most 85% of the grid's height, kept between minColumns and maxColumns. With the defaults (minTile 150, gap 12, square): 2 at 360x640, 3 at 640x360, 4 at 800x1280, 6 at 1280x800; a portrait aspect (1.25) gets 4 at 640x360",
+  "Every tile keeps aspect (picture height over width) at every column count; only the text under it is fixed (title one line, caption and meta one line). Keep meta short (\"$24\", \"4.8\"): it is never cut, the caption is ellipsized beside it",
+  "art fills the picture box exactly: a canvas or box with fillMaxSize (draw from componentWidth() and componentHeight(), not from a size), or CoverArt with no size. In plain style the box clips art to radius; in card style the card clips it",
+  "A section field starts a full-width heading before its tile and a new row of tiles; a row before it may stay short. There is no sticky header",
+  "The grid scrolls inside height minus the header: no weights or fillMaxHeight inside art. Every tile is written into the document: fine for tens of items; for hundreds, page them from the app",
+  "Tap sets selected (from 0, -1 none) and then runs onClick, which sees the new index: send it with {\"type\": \"hostNamedAction\", \"name\": \"open\", \"value\": \"@sel\", \"valueType\": \"float\", \"actionType\": 0}. The action is written in every tile, so the name is used many times: json2rc declares it once on purpose (the reference parser writes it only in the first tile's list, so its bytes differ)",
+  "Each distinct symbol in a generated cover is a Material Symbols path written once, about 1.5 KB: twelve different symbols are most of a 38 KB document (CMP-46). Reuse symbols, or pass art drawn from a few primitives (CMP-45's Snapshot is about 0.5 KB a photo)",
+  "Not for tiles of different kinds (a chart beside a list beside a gauge): that is a dashboard grid. Not for rows of data that become tiles when wide: that is RowList. GalleryGrid is pictures first",
+  "width and height default to the window: pass them when it sits under a bar or inside a pane (a NavShell page: give height the page's height and set NavShell scroll to false)"
+ ]
+}

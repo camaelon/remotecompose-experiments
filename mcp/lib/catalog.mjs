@@ -6,7 +6,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadLibrary, loadIconCatalog, VERTICAL_EXAMPLES, BATCH_EXAMPLES, BATCH2_EXAMPLES } from "./components.mjs";
+import { loadLibrary, loadIconCatalog, VERTICAL_EXAMPLES, BATCH_EXAMPLES, BATCH2_EXAMPLES, THREE_D_EXAMPLES } from "./components.mjs";
 import { designAudit } from "./design-audit.mjs";
 import { loadMaps } from "./maps.mjs";
 import { STRUCTURES, classifyStructure, structureMenu, HIDE_TEMPLATES } from "./structures.mjs";
@@ -76,6 +76,7 @@ export function loadCatalog() {
     if (process.env.RC_HIDE_VERTICALS) catalog.examples = catalog.examples.filter((e) => !VERTICAL_EXAMPLES.includes(e.id));
     if (process.env.RC_HIDE_BATCH) catalog.examples = catalog.examples.filter((e) => !BATCH_EXAMPLES.includes(e.id));
     if (process.env.RC_HIDE_BATCH2) catalog.examples = catalog.examples.filter((e) => !BATCH2_EXAMPLES.includes(e.id));
+    if (process.env.RC_HIDE_3D) catalog.examples = catalog.examples.filter((e) => !THREE_D_EXAMPLES.includes(e.id));
     const library = loadLibrary();
     // phrase (normalised words joined by a space) -> [{kind, id}]
     const phrases = new Map();
@@ -362,6 +363,18 @@ function expandCapIds(ids, C) {
     return out;
 }
 
+// 3D is offered only when a request asks for it: a 2D chart or a picture of an object must not
+// come back as a 3D scene (3D has not landed in androidx yet; it plays in the C++ and TS players).
+export const WANTS_3D = /\b(3[- ]?d|three[- ]dimensional|exploded view|surface plot|functions? of two variables|360(°|[- ]degrees?)? (view|spin|turntable)|z\s*=\s*f\s*\()/i;
+const THREE_D_COMPONENTS = new Set(["Scene3D", "Chart3D"]);
+const is3D = (e) => exampleCaps(e).primary.some((c) => c.startsWith("3d.")) || (e.components ?? []).some((c) => THREE_D_COMPONENTS.has(c));
+const no3dCache = new WeakMap();
+function without3D(C) {
+    let v = no3dCache.get(C);
+    if (!v) no3dCache.set(C, (v = { ...C, examples: C.examples.filter((e) => !is3D(e)) }));
+    return v;
+}
+
 /** The smallest set of examples (greedy set cover) that together demonstrate the goal. */
 // How many examples mention each word (title, keywords, prompt), for the subject weighting.
 const dfCache = new WeakMap();
@@ -395,8 +408,13 @@ function buildKitCore({ goal = "", capabilities = [], max_examples = 4, structur
     const pickedAll = picks.map((id) => STRUCTURES.find((s) => s.id === id) ?? (() => { throw new Error(`build_kit: no structure "${id}": use ${STRUCTURES.map((s) => s.id).join(", ")} or none`); })());
     const chosen = pickedAll[0] ?? null;
     const shapeOf = () => (chosen ? { structure: chosen, score: Infinity } : none ? null : classifyStructure(goal));
-    const C = loadCatalog();
+    const wants3D = WANTS_3D.test(String(goal)) || capabilities.some((c) => String(c).startsWith("3d"));
+    const C = wants3D ? loadCatalog() : without3D(loadCatalog());
     const r = resolveTerms(goal);
+    if (!wants3D) {
+        r.components = r.components.filter((n) => !THREE_D_COMPONENTS.has(n));
+        r.capabilities = r.capabilities.filter((c) => !c.startsWith("3d."));
+    }
     const needed = new Set([...r.capabilities, ...expandCapIds(capabilities, C)]);
     // Components first: a goal that names a component gets its call, not a hand-drawn copy.
     // A structure with a template: the template first, whatever the words matched.
@@ -756,7 +774,7 @@ function designRules(goal, r, needed) {
     });
     if (/\b(colou?r picker|hue|saturation|lightness|brightness of the colou?r|rgb|hsl|hsv|swatch|tint)\b/.test(g)) rules.push({
         rule: "Compute the colour",
-        how: "A colour that follows values (a picker's preview, a tint) is a computed colour in resources.colors: {\"preview\": {\"hsv\": [\"@hue\", \"@sat\", \"@val\"]}} (h, s, v in 0..1; or {\"argb\": [a, r, g, b]}), used as \"@colors.preview\"; it re-evaluates when the variables change. HSL is not native: V = L + S·min(L, 1 − L), S_v = 2·(1 − L / V). Slider tracks can show the range as a gradient drawn on a canvas. In mono the preview has no colour: show the values as text too.",
+        how: "A colour that follows values (a picker's preview, a tint) is a computed colour in resources.colors: {\"preview\": {\"hsv\": [\"@hue\", \"@sat\", \"@val\"]}} (h, s, v in 0..1; or {\"argb\": [a, r, g, b]}), used as \"@colors.preview\"; it re-evaluates when the variables change, and follows a Slider live while dragging (the expander moves it after the slider) as long as nothing before the slider reads it. HSL is not native: V = L + S·min(L, 1 − L), S_v = 2·(1 − L / V). Slider tracks can show the range as a gradient drawn on a canvas. In mono the preview has no colour: show the values as text too.",
     });
     // A list of rows from host values (departures, appointments, a queue).
     if (/\b(departures?|arrivals?|bus(es)?|trains?|transit|schedule|timetable|upcoming|queue|next \d+|agenda|appointments?|rows? of)\b/.test(g)) rules.push({

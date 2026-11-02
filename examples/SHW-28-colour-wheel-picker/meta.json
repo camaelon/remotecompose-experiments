@@ -1,0 +1,523 @@
+{
+ "id": "SHW-28",
+ "name": "colour-wheel-picker",
+ "version": 1,
+ "title": "Pro colour picker: hue ring, SV square, hex and WCAG contrast",
+ "summary": "A precise HSV colour picker in one canvas: a sweep-gradient hue ring around a saturation/value square built from three stacked gradients, two drag handles that grow while held, a live swatch with white and black sample text, the hex code assembled from text lookups, rgb() and H/S/V read-outs, and a WCAG 2.2 contrast check (sRGB linearisation, relative luminance, ratio, AA / AA Large / AAA / Fail badge and a log-scale meter) against white and black text, all computed with expressions. Phone layouts stack wheel and panel; a wide box puts the panel beside the wheel.",
+ "prompt": "Build an HSV colour picker that looks like a pro design tool: a hue ring and a saturation/value square I can drag, a live preview swatch, the hex code, and a contrast check of white and black text on the colour with the WCAG ratio and pass/fail.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "No library component draws a hue ring or an SV field, and the touch routing (which control the finger went down on, latched values per control) and the colour maths are specific to this picker.",
+ "capabilities": {
+  "primary": [
+   "input.drag",
+   "draw.gradient",
+   "expr.math",
+   "text.dynamic"
+  ],
+  "secondary": [
+   "expr.trig",
+   "expr.select",
+   "expr.string",
+   "data.loop",
+   "draw.transform",
+   "draw.shapes",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "control"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "colour picker",
+  "color picker",
+  "hsv",
+  "hue ring",
+  "colour wheel",
+  "color wheel",
+  "saturation",
+  "brightness",
+  "hex",
+  "hex code",
+  "rgb",
+  "wcag",
+  "contrast ratio",
+  "accessibility",
+  "a11y contrast",
+  "design tool",
+  "swatch",
+  "showcase"
+ ],
+ "teaches": [
+  "Route one canvas's drag to two controls: onTouchDown stores touchX()/touchY() in root variables, and the tree classifies the press (inside the square, or on the ring) from those and the live geometry",
+  "Latch a value per control without actions that read tree variables: a touchExpression with expression [0], touchMode 1 and min = max = the live value while its control is held (±100000 otherwise) is a register that keeps its last clamped value",
+  "Fill with an exact runtime hue without a computed colour: a linear gradient of the 7-stop hue ramp stretched to 2000 px per degree and offset so the drawn shape sits on @hue",
+  "Composite the HSV colour from fixed paints: pure hue, then white at alpha 1 - s, then black at alpha 1 - v (the swatch, both handles and the contrast chips)",
+  "Build the SV square from three gradients over the same rounded rect: pure hue, white to transparent left to right, transparent to black top to bottom",
+  "Compute WCAG contrast with expressions: sRGB bytes from HSV, linearise each channel (c / 12.92 below 10.31/255, else ((c + 0.055) / 1.055)^2.4), luminance 0.2126 R + 0.7152 G + 0.0722 B, ratios 1.05 / (L + 0.05) and (L + 0.05) / 0.05",
+  "Spell a hex code with textSubtext of \"0123456789ABCDEF#\" (start floor(R / 16) and R % 16) joined by textMerge, and show a grade by drawing its four labels with alpha 1 - min(1, |grade - j|)"
+ ],
+ "pitfalls": [
+  "A modifier action is parsed before the canvas commands, so onTouchDown/onTouchUp cannot read a tree variable (componentWidth(), a touchExpression): record raw touch positions in root variables and do the geometry in the tree",
+  "step(x, edge) is strict (x > edge): step(1, 1) is 0",
+  "A computed colour (hsv/argb) cannot read tree values; the gradient trick and alpha compositing avoid it",
+  "A gradient paint inherits the paint's alpha: set an opaque colour before a gradient that follows a translucent colour, or the ring draws at 40%",
+  "A text starting with '#' is not drawn as text; put the '#' at the end of the lookup string and cut it out with textSubtext",
+  "Canvas paints have no font weight: weights need text components",
+  "The latch keeps the last drag position, not the up position: an up event far from the last move does not move the value",
+  "Java's addDataList drops the list id, so textLookup cannot reach it from JSON (EXAMPLES_FINDINGS U4): the grade labels are four texts selected by alpha"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/3/box/children/0/canvas/commands/22",
+   "shows": "input.drag",
+   "note": "the hue register: min = max = @liveH while the ring is held"
+  },
+  {
+   "pointer": "/root/3/box/children/0/canvas/commands/19",
+   "shows": "expr.trig",
+   "note": "hue from the finger: atan2 around the ring centre, 0° at the top"
+  },
+  {
+   "pointer": "/root/3/box/children/0/canvas/commands/72",
+   "shows": "draw.gradient",
+   "note": "the SV square's pure-hue fill: the hue ramp stretched to 2000 px per degree"
+  },
+  {
+   "pointer": "/root/3/box/children/0/canvas/commands/74",
+   "shows": "draw.gradient",
+   "note": "white to transparent, then transparent to black (next command) over the square"
+  },
+  {
+   "pointer": "/root/3/box/children/0/canvas/commands/38",
+   "shows": "expr.math",
+   "note": "contrast with white text from the relative luminance"
+  },
+  {
+   "pointer": "/root/3/box/children/0/canvas/commands/42",
+   "shows": "text.dynamic",
+   "note": "hex digits cut from a lookup string with textSubtext"
+  },
+  {
+   "pointer": "/root/3/box/children/0/canvas/commands/40",
+   "shows": "expr.select",
+   "note": "WCAG grade index: step(c, 3) + step(c, 4.5) + step(c, 7); one of four labels is shown by alpha"
+  },
+  {
+   "pointer": "/root/3/box/children/0/canvas/commands/71",
+   "shows": "data.loop",
+   "note": "24 tick marks round the ring"
+  },
+  {
+   "pointer": "/root/3/box/children/1",
+   "shows": "a11y.labels",
+   "note": "a live description: hex and both contrast grades"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Default: #3882D6 (H 212, S 74, V 84): white text 3.94:1 AA Large, black text 5.33:1 AA. Dragging the hue handle round to the top right (H 40) and the SV handle up and right gives #F2AA18, rgb(242, 170, 24): white 1.99:1 Fail (red meter), black 10.54:1 AAA; both handles sit where the finger left them and the ring handle keeps its hue while the square is dragged. Dragging the SV handle down darkens the colour and flips the grades. 320x568 shrinks the wheel and compacts the swatch; 820x520 moves the panel beside the wheel.",
+  "render": {
+   "clock": "2026-11-02T10:00:00"
+  },
+  "interact": [
+   {
+    "drag": [
+     102,
+     373,
+     275,
+     135
+    ],
+    "steps": 6
+   },
+   {
+    "wait": 0.2
+   },
+   {
+    "drag": [
+     222,
+     189,
+     250,
+     169
+    ],
+    "steps": 4
+   }
+  ],
+  "renders": [
+   {
+    "name": "orange",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 102,
+      "y": 373
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 40,
+      "y": 250
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 180,
+      "y": 100
+     },
+     {
+      "t": 0.4,
+      "type": "move",
+      "x": 275,
+      "y": 135
+     },
+     {
+      "t": 0.45,
+      "type": "up",
+      "x": 275,
+      "y": 135,
+      "vx": 0,
+      "vy": 0
+     },
+     {
+      "t": 0.6,
+      "type": "down",
+      "x": 222,
+      "y": 189
+     },
+     {
+      "t": 0.7,
+      "type": "move",
+      "x": 240,
+      "y": 180
+     },
+     {
+      "t": 0.8,
+      "type": "move",
+      "x": 250,
+      "y": 169
+     },
+     {
+      "t": 0.85,
+      "type": "up",
+      "x": 250,
+      "y": 169,
+      "vx": 0,
+      "vy": 0
+     }
+    ],
+    "duration": 1
+   },
+   {
+    "name": "dark-blue",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 222,
+      "y": 189
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 200,
+      "y": 260
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 180,
+      "y": 320
+     },
+     {
+      "t": 0.35,
+      "type": "up",
+      "x": 180,
+      "y": 320,
+      "vx": 0,
+      "vy": 0
+     }
+    ],
+    "duration": 0.6
+   },
+   {
+    "name": "small-phone",
+    "clock": "2026-11-02T10:00:00",
+    "width": 320,
+    "height": 568
+   },
+   {
+    "name": "wide",
+    "clock": "2026-11-02T10:00:00",
+    "width": 820,
+    "height": 520
+   },
+   {
+    "name": "tablet",
+    "clock": "2026-11-02T10:00:00",
+    "width": 600,
+    "height": 900
+   }
+  ]
+ },
+ "related": [
+  "INT-04",
+  "DRW-13",
+  "EXP-11",
+  "EXP-12",
+  "TXT-10",
+  "A11Y-02"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 15124,
+  "header": {
+   "width": 360,
+   "height": 760
+  },
+  "op_count": 584,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 2,
+   "ANIMATED_FLOAT": 299,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_FLOAT": 3,
+   "DATA_TEXT": 31,
+   "DRAW_CIRCLE": 14,
+   "DRAW_LINE": 18,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 22,
+   "DRAW_TEXT_ANCHOR": 29,
+   "HEADER": 1,
+   "LAYOUT_BOX": 2,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 2,
+   "LoopOperation": 1,
+   "MATRIX_RESTORE": 1,
+   "MATRIX_ROTATE": 1,
+   "MATRIX_SAVE": 1,
+   "MODIFIER_HEIGHT": 3,
+   "MODIFIER_TOUCH_DOWN": 1,
+   "MODIFIER_TOUCH_UP": 1,
+   "MODIFIER_WIDTH": 3,
+   "PAINT_VALUES": 87,
+   "TextFromFloat": 10,
+   "TextMerge": 32,
+   "TextSubtext": 7,
+   "TouchExpression": 3,
+   "ValueFloatExpressionChangeActionOperation": 4
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 2,
+   "info": 2
+  },
+  "audit_findings": [
+   "warning: hardcoded_colors",
+   "warning: text_in_canvas",
+   "info: deep_expressions",
+   "info: expression_entries"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 3,
+   "click": 0,
+   "area": 0,
+   "touch": 3
+  },
+  "java_identical": true,
+  "renders": {
+   "orange": {
+    "render": "render-orange.png",
+    "render_findings": []
+   },
+   "dark-blue": {
+    "render": "render-dark-blue.png",
+    "render_findings": []
+   },
+   "small-phone": {
+    "render": "render-small-phone.png",
+    "render_findings": [],
+    "size": [
+     320,
+     568
+    ],
+    "audit_findings": [
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     820,
+     520
+    ],
+    "audit_findings": [
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "tablet": {
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     600,
+     900
+    ],
+    "audit_findings": [
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "angle",
+   "apiLevel",
+   "bottom",
+   "box",
+   "canvas",
+   "centerX",
+   "centerY",
+   "children",
+   "color",
+   "colors",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "decimal",
+   "defaultValue",
+   "drawCircle",
+   "drawLine",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "expression",
+   "flags",
+   "from",
+   "header",
+   "height",
+   "id1",
+   "id2",
+   "index",
+   "left",
+   "len",
+   "linearGradient",
+   "loop",
+   "max",
+   "min",
+   "modifiers",
+   "name",
+   "onTouchDown",
+   "onTouchUp",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "radius",
+   "right",
+   "root",
+   "rotate",
+   "rx",
+   "ry",
+   "save",
+   "semantics",
+   "shader",
+   "size",
+   "start",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "sweepGradient",
+   "target",
+   "text",
+   "textSize",
+   "textSubtext",
+   "top",
+   "touchExpression",
+   "touchMode",
+   "type",
+   "until",
+   "value",
+   "varName",
+   "variable",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "input.drag": [
+    "touchExpression"
+   ],
+   "draw.gradient": [
+    "linearGradient",
+    "sweepGradient"
+   ],
+   "expr.math": [
+    "pow(",
+    "log(",
+    "floor(",
+    "round(",
+    "abs(",
+    "hypot(",
+    "min(",
+    "max("
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "expr.trig": [
+    "sin(",
+    "cos(",
+    "atan2("
+   ],
+   "expr.select": [
+    "ifElse(",
+    "step("
+   ],
+   "expr.string": [
+    "textMerge",
+    "textSubtext"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "draw.transform": [
+    "save",
+    "rotate"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawRoundRect",
+    "drawCircle",
+    "drawLine"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:48:56.752Z"
+ }
+}

@@ -1,0 +1,603 @@
+{
+ "id": "CMP-39",
+ "name": "inbox",
+ "version": 1,
+ "title": "An inbox that becomes two panes on a tablet",
+ "prompt": "Make an email inbox: each message shows the sender, subject, a preview line and the time, unread ones in bold. Tapping one opens the message; on a tablet show the list and the open message side by side.",
+ "level": 2,
+ "family": "CMP",
+ "components": [
+  "ListDetail",
+  "Avatar",
+  "Badge",
+  "IconButton",
+  "Icon",
+  "Button"
+ ],
+ "capabilities": {
+  "primary": [
+   "layout.state",
+   "input.tap"
+  ],
+  "secondary": [
+   "a11y.labels",
+   "input.host"
+  ]
+ },
+ "use_cases": [
+  "list",
+  "notification"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "inbox",
+  "email",
+  "mail",
+  "messages",
+  "mail client",
+  "list detail",
+  "master detail",
+  "two pane",
+  "split view",
+  "reading pane",
+  "unread",
+  "sender",
+  "subject",
+  "preview",
+  "tablet",
+  "wide screen",
+  "adaptive",
+  "back button"
+ ],
+ "teaches": [
+  "One ListDetail call: each message is {title: sender, subtitle: subject, preview, meta: time, lead: Avatar, unread, headline: subject, body}. About 3.8 KB of JSON for the whole adaptive screen",
+  "Phone: the list, a tap opens the message with a back arrow. From 600 dp: list a third wide, the open message beside it, highlighted with a bar and a tint",
+  "headline puts the subject above the sender in the message, so it is not repeated under the sender; body is plain text with blank lines between paragraphs",
+  "Reply sits in the detailEnd slot, written once under whichever message is open, and sends hostNamedAction reply with the open message's index"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/ListDetail",
+   "shows": "layout.state",
+   "note": "the whole call"
+  },
+  {
+   "pointer": "/root/ListDetail/items/0",
+   "shows": "input.tap",
+   "note": "one message: row fields and the message body"
+  },
+  {
+   "pointer": "/root/ListDetail/items/1",
+   "shows": "a11y.labels",
+   "note": "each row is one labelled tap target"
+  },
+  {
+   "pointer": "/root/ListDetail/slots/detailEnd",
+   "shows": "input.host",
+   "note": "one Reply for every message, sending the index"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "sel": {
+    "min": 0,
+    "max": 5,
+    "meaning": "open message, from 0"
+   },
+   "open": {
+    "min": 0,
+    "max": 1,
+    "meaning": "1: the message is open on a phone"
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Phone: Inbox with a 2 new badge, six rows, each an avatar, sender and time, subject, one preview line; Ana Lopez and Build server bold with a blue time and dot. phone-detail: back arrow and Inbox, then the build failure subject, the CI avatar, Build server, 08:15, a rule and the message. 640x360, 800x1280, 1280x800: list on the left with Ana Lopez highlighted, her message on the right. desktop-tap: Mei Chen highlighted and her message shown.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "phone-detail",
+    "variables": {
+     "open": 1,
+     "sel": 1
+    },
+    "theme": "light"
+   },
+   {
+    "name": "phone-detail-dark",
+    "variables": {
+     "open": 1,
+     "sel": 1
+    },
+    "theme": "dark"
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360,
+    "theme": "light"
+   },
+   {
+    "name": "landscape-dark",
+    "width": 640,
+    "height": 360,
+    "theme": "dark"
+   },
+   {
+    "name": "desktop",
+    "width": 1280,
+    "height": 800,
+    "theme": "light"
+   },
+   {
+    "name": "desktop-dark",
+    "width": 1280,
+    "height": 800,
+    "theme": "dark"
+   },
+   {
+    "name": "tablet",
+    "width": 800,
+    "height": 1280,
+    "theme": "light"
+   },
+   {
+    "name": "tablet-dark",
+    "width": 800,
+    "height": 1280,
+    "theme": "dark"
+   },
+   {
+    "name": "desktop-tap",
+    "width": 1280,
+    "height": 800,
+    "theme": "light",
+    "touch_events": [
+     {
+      "t": 0.3,
+      "type": "tap",
+      "x": 150,
+      "y": 216
+     }
+    ]
+   }
+  ]
+ },
+ "related": [
+  "ListDetail",
+  "RowList",
+  "CMP-40",
+  "CMP-05"
+ ],
+ "derived": {
+  "components": [
+   "Avatar",
+   "Badge",
+   "Button",
+   "Icon",
+   "IconButton",
+   "ListDetail"
+  ],
+  "component_instances": 17,
+  "component_modes": {
+   "IconButton": "expand",
+   "ListDetail": "expand",
+   "Badge": "expand",
+   "Avatar": "expand",
+   "Icon": "expand",
+   "Button": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 15097,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 867,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 8,
+   "ANIMATED_FLOAT": 11,
+   "COLOR_CONSTANT": 24,
+   "COLOR_EXPRESSIONS": 24,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "ClipRectModifierOperation": 2,
+   "CoreText": 64,
+   "DATA_FLOAT": 4,
+   "DATA_TEXT": 41,
+   "DRAW_PATH": 1,
+   "HEADER": 1,
+   "HostNamedAction": 1,
+   "IntegerExpression": 12,
+   "LAYOUT_BOX": 56,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 22,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 21,
+   "LayoutComponentContent": 149,
+   "LoopOperation": 24,
+   "MATRIX_RESTORE": 1,
+   "MATRIX_SAVE": 1,
+   "MATRIX_SCALE": 1,
+   "MODIFIER_BACKGROUND": 38,
+   "MODIFIER_CLICK": 8,
+   "MODIFIER_HEIGHT": 57,
+   "MODIFIER_PADDING": 77,
+   "MODIFIER_RIPPLE": 1,
+   "MODIFIER_VISIBILITY": 16,
+   "MODIFIER_WIDTH": 98,
+   "NAMED_VARIABLE": 14,
+   "PAINT_VALUES": 1,
+   "PATH_DATA": 1,
+   "RoundedClipRectModifierOperation": 18,
+   "ScrollModifierOperation": 2,
+   "THEME": 36,
+   "TextMerge": 12,
+   "TouchExpression": 2,
+   "ValueFloatExpressionChangeActionOperation": 13
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "open",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   },
+   {
+    "name": "sel",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "surfaceHigh",
+    "type": "color",
+    "value": "#FF263042"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [
+   "info: hidden_rows",
+   "info: text_ellipsized"
+  ],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 8,
+   "click": 6,
+   "area": 0,
+   "touch": 2
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: text_ellipsized"
+    ]
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: text_ellipsized"
+    ]
+   },
+   "phone-detail": {
+    "theme": "light",
+    "render": "render-phone-detail.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: unused_space"
+    ]
+   },
+   "phone-detail-dark": {
+    "theme": "dark",
+    "render": "render-phone-detail-dark.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: unused_space"
+    ]
+   },
+   "landscape": {
+    "theme": "light",
+    "render": "render-landscape.png",
+    "render_findings": [
+     "info: text_ellipsized",
+     "info: unpainted_corners"
+    ],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   },
+   "landscape-dark": {
+    "theme": "dark",
+    "render": "render-landscape-dark.png",
+    "render_findings": [
+     "info: text_ellipsized"
+    ],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   },
+   "desktop": {
+    "theme": "light",
+    "render": "render-desktop.png",
+    "render_findings": [
+     "info: text_ellipsized",
+     "info: unpainted_corners"
+    ],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   },
+   "desktop-dark": {
+    "theme": "dark",
+    "render": "render-desktop-dark.png",
+    "render_findings": [
+     "info: text_ellipsized"
+    ],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   },
+   "tablet": {
+    "theme": "light",
+    "render": "render-tablet.png",
+    "render_findings": [
+     "info: text_ellipsized",
+     "info: unpainted_corners"
+    ],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   },
+   "tablet-dark": {
+    "theme": "dark",
+    "render": "render-tablet-dark.png",
+    "render_findings": [
+     "info: text_ellipsized"
+    ],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   },
+   "desktop-tap": {
+    "theme": "light",
+    "render": "render-desktop-tap.png",
+    "render_findings": [
+     "info: text_ellipsized",
+     "info: unpainted_corners"
+    ],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "Avatar",
+   "Badge",
+   "Button",
+   "ListDetail",
+   "actionType",
+   "apiLevel",
+   "background",
+   "body",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "dark",
+   "detailEnd",
+   "drawPath",
+   "enabled",
+   "end",
+   "error",
+   "export",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "headerEnd",
+   "headline",
+   "height",
+   "horizontalAlignment",
+   "icon_arrow_back_outlined",
+   "id1",
+   "id2",
+   "initials",
+   "items",
+   "label",
+   "lead",
+   "light",
+   "listdetail1_bar",
+   "listdetail1_cw",
+   "listdetail1_detOn",
+   "listdetail1_dh",
+   "listdetail1_dw",
+   "listdetail1_lh",
+   "listdetail1_listOn",
+   "listdetail1_lw",
+   "listdetail1_wide",
+   "maxLines",
+   "meta",
+   "modifiers",
+   "muted",
+   "name",
+   "onClick",
+   "onPrimary",
+   "onSurface",
+   "open",
+   "outline",
+   "overflow",
+   "padding",
+   "paint",
+   "path",
+   "paths",
+   "preview",
+   "primary",
+   "profiles",
+   "resources",
+   "root",
+   "roundedRect",
+   "row",
+   "save",
+   "scale",
+   "secondary",
+   "sel",
+   "selected",
+   "semantics",
+   "size",
+   "slots",
+   "start",
+   "style",
+   "subtitle",
+   "success",
+   "surface",
+   "surfaceHigh",
+   "sx",
+   "sy",
+   "target",
+   "text",
+   "title",
+   "top",
+   "type",
+   "unread",
+   "value",
+   "valueType",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalScroll",
+   "visibility",
+   "warning",
+   "weight",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "layout.state": [
+    "visibility"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "input.host": [
+    "hostNamedAction"
+   ]
+  },
+  "built_at": "2026-11-02T18:41:46.148Z"
+ }
+}

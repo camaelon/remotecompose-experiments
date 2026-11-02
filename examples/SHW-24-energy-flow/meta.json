@@ -1,0 +1,524 @@
+{
+ "id": "SHW-24",
+ "name": "energy-flow",
+ "version": 1,
+ "title": "Home energy flow: a live Sankey diagram with particles and eased transitions",
+ "summary": "Solar, grid and battery feeding the house, the car, the heat pump and the export, as a Sankey diagram: ribbon widths come from a 12-value host float array, each ribbon is one filled path expression with a source-to-use gradient, white particles flow along it at a speed proportional to its flow, and when the host replaces the array every ribbon, bar and label eases to the new layout in 1.2 s without the stack ever coming apart. Labels with values in kW; the same canvas lays out on a tablet and a phone, light or dark.",
+ "prompt": "Build a home energy flow diagram: sources (solar, grid, battery) to uses (house, car, heat pump, export) as a Sankey, ribbon widths from host data arrays, animated particles flowing along the ribbons at speeds proportional to the flow, and a smooth transition when the data changes. Labels with values; tablet and phone layouts.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "A Sankey needs each ribbon's two stacked offsets computed from all the flows before it; no library chart does that, so the twelve ribbons are generated from one recipe.",
+ "capabilities": {
+  "primary": [
+   "draw.plot",
+   "host.variables",
+   "anim.value",
+   "data.array"
+  ],
+  "secondary": [
+   "draw.path",
+   "draw.gradient",
+   "data.loop",
+   "data.condition",
+   "data.expression",
+   "expr.format",
+   "text.dynamic",
+   "text.anchor",
+   "time.clock",
+   "anim.loop",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "dashboard",
+  "chart",
+  "iot-panel"
+ ],
+ "form_factor": "tablet",
+ "keywords": [
+  "sankey",
+  "energy flow",
+  "home energy",
+  "solar",
+  "photovoltaic",
+  "pv",
+  "battery",
+  "grid",
+  "export",
+  "heat pump",
+  "ev charging",
+  "electric car",
+  "power flow",
+  "smart home",
+  "kw",
+  "flow diagram",
+  "alluvial",
+  "particles",
+  "energy dashboard",
+  "self-consumption"
+ ],
+ "inputs": {
+  "variables": {
+   "flows": {
+    "type": "float_array",
+    "meaning": "kW from each source to each use, row-major: solar, grid, battery x house, car, heat pump, export",
+    "default": [
+     1.2,
+     2.4,
+     0.8,
+     1.1,
+     0.3,
+     0,
+     0.6,
+     0,
+     0.9,
+     0,
+     0.2,
+     0
+    ]
+   }
+  },
+  "clock": "drives the particles",
+  "touch": false
+ },
+ "teaches": [
+  "Each flow is eased on its own: g_k = arrayGet(@flows, k), then f_k = {value: @g_k, anim: 1.2}. Every offset is a sum of eased flows, so ribbons, bars and labels move together and never overlap mid-transition",
+  "A ribbon is ONE closed pathExpression: a in 0..2, x = xs + dx * (1 - abs(1 - a)), y = ya + (yb - ya) * (1 - cos(pi a)) / 2 + w * step(a, 1). The same cosine ease serves the top edge forward and the bottom edge back; flags 4 (linear) keeps the corners square",
+  "Stacking without loops over variables: the source offset of link (s, u) is the sum of the flows before it in its row, the use offset the sum before it in its column, written out by the generator",
+  "Particles: phase = fract(T * 0.16 * arrayGet(@flows, i)) and a loop of 7 dots at fract(phase + j / 7), each with a fixed lateral offset sin(j * 2.39 + i) and alpha sin(pi t) so they fade in and out at the bars",
+  "Zero flows are skipped with conditionalOperations (gt @f_k 0.01), not drawn as hairlines",
+  "Layout scales with the box: label column clamp(70, 150, 0.21 W), gaps clamp(14, 30, 0.06 H), text clamp(11, 14, 0.018 W)"
+ ],
+ "pitfalls": [
+  "C++ player (rc-render): an animated variable whose expression reads the array directly ({value: \"arrayGet(@flows, 0)\", anim}) never re-animates when the host replaces the array; route it through a plain variable first (g_k = arrayGet(...), then {value: \"@g_k\", anim})",
+  "The particle speed reads the raw host value, so when the data changes the dots jump once to their new phase while the ribbons ease",
+  "pathExpression defaults to a spline through the samples: on a closed band that overshoots into a bulge at the corners; pass flags 4",
+  "drawTextAnchored panY -1 puts the text above the anchor and 1 below it",
+  "rc-render variables accept the float array; rc-inspect interact does not yet (EXAMPLES_FINDINGS I8)"
+ ],
+ "check": {
+  "describe": "800x500 dark: Energy flow 7.5 kW, 80% of solar used at home; Solar 5.5, Grid 0.9, Battery 1.1 on the left, House 2.4, Car 2.4, Heat pump 1.6, Export 1.1 on the right; amber-to-blue solar-to-car ribbon the widest, white dots along every ribbon. evening (variables, 2.5 s): Solar 0.0, Grid 3.2, Battery 4.2; Car 3.2 fed by the battery; mid (0.5 s): ribbons half-way between the two layouts, still stacked. 360x640 phone, light: same diagram, narrower label columns.",
+  "render": {
+   "clock": "2026-11-02T13:20:00",
+   "duration": 2
+  },
+  "renders": [
+   {
+    "name": "particles-later",
+    "clock": "2026-11-02T13:20:01",
+    "duration": 2
+   },
+   {
+    "name": "transition-mid",
+    "clock": "2026-11-02T19:20:00",
+    "duration": 0.5,
+    "variables": {
+     "flows": [
+      0,
+      0,
+      0,
+      0,
+      1.4,
+      0,
+      1.8,
+      0,
+      0.6,
+      3.2,
+      0.4,
+      0
+     ]
+    }
+   },
+   {
+    "name": "evening",
+    "clock": "2026-11-02T19:20:00",
+    "duration": 2.5,
+    "variables": {
+     "flows": [
+      0,
+      0,
+      0,
+      0,
+      1.4,
+      0,
+      1.8,
+      0,
+      0.6,
+      3.2,
+      0.4,
+      0
+     ]
+    }
+   },
+   {
+    "name": "light",
+    "theme": "light",
+    "clock": "2026-11-02T13:20:00",
+    "duration": 2
+   },
+   {
+    "name": "phone",
+    "width": 360,
+    "height": 640,
+    "clock": "2026-11-02T13:20:00",
+    "duration": 2
+   },
+   {
+    "name": "phone-light",
+    "width": 360,
+    "height": 640,
+    "theme": "light",
+    "clock": "2026-11-02T13:20:00",
+    "duration": 2
+   },
+   {
+    "name": "large",
+    "width": 1280,
+    "height": 800,
+    "clock": "2026-11-02T13:20:00",
+    "duration": 2
+   }
+  ]
+ },
+ "related": [
+  "HST-02",
+  "DRW-06",
+  "VAR-06",
+  "ANM-01",
+  "CMP-43"
+ ],
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 13691,
+  "header": {
+   "width": 800,
+   "height": 500
+  },
+  "op_count": 458,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 220,
+   "COLOR_CONSTANT": 6,
+   "COLOR_EXPRESSIONS": 6,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "ConditionalOperations": 24,
+   "CoreText": 6,
+   "DATA_TEXT": 13,
+   "DRAW_CIRCLE": 12,
+   "DRAW_PATH": 12,
+   "DRAW_ROUND_RECT": 7,
+   "DRAW_TEXT_ANCHOR": 14,
+   "DataListFloat": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 2,
+   "LayoutComponentContent": 10,
+   "LoopOperation": 18,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 3,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 6,
+   "NAMED_VARIABLE": 4,
+   "PAINT_VALUES": 46,
+   "PathExpression": 12,
+   "THEME": 9,
+   "TextFromFloat": 9,
+   "TextMerge": 7
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "flows",
+    "type": "float_array",
+    "value": [
+     1.20000005,
+     2.4000001,
+     0.800000012,
+     1.10000002,
+     0.300000012,
+     0,
+     0.600000024,
+     0,
+     0.899999976,
+     0,
+     0.200000003,
+     0
+    ]
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 3
+  },
+  "audit_findings": [
+   "warning: text_in_canvas",
+   "info: repaint_continuous",
+   "info: repeated_subtree",
+   "info: expression_entries"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "particles-later": {
+    "render": "render-particles-later.png",
+    "render_findings": []
+   },
+   "transition-mid": {
+    "render": "render-transition-mid.png",
+    "render_findings": []
+   },
+   "evening": {
+    "render": "render-evening.png",
+    "render_findings": []
+   },
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "phone": {
+    "render": "render-phone.png",
+    "render_findings": [],
+    "size": [
+     360,
+     640
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "phone-light": {
+    "theme": "light",
+    "render": "render-phone-light.png",
+    "render_findings": [],
+    "size": [
+     360,
+     640
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "large": {
+    "render": "render-large.png",
+    "render_findings": [],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "anim",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "drawCircle",
+   "drawPath",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "end",
+   "export",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "floatArrays",
+   "flows",
+   "fontSize",
+   "fontWeight",
+   "from",
+   "header",
+   "height",
+   "id",
+   "id1",
+   "id2",
+   "index",
+   "left",
+   "light",
+   "linearGradient",
+   "loop",
+   "maxLines",
+   "modifiers",
+   "muted",
+   "name",
+   "onSurface",
+   "ops",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "pathExpression",
+   "profiles",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "row",
+   "rx",
+   "ry",
+   "semantics",
+   "shader",
+   "start",
+   "style",
+   "text",
+   "textSize",
+   "top",
+   "type",
+   "until",
+   "v1",
+   "v2",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "verticalWeight",
+   "weight",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "draw.plot": [
+    "pathExpression"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "anim.value": [
+    "anim"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "draw.path": [
+    "drawPath"
+   ],
+   "draw.gradient": [
+    "linearGradient"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "data.condition": [
+    "conditionalOperations",
+    "step()"
+   ],
+   "data.expression": [
+    "pathExpression",
+    "conditionalOperations",
+    "<arithmetic>"
+   ],
+   "expr.format": [
+    "textFromFloat"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "time.clock": [
+    "continuousSec"
+   ],
+   "anim.loop": [
+    "continuousSec"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:48:45.483Z"
+ },
+ "snippets": [
+  {
+   "pointer": "/resources/floatArrays",
+   "shows": "data.array",
+   "note": "the 12 exported flows"
+  },
+  {
+   "pointer": "/root/4/column/children/3/canvas/commands/51",
+   "shows": "draw.plot",
+   "note": "one ribbon: offsets, the closed band path expression, its gradient"
+  },
+  {
+   "pointer": "/root/4/column/children/3/canvas/commands/9",
+   "shows": "anim.value",
+   "note": "an eased flow, read through a plain variable"
+  },
+  {
+   "pointer": "/root/4/column/children/3/canvas/commands/8",
+   "shows": "data.array",
+   "note": "a flow read from the exported host array"
+  },
+  {
+   "pointer": "/root/4/column/children/3/canvas/commands/8",
+   "shows": "host.variables",
+   "note": "the host array drives everything"
+  },
+  {
+   "pointer": "/root/4/column/children/3/canvas/commands/63",
+   "shows": "anim.loop",
+   "note": "seven particles on a ribbon, speed proportional to its flow"
+  }
+ ]
+}

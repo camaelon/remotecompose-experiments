@@ -1,0 +1,519 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Photo album: twelve photos from two trips in a grid, two columns on a phone, more as the window widens; tap one to select it, then share it"
+ },
+ "resources": {
+  "variables": {
+   "sel": {
+    "value": -1,
+    "export": true
+   }
+  }
+ },
+ "components": {
+  "Snapshot": {
+   "summary": "A drawn stand-in for a photo: a sky gradient, a sun and hills, sea or a skyline, filling its box",
+   "params": {
+    "kind": {
+     "type": "enum",
+     "values": [
+      "hills",
+      "sea",
+      "city"
+     ],
+     "default": "hills",
+     "static": true,
+     "doc": "The scene"
+    },
+    "sky": {
+     "type": "color",
+     "required": true,
+     "doc": "Sky at the top"
+    },
+    "glow": {
+     "type": "color",
+     "required": true,
+     "doc": "Sky at the horizon"
+    },
+    "far": {
+     "type": "color",
+     "required": true,
+     "doc": "Far hills, the sea or the skyline"
+    },
+    "near": {
+     "type": "color",
+     "required": true,
+     "doc": "Near hill, sand or the street"
+    },
+    "sun": {
+     "type": "color",
+     "default": "#FFFFF3C4",
+     "doc": "Sun or moon"
+    },
+    "sx": {
+     "type": "float",
+     "default": 70,
+     "static": true,
+     "doc": "Sun x, 0..100"
+    },
+    "sy": {
+     "type": "float",
+     "default": 30,
+     "static": true,
+     "doc": "Sun y, 0..100"
+    }
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxSize"
+     ],
+     "commands": [
+      {
+       "save": [
+        {
+         "scale": {
+          "sx": "componentWidth() / 100",
+          "sy": "componentHeight() / 100"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": 1
+           },
+           {
+            "linearGradient": {
+             "x1": 0,
+             "y1": 0,
+             "x2": 0,
+             "y2": 100,
+             "colors": [
+              "@sky",
+              "@glow"
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": 0,
+          "top": 0,
+          "right": 100,
+          "bottom": 100
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "shader": 0
+           },
+           {
+            "color": "@sun"
+           }
+          ]
+         }
+        },
+        {
+         "drawOval": {
+          "left": "@sx - 7",
+          "top": "@sy - 7 * componentWidth() / componentHeight()",
+          "right": "@sx + 7",
+          "bottom": "@sy + 7 * componentWidth() / componentHeight()"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@far"
+           }
+          ]
+         }
+        },
+        {
+         "$if": "kind == 'hills'",
+         "then": [
+          {
+           "drawOval": {
+            "left": -40,
+            "top": 50,
+            "right": 75,
+            "bottom": 150
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@near"
+             }
+            ]
+           }
+          },
+          {
+           "drawOval": {
+            "left": 25,
+            "top": 64,
+            "right": 150,
+            "bottom": 160
+           }
+          }
+         ]
+        },
+        {
+         "$if": "kind == 'sea'",
+         "then": [
+          {
+           "drawRect": {
+            "left": 0,
+            "top": 62,
+            "right": 100,
+            "bottom": 100
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@near"
+             }
+            ]
+           }
+          },
+          {
+           "drawOval": {
+            "left": -30,
+            "top": 84,
+            "right": 130,
+            "bottom": 140
+           }
+          }
+         ]
+        },
+        {
+         "$if": "kind == 'city'",
+         "then": [
+          {
+           "drawRect": {
+            "left": 4,
+            "top": 46,
+            "right": 17,
+            "bottom": 100
+           }
+          },
+          {
+           "drawRect": {
+            "left": 19,
+            "top": 30,
+            "right": 31,
+            "bottom": 100
+           }
+          },
+          {
+           "drawRect": {
+            "left": 33,
+            "top": 54,
+            "right": 43,
+            "bottom": 100
+           }
+          },
+          {
+           "drawRect": {
+            "left": 45,
+            "top": 38,
+            "right": 57,
+            "bottom": 100
+           }
+          },
+          {
+           "drawRect": {
+            "left": 59,
+            "top": 22,
+            "right": 69,
+            "bottom": 100
+           }
+          },
+          {
+           "drawRect": {
+            "left": 71,
+            "top": 50,
+            "right": 82,
+            "bottom": 100
+           }
+          },
+          {
+           "drawRect": {
+            "left": 84,
+            "top": 36,
+            "right": 96,
+            "bottom": 100
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@near"
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 0,
+            "top": 86,
+            "right": 100,
+            "bottom": 100
+           }
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "call": {
+    "Snapshot": {
+     "sky": "#FF4A90D9",
+     "glow": "#FFBFE0F5",
+     "far": "#FF5B8C5A",
+     "near": "#FF3E6B3F"
+    }
+   }
+  }
+ },
+ "root": {
+  "GalleryGrid": {
+   "title": "Trips",
+   "subtitle": "12 photos, 2 albums",
+   "aspect": 0.75,
+   "selected": "@sel",
+   "items": [
+    {
+     "section": "Lisbon, October 2026",
+     "title": "Alfama at dusk",
+     "caption": "Oct 24",
+     "art": {
+      "Snapshot": {
+       "kind": "city",
+       "sky": "#FF3B3F7A",
+       "glow": "#FFF2A36B",
+       "far": "#FF2B2E4F",
+       "near": "#FF1B1D33",
+       "sx": 30,
+       "sy": 36
+      }
+     }
+    },
+    {
+     "title": "Belém shore",
+     "caption": "Oct 25",
+     "art": {
+      "Snapshot": {
+       "kind": "sea",
+       "sky": "#FF3E8EDB",
+       "glow": "#FFBFE3F7",
+       "far": "#FF2F6FA8",
+       "near": "#FFE8D3A6",
+       "sx": 78,
+       "sy": 24
+      }
+     }
+    },
+    {
+     "title": "Sintra hills",
+     "caption": "Oct 26",
+     "art": {
+      "Snapshot": {
+       "kind": "hills",
+       "sky": "#FF6E8FC9",
+       "glow": "#FFF7CBA1",
+       "far": "#FF6C8C6A",
+       "near": "#FF3F6342",
+       "sx": 40,
+       "sy": 40
+      }
+     }
+    },
+    {
+     "title": "Cascais sunset",
+     "caption": "Oct 26",
+     "art": {
+      "Snapshot": {
+       "kind": "sea",
+       "sky": "#FF5A3D7A",
+       "glow": "#FFFFB36B",
+       "far": "#FF3A3F78",
+       "near": "#FFC9A27A",
+       "sun": "#FFFFE08A",
+       "sx": 50,
+       "sy": 52
+      }
+     }
+    },
+    {
+     "title": "Baixa by night",
+     "caption": "Oct 27",
+     "art": {
+      "Snapshot": {
+       "kind": "city",
+       "sky": "#FF0E1630",
+       "glow": "#FF35406E",
+       "far": "#FF0A0F22",
+       "near": "#FF070B18",
+       "sun": "#FFE8EEF8",
+       "sx": 80,
+       "sy": 22
+      }
+     }
+    },
+    {
+     "title": "Tram 28",
+     "caption": "Oct 27",
+     "art": {
+      "Snapshot": {
+       "kind": "city",
+       "sky": "#FF3E8EDB",
+       "glow": "#FFBFE3F7",
+       "far": "#FFD9A066",
+       "near": "#FF8C6B4F",
+       "sx": 22,
+       "sy": 20
+      }
+     }
+    },
+    {
+     "section": "Dolomites, September 2026",
+     "title": "Seceda ridge",
+     "caption": "Sep 12",
+     "art": {
+      "Snapshot": {
+       "kind": "hills",
+       "sky": "#FF3E8EDB",
+       "glow": "#FFBFE3F7",
+       "far": "#FF7A9AB8",
+       "near": "#FF4C8A4E",
+       "sx": 22,
+       "sy": 22
+      }
+     }
+    },
+    {
+     "title": "Lago di Braies",
+     "caption": "Sep 13",
+     "art": {
+      "Snapshot": {
+       "kind": "sea",
+       "sky": "#FF4B88C9",
+       "glow": "#FFD5ECF5",
+       "far": "#FF2E7D7A",
+       "near": "#FF5C6B5A",
+       "sx": 64,
+       "sy": 20
+      }
+     }
+    },
+    {
+     "title": "Alpe di Siusi",
+     "caption": "Sep 14",
+     "art": {
+      "Snapshot": {
+       "kind": "hills",
+       "sky": "#FF6E8FC9",
+       "glow": "#FFF7CBA1",
+       "far": "#FF8A7FA8",
+       "near": "#FF5E8A47",
+       "sx": 82,
+       "sy": 34
+      }
+     }
+    },
+    {
+     "title": "Cortina evening",
+     "caption": "Sep 15",
+     "art": {
+      "Snapshot": {
+       "kind": "city",
+       "sky": "#FF2F3466",
+       "glow": "#FFE58E6B",
+       "far": "#FF262A4A",
+       "near": "#FF3B3248",
+       "sx": 60,
+       "sy": 48
+      }
+     }
+    },
+    {
+     "title": "Tre Cime",
+     "caption": "Sep 16",
+     "art": {
+      "Snapshot": {
+       "kind": "hills",
+       "sky": "#FF20325E",
+       "glow": "#FF8FA6C8",
+       "far": "#FF4E5A78",
+       "near": "#FF2E3F35",
+       "sun": "#FFF5F1E0",
+       "sx": 26,
+       "sy": 24
+      }
+     }
+    },
+    {
+     "title": "Rifugio sunrise",
+     "caption": "Sep 16",
+     "art": {
+      "Snapshot": {
+       "kind": "hills",
+       "sky": "#FF6E8FC9",
+       "glow": "#FFF7CBA1",
+       "far": "#FF9C8FB0",
+       "near": "#FF6B7F4E",
+       "sun": "#FFFFE08A",
+       "sx": 50,
+       "sy": 46
+      }
+     }
+    }
+   ],
+   "slots": {
+    "headerEnd": [
+     {
+      "IconButton": {
+       "label": "Share the selected photo",
+       "onClick": {
+        "type": "hostNamedAction",
+        "name": "sharePhoto",
+        "value": "@sel",
+        "valueType": "float",
+        "actionType": 0
+       },
+       "slots": {
+        "icon": [
+         {
+          "Icon": {
+           "name": "share"
+          }
+         }
+        ]
+       }
+      }
+     }
+    ]
+   }
+  }
+ }
+}

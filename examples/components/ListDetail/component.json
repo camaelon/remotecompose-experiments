@@ -1,0 +1,872 @@
+{
+ "component": "ListDetail",
+ "version": 1,
+ "summary": "A whole list-detail screen from data: a master list (a title, then rows with a lead, title, subtitle, preview and a time or value) and the selected item's detail. On a phone one pane shows: the list, and a tap opens the detail with a back arrow. From 600 dp wide both panes show side by side, the list about a third (260 to 420 dp), the selected row highlighted, and a tap changes the detail in place.",
+ "params": {
+  "items": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One object per item: {\"title\", \"subtitle\", \"preview\", \"meta\", \"lead\", \"unread\", \"headline\", \"body\", \"detail\", \"label\"}, all but the title optional. title (sender, name, product), subtitle (subject, role, price) and preview (first line of the message) are the row's three lines, meta the time or value at its end; lead any node (Avatar, Icon) shown in the row and the detail header; unread: true makes the title bold with a dot. The detail shows headline (big, above the header, e.g. a subject), a header (lead, title, subtitle, meta), then body (a long text that wraps) and/or detail (any node: a column of rows, buttons). label replaces the row's spoken text"
+  },
+  "title": {
+   "type": "string",
+   "doc": "The list's heading (\"Inbox\"); also beside the back arrow on a phone. Omit for no header"
+  },
+  "selected": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The selected item, from 0. Bind a resources variable (\"@sel\") to read it or preset it. Do not name it step"
+  },
+  "open": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "1 while the detail is open on a phone (a row tap sets it, back clears it). Bind it to open a phone straight on the detail. It has no effect when wide"
+  },
+  "wideAt": {
+   "type": "float",
+   "default": 600,
+   "static": true,
+   "doc": "Width in dp from which both panes show"
+  },
+  "listShare": {
+   "type": "float",
+   "default": 0.34,
+   "static": true,
+   "doc": "The list's share of the width when wide, kept between listMin and listMax"
+  },
+  "listMin": {
+   "type": "float",
+   "default": 260,
+   "static": true,
+   "doc": "Narrowest list when wide"
+  },
+  "listMax": {
+   "type": "float",
+   "default": 420,
+   "static": true,
+   "doc": "Widest list when wide"
+  },
+  "previewLines": {
+   "type": "float",
+   "default": 1,
+   "static": true,
+   "doc": "Lines of preview per row (1 or 2)"
+  },
+  "detailHeader": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "false: the detail has no header (lead, title, subtitle, meta), only headline, body and detail"
+  },
+  "maxDetail": {
+   "type": "float",
+   "default": 760,
+   "static": true,
+   "doc": "Widest the detail's content grows, for readable lines on a desktop"
+  },
+  "background": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "The detail pane's background (the list sits on surface)"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width it has, when it is not the whole window"
+  },
+  "height": {
+   "type": "float",
+   "default": "windowHeight()",
+   "doc": "The height it has"
+  }
+ },
+ "slots": {
+  "headerEnd": {
+   "optional": true,
+   "doc": "At the end of the list's header: a Badge with the unread count, an IconButton"
+  },
+  "detailEnd": {
+   "optional": true,
+   "doc": "Written once, under the selected item's detail: actions on the selected item (Reply, Add to cart) that read the selected variable. Cheaper than a button per item, and a host action name used once"
+  }
+ },
+ "locals": {
+  "wide": "step(@width, @wideAt - 0.5)",
+  "lw": "ifElse(@width, clamp(@listMin, @listMax, floor(@width * @listShare)), @wide)",
+  "dw": "ifElse(@width, @width - @lw - 1, @wide)",
+  "listOn": "max(@wide, 1 - @open)",
+  "detOn": "max(@wide, @open)",
+  "bar": "1 - @wide",
+  "hh": {
+   "$if": "title",
+   "then": 56,
+   "else": 0
+  },
+  "lh": "@height - @hh",
+  "dh": "@height - 56 * @bar",
+  "pl": "@previewLines * 18",
+  "cw": "min(@dw, @maxDetail)"
+ },
+ "capabilities": [
+  "layout.state",
+  "input.tap",
+  "a11y.labels"
+ ],
+ "call": {
+  "ListDetail": {
+   "title": "Notes",
+   "items": [
+    {
+     "title": "Groceries",
+     "meta": "Mon",
+     "body": "Milk, eggs, bread."
+    },
+    {
+     "title": "Ideas",
+     "meta": "Sun",
+     "body": "A list that becomes two panes."
+    }
+   ]
+  }
+ },
+ "body": {
+  "row": {
+   "modifiers": [
+    {
+     "width": "@width"
+    },
+    {
+     "height": "@height"
+    },
+    {
+     "background": "@background"
+    }
+   ],
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       {
+        "visibility": "@listOn"
+       },
+       {
+        "width": "@lw"
+       },
+       {
+        "height": "@height"
+       },
+       {
+        "background": "@colors.surface"
+       }
+      ],
+      "children": [
+       {
+        "variable": {
+         "name": "sy",
+         "value": 0
+        }
+       },
+       {
+        "$if": "title",
+        "then": {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": 56
+           },
+           {
+            "padding": [
+             16,
+             0
+            ]
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@title",
+             "fontSize": "@theme.text_lg",
+             "fontWeight": 700,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ]
+            }
+           },
+           {
+            "$slot": "headerEnd"
+           }
+          ]
+         }
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": "@lh"
+          },
+          {
+           "verticalScroll": "@sy"
+          }
+         ],
+         "children": [
+          {
+           "$each": "items",
+           "as": "r",
+           "index": "i",
+           "fields": [
+            "title",
+            "subtitle",
+            "preview",
+            "meta",
+            "lead",
+            "unread",
+            "headline",
+            "body",
+            "detail",
+            "label"
+           ],
+           "do": {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "$if": "r_preview",
+               "then": {
+                "height": "@pl + 62"
+               },
+               "else": {
+                "$if": "r_subtitle",
+                "then": {
+                 "height": 64
+                },
+                "else": {
+                 "height": 52
+                }
+               }
+              },
+              {
+               "semantics": {
+                "clickable": true,
+                "contentDescription": {
+                 "$if": "r_label",
+                 "then": "@r_label",
+                 "else": {
+                  "$if": "r_subtitle",
+                  "then": {
+                   "type": "textMerge",
+                   "id1": "@r_title",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": ", ",
+                    "id2": "@r_subtitle"
+                   }
+                  },
+                  "else": "@r_title"
+                 }
+                }
+               }
+              },
+              {
+               "onClick": [
+                {
+                 "type": "valueFloatChange",
+                 "target": "@selected",
+                 "value": "@i"
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@open",
+                 "value": 1
+                }
+               ]
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "@wide * (1 - min(1, abs(@selected - @i)))"
+                 },
+                 "fillMaxSize",
+                 {
+                  "background": "@colors.surfaceHigh"
+                 }
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 4
+                    },
+                    "fillMaxHeight",
+                    {
+                     "background": "@colors.primary"
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 "fillMaxSize",
+                 {
+                  "padding": [
+                   16,
+                   0
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "$if": "r_lead",
+                  "then": {
+                   "box": {
+                    "modifiers": [
+                     {
+                      "padding": {
+                       "end": 12
+                      }
+                     }
+                    ],
+                    "children": [
+                     "@r_lead"
+                    ]
+                   }
+                  }
+                 },
+                 {
+                  "column": {
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ],
+                   "children": [
+                    {
+                     "row": {
+                      "verticalAlignment": "center",
+                      "modifiers": [
+                       "fillMaxWidth"
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": "@r_title",
+                         "fontSize": "@theme.text_md",
+                         "fontWeight": {
+                          "$if": "r_unread",
+                          "then": 700,
+                          "else": 500
+                         },
+                         "color": "@colors.onSurface",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "$if": "r_meta",
+                        "then": {
+                         "text": {
+                          "value": "@r_meta",
+                          "fontSize": "@theme.text_sm",
+                          "fontWeight": {
+                           "$if": "r_unread",
+                           "then": 700,
+                           "else": 400
+                          },
+                          "color": {
+                           "$if": "r_unread",
+                           "then": "@colors.primary",
+                           "else": "@colors.muted"
+                          },
+                          "maxLines": 1,
+                          "modifiers": [
+                           {
+                            "padding": {
+                             "start": 8
+                            }
+                           }
+                          ]
+                         }
+                        }
+                       },
+                       {
+                        "$if": "r_unread",
+                        "then": {
+                         "box": {
+                          "modifiers": [
+                           {
+                            "padding": {
+                             "start": 6
+                            }
+                           },
+                           {
+                            "size": 8
+                           },
+                           {
+                            "clip": {
+                             "roundedRect": 4
+                            }
+                           },
+                           {
+                            "background": "@colors.primary"
+                           }
+                          ]
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "$if": "r_subtitle",
+                     "then": {
+                      "text": {
+                       "value": "@r_subtitle",
+                       "fontSize": 14,
+                       "fontWeight": {
+                        "$if": "r_unread",
+                        "then": 600,
+                        "else": 400
+                       },
+                       "color": {
+                        "$if": "r_preview",
+                        "then": "@colors.onSurface",
+                        "else": "@colors.muted"
+                       },
+                       "maxLines": 1,
+                       "overflow": "ellipsis",
+                       "modifiers": [
+                        {
+                         "padding": {
+                          "top": 2
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    },
+                    {
+                     "$if": "r_preview",
+                     "then": {
+                      "text": {
+                       "value": "@r_preview",
+                       "fontSize": 13,
+                       "color": "@colors.muted",
+                       "maxLines": "@previewLines",
+                       "overflow": "ellipsis",
+                       "modifiers": [
+                        {
+                         "padding": {
+                          "top": 2
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       {
+        "visibility": "@wide"
+       },
+       {
+        "width": 1
+       },
+       {
+        "height": "@height"
+       },
+       {
+        "background": "@colors.outline"
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       {
+        "visibility": "@detOn"
+       },
+       {
+        "width": "@dw"
+       },
+       {
+        "height": "@height"
+       }
+      ],
+      "children": [
+       {
+        "variable": {
+         "name": "dy",
+         "value": 0
+        }
+       },
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": [
+          {
+           "visibility": "@bar"
+          },
+          "fillMaxWidth",
+          {
+           "height": 56
+          },
+          {
+           "padding": {
+            "start": 4,
+            "end": 16
+           }
+          }
+         ],
+         "children": [
+          {
+           "IconButton": {
+            "label": "Back",
+            "onClick": {
+             "type": "valueFloatChange",
+             "target": "@open",
+             "value": 0
+            },
+            "slots": {
+             "icon": [
+              {
+               "Icon": {
+                "name": "arrow_back"
+               }
+              }
+             ]
+            }
+           }
+          },
+          {
+           "$if": "title",
+           "then": {
+            "text": {
+             "value": "@title",
+             "fontSize": "@theme.text_lg",
+             "fontWeight": 700,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "modifiers": [
+              {
+               "padding": {
+                "start": 4
+               }
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": "@dh"
+          },
+          {
+           "verticalScroll": "@dy"
+          }
+         ],
+         "children": [
+          {
+           "$each": "items",
+           "as": "r",
+           "index": "i",
+           "fields": [
+            "title",
+            "subtitle",
+            "preview",
+            "meta",
+            "lead",
+            "unread",
+            "headline",
+            "body",
+            "detail",
+            "label"
+           ],
+           "do": {
+            "column": {
+             "modifiers": [
+              {
+               "visibility": "1 - min(1, abs(@selected - @i))"
+              },
+              {
+               "width": "@cw"
+              },
+              {
+               "padding": [
+                20,
+                16
+               ]
+              }
+             ],
+             "children": [
+              {
+               "$if": "r_headline",
+               "then": {
+                "text": {
+                 "value": "@r_headline",
+                 "fontSize": 22,
+                 "fontWeight": 700,
+                 "color": "@colors.onSurface",
+                 "modifiers": [
+                  {
+                   "padding": {
+                    "bottom": 12
+                   }
+                  }
+                 ]
+                }
+               }
+              },
+              {
+               "$if": "detailHeader",
+               "then": {
+                "row": {
+                 "verticalAlignment": "center",
+                 "modifiers": [
+                  "fillMaxWidth",
+                  {
+                   "padding": {
+                    "bottom": 12
+                   }
+                  }
+                 ],
+                 "children": [
+                  {
+                   "$if": "r_lead",
+                   "then": {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "padding": {
+                        "end": 12
+                       }
+                      }
+                     ],
+                     "children": [
+                      "@r_lead"
+                     ]
+                    }
+                   }
+                  },
+                  {
+                   "column": {
+                    "modifiers": [
+                     {
+                      "weight": 1
+                     }
+                    ],
+                    "children": [
+                     {
+                      "text": {
+                       "value": "@r_title",
+                       "fontSize": {
+                        "$if": "r_headline",
+                        "then": "@theme.text_md",
+                        "else": 22
+                       },
+                       "fontWeight": {
+                        "$if": "r_headline",
+                        "then": 600,
+                        "else": 700
+                       },
+                       "color": "@colors.onSurface",
+                       "maxLines": 2,
+                       "overflow": "ellipsis"
+                      }
+                     },
+                     {
+                      "$if": "r_subtitle",
+                      "then": {
+                       "$if": "r_headline",
+                       "else": {
+                        "text": {
+                         "value": "@r_subtitle",
+                         "fontSize": 14,
+                         "color": "@colors.muted",
+                         "maxLines": 2,
+                         "overflow": "ellipsis",
+                         "modifiers": [
+                          {
+                           "padding": {
+                            "top": 2
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      }
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "$if": "r_meta",
+                   "then": {
+                    "text": {
+                     "value": "@r_meta",
+                     "fontSize": "@theme.text_sm",
+                     "color": "@colors.muted",
+                     "maxLines": 1,
+                     "modifiers": [
+                      {
+                       "padding": {
+                        "start": 8
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  }
+                 ]
+                }
+               }
+              },
+              {
+               "$if": "detailHeader",
+               "then": {
+                "box": {
+                 "modifiers": [
+                  "fillMaxWidth",
+                  {
+                   "height": 1
+                  },
+                  {
+                   "background": "@colors.outline"
+                  }
+                 ]
+                }
+               }
+              },
+              {
+               "$if": "r_body",
+               "then": {
+                "text": {
+                 "value": "@r_body",
+                 "fontSize": "@theme.text_md",
+                 "color": "@colors.onSurface",
+                 "modifiers": [
+                  "fillMaxWidth",
+                  {
+                   "padding": {
+                    "top": 16
+                   }
+                  }
+                 ]
+                }
+               }
+              },
+              {
+               "$if": "r_detail",
+               "then": {
+                "box": {
+                 "modifiers": [
+                  "fillMaxWidth",
+                  {
+                   "padding": {
+                    "top": 16
+                   }
+                  }
+                 ],
+                 "children": [
+                  "@r_detail"
+                 ]
+                }
+               }
+              }
+             ]
+            }
+           }
+          },
+          {
+           "$if": "detailEnd",
+           "then": {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@cw"
+              },
+              {
+               "padding": [
+                20,
+                8,
+                20,
+                24
+               ]
+              }
+             ],
+             "children": [
+              {
+               "$slot": "detailEnd"
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Give items as data and let it decide: under wideAt (600 dp) one pane, the list or (open = 1) the detail with a back arrow; from wideAt both panes, the list listShare of the width (260 to 420 dp) and the selected row highlighted with a tint and a bar on its start edge (the bar alone in mono). Decided by the window width, never by content",
+  "Every item's detail is written into the document and shown by visibility: the doc grows with items x detail. Fine for tens of items; for a long or app-fed list, keep detail small, put shared actions in detailEnd (written once) and read the selected variable there",
+  "A host action name used in more than one place (a Button with addToCart in every item's detail) makes json2rc and the Java parser write different bytes. Put the action once in detailEnd and send the index: {\"type\": \"hostNamedAction\", \"name\": \"addToCart\", \"value\": \"@sel\", \"valueType\": \"float\", \"actionType\": 0}",
+  "Rows have fixed heights from their fields: 52 dp with a title only, 64 with a subtitle, 62 + 18 per preview line with a preview. Title, subtitle and preview are one line each (ellipsized); meta, a time or price, is not cut: keep it short",
+  "body is plain text that wraps, \\n for a line break, blank lines between paragraphs. With headline (an email subject) the headline is the big line and the header shows the lead, title and meta only, so the subject is not said twice",
+  "lead is any node, drawn in the row and again in the detail header: an Avatar or Icon of about 40 dp. A lead on a surfaceHigh tile loses its edge on the selected row, which is surfaceHigh too",
+  "selected is from 0 and open is 0/1: bind resources variables (\"@sel\", \"@open\") to preset a phone on the detail or to read the selection. Do not name a variable step",
+  "Both panes scroll on their own; the detail's scroll position is shared by all items, so a long message scrolled down leaves the next one scrolled too. There is no system back: the back arrow is the only way back on a phone",
+  "width and height default to the window: pass them when it is not the whole window. The list sits on surface, the detail on background (set background to change it)"
+ ]
+}

@@ -1,0 +1,866 @@
+{
+ "id": "SHW-31",
+ "name": "parallax-onboarding",
+ "version": 1,
+ "title": "Parallax onboarding: a landscape that follows your swipe from day to night",
+ "summary": "A three-page onboarding whose illustration is a layered landscape drawn from paths: far mountains, hills, a meadow and a foreground ridge tile seamlessly and move at 0.15, 0.4, 1 and 1.35 page widths per page while you drag, so depth comes from the finger. Swiping also moves the sun down and turns the sky from day to dusk to a starry night with a moon; each page has its own scene (pines and a trail sign, a bobbing hot-air balloon, a tent with a flickering campfire and sparks). The pager follows the finger and eases to the nearest page on release, the active dot stretches between dots like a worm, text slides and cross-fades, and the round arrow button grows into a full-width Get started pill on the last page. Light and dark sheets; portrait, tablet and landscape (side panel) layouts.",
+ "prompt": "A three-page onboarding pager with layered illustrations (hills, clouds, objects drawn with paths) that move at different speeds as you swipe, an animated dot indicator that stretches between pages, and a Get started button that appears on the last page. Make it polished, app-store quality.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "The Pager component changes page on release and cannot follow the finger, and parallax needs every layer to read the continuous drag position, so the pager, layers and indicator are one hand-built canvas",
+ "capabilities": {
+  "primary": [
+   "draw.path",
+   "anim.value",
+   "time.animation"
+  ],
+  "secondary": [
+   "draw.gradient",
+   "data.loop",
+   "input.tap",
+   "input.host",
+   "expr.trig",
+   "draw.shapes",
+   "text.anchor",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "onboarding",
+  "generative-art"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "onboarding",
+  "parallax",
+  "pager",
+  "swipe",
+  "carousel",
+  "walkthrough",
+  "intro screens",
+  "welcome screens",
+  "page indicator",
+  "worm indicator",
+  "stretching dots",
+  "get started",
+  "landscape illustration",
+  "day to night",
+  "hills",
+  "mountains",
+  "hot air balloon",
+  "campfire",
+  "stars",
+  "follows the finger",
+  "snap",
+  "showcase"
+ ],
+ "teaches": [
+  "A pager that follows the finger without touchExpression: onTouchDown stores start = touchX() and down = 1; while down, live = page + (start - touchX()) / W; onTouchUp sets page = clamp(0, 2, page + clamp(-1, 1, round((start - touchX()) / (0.5 * windowWidth())))) and down = 0",
+  "pos = {value: ifElse(@page, @live, @down - 0.5), anim: 0.5}: while dragging the target changes every frame and the anim restarts from the previous target, so it tracks the finger; on release the target becomes the page and pos eases there from where the finger left it",
+  "Parallax: every layer translates by -pos * P * speed (P = one page in scene units); objects of page i sit at centre + (i - pos) * P, so speed 1 carries them with the page, the balloon at 0.8 and the far one at 0.4 drift behind",
+  "Seamless ridges: each is a periodic function sampled over 1200 units into one cubic path, drawn in a loop of ceil((P + 400) / 1200) + 2 tiles offset by (k - 1) * 1200 - (offset % 1200)",
+  "Day to night with chain alphas: the sky, every ridge and the clouds are drawn three times (day colour at alpha 1, dusk at clamp(pos), night at clamp(pos - 1)); the sun's height, the moon, the stars and the firelight read the same pos",
+  "Worm indicator: with i = min(1, floor(pos)) and u = pos - i, the pill runs from dot i + max(0, 2u - 1) to dot i + min(1, 2u): its head reaches the next dot half-way, then its tail follows",
+  "The arrow button grows into Get started with e = smooth_step(pos - 1, 1, 0): its left edge moves from W - 80 to the panel's left + 24, the arrow fades out and the label in. Tap targets are layout boxes whose visibility is the integer expression min(1, |page - 2|) (Skip, Next) or its complement (Get started, a hostNamedAction)",
+  "Landscape: land = step(W / H, 1.2) turns the bottom sheet into a right-hand panel; the illustration centres on the visible left part and the tap boxes are shifted by a width expression"
+ ],
+ "pitfalls": [
+  "A paint that sets a colour resets the alpha: give every coloured paint its own alpha (the body text was visible on every page until it had one)",
+  "Expressions are capped at 32 entries: the cloud wrap-around is split into cw, cv, cx",
+  "% of a negative number stays negative: the clouds add 100 page widths before the modulo",
+  "Buttons change page on tap, the canvas's onTouchUp also runs: it adds round(0) to the page, so a tap never moves the page by itself",
+  "The vocabulary's input.pager evidence is touchExpression only; this pager uses onTouchDown/onTouchUp and touchX(), so it does not claim input.pager",
+  "No fling: a fast short flick under a quarter of the width does not turn the page (touchVelX() could be added to the release rule)"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/box/children/0/canvas/commands/14",
+   "shows": "anim.value",
+   "note": "live: the page under the finger while dragging"
+  },
+  {
+   "pointer": "/root/box/children/0/canvas/commands/15",
+   "shows": "anim.value",
+   "note": "pos: follows the finger, then eases to the page"
+  },
+  {
+   "pointer": "/resources/paths/far",
+   "shows": "draw.path",
+   "note": "a tileable mountain ridge: one period of a periodic function as cubics"
+  },
+  {
+   "pointer": "/root/box/children/0/canvas/commands/13",
+   "shows": "time.animation",
+   "note": "t = continuousSec(): clouds drift, the balloon bobs, stars twinkle, the fire flickers"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "page": {
+    "type": "float",
+    "meaning": "the page, 0 to 2; swipes and the buttons set it",
+    "default": 0,
+    "min": 0,
+    "max": 2
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "360x760 light, page 1: blue sky, sun and clouds, pale mountains, green hills, pines and a TRAIL sign; white sheet with Find your trail, two lines, three dots (first blue), Skip and a round blue arrow. drag: 60, 120, 200 px left the pines slide out faster than the mountains, the sky turns violet, the balloon enters, the dot stretches toward the second. release: eases to page 2 (dusk sky, orange sun low behind the balloon, Go further, safely, orange arrow). page 3: night sky with stars and moon, a lit tent and campfire, Sleep under the stars, a full-width violet Get started pill. Dark: the sheet is near-black with light text. Tablet 800x1280 scales text; landscape 760x360 and 1280x800 put the text in a right-hand panel.",
+  "render": {
+   "clock": "2026-11-02T10:00:00",
+   "theme": "light",
+   "duration": 1
+  },
+  "renders": [
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "drag-mid",
+    "touch_events": [
+     {
+      "t": 0.5,
+      "type": "down",
+      "x": 300,
+      "y": 300
+     },
+     {
+      "t": 0.55,
+      "type": "move",
+      "x": 280,
+      "y": 300
+     },
+     {
+      "t": 0.6,
+      "type": "move",
+      "x": 260,
+      "y": 300
+     },
+     {
+      "t": 0.65,
+      "type": "move",
+      "x": 240,
+      "y": 300
+     },
+     {
+      "t": 0.7,
+      "type": "move",
+      "x": 220,
+      "y": 300
+     },
+     {
+      "t": 0.75,
+      "type": "move",
+      "x": 200,
+      "y": 300
+     },
+     {
+      "t": 0.8,
+      "type": "move",
+      "x": 180,
+      "y": 300
+     }
+    ],
+    "duration": 0.82
+   },
+   {
+    "name": "drag-far",
+    "touch_events": [
+     {
+      "t": 0.5,
+      "type": "down",
+      "x": 300,
+      "y": 300
+     },
+     {
+      "t": 0.55,
+      "type": "move",
+      "x": 280,
+      "y": 300
+     },
+     {
+      "t": 0.6,
+      "type": "move",
+      "x": 260,
+      "y": 300
+     },
+     {
+      "t": 0.65,
+      "type": "move",
+      "x": 240,
+      "y": 300
+     },
+     {
+      "t": 0.7,
+      "type": "move",
+      "x": 220,
+      "y": 300
+     },
+     {
+      "t": 0.75,
+      "type": "move",
+      "x": 200,
+      "y": 300
+     },
+     {
+      "t": 0.8,
+      "type": "move",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.85,
+      "type": "move",
+      "x": 160,
+      "y": 300
+     },
+     {
+      "t": 0.9,
+      "type": "move",
+      "x": 140,
+      "y": 300
+     },
+     {
+      "t": 0.95,
+      "type": "move",
+      "x": 120,
+      "y": 300
+     },
+     {
+      "t": 1,
+      "type": "move",
+      "x": 100,
+      "y": 300
+     }
+    ],
+    "duration": 1.02
+   },
+   {
+    "name": "released",
+    "touch_events": [
+     {
+      "t": 0.5,
+      "type": "down",
+      "x": 300,
+      "y": 300
+     },
+     {
+      "t": 0.55,
+      "type": "move",
+      "x": 280,
+      "y": 300
+     },
+     {
+      "t": 0.6,
+      "type": "move",
+      "x": 260,
+      "y": 300
+     },
+     {
+      "t": 0.65,
+      "type": "move",
+      "x": 240,
+      "y": 300
+     },
+     {
+      "t": 0.7,
+      "type": "move",
+      "x": 220,
+      "y": 300
+     },
+     {
+      "t": 0.75,
+      "type": "move",
+      "x": 200,
+      "y": 300
+     },
+     {
+      "t": 0.8,
+      "type": "move",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.85,
+      "type": "move",
+      "x": 160,
+      "y": 300
+     },
+     {
+      "t": 0.9,
+      "type": "move",
+      "x": 140,
+      "y": 300
+     },
+     {
+      "t": 0.95,
+      "type": "move",
+      "x": 120,
+      "y": 300
+     },
+     {
+      "t": 1,
+      "type": "move",
+      "x": 100,
+      "y": 300
+     },
+     {
+      "t": 1,
+      "type": "up",
+      "x": 100,
+      "y": 300
+     }
+    ],
+    "duration": 1.15
+   },
+   {
+    "name": "page2",
+    "touch_events": [
+     {
+      "t": 0.5,
+      "type": "down",
+      "x": 300,
+      "y": 300
+     },
+     {
+      "t": 0.55,
+      "type": "move",
+      "x": 280,
+      "y": 300
+     },
+     {
+      "t": 0.6,
+      "type": "move",
+      "x": 260,
+      "y": 300
+     },
+     {
+      "t": 0.65,
+      "type": "move",
+      "x": 240,
+      "y": 300
+     },
+     {
+      "t": 0.7,
+      "type": "move",
+      "x": 220,
+      "y": 300
+     },
+     {
+      "t": 0.75,
+      "type": "move",
+      "x": 200,
+      "y": 300
+     },
+     {
+      "t": 0.8,
+      "type": "move",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.85,
+      "type": "move",
+      "x": 160,
+      "y": 300
+     },
+     {
+      "t": 0.9,
+      "type": "move",
+      "x": 140,
+      "y": 300
+     },
+     {
+      "t": 0.95,
+      "type": "move",
+      "x": 120,
+      "y": 300
+     },
+     {
+      "t": 1,
+      "type": "move",
+      "x": 100,
+      "y": 300
+     },
+     {
+      "t": 1,
+      "type": "up",
+      "x": 100,
+      "y": 300
+     }
+    ],
+    "duration": 2
+   },
+   {
+    "name": "next-tap",
+    "touch_events": [
+     {
+      "t": 0.3,
+      "type": "tap",
+      "x": 308,
+      "y": 704
+     }
+    ],
+    "duration": 1.3
+   },
+   {
+    "name": "page3",
+    "variables": {
+     "page": 2
+    },
+    "duration": 1.5
+   },
+   {
+    "name": "page3-dark",
+    "theme": "dark",
+    "variables": {
+     "page": 2
+    },
+    "duration": 1.5
+   },
+   {
+    "name": "fire-later",
+    "clock": "2026-11-02T10:00:02",
+    "variables": {
+     "page": 2
+    },
+    "duration": 1.5
+   },
+   {
+    "name": "phone-small",
+    "width": 360,
+    "height": 640,
+    "variables": {
+     "page": 1
+    },
+    "duration": 1.5
+   },
+   {
+    "name": "tablet",
+    "width": 800,
+    "height": 1280,
+    "theme": "dark"
+   },
+   {
+    "name": "landscape",
+    "width": 760,
+    "height": 360,
+    "variables": {
+     "page": 2
+    },
+    "duration": 1.5
+   },
+   {
+    "name": "desktop",
+    "width": 1280,
+    "height": 800,
+    "theme": "dark",
+    "variables": {
+     "page": 1
+    },
+    "duration": 1.5
+   }
+  ]
+ },
+ "related": [
+  "INT-06",
+  "Pager",
+  "PagerDots",
+  "DRW-13"
+ ],
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 18246,
+  "header": {
+   "width": 360,
+   "height": 760
+  },
+  "op_count": 618,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 5,
+   "ANIMATED_FLOAT": 173,
+   "COLOR_CONSTANT": 8,
+   "COLOR_EXPRESSIONS": 8,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_FLOAT": 3,
+   "DATA_TEXT": 21,
+   "DRAW_CIRCLE": 12,
+   "DRAW_LINE": 7,
+   "DRAW_PATH": 44,
+   "DRAW_RECT": 5,
+   "DRAW_ROUND_RECT": 8,
+   "DRAW_TEXT_ANCHOR": 12,
+   "DataListFloat": 2,
+   "HEADER": 1,
+   "HostNamedAction": 1,
+   "IntegerExpression": 2,
+   "LAYOUT_BOX": 9,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 5,
+   "LoopOperation": 24,
+   "MATRIX_RESTORE": 30,
+   "MATRIX_ROTATE": 1,
+   "MATRIX_SAVE": 30,
+   "MATRIX_SCALE": 16,
+   "MATRIX_TRANSLATE": 29,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_CLICK": 3,
+   "MODIFIER_HEIGHT": 10,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_TOUCH_DOWN": 1,
+   "MODIFIER_TOUCH_UP": 1,
+   "MODIFIER_VISIBILITY": 2,
+   "MODIFIER_WIDTH": 12,
+   "NAMED_VARIABLE": 7,
+   "PAINT_VALUES": 81,
+   "PATH_DATA": 13,
+   "THEME": 12,
+   "TextFromFloat": 1,
+   "TextMerge": 3,
+   "TextSubtext": 1,
+   "ValueFloatExpressionChangeActionOperation": 6
+  },
+  "host_variables": [
+   {
+    "name": "ink",
+    "type": "color",
+    "value": "#FFF1F2F6"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF9A9FB2"
+   },
+   {
+    "name": "page",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "sheet",
+    "type": "color",
+    "value": "#FF151823"
+   },
+   {
+    "name": "tlen",
+    "type": "float_array",
+    "value": [
+     15,
+     18,
+     21
+    ]
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF3A3E4E"
+   },
+   {
+    "name": "tstart",
+    "type": "float_array",
+    "value": [
+     0,
+     15,
+     33
+    ]
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 3
+  },
+  "audit_findings": [
+   "warning: text_in_canvas",
+   "info: repaint_continuous",
+   "info: expression_entries",
+   "info: never_executed"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 2,
+   "click": 2,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "drag-mid": {
+    "render": "render-drag-mid.png",
+    "render_findings": []
+   },
+   "drag-far": {
+    "render": "render-drag-far.png",
+    "render_findings": []
+   },
+   "released": {
+    "render": "render-released.png",
+    "render_findings": []
+   },
+   "page2": {
+    "render": "render-page2.png",
+    "render_findings": []
+   },
+   "next-tap": {
+    "render": "render-next-tap.png",
+    "render_findings": []
+   },
+   "page3": {
+    "render": "render-page3.png",
+    "render_findings": []
+   },
+   "page3-dark": {
+    "theme": "dark",
+    "render": "render-page3-dark.png",
+    "render_findings": []
+   },
+   "fire-later": {
+    "render": "render-fire-later.png",
+    "render_findings": []
+   },
+   "phone-small": {
+    "render": "render-phone-small.png",
+    "render_findings": [],
+    "size": [
+     360,
+     640
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: expression_entries",
+     "info: never_executed"
+    ]
+   },
+   "tablet": {
+    "theme": "dark",
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: expression_entries",
+     "info: never_executed"
+    ]
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     760,
+     360
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: expression_entries",
+     "info: never_executed"
+    ]
+   },
+   "desktop": {
+    "theme": "dark",
+    "render": "render-desktop.png",
+    "render_findings": [],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: expression_entries",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "angle",
+   "anim",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "centerX",
+   "centerY",
+   "children",
+   "clickable",
+   "cloud",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "door",
+   "down",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "env",
+   "export",
+   "far",
+   "flags",
+   "flame",
+   "floatArrays",
+   "from",
+   "front",
+   "gore",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "id1",
+   "id2",
+   "index",
+   "ink",
+   "left",
+   "len",
+   "light",
+   "linearGradient",
+   "loop",
+   "lpl",
+   "meadow",
+   "mid",
+   "modifiers",
+   "muted",
+   "name",
+   "onClick",
+   "onTouchDown",
+   "onTouchUp",
+   "ops",
+   "padding",
+   "page",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "paths",
+   "pillw",
+   "pine",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "radialGradient",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "rotate",
+   "row",
+   "rx",
+   "ry",
+   "save",
+   "scale",
+   "semantics",
+   "shader",
+   "sheet",
+   "sign",
+   "size",
+   "start",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "target",
+   "tent",
+   "tentlit",
+   "text",
+   "textSize",
+   "textSubtext",
+   "tlen",
+   "top",
+   "track",
+   "translate",
+   "tstart",
+   "type",
+   "until",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalWeight",
+   "visibility",
+   "weight",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "x3",
+   "y",
+   "y1",
+   "y2",
+   "y3"
+  ],
+  "evidence": {
+   "draw.path": [
+    "drawPath"
+   ],
+   "anim.value": [
+    "anim"
+   ],
+   "time.animation": [
+    "continuousSec"
+   ],
+   "draw.gradient": [
+    "linearGradient",
+    "radialGradient"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "input.host": [
+    "hostNamedAction"
+   ],
+   "expr.trig": [
+    "sin("
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawRoundRect",
+    "drawCircle",
+    "drawLine"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:49:07.066Z"
+ }
+}

@@ -1,0 +1,491 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Server status board for the production cluster: requests per second, p95 latency, error rate, traffic over 24 hours, CPU and memory gauges, the services and their health, and disk use; one column on a phone, up to four on a wide screen"
+ },
+ "resources": {
+  "floatArrays": {
+   "rps": {
+    "value": [
+     1180,
+     1220,
+     1260,
+     1240,
+     1310,
+     1290,
+     1350,
+     1330,
+     1380,
+     1420
+    ],
+    "export": true
+   },
+   "lat": {
+    "value": [
+     182,
+     176,
+     190,
+     201,
+     188,
+     179,
+     184,
+     192,
+     186,
+     174
+    ],
+    "export": true
+   },
+   "err": {
+    "value": [
+     0.21,
+     0.18,
+     0.22,
+     0.35,
+     0.41,
+     0.28,
+     0.24,
+     0.2,
+     0.19,
+     0.18
+    ],
+    "export": true
+   },
+   "traffic": {
+    "value": [
+     620,
+     480,
+     390,
+     350,
+     410,
+     640,
+     980,
+     1260,
+     1390,
+     1420,
+     1350,
+     1300,
+     1280,
+     1340,
+     1410,
+     1460,
+     1390,
+     1250,
+     1120,
+     1040,
+     960,
+     880,
+     760,
+     690
+    ],
+    "export": true
+   },
+   "disk": {
+    "value": [
+     412,
+     236,
+     118,
+     234
+    ],
+    "export": true
+   }
+  }
+ },
+ "root": {
+  "DashboardGrid": {
+   "title": "prod-eu-1",
+   "subtitle": "12 nodes · updated 10 s ago",
+   "cards": [
+    {
+     "height": 124,
+     "content": {
+      "column": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "children": [
+        {
+         "BigNumber": {
+          "caption": "Requests / s",
+          "value": 1420,
+          "fontSize": 32,
+          "change": 7.3
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           }
+          ],
+          "verticalAlignment": "bottom",
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": "min(@cardHeight - 80, 64)"
+              }
+             ],
+             "children": [
+              {
+               "TrendSparkline": {
+                "values": "@rps",
+                "fill": true,
+                "invert": false,
+                "label": "Requests / s, last hour"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "height": 124,
+     "content": {
+      "column": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "children": [
+        {
+         "BigNumber": {
+          "caption": "p95 latency",
+          "value": 174,
+          "fontSize": 32,
+          "suffix": " ms",
+          "change": -6.5,
+          "invert": true
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           }
+          ],
+          "verticalAlignment": "bottom",
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": "min(@cardHeight - 80, 64)"
+              }
+             ],
+             "children": [
+              {
+               "TrendSparkline": {
+                "values": "@lat",
+                "fill": true,
+                "invert": true,
+                "label": "p95 latency, last hour"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "height": 124,
+     "content": {
+      "column": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "children": [
+        {
+         "BigNumber": {
+          "caption": "Error rate",
+          "value": 0.18,
+          "fontSize": 32,
+          "suffix": " %",
+          "decimals": 2,
+          "change": -5.3,
+          "invert": true
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           }
+          ],
+          "verticalAlignment": "bottom",
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": "min(@cardHeight - 80, 64)"
+              }
+             ],
+             "children": [
+              {
+               "TrendSparkline": {
+                "values": "@err",
+                "fill": true,
+                "invert": true,
+                "label": "Error rate, last hour"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "title": "CPU",
+     "align": "center",
+     "height": 124,
+     "content": {
+      "Gauge": {
+       "value": 48,
+       "label": "CPU %",
+       "fill": true,
+       "thickness": 10
+      }
+     }
+    },
+    {
+     "title": "Traffic",
+     "note": "24 h, req/s",
+     "span": 2,
+     "height": 160,
+     "content": {
+      "LineChart": {
+       "values": "@traffic",
+       "fill": true,
+       "y_min": 0,
+       "xLabels": [
+        "00",
+        "06",
+        "12",
+        "18",
+        "24"
+       ],
+       "label": "Traffic over 24 hours, peak 1,460 requests a second at 15:00"
+      }
+     }
+    },
+    {
+     "title": "Memory",
+     "align": "center",
+     "height": 124,
+     "content": {
+      "Gauge": {
+       "value": 81,
+       "label": "Memory %",
+       "fill": true,
+       "thickness": 10
+      }
+     }
+    },
+    {
+     "title": "Disk",
+     "note": "1 TB",
+     "priority": 2,
+     "height": 124,
+     "content": {
+      "row": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "verticalAlignment": "center",
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": "min(@cardHeight, @cardWidth * 0.45)"
+           },
+           "fillMaxHeight"
+          ],
+          "children": [
+           {
+            "DonutChart": {
+             "values": "@disk",
+             "fill": true,
+             "thickness": 12,
+             "label": "",
+             "showTotal": false
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "padding": {
+             "start": 12
+            }
+           }
+          ],
+          "children": [
+           {
+            "Legend": {
+             "values": "@disk",
+             "labels": [
+              "Logs",
+              "Data",
+              "Backups",
+              "Free"
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "title": "Services",
+     "note": "6",
+     "span": 2,
+     "height": 176,
+     "content": {
+      "RowList": {
+       "embedded": true,
+       "readOnly": true,
+       "maxColumns": 2,
+       "tileWidth": 200,
+       "width": "@cardWidth",
+       "height": "@cardHeight",
+       "rows": [
+        {
+         "title": "api-gateway",
+         "subtitle": "4 pods",
+         "value": "12 ms",
+         "lead": {
+          "Icon": {
+           "name": "check_circle",
+           "filled": true,
+           "size": 20,
+           "color": "@colors.success",
+           "label": "Healthy"
+          }
+         }
+        },
+        {
+         "title": "auth",
+         "subtitle": "3 pods",
+         "value": "8 ms",
+         "lead": {
+          "Icon": {
+           "name": "check_circle",
+           "filled": true,
+           "size": 20,
+           "color": "@colors.success",
+           "label": "Healthy"
+          }
+         }
+        },
+        {
+         "title": "search",
+         "subtitle": "2 of 3 pods",
+         "value": "240 ms",
+         "lead": {
+          "Icon": {
+           "name": "warning",
+           "filled": true,
+           "size": 20,
+           "color": "@colors.warning",
+           "label": "Degraded"
+          }
+         }
+        },
+        {
+         "title": "payments",
+         "subtitle": "3 pods",
+         "value": "31 ms",
+         "lead": {
+          "Icon": {
+           "name": "check_circle",
+           "filled": true,
+           "size": 20,
+           "color": "@colors.success",
+           "label": "Healthy"
+          }
+         }
+        },
+        {
+         "title": "mailer",
+         "subtitle": "2 pods",
+         "value": "5 ms",
+         "lead": {
+          "Icon": {
+           "name": "check_circle",
+           "filled": true,
+           "size": 20,
+           "color": "@colors.success",
+           "label": "Healthy"
+          }
+         }
+        },
+        {
+         "title": "reports",
+         "subtitle": "1 pod",
+         "value": "88 ms",
+         "lead": {
+          "Icon": {
+           "name": "check_circle",
+           "filled": true,
+           "size": 20,
+           "color": "@colors.success",
+           "label": "Healthy"
+          }
+         }
+        }
+       ]
+      }
+     }
+    }
+   ],
+   "slots": {
+    "headerEnd": [
+     {
+      "Badge": {
+       "text": "1 incident",
+       "color": "@colors.warning"
+      }
+     }
+    ]
+   }
+  }
+ }
+}

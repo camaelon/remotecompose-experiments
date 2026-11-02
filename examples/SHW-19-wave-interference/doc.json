@@ -1,0 +1,989 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Two-source wave interference: a round pond whose ripples come from two bobbing sources; a pad sets their frequency and the distance between them"
+ },
+ "resources": {
+  "variables": {
+   "px0": 0,
+   "py0": 0,
+   "land": "step(windowWidth(), 1.15 * windowHeight())",
+   "tiny": "1 - step(windowHeight(), 330) * step(windowWidth(), 280)",
+   "full": "1 - @tiny"
+  },
+  "bitmaps": {
+   "grad": {
+    "base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAAgCAIAAAC3sD5OAAAAWklEQVR42nXIMQ6DMBAF0UH6979lGkAgRRi8XjZOYRoLqEZvho8FoMkd0OjnXbMVQGvKgJZ0dMqAvi2RDFBs9q7dANX8kN9xKQOq1nQ6oBqlqQCipZ81vFMB/iUiXMubybxgAAAAAElFTkSuQmCC"
+   },
+   "crest": {
+    "base64": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAAQCAYAAAA8qK60AAAAGUlEQVR42mP8////fwYGBgYmBigghkE7AAA5mgQI/8TA0AAAAABJRU5ErkJggg=="
+   }
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": {
+      "$if": "theme.mono",
+      "then": "@colors.background",
+      "else": "#FF050B18"
+     }
+    }
+   ],
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "padding": 20
+       },
+       {
+        "visibility": "@full"
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Two sources, one pond",
+         "fontSize": 22,
+         "color": {
+          "$if": "theme.mono",
+          "then": "@colors.onSurface",
+          "else": "#FFEAF4FF"
+         },
+         "maxLines": 1,
+         "fontWeight": 600
+        }
+       },
+       {
+        "text": {
+         "value": "Crests add where they meet, cancel on the nodal lines",
+         "fontSize": 13,
+         "color": {
+          "$if": "theme.mono",
+          "then": "@colors.onSurface",
+          "else": "#FF8396B3"
+         },
+         "maxLines": 2,
+         "modifiers": [
+          {
+           "padding": [
+            0,
+            4,
+            0,
+            0
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "verticalWeight": 1
+          }
+         ],
+         "children": []
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               150,
+               118
+              ]
+             },
+             {
+              "semantics": {
+               "contentDescription": "Wave control: drag sideways for frequency, up and down for the distance between the sources"
+              }
+             }
+            ],
+            "commands": [
+             {
+              "componentValue": {
+               "id": "@px0",
+               "valueType": 4
+              }
+             },
+             {
+              "componentValue": {
+               "id": "@py0",
+               "valueType": 5
+              }
+             },
+             {
+              "touchExpression": {
+               "name": "freq",
+               "defaultValue": 1.0,
+               "min": 0.5,
+               "max": 1.8,
+               "touchMode": 6,
+               "expression": [
+                "0.5 + (touchX() - @px0 - 14) / (componentWidth() - 28) * 1.3"
+               ]
+              }
+             },
+             {
+              "touchExpression": {
+               "name": "sep",
+               "defaultValue": 2.0,
+               "min": 0.6,
+               "max": 3.6,
+               "touchMode": 6,
+               "expression": [
+                "3.6 - (touchY() - @py0 - 14) / (componentHeight() - 28) * 3.0"
+               ]
+              }
+             },
+             {
+              "variable": {
+               "name": "pxx",
+               "value": "14 + (@freq - 0.5) / 1.3 * (componentWidth() - 28)"
+              }
+             },
+             {
+              "variable": {
+               "name": "pyy",
+               "value": "14 + (3.6 - @sep) / 3.0 * (componentHeight() - 28)"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": {
+                  "$if": "theme.mono",
+                  "then": "@colors.background",
+                  "else": "#FF0D1830"
+                 }
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": 0,
+               "top": 0,
+               "right": "componentWidth()",
+               "bottom": "componentHeight()",
+               "rx": 14,
+               "ry": 14
+              }
+             },
+             {
+              "$if": "theme.mono",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 1.5
+                  }
+                 ]
+                }
+               },
+               {
+                "drawRoundRect": {
+                 "left": 1,
+                 "top": 1,
+                 "right": "componentWidth() - 1",
+                 "bottom": "componentHeight() - 1",
+                 "rx": 14,
+                 "ry": 14
+                }
+               }
+              ]
+             },
+             {
+              "$if": "theme.mono",
+              "else": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#FF22324F"
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 1
+                  }
+                 ]
+                }
+               },
+               {
+                "loop": {
+                 "index": "gi",
+                 "from": 1,
+                 "until": 4,
+                 "commands": [
+                  {
+                   "drawLine": {
+                    "x1": "14 + gi * (componentWidth() - 28) / 4",
+                    "y1": 14,
+                    "x2": "14 + gi * (componentWidth() - 28) / 4",
+                    "y2": "componentHeight() - 14"
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 14,
+                    "y1": "14 + gi * (componentHeight() - 28) / 4",
+                    "x2": "componentWidth() - 14",
+                    "y2": "14 + gi * (componentHeight() - 28) / 4"
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": {
+                  "$if": "theme.mono",
+                  "then": "@colors.onSurface",
+                  "else": "#FF8396B3"
+                 }
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "textSize": 10
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "frequency →",
+               "x": "componentWidth() - 10",
+               "y": "componentHeight() - 8",
+               "panX": 1,
+               "panY": 0
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "gap ↑",
+               "x": 10,
+               "y": 12,
+               "panX": -1,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": {
+                  "$if": "theme.mono",
+                  "then": "@colors.onSurface",
+                  "else": "#66FFD27A"
+                 }
+                },
+                {
+                 "style": "stroke"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": "@pxx",
+               "y1": 14,
+               "x2": "@pxx",
+               "y2": "componentHeight() - 14"
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 14,
+               "y1": "@pyy",
+               "x2": "componentWidth() - 14",
+               "y2": "@pyy"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": {
+                  "$if": "theme.mono",
+                  "then": "@colors.background",
+                  "else": "#33FFD27A"
+                 }
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@pxx",
+               "cy": "@pyy",
+               "radius": 13
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": {
+                  "$if": "theme.mono",
+                  "then": "@colors.onSurface",
+                  "else": "#FFFFD27A"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@pxx",
+               "cy": "@pyy",
+               "radius": 7
+              }
+             }
+            ]
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             {
+              "padding": [
+               18,
+               0,
+               0,
+               0
+              ]
+             }
+            ],
+            "children": [
+             {
+              "row": {
+               "verticalAlignment": "bottom",
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textFromFloat",
+                   "value": "@freq",
+                   "whole": 1,
+                   "decimal": 2
+                  },
+                  "fontSize": 20,
+                  "color": {
+                   "$if": "theme.mono",
+                   "then": "@colors.onSurface",
+                   "else": "#FFEAF4FF"
+                  },
+                  "maxLines": 1,
+                  "fontWeight": 600,
+                  "modifiers": [
+                   {
+                    "width": 50
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "Hz",
+                  "fontSize": 13,
+                  "color": {
+                   "$if": "theme.mono",
+                   "then": "@colors.onSurface",
+                   "else": "#FF8396B3"
+                  },
+                  "maxLines": 1,
+                  "modifiers": [
+                   {
+                    "padding": [
+                     4,
+                     0,
+                     0,
+                     2
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "frequency",
+               "fontSize": 11,
+               "color": {
+                "$if": "theme.mono",
+                "then": "@colors.onSurface",
+                "else": "#FF8396B3"
+               },
+               "maxLines": 1
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "height": 6
+                }
+               ],
+               "children": []
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "bottom",
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textFromFloat",
+                   "value": "@sep",
+                   "whole": 1,
+                   "decimal": 1
+                  },
+                  "fontSize": 20,
+                  "color": {
+                   "$if": "theme.mono",
+                   "then": "@colors.onSurface",
+                   "else": "#FFEAF4FF"
+                  },
+                  "maxLines": 1,
+                  "fontWeight": 600,
+                  "modifiers": [
+                   {
+                    "width": 50
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "m",
+                  "fontSize": 13,
+                  "color": {
+                   "$if": "theme.mono",
+                   "then": "@colors.onSurface",
+                   "else": "#FF8396B3"
+                  },
+                  "maxLines": 1,
+                  "modifiers": [
+                   {
+                    "padding": [
+                     4,
+                     0,
+                     0,
+                     2
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "between sources",
+               "fontSize": 11,
+               "color": {
+                "$if": "theme.mono",
+                "then": "@colors.onSurface",
+                "else": "#FF8396B3"
+               },
+               "maxLines": 1
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "height": 6
+                }
+               ],
+               "children": []
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "bottom",
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textFromFloat",
+                   "value": "1.1/@freq",
+                   "whole": 1,
+                   "decimal": 2
+                  },
+                  "fontSize": 20,
+                  "color": {
+                   "$if": "theme.mono",
+                   "then": "@colors.onSurface",
+                   "else": "#FFEAF4FF"
+                  },
+                  "maxLines": 1,
+                  "fontWeight": 600,
+                  "modifiers": [
+                   {
+                    "width": 50
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "m",
+                  "fontSize": 13,
+                  "color": {
+                   "$if": "theme.mono",
+                   "then": "@colors.onSurface",
+                   "else": "#FF8396B3"
+                  },
+                  "maxLines": 1,
+                  "modifiers": [
+                   {
+                    "padding": [
+                     4,
+                     0,
+                     0,
+                     2
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "wavelength λ",
+               "fontSize": 11,
+               "color": {
+                "$if": "theme.mono",
+                "then": "@colors.onSurface",
+                "else": "#FF8396B3"
+               },
+               "maxLines": 1
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "commands": [
+       {
+        "variable": {
+         "name": "w",
+         "value": "6.2832*@freq"
+        }
+       },
+       {
+        "variable": {
+         "name": "k",
+         "value": "@w/1.1"
+        }
+       },
+       {
+        "variable": {
+         "name": "s",
+         "value": "@sep/2"
+        }
+       },
+       {
+        "variable": {
+         "name": "ph",
+         "value": {
+          "$if": "theme.mono",
+          "then": "1.2",
+          "else": "@w*continuousSec()"
+         }
+        }
+       },
+       {
+        "variable": {
+         "name": "rx0",
+         "value": "(1 - @tiny) * @land * 320"
+        }
+       },
+       {
+        "variable": {
+         "name": "ry0",
+         "value": "(1 - @tiny) * (84 - 68 * @land)"
+        }
+       },
+       {
+        "variable": {
+         "name": "ry1",
+         "value": "componentHeight() - (1 - @tiny) * (1 - @land) * 160"
+        }
+       },
+       {
+        "variable": {
+         "name": "rw",
+         "value": "componentWidth() - @rx0"
+        }
+       },
+       {
+        "variable": {
+         "name": "rh",
+         "value": "@ry1 - @ry0"
+        }
+       },
+       {
+        "variable": {
+         "name": "dist",
+         "value": "max(15.5 * componentHeight() / @rw, 10.5 * componentHeight() / @rh)"
+        }
+       },
+       {
+        "translate": {
+         "dx": "@rx0 / 2",
+         "dy": "(@ry0 + @ry1 - componentHeight()) / 2"
+        }
+       },
+       {
+        "variable": {
+         "name": "yaw",
+         "value": {
+          "$if": "theme.mono",
+          "then": "0",
+          "else": "0.3*sin(continuousSec()*0.13)"
+         }
+        }
+       },
+       {
+        "clearDepth3D": {}
+       },
+       {
+        "camera3D": {
+         "projection": "perspective",
+         "fovY": 0.6,
+         "aspect": "componentWidth()/componentHeight()",
+         "near": 0.1,
+         "far": "@dist+12",
+         "eye": [
+          "@dist*0.8*sin(@yaw)",
+          "@dist*0.6",
+          "@dist*0.8*cos(@yaw)"
+         ],
+         "center": [
+          0,
+          -0.2,
+          0
+         ],
+         "up": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "lights3D": {
+         "lights": [
+          {
+           "type": "directional",
+           "dir": [
+            -0.3,
+            -0.9,
+            -0.35
+           ],
+           "color": "#FFFFFFFF",
+           "intensity": 0.95
+          },
+          {
+           "type": "directional",
+           "dir": [
+            0.6,
+            -0.3,
+            0.5
+           ],
+           "color": "#FFB0C8FF",
+           "intensity": 0.2
+          }
+         ]
+        }
+       },
+       {
+        "meshExpression3D": {
+         "id": 1,
+         "uRange": [
+          0,
+          4
+         ],
+         "uCount": 48,
+         "vRange": [
+          0,
+          6.2832
+         ],
+         "vCount": 168,
+         "x": "u*cos(v)",
+         "y": "0.22*(sin(@k*sqrt(u*u - 2*u*@s*cos(v) + @s*@s) - @ph)/(1+0.35*sqrt(u*u - 2*u*@s*cos(v) + @s*@s)) + sin(@k*sqrt(u*u + 2*u*@s*cos(v) + @s*@s) - @ph)/(1+0.35*sqrt(u*u + 2*u*@s*cos(v) + @s*@s)))",
+         "z": "u*sin(v)",
+         "uv": [
+          "0.5",
+          "0.5+2*0.22*(sin(@k*sqrt(u*u - 2*u*@s*cos(v) + @s*@s) - @ph)/(1+0.35*sqrt(u*u - 2*u*@s*cos(v) + @s*@s)) + sin(@k*sqrt(u*u + 2*u*@s*cos(v) + @s*@s) - @ph)/(1+0.35*sqrt(u*u + 2*u*@s*cos(v) + @s*@s)))"
+         ]
+        }
+       },
+       {
+        "meshPrimitive3D": {
+         "id": 2,
+         "primitive": "torus",
+         "majorRadius": 4.12,
+         "minorRadius": 0.14,
+         "center": [
+          0,
+          0,
+          0
+         ],
+         "segments": 72
+        }
+       },
+       {
+        "meshPrimitive3D": {
+         "id": 3,
+         "primitive": "sphere",
+         "radius": 0.13,
+         "center": [
+          0,
+          0,
+          0
+         ],
+         "segments": 16
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": [
+         {
+          "lights3D": {
+           "lights": [
+            {
+             "type": "directional",
+             "dir": [
+              1,
+              0,
+              0
+             ],
+             "color": "#FFFFFFFF",
+             "intensity": 0.85
+            },
+            {
+             "type": "directional",
+             "dir": [
+              0,
+              1,
+              0
+             ],
+             "color": "#FFFFFFFF",
+             "intensity": 0.85
+            },
+            {
+             "type": "directional",
+             "dir": [
+              0,
+              0,
+              1
+             ],
+             "color": "#FFFFFFFF",
+             "intensity": 0.85
+            }
+           ]
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            }
+           ]
+          }
+         },
+         {
+          "texture3D": {
+           "bitmap": "@crest"
+          }
+         },
+         {
+          "drawMesh3D": {
+           "mesh": 1,
+           "mode": "flat"
+          }
+         },
+         {
+          "texture3D": {
+           "bitmap": 0
+          }
+         },
+         {
+          "drawMesh3D": {
+           "mesh": 2,
+           "mode": "flat"
+          }
+         }
+        ],
+        "else": [
+         {
+          "texture3D": {
+           "bitmap": "@grad"
+          }
+         },
+         {
+          "material3D": {
+           "specular": 0.35,
+           "shininess": 40
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "#FFFFFFFF"
+            }
+           ]
+          }
+         },
+         {
+          "drawMesh3D": {
+           "mesh": 1,
+           "mode": "smooth"
+          }
+         },
+         {
+          "texture3D": {
+           "bitmap": 0
+          }
+         },
+         {
+          "material3D": {
+           "specular": 0.2,
+           "shininess": 20
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "#FF6F7E9C"
+            }
+           ]
+          }
+         },
+         {
+          "drawMesh3D": {
+           "mesh": 2,
+           "mode": "smooth"
+          }
+         }
+        ]
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": {
+            "$if": "theme.mono",
+            "then": "@colors.onSurface",
+            "else": "#FFFFD27A"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": "-@s",
+         "y": "0.22+0.12*sin(-@ph)",
+         "z": 0
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 3,
+         "mode": "smooth"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": "@s",
+         "y": "0.22+0.12*sin(-@ph)",
+         "z": 0
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 3,
+         "mode": "smooth"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

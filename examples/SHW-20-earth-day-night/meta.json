@@ -1,0 +1,570 @@
+{
+ "id": "SHW-20",
+ "name": "earth-day-night",
+ "version": 1,
+ "title": "The Earth right now: a textured globe with day, night and city lights",
+ "summary": "A turning 3D globe textured with a 768 x 384 map made from the catalog's own Natural Earth data, lit by a sun placed where it really is at the current clock (declination and equation of time from dayOfYear(), the subsolar longitude from UTC), so the day/night terminator is real; 16 cities are dots (one merged mesh) that glow on the night side, six carry labels projected from 3D to the screen, and a drag spins and tilts it.",
+ "prompt": "Show the Earth as a 3D globe that turns, with the continents, the real day and night for right now, and a few cities as dots; let me drag to spin it.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "Scene3D has no texture or sun; a textured sphere, a light from the computed sun direction, city dots lit from the night side and labels projected to the screen need the 3D ops by hand.",
+ "capabilities": {
+  "primary": [
+   "3d.texture",
+   "3d.scene",
+   "time.clock",
+   "input.drag"
+  ],
+  "secondary": [
+   "3d.mesh",
+   "image.bitmap",
+   "data.loop",
+   "expr.trig",
+   "expr.system",
+   "draw.gradient",
+   "text.dynamic",
+   "time.animation",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "generative-art",
+  "weather",
+  "map",
+  "travel"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "globe",
+  "earth",
+  "3d globe",
+  "textured globe",
+  "world",
+  "day and night",
+  "terminator",
+  "sun position",
+  "subsolar point",
+  "solar declination",
+  "equation of time",
+  "night side",
+  "city lights",
+  "cities",
+  "time zones",
+  "spinning globe",
+  "drag to spin",
+  "texture",
+  "uv",
+  "showcase"
+ ],
+ "teaches": [
+  "Texture a sphere: meshPrimitive3D sphere with \"uv\": \"uv\", texture3D on a bitmap resource, white paint, drawMesh3D smooth (the same approach as the textured globes of hoford.github.io/RemoteCompose-Examples, render/textured-sphere and vis-set-10)",
+  "Make the texture fit the primitive's UV, not the other way round: the sphere's u is 1 - φ/2π with φ the angle from +X toward +Z, so an equirectangular map whose left edge is Greenwich and which runs east puts longitude λ at (cos λ, ·, -sin λ) with no extra rotation, and world space is Earth-fixed",
+  "Place the sun from the clock: declination -23.44° · cos(2π(N + 10)/365), equation of time 9.87 sin 2B - 7.53 cos B - 1.5 sin B, subsolar longitude (720 - UTC minutes - EoT)/4 degrees; the directional light travels along minus that vector",
+  "Get a real terminator: with material3D specular above 0 the lighting is one-sided (a face turned away from the light gets ambient only), while specular 0 lights both sides (|N·L|) and the night disappears",
+  "Turn the camera, not the globe (lights are in world space): the eye orbits at D·(cos t sin s, sin t, cos t cos s), s from an autorotation, the drag and the sun's longitude",
+  "Draw fixed points as one mesh: the 16 city dots are small octahedra merged into a single defineMesh3D (2.3 KB), because each drawMesh3D composites the whole window buffer (a loop of 16 sphere draws cost the TypeScript player about 68 ms a frame at 1080 x 1920, the merged mesh a few); lit from the anti-sun direction, they glow on the night side and are dim by day",
+  "Label 3D points in 2D: project each city with the camera basis (right (cos s, 0, -sin s), up (-sin t sin s, cos t, -sin t cos s)) and F = (H/2)/tan(fov/2), and push the label off screen with step() when it is behind the limb",
+  "Frame the globe in the free part of the window: the distance D = 1/sin(atan(r/F)) for a target radius r in px, and a 2D translate before the 3D moves the window-sized buffer to the free region",
+  "Draw line art on a sphere in mono with a mostly transparent texture (texels with alpha 0 are skipped and write no depth), then the hidden-line wireframe: its own depth prepass hides the back, and objects drawn after it (dots, the terminator ring) stay visible as long as no negative depthBias3D was active during the wireframe"
+ ],
+ "pitfalls": [
+  "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players only",
+  "The texture is most of the size: 21.7 KB of the document is the 768 x 384 colour map (10-colour palette PNG); a 1024 x 512 map with 1:50m coastlines costs 32 KB. Nearest-texel sampling shows the texels at the coast when the globe is large",
+  "Ambient light is a fixed 0.2, so the night side stays dimly visible and cannot be made darker",
+  "In the TypeScript web player bitmaps decode asynchronously: the globe can draw untextured for its first frame",
+  "The sun uses minute resolution (timeInMin()) and offsetToUtc(); with a wrong device time zone the terminator is wrong by the same amount",
+  "The labels are 2D text projected by hand: they are not hidden by the city's own dot or clipped at the limb, only switched off a little before it",
+  "The texture is stylised (land, ice, shelf, a 30° graticule from Natural Earth), not a satellite image",
+  "The colour version is a deliberate dark space piece with literal colours; mono follows the theme",
+  "A wireframe drawMesh3D fills the z-buffer with its front faces first; with a negative depthBias3D active it writes them biased toward the eye, so later parts close to the surface (city dots, a ring 0.004 above it) disappear. Draw the wireframe without a bias (its prepass already hides the back lines) when anything sits on the surface afterwards"
+ ],
+ "java_difference": "3D support has not landed in androidx yet (coming): the Java JSON parser does not know camera3D, lights3D, matrix3D, meshPrimitive3D or drawMesh3D; plays in the C++ and TypeScript players",
+ "snippets": [
+  {
+   "pointer": "/root/box/children/0/canvas/commands/19",
+   "shows": "3d.scene",
+   "note": "camera orbiting the Earth-fixed globe"
+  },
+  {
+   "pointer": "/root/box/children/0/canvas/commands/20",
+   "shows": "3d.texture",
+   "note": "the sphere with UVs"
+  },
+  {
+   "pointer": "/root/box/children/0/canvas/commands/23",
+   "shows": "3d.texture",
+   "note": "the sun light, specular for a one-sided terminator, texture3D and the draw; mono: land mask over a hidden-line graticule"
+  },
+  {
+   "pointer": "/resources/variables",
+   "shows": "time.clock",
+   "note": "sun declination, equation of time and subsolar longitude from the clock"
+  },
+  {
+   "pointer": "/root/box/children/0/canvas/commands/0",
+   "shows": "input.drag",
+   "note": "drag to spin"
+  },
+  {
+   "pointer": "/root/box/children/0/canvas/commands/25",
+   "shows": "3d.mesh",
+   "note": "all 16 city dots as one defineMesh3D of small octahedra"
+  }
+ ],
+ "assets": "Texture generated for this example from assets/maps/maps.json (Natural Earth 1:50m land and 1:110m lakes, public domain): equirectangular 768 x 384, Greenwich at the left edge, quantised to 10 colours. The mono texture is the 1:110m coastline drawn as lines into a 512 x 256 RGBA PNG (6.6 KB), transparent elsewhere.",
+ "check": {
+  "describe": "A dark starry screen with 'Earth, right now' and 'Sun overhead at 15.3° S, 34.1° W' (at 14:00 UTC on 2 Nov 2026) at the top; a globe with a faint blue halo, lit from the left: Africa and Europe in daylight, the terminator running through Arabia and the Indian Ocean, Asia on the night side where Mumbai, Beijing and the other cities glow gold; labels London, Mumbai, Cape Town next to their dots. Later in time the globe has turned east (the view drifts west). A drag turns it. In June at 06:00 UTC the north pole is in daylight; in December at 22:00 UTC the south pole is. Mono: a hidden-line graticule sphere with the coastlines as line art, the city dots and labels, and the terminator as a solid great circle; no shading, no motion.",
+  "render": {
+   "clock": 1793628000000
+  },
+  "renders": [
+   {
+    "name": "later",
+    "clock": 1793628030000
+   },
+   {
+    "name": "dragged",
+    "clock": 1793628000000,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 120,
+      "y": 330
+     },
+     {
+      "t": 0.22,
+      "type": "move",
+      "x": 170,
+      "y": 320
+     },
+     {
+      "t": 0.33999999999999997,
+      "type": "move",
+      "x": 230,
+      "y": 310
+     },
+     {
+      "t": 0.45999999999999996,
+      "type": "move",
+      "x": 280,
+      "y": 300
+     },
+     {
+      "t": 0.5599999999999999,
+      "type": "up",
+      "x": 280,
+      "y": 300
+     }
+    ],
+    "duration": 1.2
+   },
+   {
+    "name": "june",
+    "clock": 1782021600000
+   },
+   {
+    "name": "december",
+    "clock": 1797890400000
+   },
+   {
+    "name": "landscape",
+    "width": 720,
+    "height": 400,
+    "clock": 1793628000000
+   },
+   {
+    "name": "tablet",
+    "width": 800,
+    "height": 1100,
+    "clock": 1793628000000
+   },
+   {
+    "name": "w2x2",
+    "width": 170,
+    "height": 170,
+    "clock": 1793628000000
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "clock": 1793628000000
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "clock": 1793628000000
+   }
+  ]
+ },
+ "related": [
+  "DRW-17",
+  "DRW-16",
+  "TIM-12",
+  "SHW-19",
+  "WorldMap"
+ ],
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 38404,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 225,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 112,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "CoreText": 11,
+   "DATA_BITMAP": 2,
+   "DATA_TEXT": 19,
+   "DEFINE_MESH_3D": 1,
+   "DRAW_CIRCLE": 2,
+   "DRAW_MESH_3D": 2,
+   "DRAW_TEXT_ANCHOR": 8,
+   "HEADER": 1,
+   "LAYOUT_BOX": 3,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 15,
+   "LoopOperation": 1,
+   "MATRIX_3D_OP": 2,
+   "MATRIX_TRANSLATE": 1,
+   "MESH_PRIMITIVE_3D": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 5,
+   "MODIFIER_PADDING": 2,
+   "MODIFIER_VISIBILITY": 5,
+   "MODIFIER_WIDTH": 4,
+   "PAINT_3D_STATE": 4,
+   "PAINT_VALUES": 6,
+   "SET_CAMERA_3D": 1,
+   "SET_LIGHTS_3D": 2,
+   "SET_TEXTURE_3D": 2,
+   "TextFromFloat": 2,
+   "TouchExpression": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 6
+  },
+  "audit_findings": [
+   "info: repaint_continuous",
+   "info: deep_expressions",
+   "info: size_dominated",
+   "info: size_single_op",
+   "info: text_in_canvas",
+   "info: expression_entries"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 2,
+   "click": 0,
+   "area": 0,
+   "touch": 2
+  },
+  "java_identical": false,
+  "renders": {
+   "later": {
+    "render": "render-later.png",
+    "render_findings": []
+   },
+   "dragged": {
+    "render": "render-dragged.png",
+    "render_findings": []
+   },
+   "june": {
+    "render": "render-june.png",
+    "render_findings": []
+   },
+   "december": {
+    "render": "render-december.png",
+    "render_findings": []
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     720,
+     400
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: deep_expressions",
+     "info: size_dominated",
+     "info: size_single_op",
+     "info: expression_entries"
+    ]
+   },
+   "tablet": {
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1100
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: deep_expressions",
+     "info: size_dominated",
+     "info: size_single_op",
+     "info: expression_entries"
+    ]
+   },
+   "w2x2": {
+    "render": "render-w2x2.png",
+    "render_findings": [],
+    "size": [
+     170,
+     170
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: deep_expressions",
+     "info: size_dominated",
+     "info: size_single_op",
+     "info: expression_entries"
+    ]
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 38129,
+    "component_modes": {},
+    "op_count": 217,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "scheduled",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 38129,
+    "component_modes": {},
+    "op_count": 217,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "scheduled",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   }
+  },
+  "json_keys": [
+   "$if",
+   "N",
+   "angle",
+   "apiLevel",
+   "aspect",
+   "axis",
+   "background",
+   "base64",
+   "bitmap",
+   "bitmaps",
+   "box",
+   "camera3D",
+   "canvas",
+   "center",
+   "centerX",
+   "centerY",
+   "children",
+   "clearDepth3D",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dec",
+   "decD",
+   "decimal",
+   "defaultValue",
+   "defineMesh3D",
+   "dir",
+   "drawCircle",
+   "drawMesh3D",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "earth",
+   "east",
+   "edges",
+   "else",
+   "eot",
+   "expression",
+   "eye",
+   "far",
+   "fontSize",
+   "fontWeight",
+   "fovY",
+   "from",
+   "full",
+   "header",
+   "height",
+   "id",
+   "index",
+   "indices",
+   "intensity",
+   "land",
+   "landmask",
+   "lights",
+   "lights3D",
+   "loop",
+   "majorRadius",
+   "material3D",
+   "matrix3D",
+   "max",
+   "maxLines",
+   "mesh",
+   "meshPrimitive3D",
+   "min",
+   "minorRadius",
+   "mode",
+   "modifiers",
+   "name",
+   "near",
+   "north",
+   "op",
+   "ops",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "primitive",
+   "profiles",
+   "projection",
+   "radialGradient",
+   "radius",
+   "resources",
+   "root",
+   "row",
+   "segments",
+   "semantics",
+   "shader",
+   "shininess",
+   "slon",
+   "slonR",
+   "south",
+   "specular",
+   "stopMode",
+   "stops",
+   "style",
+   "sx",
+   "sy",
+   "sz",
+   "text",
+   "textSize",
+   "texture3D",
+   "then",
+   "tiny",
+   "touchExpression",
+   "translate",
+   "type",
+   "um",
+   "until",
+   "up",
+   "uv",
+   "value",
+   "variable",
+   "variables",
+   "verticalWeight",
+   "verts",
+   "visibility",
+   "west",
+   "whole",
+   "width",
+   "wireframe",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "3d.texture": [
+    "texture3D",
+    "material3D"
+   ],
+   "3d.scene": [
+    "camera3D",
+    "lights3D"
+   ],
+   "time.clock": [
+    "timeInMin",
+    "continuousSec"
+   ],
+   "input.drag": [
+    "touchExpression"
+   ],
+   "3d.mesh": [
+    "meshPrimitive3D",
+    "defineMesh3D",
+    "drawMesh3D"
+   ],
+   "image.bitmap": [
+    "bitmaps"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "expr.trig": [
+    "sin(",
+    "cos(",
+    "tan(",
+    "atan("
+   ],
+   "expr.system": [
+    "fontSize()",
+    "windowWidth",
+    "windowHeight",
+    "componentWidth",
+    "componentHeight",
+    "timeInMin",
+    "dayOfYear"
+   ],
+   "draw.gradient": [
+    "radialGradient"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "time.animation": [
+    "continuousSec"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:48:33.311Z"
+ }
+}

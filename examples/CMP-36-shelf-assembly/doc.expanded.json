@@ -1,0 +1,808 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "A small shelf unit assembling itself, part by part, in 3D; drag to turn it"
+ },
+ "resources": {
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "shadow": {
+    "light": "#FF3D4655",
+    "dark": "#FF263042"
+   },
+   "birch": {
+    "light": "#FFD9B98C",
+    "dark": "#FFCFAE80"
+   },
+   "edge": {
+    "light": "#FFB8925F",
+    "dark": "#FFA88352"
+   }
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize"
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "background": "@colors.background"
+       },
+       {
+        "semantics": {
+         "contentDescription": "A shelf unit assembling: the base, the two sides, the back panel, two shelves, the top and the feet fly into place in turn, hold, then come apart again"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "clearDepth3D": {}
+       },
+       {
+        "variable": {
+         "name": "s3d1d",
+         "value": "max(4.0978 + 3.9476 * 64 / max(componentHeight() - 64, 1), 1.0486 + 3.1956 * componentHeight() / componentWidth())"
+        }
+       },
+       {
+        "translate": {
+         "dx": 0,
+         "dy": 32
+        }
+       },
+       {
+        "camera3D": {
+         "projection": "perspective",
+         "fovY": 0.6,
+         "aspect": "componentWidth() / componentHeight()",
+         "near": 0.0218,
+         "far": "@s3d1d + 1.197",
+         "eye": [
+          0,
+          0,
+          "@s3d1d"
+         ],
+         "center": [
+          0,
+          0,
+          0
+         ],
+         "up": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "lights3D": {
+         "lights": [
+          {
+           "type": "directional",
+           "color": "#FFFFF8F0",
+           "dir": [
+            0.45,
+            -0.7,
+            -0.55
+           ],
+           "intensity": 0.8
+          },
+          {
+           "type": "directional",
+           "color": "#FFE8F0FF",
+           "dir": [
+            -0.7,
+            -0.15,
+            -0.5
+           ],
+           "intensity": 0.35
+          }
+         ]
+        }
+       },
+       {
+        "meshPrimitive3D": {
+         "id": 1,
+         "primitive": "cube",
+         "dimX": 0.8,
+         "dimY": 0.018,
+         "dimZ": 0.3,
+         "segments": 1
+        }
+       },
+       {
+        "meshPrimitive3D": {
+         "id": 2,
+         "primitive": "cube",
+         "dimX": 0.018,
+         "dimY": 1.1,
+         "dimZ": 0.3,
+         "segments": 1
+        }
+       },
+       {
+        "meshPrimitive3D": {
+         "id": 3,
+         "primitive": "cube",
+         "dimX": 0.8,
+         "dimY": 1.1,
+         "dimZ": 0.006,
+         "segments": 1
+        }
+       },
+       {
+        "meshPrimitive3D": {
+         "id": 4,
+         "primitive": "cube",
+         "dimX": 0.8,
+         "dimY": 0.018,
+         "dimZ": 0.29,
+         "segments": 1
+        }
+       },
+       {
+        "meshPrimitive3D": {
+         "id": 5,
+         "primitive": "cube",
+         "dimX": 0.84,
+         "dimY": 0.022,
+         "dimZ": 0.32,
+         "segments": 1
+        }
+       },
+       {
+        "meshPrimitive3D": {
+         "id": 6,
+         "primitive": "cylinder",
+         "radius": 0.02,
+         "from": [
+          0,
+          -0.03,
+          0
+         ],
+         "to": [
+          0,
+          0.03,
+          0
+         ],
+         "segments": 32
+        }
+       },
+       {
+        "touchExpression": {
+         "name": "s3d1sx",
+         "defaultValue": 0,
+         "min": -100000,
+         "max": 100000,
+         "stopMode": "gently",
+         "expression": "touchX()"
+        }
+       },
+       {
+        "touchExpression": {
+         "name": "s3d1sy",
+         "defaultValue": 0,
+         "min": -66.9043,
+         "max": 93.0842,
+         "stopMode": "gently",
+         "expression": "touchY()"
+        }
+       },
+       {
+        "variable": {
+         "name": "s3d1spin",
+         "value": "@s3d1sx * 0.01 + -0.6109"
+        }
+       },
+       {
+        "variable": {
+         "name": "s3d1tilt",
+         "value": "@s3d1sy * 0.006 + 0.3142"
+        }
+       },
+       {
+        "variable": {
+         "name": "s3d1t",
+         "value": "continuousSec() % 9.4"
+        }
+       },
+       {
+        "variable": {
+         "name": "s3d1b",
+         "value": "smooth_step(@s3d1t, 9.4, 8.2)"
+        }
+       },
+       {
+        "variable": {
+         "name": "s3d1e0",
+         "value": "max(1 - smooth_step(@s3d1t, 1.5, 0.6), @s3d1b)"
+        }
+       },
+       {
+        "variable": {
+         "name": "s3d1e1",
+         "value": "max(1 - smooth_step(@s3d1t, 2.2, 1.3), @s3d1b)"
+        }
+       },
+       {
+        "variable": {
+         "name": "s3d1e2",
+         "value": "max(1 - smooth_step(@s3d1t, 2.9, 2), @s3d1b)"
+        }
+       },
+       {
+        "variable": {
+         "name": "s3d1e3",
+         "value": "max(1 - smooth_step(@s3d1t, 3.6, 2.7), @s3d1b)"
+        }
+       },
+       {
+        "variable": {
+         "name": "s3d1e4",
+         "value": "max(1 - smooth_step(@s3d1t, 4.3, 3.4), @s3d1b)"
+        }
+       },
+       {
+        "variable": {
+         "name": "s3d1e5",
+         "value": "max(1 - smooth_step(@s3d1t, 5, 4.1), @s3d1b)"
+        }
+       },
+       {
+        "variable": {
+         "name": "s3d1e6",
+         "value": "max(1 - smooth_step(@s3d1t, 5.7, 4.8), @s3d1b)"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1tilt",
+         "axis": [
+          1,
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1spin",
+         "axis": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": 0,
+         "y": "-0.522 + -0.35 * @s3d1e0",
+         "z": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.birch"
+          }
+         ]
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 1,
+         "mode": "flat"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1tilt",
+         "axis": [
+          1,
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1spin",
+         "axis": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": "-0.409 + -0.45 * @s3d1e1",
+         "y": 0.019,
+         "z": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.edge"
+          }
+         ]
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 2,
+         "mode": "flat"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1tilt",
+         "axis": [
+          1,
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1spin",
+         "axis": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": "0.409 + 0.45 * @s3d1e1",
+         "y": 0.019,
+         "z": 0
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 2,
+         "mode": "flat"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1tilt",
+         "axis": [
+          1,
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1spin",
+         "axis": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": 0,
+         "y": 0.019,
+         "z": "-0.153 + -0.6 * @s3d1e2"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          }
+         ]
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 3,
+         "mode": "flat"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1tilt",
+         "axis": [
+          1,
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1spin",
+         "axis": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": 0,
+         "y": -0.161,
+         "z": "0.005 + 0.6 * @s3d1e3"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.birch"
+          }
+         ]
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 4,
+         "mode": "flat"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1tilt",
+         "axis": [
+          1,
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1spin",
+         "axis": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": 0,
+         "y": 0.209,
+         "z": "0.005 + 0.6 * @s3d1e4"
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 4,
+         "mode": "flat"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1tilt",
+         "axis": [
+          1,
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1spin",
+         "axis": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": 0,
+         "y": "0.58 + 0.4 * @s3d1e5",
+         "z": 0
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 5,
+         "mode": "flat"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1tilt",
+         "axis": [
+          1,
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1spin",
+         "axis": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": -0.36,
+         "y": "-0.561 + -0.25 * @s3d1e6",
+         "z": 0.11
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.shadow"
+          }
+         ]
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 6,
+         "mode": "smooth"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1tilt",
+         "axis": [
+          1,
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1spin",
+         "axis": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": 0.36,
+         "y": "-0.561 + -0.25 * @s3d1e6",
+         "z": 0.11
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 6,
+         "mode": "smooth"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1tilt",
+         "axis": [
+          1,
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1spin",
+         "axis": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": -0.36,
+         "y": "-0.561 + -0.25 * @s3d1e6",
+         "z": -0.11
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 6,
+         "mode": "smooth"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "identity"
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1tilt",
+         "axis": [
+          1,
+          0,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "rotate",
+         "angle": "@s3d1spin",
+         "axis": [
+          0,
+          1,
+          0
+         ]
+        }
+       },
+       {
+        "matrix3D": {
+         "op": "translate",
+         "x": 0.36,
+         "y": "-0.561 + -0.25 * @s3d1e6",
+         "z": -0.11
+        }
+       },
+       {
+        "drawMesh3D": {
+         "mesh": 6,
+         "mode": "smooth"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       {
+        "padding": [
+         16,
+         16,
+         16,
+         16
+        ]
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Assembling the shelf",
+         "fontSize": 22,
+         "color": "@colors.onSurface"
+        }
+       },
+       {
+        "text": {
+         "value": "Base, sides, back, shelves, top, feet",
+         "fontSize": 14,
+         "color": "@colors.muted"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

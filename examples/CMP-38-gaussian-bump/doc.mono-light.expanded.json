@@ -1,0 +1,1876 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "A 2D Gaussian bump, z equals e to the minus x squared plus y squared over two sigma squared, drawn as a 3D surface over x and y from minus 3 to 3; a slider sets the width sigma from 0.4 to 2. Drag the chart to orbit"
+ },
+ "resources": {
+  "variables": {
+   "sigma": 0.8,
+   "showFormula": "step(windowHeight(), 300)",
+   "showCaption": "step(windowHeight(), 460)",
+   "slider1_x0": 0
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "muted": "#FF616161",
+   "onSurface": "#FF000000",
+   "primary": "#FF000000",
+   "track": "#FF616161"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "A Gaussian bump",
+      "fontSize": 20,
+      "fontWeight": 600,
+      "color": "@colors.onSurface",
+      "maxLines": 1
+     }
+    },
+    {
+     "text": {
+      "value": "z = e^(−(x² + y²) / 2σ²)",
+      "fontSize": 14,
+      "color": "@colors.muted",
+      "maxLines": 1,
+      "modifiers": [
+       {
+        "padding": [
+         0,
+         2,
+         0,
+         4
+        ]
+       },
+       {
+        "visibility": "@showFormula"
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "padding": [
+         0,
+         4,
+         0,
+         4
+        ]
+       }
+      ],
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "text": {
+         "value": "Width σ",
+         "fontSize": 14,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "padding": [
+            0,
+            0,
+            12,
+            0
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "horizontalWeight": 1
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 40
+             }
+            ],
+            "children": [
+             {
+              "variable": {
+               "name": "slider1_tx",
+               "value": "12 + (componentWidth() - 72) * (@sigma - 0.4) / 1.6"
+              }
+             },
+             {
+              "canvas": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "height": 40
+                }
+               ],
+               "commands": [
+                {
+                 "componentValue": {
+                  "id": "@slider1_x0",
+                  "valueType": 4
+                 }
+                },
+                {
+                 "touchExpression": {
+                  "name": "sigma",
+                  "defaultValue": "@sigma",
+                  "min": 0.4,
+                  "max": 2,
+                  "expression": [
+                   "0.4 + round((touchX() - @slider1_x0 - 12) / (componentWidth() - 72) * 1.6 / 0.1) * 0.1"
+                  ],
+                  "touchMode": 6
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.track"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 1.5
+                   },
+                   {
+                    "strokeCap": "round"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 12,
+                  "y1": 20,
+                  "x2": "componentWidth() - 60",
+                  "y2": 20
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.primary"
+                   },
+                   {
+                    "strokeWidth": 3
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 12,
+                  "y1": 20,
+                  "x2": "@slider1_tx",
+                  "y2": 20
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawCircle": {
+                  "cx": "@slider1_tx",
+                  "cy": 20,
+                  "radius": 7
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "textSize": 15
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": {
+                   "type": "textFromFloat",
+                   "value": "@sigma",
+                   "whole": 4,
+                   "decimal": 1,
+                   "flags": 5
+                  },
+                  "x": "componentWidth()",
+                  "y": 20,
+                  "panX": 1,
+                  "panY": 0
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "height": 40
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "Width sigma",
+                  "stateDescription": {
+                   "type": "textFromFloat",
+                   "value": "@sigma",
+                   "whole": 4,
+                   "decimal": 1,
+                   "flags": 5
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "verticalWeight": 1
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "semantics": {
+            "contentDescription": "3D surface of z = exp(-(x^2 + y^2) / (2 * s^2)) for x from -3 to 3 and y from -3 to 3; z from 0 to 1, highest at (0, 0)"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "touchExpression": {
+            "name": "c3d1_sp",
+            "defaultValue": 0,
+            "min": -100000,
+            "max": 100000,
+            "stopMode": "gently",
+            "expression": "touchX()"
+           }
+          },
+          {
+           "touchExpression": {
+            "name": "c3d1_tp",
+            "defaultValue": 0,
+            "min": -58.9643,
+            "max": 116.036,
+            "stopMode": "gently",
+            "expression": "touchY()"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_s",
+            "value": "0.6108652 + @c3d1_sp * 0.012"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_t",
+            "value": "0.4537856 + @c3d1_tp * 0.006"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_cs",
+            "value": "cos(@c3d1_s)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_ss",
+            "value": "sin(@c3d1_s)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_ct",
+            "value": "cos(@c3d1_t)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_st",
+            "value": "sin(@c3d1_t)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_F",
+            "value": "min((componentWidth() - 32) / 0.6644421, (componentHeight() - 22) / 0.7231652)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_cx",
+            "value": "componentWidth() / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_cy",
+            "value": "componentHeight() / 2"
+           }
+          },
+          {
+           "save": {
+            "commands": [
+             {
+              "translate": {
+               "dx": "(componentWidth() - windowWidth()) / 2",
+               "dy": "(componentHeight() - windowHeight()) / 2"
+              }
+             },
+             {
+              "clearDepth3D": {}
+             },
+             {
+              "camera3D": {
+               "projection": "perspective",
+               "fovY": "2 * atan(windowHeight() * 0.5 / @c3d1_F)",
+               "aspect": "windowWidth() / windowHeight()",
+               "near": 0.5,
+               "far": 40,
+               "eye": [
+                0,
+                0,
+                5.2
+               ],
+               "center": [
+                0,
+                0,
+                0
+               ],
+               "up": [
+                0,
+                1,
+                0
+               ]
+              }
+             },
+             {
+              "defineMesh3D": {
+               "id": 3016,
+               "verts": [
+                0,
+                0,
+                0,
+                0.166667,
+                0,
+                0,
+                0.5,
+                0,
+                0,
+                0.833333,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0.166667,
+                0,
+                0.166667,
+                0.166667,
+                0,
+                0.5,
+                0.166667,
+                0,
+                0.833333,
+                0.166667,
+                0,
+                1,
+                0.166667,
+                0,
+                0,
+                0.5,
+                0,
+                0.166667,
+                0.5,
+                0,
+                0.5,
+                0.5,
+                0,
+                0.833333,
+                0.5,
+                0,
+                1,
+                0.5,
+                0,
+                0,
+                0.833333,
+                0,
+                0.166667,
+                0.833333,
+                0,
+                0.5,
+                0.833333,
+                0,
+                0.833333,
+                0.833333,
+                0,
+                1,
+                0.833333,
+                0,
+                0,
+                1,
+                0,
+                0.166667,
+                1,
+                0,
+                0.5,
+                1,
+                0,
+                0.833333,
+                1,
+                0,
+                1,
+                1,
+                0
+               ],
+               "indices": [
+                0,
+                1,
+                6,
+                6,
+                5,
+                0,
+                1,
+                2,
+                7,
+                7,
+                6,
+                1,
+                2,
+                3,
+                8,
+                8,
+                7,
+                2,
+                3,
+                4,
+                9,
+                9,
+                8,
+                3,
+                5,
+                6,
+                11,
+                11,
+                10,
+                5,
+                6,
+                7,
+                12,
+                12,
+                11,
+                6,
+                7,
+                8,
+                13,
+                13,
+                12,
+                7,
+                8,
+                9,
+                14,
+                14,
+                13,
+                8,
+                10,
+                11,
+                16,
+                16,
+                15,
+                10,
+                11,
+                12,
+                17,
+                17,
+                16,
+                11,
+                12,
+                13,
+                18,
+                18,
+                17,
+                12,
+                13,
+                14,
+                19,
+                19,
+                18,
+                13,
+                15,
+                16,
+                21,
+                21,
+                20,
+                15,
+                16,
+                17,
+                22,
+                22,
+                21,
+                16,
+                17,
+                18,
+                23,
+                23,
+                22,
+                17,
+                18,
+                19,
+                24,
+                24,
+                23,
+                18
+               ]
+              }
+             },
+             {
+              "defineMesh3D": {
+               "id": 3017,
+               "verts": [
+                0,
+                0,
+                0,
+                0.166667,
+                0,
+                0,
+                0.5,
+                0,
+                0,
+                0.833333,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0.25,
+                0,
+                0.166667,
+                0.25,
+                0,
+                0.5,
+                0.25,
+                0,
+                0.833333,
+                0.25,
+                0,
+                1,
+                0.25,
+                0,
+                0,
+                0.5,
+                0,
+                0.166667,
+                0.5,
+                0,
+                0.5,
+                0.5,
+                0,
+                0.833333,
+                0.5,
+                0,
+                1,
+                0.5,
+                0,
+                0,
+                0.75,
+                0,
+                0.166667,
+                0.75,
+                0,
+                0.5,
+                0.75,
+                0,
+                0.833333,
+                0.75,
+                0,
+                1,
+                0.75,
+                0,
+                0,
+                1,
+                0,
+                0.166667,
+                1,
+                0,
+                0.5,
+                1,
+                0,
+                0.833333,
+                1,
+                0,
+                1,
+                1,
+                0
+               ],
+               "indices": [
+                0,
+                1,
+                6,
+                6,
+                5,
+                0,
+                1,
+                2,
+                7,
+                7,
+                6,
+                1,
+                2,
+                3,
+                8,
+                8,
+                7,
+                2,
+                3,
+                4,
+                9,
+                9,
+                8,
+                3,
+                5,
+                6,
+                11,
+                11,
+                10,
+                5,
+                6,
+                7,
+                12,
+                12,
+                11,
+                6,
+                7,
+                8,
+                13,
+                13,
+                12,
+                7,
+                8,
+                9,
+                14,
+                14,
+                13,
+                8,
+                10,
+                11,
+                16,
+                16,
+                15,
+                10,
+                11,
+                12,
+                17,
+                17,
+                16,
+                11,
+                12,
+                13,
+                18,
+                18,
+                17,
+                12,
+                13,
+                14,
+                19,
+                19,
+                18,
+                13,
+                15,
+                16,
+                21,
+                21,
+                20,
+                15,
+                16,
+                17,
+                22,
+                22,
+                21,
+                16,
+                17,
+                18,
+                23,
+                23,
+                22,
+                17,
+                18,
+                19,
+                24,
+                24,
+                23,
+                18
+               ]
+              }
+             },
+             {
+              "lights3D": {
+               "lights": [
+                {
+                 "type": "directional",
+                 "color": "#FFFFFFFF",
+                 "dir": [
+                  0,
+                  -1,
+                  0
+                 ],
+                 "intensity": 1.6
+                }
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "identity"
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_t",
+               "axis": [
+                1,
+                0,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_s",
+               "axis": [
+                0,
+                1,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "translate",
+               "x": 0,
+               "y": "-0.625",
+               "z": 0
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "translate",
+               "x": -1,
+               "y": 0,
+               "z": 1
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "-1.570796",
+               "axis": [
+                1,
+                0,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "scale",
+               "x": 2,
+               "y": 2,
+               "z": 1
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.background"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3016,
+               "mode": "software-flat"
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": -0.002,
+               "slope": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3016,
+               "mode": "software-flat",
+               "wireframe": true,
+               "edges": [
+                0,
+                1
+               ]
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": 0,
+               "slope": 0
+              }
+             },
+             {
+              "lights3D": {
+               "lights": [
+                {
+                 "type": "directional",
+                 "color": "#FFFFFFFF",
+                 "dir": [
+                  0,
+                  0,
+                  -1
+                 ],
+                 "intensity": 2
+                }
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "identity"
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_t",
+               "axis": [
+                1,
+                0,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_s",
+               "axis": [
+                0,
+                1,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "translate",
+               "x": 0,
+               "y": "-0.625",
+               "z": 0
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "translate",
+               "x": -1,
+               "y": 0,
+               "z": -1
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "scale",
+               "x": 2,
+               "y": "1.25",
+               "z": 1
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.background"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3017,
+               "mode": "software-flat"
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": -0.002,
+               "slope": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3017,
+               "mode": "software-flat",
+               "wireframe": true,
+               "edges": [
+                0,
+                1
+               ]
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": 0,
+               "slope": 0
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "identity"
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_t",
+               "axis": [
+                1,
+                0,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_s",
+               "axis": [
+                0,
+                1,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "translate",
+               "x": 0,
+               "y": "-0.625",
+               "z": 0
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "translate",
+               "x": 1,
+               "y": 0,
+               "z": 1
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "3.141593",
+               "axis": [
+                0,
+                1,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "scale",
+               "x": 2,
+               "y": "1.25",
+               "z": 1
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.background"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3017,
+               "mode": "software-flat"
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": -0.002,
+               "slope": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3017,
+               "mode": "software-flat",
+               "wireframe": true,
+               "edges": [
+                0,
+                1
+               ]
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": 0,
+               "slope": 0
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "identity"
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_t",
+               "axis": [
+                1,
+                0,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_s",
+               "axis": [
+                0,
+                1,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "translate",
+               "x": 0,
+               "y": "-0.625",
+               "z": 0
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "translate",
+               "x": -1,
+               "y": 0,
+               "z": 1
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "1.570796",
+               "axis": [
+                0,
+                1,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "scale",
+               "x": 2,
+               "y": "1.25",
+               "z": 1
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.background"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3017,
+               "mode": "software-flat"
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": -0.002,
+               "slope": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3017,
+               "mode": "software-flat",
+               "wireframe": true,
+               "edges": [
+                0,
+                1
+               ]
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": 0,
+               "slope": 0
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "identity"
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_t",
+               "axis": [
+                1,
+                0,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_s",
+               "axis": [
+                0,
+                1,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "translate",
+               "x": 0,
+               "y": "-0.625",
+               "z": 0
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "translate",
+               "x": 1,
+               "y": 0,
+               "z": -1
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "-1.570796",
+               "axis": [
+                0,
+                1,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "scale",
+               "x": 2,
+               "y": "1.25",
+               "z": 1
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.background"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3017,
+               "mode": "software-flat"
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": -0.002,
+               "slope": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3017,
+               "mode": "software-flat",
+               "wireframe": true,
+               "edges": [
+                0,
+                1
+               ]
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": 0,
+               "slope": 0
+              }
+             },
+             {
+              "lights3D": {
+               "lights": [
+                {
+                 "type": "directional",
+                 "color": "#FFFFFFFF",
+                 "dir": [
+                  -0.35,
+                  -0.75,
+                  -0.55
+                 ],
+                 "intensity": 0.85
+                },
+                {
+                 "type": "directional",
+                 "color": "#FFFFFFFF",
+                 "dir": [
+                  0.6,
+                  -0.1,
+                  -0.6
+                 ],
+                 "intensity": 0.35
+                }
+               ]
+              }
+             },
+             {
+              "meshExpression3D": {
+               "id": 3026,
+               "surface": "general",
+               "uRange": [
+                "-1.083333",
+                "1.083333"
+               ],
+               "uCount": 27,
+               "vRange": [
+                "-1.083333",
+                "1.083333"
+               ],
+               "vCount": 27,
+               "x": "clamp(-1, 1, u)",
+               "z": "clamp(-1, 1, v)",
+               "y": "clamp(0, 1.25, exp(((-(square((clamp(-1, 1, u) * 3 + 0)) + square((clamp(-1, 1, v) * -3 + 0)))) / (2 * square(@sigma)))) * 1.25)"
+              }
+             },
+             {
+              "meshExpression3D": {
+               "id": 3031,
+               "surface": "general",
+               "uRange": [
+                "-1.083333",
+                "1.083333"
+               ],
+               "uCount": 27,
+               "vRange": [
+                "-1.083333",
+                "1.083333"
+               ],
+               "vCount": 27,
+               "x": "clamp(-1, 1, u)",
+               "z": "clamp(-1, 1, v)",
+               "y": "(1 - max(step(abs(u), 1.041667), step(abs(v), 1.041667))) * (max(step(abs(u), 0.9583333), step(abs(v), 0.9583333)) * (clamp(0, 1.25, exp(((-(square((clamp(-1, 1, u) * 3 + 0)) + square((clamp(-1, 1, v) * -3 + 0)))) / (2 * square(@sigma)))) * 1.25) + 0.02) - 0.02)"
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "identity"
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_t",
+               "axis": [
+                1,
+                0,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "rotate",
+               "angle": "@c3d1_s",
+               "axis": [
+                0,
+                1,
+                0
+               ]
+              }
+             },
+             {
+              "matrix3D": {
+               "op": "translate",
+               "x": 0,
+               "y": "-0.625",
+               "z": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.background"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3031,
+               "mode": "software-flat"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.background"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3026,
+               "mode": "software-flat"
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": -0.003,
+               "slope": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                }
+               ]
+              }
+             },
+             {
+              "drawMesh3D": {
+               "mesh": 3026,
+               "mode": "software-flat",
+               "wireframe": true,
+               "edges": [
+                0,
+                1
+               ]
+              }
+             },
+             {
+              "depthBias3D": {
+               "constant": 0,
+               "slope": 0
+              }
+             }
+            ]
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_zE",
+            "value": "2 * step(@c3d1_cs, 0) - 1"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_xE",
+            "value": "1 - 2 * step(@c3d1_ss, 0)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_ax0",
+            "value": "@c3d1_F * (-1 * @c3d1_cs + @c3d1_zE * 1.17 * @c3d1_ss)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_dx0",
+            "value": "@c3d1_F * (1 * @c3d1_cs + @c3d1_zE * 1.17 * @c3d1_ss) - @c3d1_ax0"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_ay0",
+            "value": "@c3d1_F * (-0.625 * @c3d1_ct - (@c3d1_zE * 1.17 * @c3d1_cs - -1 * @c3d1_ss) * @c3d1_st)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_dy0",
+            "value": "@c3d1_F * (-0.625 * @c3d1_ct - (@c3d1_zE * 1.17 * @c3d1_cs - 1 * @c3d1_ss) * @c3d1_st) - @c3d1_ay0"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_aw0",
+            "value": "5.2 - (-0.625 * @c3d1_st + (@c3d1_zE * 1.17 * @c3d1_cs - -1 * @c3d1_ss) * @c3d1_ct)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_dw0",
+            "value": "5.2 - (-0.625 * @c3d1_st + (@c3d1_zE * 1.17 * @c3d1_cs - 1 * @c3d1_ss) * @c3d1_ct) - @c3d1_aw0"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_ax1",
+            "value": "@c3d1_F * (@c3d1_xE * 1.17 * @c3d1_cs + 1 * @c3d1_ss)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_dx1",
+            "value": "@c3d1_F * (@c3d1_xE * 1.17 * @c3d1_cs + -1 * @c3d1_ss) - @c3d1_ax1"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_ay1",
+            "value": "@c3d1_F * (-0.625 * @c3d1_ct - (1 * @c3d1_cs - @c3d1_xE * 1.17 * @c3d1_ss) * @c3d1_st)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_dy1",
+            "value": "@c3d1_F * (-0.625 * @c3d1_ct - (-1 * @c3d1_cs - @c3d1_xE * 1.17 * @c3d1_ss) * @c3d1_st) - @c3d1_ay1"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_aw1",
+            "value": "5.2 - (-0.625 * @c3d1_st + (1 * @c3d1_cs - @c3d1_xE * 1.17 * @c3d1_ss) * @c3d1_ct)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_dw1",
+            "value": "5.2 - (-0.625 * @c3d1_st + (-1 * @c3d1_cs - @c3d1_xE * 1.17 * @c3d1_ss) * @c3d1_ct) - @c3d1_aw1"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_ax2",
+            "value": "@c3d1_F * (@c3d1_xE * 1.1 * @c3d1_cs + -@c3d1_zE * 1.1 * @c3d1_ss)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_dx2",
+            "value": "@c3d1_F * (@c3d1_xE * 1.1 * @c3d1_cs + -@c3d1_zE * 1.1 * @c3d1_ss) - @c3d1_ax2"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_ay2",
+            "value": "@c3d1_F * (-0.625 * @c3d1_ct - (-@c3d1_zE * 1.1 * @c3d1_cs - @c3d1_xE * 1.1 * @c3d1_ss) * @c3d1_st)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_dy2",
+            "value": "@c3d1_F * (0.625 * @c3d1_ct - (-@c3d1_zE * 1.1 * @c3d1_cs - @c3d1_xE * 1.1 * @c3d1_ss) * @c3d1_st) - @c3d1_ay2"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_aw2",
+            "value": "5.2 - (-0.625 * @c3d1_st + (-@c3d1_zE * 1.1 * @c3d1_cs - @c3d1_xE * 1.1 * @c3d1_ss) * @c3d1_ct)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_dw2",
+            "value": "5.2 - (0.625 * @c3d1_st + (-@c3d1_zE * 1.1 * @c3d1_cs - @c3d1_xE * 1.1 * @c3d1_ss) * @c3d1_ct) - @c3d1_aw2"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_zpan",
+            "value": "-sign(@c3d1_ax2 + 0.0001)"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": 10
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "−2",
+            "x": "@c3d1_cx + (@c3d1_ax0 + 0.1666667 * @c3d1_dx0) / (@c3d1_aw0 + 0.1666667 * @c3d1_dw0)",
+            "y": "@c3d1_cy - (@c3d1_ay0 + 0.1666667 * @c3d1_dy0) / (@c3d1_aw0 + 0.1666667 * @c3d1_dw0)",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "0",
+            "x": "@c3d1_cx + (@c3d1_ax0 + 0.5 * @c3d1_dx0) / (@c3d1_aw0 + 0.5 * @c3d1_dw0)",
+            "y": "@c3d1_cy - (@c3d1_ay0 + 0.5 * @c3d1_dy0) / (@c3d1_aw0 + 0.5 * @c3d1_dw0)",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "2",
+            "x": "@c3d1_cx + (@c3d1_ax0 + 0.8333333 * @c3d1_dx0) / (@c3d1_aw0 + 0.8333333 * @c3d1_dw0)",
+            "y": "@c3d1_cy - (@c3d1_ay0 + 0.8333333 * @c3d1_dy0) / (@c3d1_aw0 + 0.8333333 * @c3d1_dw0)",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "−2",
+            "x": "@c3d1_cx + (@c3d1_ax1 + 0.1666667 * @c3d1_dx1) / (@c3d1_aw1 + 0.1666667 * @c3d1_dw1)",
+            "y": "@c3d1_cy - (@c3d1_ay1 + 0.1666667 * @c3d1_dy1) / (@c3d1_aw1 + 0.1666667 * @c3d1_dw1)",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "0",
+            "x": "@c3d1_cx + (@c3d1_ax1 + 0.5 * @c3d1_dx1) / (@c3d1_aw1 + 0.5 * @c3d1_dw1)",
+            "y": "@c3d1_cy - (@c3d1_ay1 + 0.5 * @c3d1_dy1) / (@c3d1_aw1 + 0.5 * @c3d1_dw1)",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "2",
+            "x": "@c3d1_cx + (@c3d1_ax1 + 0.8333333 * @c3d1_dx1) / (@c3d1_aw1 + 0.8333333 * @c3d1_dw1)",
+            "y": "@c3d1_cy - (@c3d1_ay1 + 0.8333333 * @c3d1_dy1) / (@c3d1_aw1 + 0.8333333 * @c3d1_dw1)",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "0.25",
+            "x": "@c3d1_cx + (@c3d1_ax2 + 0.25 * @c3d1_dx2) / (@c3d1_aw2 + 0.25 * @c3d1_dw2)",
+            "y": "@c3d1_cy - (@c3d1_ay2 + 0.25 * @c3d1_dy2) / (@c3d1_aw2 + 0.25 * @c3d1_dw2)",
+            "panX": "@c3d1_zpan",
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "0.5",
+            "x": "@c3d1_cx + (@c3d1_ax2 + 0.5 * @c3d1_dx2) / (@c3d1_aw2 + 0.5 * @c3d1_dw2)",
+            "y": "@c3d1_cy - (@c3d1_ay2 + 0.5 * @c3d1_dy2) / (@c3d1_aw2 + 0.5 * @c3d1_dw2)",
+            "panX": "@c3d1_zpan",
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "0.75",
+            "x": "@c3d1_cx + (@c3d1_ax2 + 0.75 * @c3d1_dx2) / (@c3d1_aw2 + 0.75 * @c3d1_dw2)",
+            "y": "@c3d1_cy - (@c3d1_ay2 + 0.75 * @c3d1_dy2) / (@c3d1_aw2 + 0.75 * @c3d1_dw2)",
+            "panX": "@c3d1_zpan",
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "1",
+            "x": "@c3d1_cx + (@c3d1_ax2 + 1 * @c3d1_dx2) / (@c3d1_aw2 + 1 * @c3d1_dw2)",
+            "y": "@c3d1_cy - (@c3d1_ay2 + 1 * @c3d1_dy2) / (@c3d1_aw2 + 1 * @c3d1_dw2)",
+            "panX": "@c3d1_zpan",
+            "panY": 0
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_w3",
+            "value": "5.2 - (-0.625 * @c3d1_st + (@c3d1_zE * 1.5 * @c3d1_cs - 0 * @c3d1_ss) * @c3d1_ct)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_X3",
+            "value": "@c3d1_cx + @c3d1_F * (0 * @c3d1_cs + @c3d1_zE * 1.5 * @c3d1_ss) / @c3d1_w3"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_Y3",
+            "value": "@c3d1_cy - @c3d1_F * (-0.625 * @c3d1_ct - (@c3d1_zE * 1.5 * @c3d1_cs - 0 * @c3d1_ss) * @c3d1_st) / @c3d1_w3"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_w4",
+            "value": "5.2 - (-0.625 * @c3d1_st + (0 * @c3d1_cs - @c3d1_xE * 1.5 * @c3d1_ss) * @c3d1_ct)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_X4",
+            "value": "@c3d1_cx + @c3d1_F * (@c3d1_xE * 1.5 * @c3d1_cs + 0 * @c3d1_ss) / @c3d1_w4"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_Y4",
+            "value": "@c3d1_cy - @c3d1_F * (-0.625 * @c3d1_ct - (0 * @c3d1_cs - @c3d1_xE * 1.5 * @c3d1_ss) * @c3d1_st) / @c3d1_w4"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_w5",
+            "value": "5.2 - (0.625 + 0.16 * @c3d1_st + (-@c3d1_zE * 1.1 * @c3d1_cs - @c3d1_xE * 1.1 * @c3d1_ss) * @c3d1_ct)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_X5",
+            "value": "@c3d1_cx + @c3d1_F * (@c3d1_xE * 1.1 * @c3d1_cs + -@c3d1_zE * 1.1 * @c3d1_ss) / @c3d1_w5"
+           }
+          },
+          {
+           "variable": {
+            "name": "c3d1_Y5",
+            "value": "@c3d1_cy - @c3d1_F * (0.625 + 0.16 * @c3d1_ct - (-@c3d1_zE * 1.1 * @c3d1_cs - @c3d1_xE * 1.1 * @c3d1_ss) * @c3d1_st) / @c3d1_w5"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "textSize": 11
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "x",
+            "x": "clamp(7, componentWidth() - 7, @c3d1_X3)",
+            "y": "@c3d1_Y3",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "y",
+            "x": "clamp(7, componentWidth() - 7, @c3d1_X4)",
+            "y": "@c3d1_Y4",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "z",
+            "x": "clamp(7, componentWidth() - 7, @c3d1_X5)",
+            "y": "@c3d1_Y5",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "textSize": 10
+             },
+             {
+              "alpha": "step(componentWidth(), 200)"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "drag to orbit",
+            "x": "componentWidth() - 4",
+            "y": 4,
+            "panX": 1,
+            "panY": 1
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "text": {
+      "value": "The peak is 1 at the centre whatever σ is; at a distance σ from it the height is e^(−½) ≈ 0.61.",
+      "fontSize": 13,
+      "color": "@colors.muted",
+      "maxLines": 3,
+      "modifiers": [
+       {
+        "padding": [
+         0,
+         8,
+         0,
+         0
+        ]
+       },
+       {
+        "visibility": "@showCaption"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

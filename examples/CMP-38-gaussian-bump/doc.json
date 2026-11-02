@@ -1,0 +1,171 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "A 2D Gaussian bump, z equals e to the minus x squared plus y squared over two sigma squared, drawn as a 3D surface over x and y from minus 3 to 3; a slider sets the width sigma from 0.4 to 2. Drag the chart to orbit"
+ },
+ "resources": {
+  "variables": {
+   "sigma": 0.8,
+   "showFormula": "step(windowHeight(), 300)",
+   "showCaption": "step(windowHeight(), 460)"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "A Gaussian bump",
+      "fontSize": 20,
+      "fontWeight": 600,
+      "color": "@colors.onSurface",
+      "maxLines": 1
+     }
+    },
+    {
+     "text": {
+      "value": "z = e^(−(x² + y²) / 2σ²)",
+      "fontSize": 14,
+      "color": "@colors.muted",
+      "maxLines": 1,
+      "modifiers": [
+       {
+        "padding": [
+         0,
+         2,
+         0,
+         4
+        ]
+       },
+       {
+        "visibility": "@showFormula"
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "padding": [
+         0,
+         4,
+         0,
+         4
+        ]
+       }
+      ],
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "text": {
+         "value": "Width σ",
+         "fontSize": 14,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "padding": [
+            0,
+            0,
+            12,
+            0
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "horizontalWeight": 1
+          }
+         ],
+         "children": [
+          {
+           "Slider": {
+            "value": "@sigma",
+            "min": 0.4,
+            "max": 2,
+            "step": 0.1,
+            "showValue": true,
+            "decimals": 1,
+            "label": "Width sigma"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "verticalWeight": 1
+       }
+      ],
+      "children": [
+       {
+        "Chart3D": {
+         "fn": "exp(-(x^2 + y^2) / (2 * s^2))",
+         "x": [
+          -3,
+          3
+         ],
+         "vars": [
+          {
+           "name": "s",
+           "value": "@sigma",
+           "min": 0.4,
+           "max": 2
+          }
+         ],
+         "zLabel": "z",
+         "fill": true
+        }
+       }
+      ]
+     }
+    },
+    {
+     "text": {
+      "value": "The peak is 1 at the centre whatever σ is; at a distance σ from it the height is e^(−½) ≈ 0.61.",
+      "fontSize": 13,
+      "color": "@colors.muted",
+      "maxLines": 3,
+      "modifiers": [
+       {
+        "padding": [
+         0,
+         8,
+         0,
+         0
+        ]
+       },
+       {
+        "visibility": "@showCaption"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,751 @@
+{
+ "id": "SHW-18",
+ "name": "dna-helix",
+ "version": 1,
+ "title": "The double helix: a 3D DNA model that unzips",
+ "summary": "Twenty base pairs of B-DNA in 3D: two sugar-phosphate backbones of beads on a string and base-pair rungs coloured by base (adenine coral, thymine amber, guanine blue, cytosine teal), with the real twist (10 pairs a turn) and minor groove. It turns slowly, a drag turns and tilts it, and an Unzip button eases the two strands apart from the top down, each half-rung staying with its strand; a caption gives the sequence and a legend. Ten meshes from expressions, no per-part geometry.",
+ "prompt": "Show a DNA double helix in 3D: two backbones of spheres and base-pair rungs coloured by base (A-T, G-C), turning slowly, draggable, with a caption; add an unzip animation. A crisp scientific-illustration look in light and dark.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "The whole molecule is ten meshExpression3D surfaces (two beaded tubes along the helices and eight sets of half-rungs, one per strand and base, whose pairs are read from 20-bit masks inside the expression), which neither Scene3D nor Chart3D can express.",
+ "capabilities": {
+  "primary": [
+   "3d.surface",
+   "3d.scene",
+   "input.tap"
+  ],
+  "secondary": [
+   "3d.mesh",
+   "input.drag",
+   "time.animation",
+   "draw.gradient",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "onboarding",
+  "generative-art"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "3d",
+  "dna",
+  "double helix",
+  "helix",
+  "molecule",
+  "base pairs",
+  "adenine",
+  "thymine",
+  "guanine",
+  "cytosine",
+  "biology",
+  "genetics",
+  "science",
+  "unzip",
+  "replication",
+  "orbit",
+  "showcase"
+ ],
+ "teaches": [
+  "A beaded backbone as one surface: a tube round the helix (centre (cos a, y, -sin a), cross-section in the radial and binormal directions, which are exactly perpendicular to a helix's tangent) whose radius is a sphere's profile sqrt(r² - s²) around each base pair, with a thin linker between: one draw for 20 spheres and their string",
+  "Many separate parts in one grid: each half-rung takes five samples of u (its bead's centre, the cylinder from the bead to the pair's midpoint with a cap there, back to the bead), and a pair without this base collapses onto its bead, so every triangle joining one rung to the next lies inside a bead or the linker",
+  "Data inside an expression without arrays: floor(M / pow(2, floor(u))) % 2 reads bit i of a 20-bit constant M; one mask per strand and base (strand 1 has A at pairs 0, 6, 10, 13, 18 ...) decides which pairs that colour's mesh draws",
+  "The unzip is the clock, not an animated variable: the tap stores t0 = continuousSec(); zp = clamp((continuousSec() - t0) / 2.6) eased with smoothstep, and pair i opens by clamp((ez * 26 - 19 + i) / 5), so the fork runs from the top down and back when zipped; the offset is turned by -spin inside the mesh so the strands always part sideways on screen",
+  "Two buttons share the spot, shown by two int variables (isOpen / isClosed) the taps swap; the 3D canvas stops 124 dp above the bottom so they keep their taps, and a 2D translate of -33 dp centres the window-sized 3D buffer between the title and the caption",
+  "Mono: the same ten meshes on coarser grids, filled with the background under three saturating lights and then drawn as hidden-line wireframes; no turning"
+ ],
+ "pitfalls": [
+  "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players only. Don't use it for a screen that must play on Android today",
+  "meshExpression3D surfaces are rebuilt every frame in both players (no cache): 10 meshes, about 6,500 vertices of 30 to 60-token expressions, on top of ten full-window composites; heavy for a watch",
+  "An animated variable ({\"value\": \"@open\", \"anim\": 2.4}) read by a meshExpression3D did not move the mesh in the C++ render, so the ease is built on continuousSec(); with the C++ renderer, simulate from a positive clock (a run ending at clock 0 starts at a negative epoch and continuousSec() then does not advance as expected)",
+  "valueFloatExpressionChange refuses a literal: set a number with valueFloatChange, an expression (here continuousSec()) with valueFloatExpressionChange",
+  "The inspector's audit calls zp, ez, ezk, oc and os dead code (dead_code, unused_variables): it does not see variables read inside meshExpression3D; they drive the unzip",
+  "The legend chips keep their base colours in mono"
+ ],
+ "java_difference": "3D support has not landed in androidx yet (coming): the Java JSON parser does not know camera3D, lights3D, matrix3D, meshPrimitive3D or drawMesh3D; plays in the C++ and TypeScript players",
+ "snippets": [
+  {
+   "pointer": "/root/2/box/children/2/column/children/0/canvas/commands/10",
+   "shows": "3d.surface",
+   "note": "the two beaded backbones and the four sets of half-rungs, all meshExpression3D"
+  },
+  {
+   "pointer": "/root/2/box/children/2/column/children/0/canvas/commands/9",
+   "shows": "3d.scene",
+   "note": "camera framed for the window and the room the title and caption leave"
+  },
+  {
+   "pointer": "/root/2/box/children/1/column/children/5",
+   "shows": "input.tap",
+   "note": "Unzip / Zip up: swap two int visibilities, set open and stamp t0 with the clock"
+  },
+  {
+   "pointer": "/root/2/box/children/2/column/children/0/canvas/commands/0",
+   "shows": "input.drag",
+   "note": "orbit: drag accumulators that coast"
+  },
+  {
+   "pointer": "/root/2/box/children/2/column/children/0/canvas/commands/4",
+   "shows": "time.animation",
+   "note": "the unzip ease from the tap's timestamp"
+  },
+  {
+   "pointer": "/root/2/box/children/2/column/children/0/canvas/commands/2",
+   "shows": "time.animation",
+   "note": "the slow turn from continuousSec(), none in mono"
+  }
+ ],
+ "check": {
+  "describe": "Title 'The double helix' and 'B-DNA · 10 base pairs a turn · 3.4 nm a turn'; a leaning double helix of grey-blue beads on a string, two turns, its rungs half coral and half amber (A-T) or half blue and half teal (G-C); below, the sequence '5′ ATGCGTACCGATTAGCCTAG 3′', a four-colour legend and an 'Unzip' button. Later it has turned; a drag turns it further. After tapping Unzip the strands part from the top down (mid-way: a fork, the top half open, each half-rung on its own strand), and the button reads 'Zip up'. Mono: white (or black) hidden-line wireframes.",
+  "render": {
+   "clock": 100000
+  },
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "clock": 100000
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "clock": 100000
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "clock": 100000
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "clock": 100000
+   },
+   {
+    "name": "later",
+    "theme": "light",
+    "clock": 104000
+   },
+   {
+    "name": "tablet",
+    "theme": "light",
+    "width": 800,
+    "height": 1280,
+    "clock": 100000
+   },
+   {
+    "name": "landscape",
+    "theme": "dark",
+    "width": 640,
+    "height": 360,
+    "clock": 100000
+   },
+   {
+    "name": "unzipping",
+    "theme": "light",
+    "clock": 100000,
+    "touch_events": [
+     {
+      "t": 0.2,
+      "type": "tap",
+      "x": 296,
+      "y": 604
+     }
+    ],
+    "duration": 1.6
+   },
+   {
+    "name": "unzipped",
+    "theme": "dark",
+    "clock": 100000,
+    "touch_events": [
+     {
+      "t": 0.2,
+      "type": "tap",
+      "x": 296,
+      "y": 604
+     }
+    ],
+    "duration": 3.4
+   },
+   {
+    "name": "turned",
+    "theme": "light",
+    "clock": 100000,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 80,
+      "y": 300
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 150,
+      "y": 320
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 220,
+      "y": 340
+     },
+     {
+      "t": 0.4,
+      "type": "up",
+      "x": 220,
+      "y": 340
+     }
+    ],
+    "duration": 2
+   }
+  ]
+ },
+ "related": [
+  "SHW-17",
+  "DRW-17",
+  "CMP-35",
+  "Scene3D",
+  "ANM-07"
+ ],
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 12983,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 320,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 2,
+   "ANIMATED_FLOAT": 10,
+   "COLOR_CONSTANT": 26,
+   "COLOR_EXPRESSIONS": 26,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 2,
+   "CoreText": 10,
+   "DATA_FLOAT": 2,
+   "DATA_INT": 2,
+   "DATA_TEXT": 10,
+   "DRAW_MESH_3D": 10,
+   "DRAW_RECT": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 9,
+   "LAYOUT_CANVAS": 2,
+   "LAYOUT_COLUMN": 2,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 6,
+   "LayoutComponentContent": 23,
+   "LoopOperation": 26,
+   "MATRIX_3D_OP": 4,
+   "MATRIX_TRANSLATE": 1,
+   "MESH_EXPRESSION_3D": 10,
+   "MODIFIER_BACKGROUND": 7,
+   "MODIFIER_CLICK": 2,
+   "MODIFIER_HEIGHT": 13,
+   "MODIFIER_PADDING": 12,
+   "MODIFIER_VISIBILITY": 2,
+   "MODIFIER_WIDTH": 12,
+   "NAMED_VARIABLE": 13,
+   "PAINT_3D_STATE": 3,
+   "PAINT_VALUES": 11,
+   "RoundedClipRectModifierOperation": 6,
+   "SET_CAMERA_3D": 1,
+   "SET_LIGHTS_3D": 1,
+   "THEME": 39,
+   "TouchExpression": 2,
+   "VALUE_INTEGER_CHANGE_ACTION": 4,
+   "ValueFloatExpressionChangeActionOperation": 4
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "baseA",
+    "type": "color",
+    "value": "#FFFF7A52"
+   },
+   {
+    "name": "baseC",
+    "type": "color",
+    "value": "#FF3CCBBB"
+   },
+   {
+    "name": "baseG",
+    "type": "color",
+    "value": "#FF5C93F0"
+   },
+   {
+    "name": "baseT",
+    "type": "color",
+    "value": "#FFFFC145"
+   },
+   {
+    "name": "bg1",
+    "type": "color",
+    "value": "#FF0A0F1C"
+   },
+   {
+    "name": "bg2",
+    "type": "color",
+    "value": "#FF161E33"
+   },
+   {
+    "name": "button",
+    "type": "color",
+    "value": "#FFEEF2F8"
+   },
+   {
+    "name": "ink",
+    "type": "color",
+    "value": "#FFEEF2F8"
+   },
+   {
+    "name": "inkMuted",
+    "type": "color",
+    "value": "#FF9BA7B8"
+   },
+   {
+    "name": "onButton",
+    "type": "color",
+    "value": "#FF0A0F1C"
+   },
+   {
+    "name": "strand1",
+    "type": "color",
+    "value": "#FFC9D3E2"
+   },
+   {
+    "name": "strand2",
+    "type": "color",
+    "value": "#FF8796B0"
+   }
+  ],
+  "render_findings": [
+   "info: hidden_rows"
+  ],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 2
+  },
+  "audit_findings": [
+   "warning: dead_code",
+   "info: unused_variables",
+   "info: repaint_continuous"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 3,
+   "click": 1,
+   "area": 0,
+   "touch": 2
+  },
+  "java_identical": false,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 11594,
+    "component_modes": {},
+    "op_count": 216,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "baseA",
+      "type": "color",
+      "value": "#FFFF7A52"
+     },
+     {
+      "name": "baseC",
+      "type": "color",
+      "value": "#FF3CCBBB"
+     },
+     {
+      "name": "baseG",
+      "type": "color",
+      "value": "#FF5C93F0"
+     },
+     {
+      "name": "baseT",
+      "type": "color",
+      "value": "#FFFFC145"
+     },
+     {
+      "name": "bg1",
+      "type": "color",
+      "value": "#FF0A0F1C"
+     },
+     {
+      "name": "bg2",
+      "type": "color",
+      "value": "#FF161E33"
+     },
+     {
+      "name": "button",
+      "type": "color",
+      "value": "#FFEEF2F8"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FFEEF2F8"
+     },
+     {
+      "name": "inkMuted",
+      "type": "color",
+      "value": "#FF9BA7B8"
+     },
+     {
+      "name": "onButton",
+      "type": "color",
+      "value": "#FF0A0F1C"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "strand1",
+      "type": "color",
+      "value": "#FFC9D3E2"
+     },
+     {
+      "name": "strand2",
+      "type": "color",
+      "value": "#FF8796B0"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "continuous",
+    "render": "render-mono-dark.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 11594,
+    "component_modes": {},
+    "op_count": 216,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "baseA",
+      "type": "color",
+      "value": "#FFE4572E"
+     },
+     {
+      "name": "baseC",
+      "type": "color",
+      "value": "#FF19A89A"
+     },
+     {
+      "name": "baseG",
+      "type": "color",
+      "value": "#FF2F6FD0"
+     },
+     {
+      "name": "baseT",
+      "type": "color",
+      "value": "#FFF2A51A"
+     },
+     {
+      "name": "bg1",
+      "type": "color",
+      "value": "#FFFBFCFE"
+     },
+     {
+      "name": "bg2",
+      "type": "color",
+      "value": "#FFE7ECF4"
+     },
+     {
+      "name": "button",
+      "type": "color",
+      "value": "#FF141B26"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FF141B26"
+     },
+     {
+      "name": "inkMuted",
+      "type": "color",
+      "value": "#FF566273"
+     },
+     {
+      "name": "onButton",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "strand1",
+      "type": "color",
+      "value": "#FF7F93B3"
+     },
+     {
+      "name": "strand2",
+      "type": "color",
+      "value": "#FFB9C4D6"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "continuous",
+    "render": "render-mono-light.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "later": {
+    "theme": "light",
+    "render": "render-later.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "tablet": {
+    "theme": "light",
+    "render": "render-tablet.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
+     "info: repaint_continuous"
+    ]
+   },
+   "landscape": {
+    "theme": "dark",
+    "render": "render-landscape.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
+     "info: repaint_continuous"
+    ]
+   },
+   "unzipping": {
+    "theme": "light",
+    "render": "render-unzipping.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "unzipped": {
+    "theme": "dark",
+    "render": "render-unzipped.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "turned": {
+    "theme": "light",
+    "render": "render-turned.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   }
+  },
+  "json_keys": [
+   "$if",
+   "angle",
+   "apiLevel",
+   "aspect",
+   "axis",
+   "background",
+   "baseA",
+   "baseC",
+   "baseG",
+   "baseT",
+   "bg1",
+   "bg2",
+   "bottom",
+   "box",
+   "button",
+   "camera3D",
+   "canvas",
+   "center",
+   "children",
+   "clearDepth3D",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "constant",
+   "contentDescription",
+   "dark",
+   "defaultValue",
+   "depthBias3D",
+   "dir",
+   "drawMesh3D",
+   "drawRect",
+   "dx",
+   "dy",
+   "edges",
+   "else",
+   "expression",
+   "eye",
+   "far",
+   "fontSize",
+   "fontWeight",
+   "fovY",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "horizontalWeight",
+   "id",
+   "ink",
+   "inkMuted",
+   "intensity",
+   "left",
+   "letterSpacing",
+   "light",
+   "lights",
+   "lights3D",
+   "linearGradient",
+   "material3D",
+   "matrix3D",
+   "max",
+   "maxLines",
+   "mesh",
+   "meshExpression3D",
+   "min",
+   "mode",
+   "modifiers",
+   "name",
+   "near",
+   "onButton",
+   "onClick",
+   "op",
+   "open",
+   "ops",
+   "padding",
+   "paint",
+   "profiles",
+   "projection",
+   "resources",
+   "right",
+   "role",
+   "root",
+   "roundedRect",
+   "row",
+   "semantics",
+   "shininess",
+   "size",
+   "slope",
+   "specular",
+   "stopMode",
+   "strand1",
+   "strand2",
+   "surface",
+   "t0",
+   "target",
+   "text",
+   "then",
+   "top",
+   "touchExpression",
+   "translate",
+   "type",
+   "uCount",
+   "uRange",
+   "up",
+   "vCount",
+   "vRange",
+   "value",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalWeight",
+   "visibility",
+   "vtype",
+   "width",
+   "wireframe",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2",
+   "z"
+  ],
+  "evidence": {
+   "3d.surface": [
+    "meshExpression3D"
+   ],
+   "3d.scene": [
+    "camera3D",
+    "lights3D"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange",
+    "valueIntegerChange"
+   ],
+   "3d.mesh": [
+    "drawMesh3D"
+   ],
+   "input.drag": [
+    "touchExpression"
+   ],
+   "time.animation": [
+    "continuousSec"
+   ],
+   "draw.gradient": [
+    "linearGradient"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:47:59.682Z"
+ }
+}

@@ -1,0 +1,2046 @@
+{
+ "component": "CalendarMonth",
+ "version": 1,
+ "summary": "A whole month calendar screen from data: the month and year, weekday initials, a grid of 4 to 6 weeks with today marked, and the selected day's agenda. Compact cells (a phone) carry up to three coloured dots per day, large cells (a tablet or desktop) the events' titles as chips with \"+N more\"; a tap on a day selects it and lists its events. Stacked when portrait, the agenda a side panel from 600 dp wide in landscape. The month is a fixed year and month, or the current one from the clock.",
+ "params": {
+  "days": {
+   "type": "list",
+   "static": true,
+   "default": [],
+   "doc": "Dated events, one object per day that has any: {\"day\": 12, \"events\": [{\"time\": \"09:30\", \"end\": \"10:15\", \"title\": \"Dentist\", \"subtitle\": \"Dr Patel, Elm St\", \"color\": \"@colors.success\"}]}. day is the day of the shown month (1 to 31); events in the order they happen, all fields but title optional (no time: \"All day\"). Give each day once"
+  },
+  "weekly": {
+   "type": "list",
+   "static": true,
+   "default": [],
+   "doc": "Events that repeat every week, by weekday: {\"weekday\": 0, \"events\": [...]}, 0 = Monday to 6 = Sunday, events as in days. Shown on every such day of whatever month is shown: honest with the real month (a class timetable, opening hours)"
+  },
+  "year": {
+   "type": "float",
+   "static": true,
+   "doc": "With month: show this month (2026). Omit both for the current month, from the clock"
+  },
+  "month": {
+   "type": "float",
+   "static": true,
+   "doc": "With year: the month to show, 1 to 12. Omit both for the current month (then give events as weekly, or days the app fills each month)"
+  },
+  "selected": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The selected day of the month, 1 to 31; 0 (the start) means today when the shown month is this month, else the 1st. A tap on a day sets it. Bind \"@sel\" to preset or read it. Do not name it step"
+  },
+  "title": {
+   "type": "string",
+   "doc": "A short label at the end of the month header (\"Personal\", \"Studio A\")"
+  },
+  "emptyText": {
+   "type": "string",
+   "default": "Nothing planned",
+   "doc": "The agenda's text for a day with no events"
+  },
+  "chipTime": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Large cells: chips read \"09:30  Dentist\"; false: the title only"
+  },
+  "sideAt": {
+   "type": "float",
+   "default": 600,
+   "static": true,
+   "doc": "Width in dp from which a landscape window puts the agenda beside the month"
+  },
+  "dayTargets": {
+   "type": "list",
+   "default": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    [
+     29,
+     "a"
+    ],
+    [
+     30,
+     "b"
+    ],
+    [
+     31,
+     "c"
+    ]
+   ],
+   "static": true,
+   "doc": "Leave it: the tap targets written, one per possible day of a month"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width it has, when it is not the whole window"
+  },
+  "height": {
+   "type": "float",
+   "default": "windowHeight()",
+   "doc": "The height it has"
+  }
+ },
+ "slots": {
+  "headerEnd": {
+   "optional": true,
+   "doc": "At the end of the month header: an IconButton (add an event)"
+  },
+  "agendaEnd": {
+   "optional": true,
+   "doc": "Written once, under the selected day's events: an action on that day (Book, Add) that reads the selected variable"
+  }
+ },
+ "locals": {
+  "cm": {
+   "$if": "month",
+   "then": "@month",
+   "else": "calendarMonth()"
+  },
+  "cy": {
+   "$if": "month",
+   "then": "@year",
+   "else": "year()"
+  },
+  "mp": {
+   "$if": "month",
+   "then": "(@month + 9) % 12",
+   "else": 0
+  },
+  "yy": {
+   "$if": "month",
+   "then": "@year - floor(@mp / 10)",
+   "else": 0
+  },
+  "cn": {
+   "$if": "month",
+   "then": "365 * @yy + floor(@yy / 4) - floor(@yy / 100) + floor(@yy / 400)",
+   "else": 0
+  },
+  "fw": {
+   "$if": "month",
+   "then": "(@cn + floor((153 * @mp + 2) / 5) + 2) % 7",
+   "else": "(weekDay() - dayOfMonth() + 35) % 7"
+  },
+  "lead": "min(1, @fw)",
+  "leap": "1 - min(1, @cy % 4) - (1 - min(1, @cy % 100)) + (1 - min(1, @cy % 400))",
+  "nd": "30 + (@cm + floor(@cm / 8)) % 2 - (1 - min(1, abs(@cm - 2))) * (2 - @leap)",
+  "v29": "step(@nd, 28.5)",
+  "v30": "step(@nd, 29.5)",
+  "v31": "step(@nd, 30.5)",
+  "cur": {
+   "$if": "month",
+   "then": "(1 - min(1, abs(@month - calendarMonth()))) * (1 - min(1, abs(@year - year())))",
+   "else": 1
+  },
+  "td": "dayOfMonth() * @cur",
+  "sd": "ifElse(max(1, @td), clamp(1, @nd, @selected), step(@selected, 0.5))",
+  "wds": "(@fw + @sd - 1) % 7",
+  "isTd": "1 - min(1, abs(@sd - @td))",
+  "wks": "ceil((@fw + @nd) / 7)",
+  "side": "step(@width, @sideAt - 0.5) * step(@width, @height)",
+  "stk": "1 - @side",
+  "ap": "@side * clamp(260, 360, floor(@width * 0.28))",
+  "gw": "@width - @ap - @side",
+  "cw": "floor((@gw - 16) / 7)",
+  "rh": "ifElse(clamp(40, 112, floor((@height * 0.6 - 88) / @wks)), floor((@height - 88) / @wks), @side)",
+  "gh": "24 + @rh * @wks",
+  "gbh": "ifElse(80 + @rh * @wks, @height, @side)",
+  "aw": "ifElse(@width, @ap, @side)",
+  "ah": "ifElse(@height - 80 - @rh * @wks, @height, @side)",
+  "chip": "step(@cw, 63.5) * step(@rh, 59.5)",
+  "dm": "1 - @chip",
+  "cr4": "@cw - 4",
+  "cr6": "@cw - 6",
+  "k": "max(0, floor((@rh - 30) / 20))",
+  "ay": 0
+ },
+ "capabilities": [
+  "struct.loop",
+  "time.date",
+  "input.tap",
+  "layout.state"
+ ],
+ "call": {
+  "CalendarMonth": {
+   "year": 2026,
+   "month": 11,
+   "days": [
+    {
+     "day": 4,
+     "events": [
+      {
+       "time": "18:30",
+       "title": "Book club"
+      }
+     ]
+    },
+    {
+     "day": 12,
+     "events": [
+      {
+       "time": "09:30",
+       "title": "Dentist"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "body": {
+  "box": {
+   "modifiers": [
+    {
+     "width": "@width"
+    },
+    {
+     "height": "@height"
+    },
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         0,
+         0
+        ]
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "January  February March    April    May      June     July     August   SeptemberOctober  November December ",
+            "start": "(@cm - 1) * 9",
+            "len": 9,
+            "varName": "mn9"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@mn9",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "mName"
+           }
+          },
+          {
+           "variable": {
+            "name": "mSp",
+            "vtype": "string",
+            "value": {
+             "type": "textMerge",
+             "id1": " ",
+             "id2": "@mName"
+            }
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "Monday   Tuesday  WednesdayThursday Friday   Saturday Sunday   ",
+            "start": "@wds * 9",
+            "len": 9,
+            "varName": "dn9"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@dn9",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "dName"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "flow": {
+      "modifiers": [
+       {
+        "width": "@width"
+       }
+      ],
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          {
+           "width": "@gw"
+          },
+          {
+           "height": "@gbh"
+          },
+          {
+           "background": "@colors.surface"
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 56
+             },
+             {
+              "padding": {
+               "start": 16,
+               "end": 8
+              }
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "@mName",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " ",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "@cy",
+                  "whole": 4,
+                  "decimal": 0,
+                  "flags": 4
+                 }
+                }
+               },
+               "fontSize": "@theme.text_lg",
+               "fontWeight": 700,
+               "color": "@colors.onSurface",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             },
+             {
+              "$if": "title",
+              "then": {
+               "text": {
+                "value": "@title",
+                "fontSize": "@theme.text_sm",
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "modifiers": [
+                 {
+                  "padding": {
+                   "start": 8,
+                   "end": 8
+                  }
+                 }
+                ]
+               }
+              }
+             },
+             {
+              "$slot": "headerEnd"
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "padding": [
+               8,
+               0
+              ]
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "width": "@cw * 7"
+                },
+                {
+                 "height": "@gh"
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "textSize": 12
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "wd",
+                  "from": 0,
+                  "until": 7,
+                  "commands": [
+                   {
+                    "textSubtext": {
+                     "text": "MonTueWedThuFriSatSun",
+                     "start": "wd * 3",
+                     "len": 3,
+                     "varName": "wdn"
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "@wdn",
+                     "x": "@cw * (wd + 0.5)",
+                     "y": 12,
+                     "panX": 0,
+                     "panY": 0
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": {
+                     "$if": "theme.mono",
+                     "then": "@colors.outline",
+                     "else": "@colors.surfaceHigh"
+                    }
+                   },
+                   {
+                    "strokeWidth": 1
+                   },
+                   {
+                    "alpha": "@chip"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "gr",
+                  "from": 0,
+                  "until": "@wks + 1",
+                  "commands": [
+                   {
+                    "drawLine": {
+                     "x1": 0,
+                     "y1": "24 + gr * @rh",
+                     "x2": "@cw * 7",
+                     "y2": "24 + gr * @rh"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "gc",
+                  "from": 1,
+                  "until": 7,
+                  "commands": [
+                   {
+                    "drawLine": {
+                     "x1": "gc * @cw",
+                     "y1": 24,
+                     "x2": "gc * @cw",
+                     "y2": "24 + @wks * @rh"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "week",
+                  "from": 0,
+                  "until": "@wks",
+                  "commands": [
+                   {
+                    "loop": {
+                     "index": "wd",
+                     "from": 0,
+                     "until": 7,
+                     "commands": [
+                      {
+                       "variable": {
+                        "name": "dn",
+                        "value": "week * 7 + wd + 1 - @fw"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "inM",
+                        "value": "step(@dn, 0.5) * step(@nd + 0.5, @dn)"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "isT",
+                        "value": "(1 - min(1, abs(@dn - @td))) * @inM"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "isS",
+                        "value": "(1 - min(1, abs(@dn - @sd))) * @inM"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "x0",
+                        "value": "wd * @cw"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "y0",
+                        "value": "24 + week * @rh"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "we",
+                        "value": "step(wd, 4.5)"
+                       }
+                      },
+                      {
+                       "$if": "theme.mono",
+                       "else": {
+                        "paint": {
+                         "ops": [
+                          {
+                           "color": "@colors.surfaceHigh"
+                          },
+                          {
+                           "alpha": "@isS * @chip"
+                          }
+                         ]
+                        }
+                       }
+                      },
+                      {
+                       "$if": "theme.mono",
+                       "else": {
+                        "drawRect": {
+                         "left": "@x0 + 0.5",
+                         "top": "@y0 + 0.5",
+                         "right": "@x0 + @cw - 0.5",
+                         "bottom": "@y0 + @rh - 0.5"
+                        }
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.primary"
+                         },
+                         {
+                          "style": "stroke"
+                         },
+                         {
+                          "strokeWidth": 2
+                         },
+                         {
+                          "alpha": "@isS * @chip"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRect": {
+                        "left": "@x0 + 1.5",
+                        "top": "@y0 + 1.5",
+                        "right": "@x0 + @cw - 1.5",
+                        "bottom": "@y0 + @rh - 1.5"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "ccx",
+                        "value": "@x0 + @cw / 2"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "ccy",
+                        "value": "@y0 + @rh * 0.4"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "R",
+                        "value": "min(@cw * 0.4, @rh * 0.33)"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.primary"
+                         },
+                         {
+                          "strokeWidth": 1.5
+                         },
+                         {
+                          "alpha": "@isT * (1 - @isS) * @dm"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawCircle": {
+                        "cx": "@ccx",
+                        "cy": "@ccy",
+                        "radius": "@R - 1"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "color": "@colors.primary"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawCircle": {
+                        "cx": "ifElse(@ccx, @x0 + 16, @chip)",
+                        "cy": "ifElse(@ccy, @y0 + 16, @chip)",
+                        "radius": "ifElse(@R * @isS, 12 * @isT, @chip)"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "tx",
+                        "value": "ifElse(@ccx, @x0 + 16, @chip)"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "ty",
+                        "value": "ifElse(@ccy, @y0 + 16, @chip)"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "hi",
+                        "value": "ifElse(@isS, @isT, @chip)"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onSurface"
+                         },
+                         {
+                          "textSize": "ifElse(15, 13, @chip)"
+                         },
+                         {
+                          "alpha": "@inM * (1 - @hi) * (1 - @isT) * (1 - @we)"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": {
+                         "type": "textFromFloat",
+                         "value": "@dn",
+                         "whole": 2,
+                         "decimal": 0,
+                         "flags": 4
+                        },
+                        "x": "@tx",
+                        "y": "@ty",
+                        "panX": 0,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.muted"
+                         },
+                         {
+                          "alpha": "@inM * (1 - @hi) * (1 - @isT) * @we"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": {
+                         "type": "textFromFloat",
+                         "value": "@dn",
+                         "whole": 2,
+                         "decimal": 0,
+                         "flags": 4
+                        },
+                        "x": "@tx",
+                        "y": "@ty",
+                        "panX": 0,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.primary"
+                         },
+                         {
+                          "alpha": "@isT * (1 - @hi)"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": {
+                         "type": "textFromFloat",
+                         "value": "@dn",
+                         "whole": 2,
+                         "decimal": 0,
+                         "flags": 4
+                        },
+                        "x": "@tx",
+                        "y": "@ty",
+                        "panX": 0,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onPrimary"
+                         },
+                         {
+                          "alpha": "@hi"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": {
+                         "type": "textFromFloat",
+                         "value": "@dn",
+                         "whole": 2,
+                         "decimal": 0,
+                         "flags": 4
+                        },
+                        "x": "@tx",
+                        "y": "@ty",
+                        "panX": 0,
+                        "panY": 0
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "$each": "days",
+                 "as": "g",
+                 "index": "gi",
+                 "fields": [
+                  "day",
+                  "events"
+                 ],
+                 "do": [
+                  {
+                   "variable": {
+                    "name": "nnd_@gi",
+                    "value": {
+                     "$count": "g_events"
+                    }
+                   }
+                  },
+                  {
+                   "variable": {
+                    "name": "lmd_@gi",
+                    "value": "min(@nnd_@gi, @k - step(@nnd_@gi, @k + 0.5))"
+                   }
+                  },
+                  {
+                   "save": {}
+                  },
+                  {
+                   "translate": {
+                    "dx": "((@g_day - 1 + @fw) % 7) * @cw",
+                    "dy": "24 + floor((@g_day - 1 + @fw) / 7) * @rh"
+                   }
+                  },
+                  {
+                   "$each": "g_events",
+                   "as": "e",
+                   "index": "j",
+                   "count": "n",
+                   "fields": [
+                    "time",
+                    "end",
+                    "title",
+                    "subtitle",
+                    "color"
+                   ],
+                   "do": [
+                    {
+                     "save": {}
+                    },
+                    {
+                     "translate": {
+                      "dx": 0,
+                      "dy": "28 + @j * 20"
+                     }
+                    },
+                    {
+                     "clipRect": {
+                      "left": 0,
+                      "top": 0,
+                      "right": "@cw",
+                      "bottom": "18 * @chip * step(@lmd_@gi, @j + 0.5)"
+                     }
+                    },
+                    {
+                     "$if": "theme.mono",
+                     "then": {
+                      "paint": {
+                       "ops": [
+                        {
+                         "color": {
+                          "$if": "e_color",
+                          "then": "@e_color",
+                          "else": "@colors.primary"
+                         }
+                        },
+                        {
+                         "style": "stroke"
+                        },
+                        {
+                         "strokeWidth": 1
+                        }
+                       ]
+                      }
+                     },
+                     "else": {
+                      "paint": {
+                       "ops": [
+                        {
+                         "color": {
+                          "$if": "e_color",
+                          "then": "@e_color",
+                          "else": "@colors.primary"
+                         }
+                        },
+                        {
+                         "alpha": 0.16
+                        }
+                       ]
+                      }
+                     }
+                    },
+                    {
+                     "drawRoundRect": {
+                      "left": 4,
+                      "top": 0,
+                      "right": "@cr4",
+                      "bottom": 18,
+                      "rx": 4,
+                      "ry": 4
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "color": {
+                         "$if": "e_color",
+                         "then": "@e_color",
+                         "else": "@colors.primary"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawRoundRect": {
+                      "left": 4,
+                      "top": 0,
+                      "right": 7,
+                      "bottom": 18,
+                      "rx": 1.5,
+                      "ry": 1.5
+                     }
+                    },
+                    {
+                     "clipRect": {
+                      "left": 9,
+                      "top": 0,
+                      "right": "@cr6",
+                      "bottom": 18
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "textSize": 12
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": {
+                       "$if": "chipTime",
+                       "then": {
+                        "$if": "e_time",
+                        "then": "@e_time  @e_title",
+                        "else": "@e_title"
+                       },
+                       "else": "@e_title"
+                      },
+                      "x": 11,
+                      "y": 9,
+                      "panX": -1,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "restore": {}
+                    }
+                   ]
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.muted"
+                     },
+                     {
+                      "textSize": 11
+                     },
+                     {
+                      "alpha": "@chip * step(@k, 0.5) * step(@nnd_@gi, @lmd_@gi + 0.5)"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": {
+                     "type": "textMerge",
+                     "id1": "+",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@nnd_@gi - @lmd_@gi",
+                       "whole": 2,
+                       "decimal": 0,
+                       "flags": 4
+                      },
+                      "id2": " more"
+                     }
+                    },
+                    "x": 11,
+                    "y": "37 + @lmd_@gi * 20",
+                    "panX": -1,
+                    "panY": 0
+                   }
+                  },
+                  {
+                   "translate": {
+                    "dx": "@cw / 2",
+                    "dy": "@rh * 0.84"
+                   }
+                  },
+                  {
+                   "$each": "g_events",
+                   "as": "e",
+                   "index": "j",
+                   "count": "n",
+                   "fields": [
+                    "time",
+                    "end",
+                    "title",
+                    "subtitle",
+                    "color"
+                   ],
+                   "do": [
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": {
+                         "$if": "e_color",
+                         "then": "@e_color",
+                         "else": "@colors.primary"
+                        }
+                       },
+                       {
+                        "alpha": "@dm * (1 - step(@j, 2.5))"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawCircle": {
+                      "cx": "(@j - (min(@n, 3) - 1) / 2) * 7",
+                      "cy": 0,
+                      "radius": 2.5
+                     }
+                    }
+                   ]
+                  },
+                  {
+                   "restore": {}
+                  }
+                 ]
+                },
+                {
+                 "$each": "weekly",
+                 "as": "w",
+                 "index": "wi",
+                 "fields": [
+                  "weekday",
+                  "events"
+                 ],
+                 "do": [
+                  {
+                   "loop": {
+                    "index": "wk",
+                    "from": 0,
+                    "until": "@wks",
+                    "commands": [
+                     {
+                      "variable": {
+                       "name": "nnw_@wi",
+                       "value": {
+                        "$count": "w_events"
+                       }
+                      }
+                     },
+                     {
+                      "variable": {
+                       "name": "lmw_@wi",
+                       "value": "min(@nnw_@wi, @k - step(@nnw_@wi, @k + 0.5))"
+                      }
+                     },
+                     {
+                      "variable": {
+                       "name": "mkw_@wi",
+                       "value": "step(wk * 7 + @w_weekday + 1 - @fw, 0.5) * step(@nd + 0.5 - @w_weekday - 1 + @fw, wk * 7)"
+                      }
+                     },
+                     {
+                      "save": {}
+                     },
+                     {
+                      "translate": {
+                       "dx": "@w_weekday * @cw",
+                       "dy": "24 + wk * @rh"
+                      }
+                     },
+                     {
+                      "$each": "w_events",
+                      "as": "e",
+                      "index": "j",
+                      "count": "n",
+                      "fields": [
+                       "time",
+                       "end",
+                       "title",
+                       "subtitle",
+                       "color"
+                      ],
+                      "do": [
+                       {
+                        "save": {}
+                       },
+                       {
+                        "translate": {
+                         "dx": 0,
+                         "dy": "28 + @j * 20"
+                        }
+                       },
+                       {
+                        "clipRect": {
+                         "left": 0,
+                         "top": 0,
+                         "right": "@cw",
+                         "bottom": "18 * @chip * step(@lmw_@wi, @j + 0.5) * @mkw_@wi"
+                        }
+                       },
+                       {
+                        "$if": "theme.mono",
+                        "then": {
+                         "paint": {
+                          "ops": [
+                           {
+                            "color": {
+                             "$if": "e_color",
+                             "then": "@e_color",
+                             "else": "@colors.primary"
+                            }
+                           },
+                           {
+                            "style": "stroke"
+                           },
+                           {
+                            "strokeWidth": 1
+                           }
+                          ]
+                         }
+                        },
+                        "else": {
+                         "paint": {
+                          "ops": [
+                           {
+                            "color": {
+                             "$if": "e_color",
+                             "then": "@e_color",
+                             "else": "@colors.primary"
+                            }
+                           },
+                           {
+                            "alpha": 0.16
+                           }
+                          ]
+                         }
+                        }
+                       },
+                       {
+                        "drawRoundRect": {
+                         "left": 4,
+                         "top": 0,
+                         "right": "@cr4",
+                         "bottom": 18,
+                         "rx": 4,
+                         "ry": 4
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "style": "fill"
+                          },
+                          {
+                           "color": {
+                            "$if": "e_color",
+                            "then": "@e_color",
+                            "else": "@colors.primary"
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawRoundRect": {
+                         "left": 4,
+                         "top": 0,
+                         "right": 7,
+                         "bottom": 18,
+                         "rx": 1.5,
+                         "ry": 1.5
+                        }
+                       },
+                       {
+                        "clipRect": {
+                         "left": 9,
+                         "top": 0,
+                         "right": "@cr6",
+                         "bottom": 18
+                        }
+                       },
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "color": "@colors.onSurface"
+                          },
+                          {
+                           "textSize": 12
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawTextAnchored": {
+                         "text": {
+                          "$if": "chipTime",
+                          "then": {
+                           "$if": "e_time",
+                           "then": "@e_time  @e_title",
+                           "else": "@e_title"
+                          },
+                          "else": "@e_title"
+                         },
+                         "x": 11,
+                         "y": 9,
+                         "panX": -1,
+                         "panY": 0
+                        }
+                       },
+                       {
+                        "restore": {}
+                       }
+                      ]
+                     },
+                     {
+                      "paint": {
+                       "ops": [
+                        {
+                         "color": "@colors.muted"
+                        },
+                        {
+                         "textSize": 11
+                        },
+                        {
+                         "alpha": "@chip * step(@k, 0.5) * step(@nnw_@wi, @lmw_@wi + 0.5) * @mkw_@wi"
+                        }
+                       ]
+                      }
+                     },
+                     {
+                      "drawTextAnchored": {
+                       "text": {
+                        "type": "textMerge",
+                        "id1": "+",
+                        "id2": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": "@nnw_@wi - @lmw_@wi",
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": " more"
+                        }
+                       },
+                       "x": 11,
+                       "y": "37 + @lmw_@wi * 20",
+                       "panX": -1,
+                       "panY": 0
+                      }
+                     },
+                     {
+                      "translate": {
+                       "dx": "@cw / 2",
+                       "dy": "@rh * 0.84"
+                      }
+                     },
+                     {
+                      "$each": "w_events",
+                      "as": "e",
+                      "index": "j",
+                      "count": "n",
+                      "fields": [
+                       "time",
+                       "end",
+                       "title",
+                       "subtitle",
+                       "color"
+                      ],
+                      "do": [
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "color": {
+                            "$if": "e_color",
+                            "then": "@e_color",
+                            "else": "@colors.primary"
+                           }
+                          },
+                          {
+                           "alpha": "@dm * (1 - step(@j, 2.5)) * @mkw_@wi"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawCircle": {
+                         "cx": "(@j - (min(@n, 3) - 1) / 2) * 7",
+                         "cy": 0,
+                         "radius": 2.5
+                        }
+                       }
+                      ]
+                     },
+                     {
+                      "restore": {}
+                     }
+                    ]
+                   }
+                  }
+                 ]
+                }
+               ]
+              }
+             },
+             {
+              "column": {
+               "modifiers": [
+                {
+                 "width": "@cw * 7"
+                },
+                {
+                 "height": "@gh"
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "height": 24
+                   },
+                   {
+                    "width": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "flow": {
+                  "modifiers": [
+                   {
+                    "width": "@cw * 7 + 1"
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "@lead"
+                      },
+                      {
+                       "width": "@fw * @cw"
+                      },
+                      {
+                       "height": "@rh"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "$each": "dayTargets",
+                    "as": "t",
+                    "fields": [
+                     "d",
+                     "v"
+                    ],
+                    "do": {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "$if": "t_v == 'a'",
+                        "then": {
+                         "visibility": "@v29"
+                        }
+                       },
+                       {
+                        "$if": "t_v == 'b'",
+                        "then": {
+                         "visibility": "@v30"
+                        }
+                       },
+                       {
+                        "$if": "t_v == 'c'",
+                        "then": {
+                         "visibility": "@v31"
+                        }
+                       },
+                       {
+                        "width": "@cw"
+                       },
+                       {
+                        "height": "@rh"
+                       },
+                       {
+                        "semantics": {
+                         "clickable": true,
+                         "contentDescription": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textFromFloat",
+                           "value": "@t_d",
+                           "whole": 2,
+                           "decimal": 0,
+                           "flags": 4
+                          },
+                          "id2": "@mSp"
+                         }
+                        }
+                       },
+                       {
+                        "onClick": {
+                         "type": "valueFloatChange",
+                         "target": "@selected",
+                         "value": "@t_d"
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "@side"
+          },
+          {
+           "width": 1
+          },
+          {
+           "height": "@height"
+          },
+          {
+           "background": "@colors.outline"
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          {
+           "width": "@aw"
+          },
+          {
+           "height": "@ah"
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "visibility": "@stk"
+             },
+             "fillMaxWidth",
+             {
+              "height": 1
+             },
+             {
+              "background": "@colors.outline"
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 52
+             },
+             {
+              "padding": [
+               16,
+               0
+              ]
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "@dName",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@sd",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 4
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " ",
+                   "id2": "@mName"
+                  }
+                 }
+                }
+               },
+               "fontSize": 17,
+               "fontWeight": 700,
+               "color": "@colors.onSurface",
+               "maxLines": 1,
+               "overflow": "ellipsis",
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "Today",
+               "fontSize": "@theme.text_sm",
+               "fontWeight": 600,
+               "color": "@colors.primary",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "visibility": "@isTd"
+                },
+                {
+                 "padding": {
+                  "start": 8
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": "@ah - 52 - (1 - @side)"
+             },
+             {
+              "verticalScroll": "@ay"
+             }
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth"
+               ],
+               "children": [
+                {
+                 "canvas": {
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "height": 48
+                   }
+                  ],
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.muted"
+                      },
+                      {
+                       "textSize": 15
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "@emptyText",
+                     "x": 16,
+                     "y": 24,
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "column": {
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "background": "@colors.background"
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": 1
+                      },
+                      {
+                       "height": 1
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "$each": "weekly",
+                    "as": "w",
+                    "index": "wi",
+                    "fields": [
+                     "weekday",
+                     "events"
+                    ],
+                    "do": [
+                     {
+                      "variable": {
+                       "name": "vw_@wi",
+                       "value": "1 - min(1, abs(@wds - @w_weekday))"
+                      }
+                     },
+                     {
+                      "column": {
+                       "modifiers": [
+                        {
+                         "visibility": "@vw_@wi"
+                        },
+                        "fillMaxWidth"
+                       ],
+                       "children": [
+                        {
+                         "$each": "w_events",
+                         "as": "e",
+                         "index": "j",
+                         "fields": [
+                          "time",
+                          "end",
+                          "title",
+                          "subtitle",
+                          "color"
+                         ],
+                         "do": {
+                          "row": {
+                           "modifiers": [
+                            "fillMaxWidth",
+                            {
+                             "padding": [
+                              16,
+                              10
+                             ]
+                            }
+                           ],
+                           "children": [
+                            {
+                             "column": {
+                              "modifiers": [
+                               {
+                                "width": 56
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": {
+                                  "$if": "e_time",
+                                  "then": "@e_time",
+                                  "else": "All day"
+                                 },
+                                 "fontSize": 14,
+                                 "fontWeight": 600,
+                                 "color": "@colors.onSurface",
+                                 "maxLines": 1
+                                }
+                               },
+                               {
+                                "$if": "e_end",
+                                "then": {
+                                 "text": {
+                                  "value": "@e_end",
+                                  "fontSize": "@theme.text_sm",
+                                  "color": "@colors.muted",
+                                  "maxLines": 1,
+                                  "modifiers": [
+                                   {
+                                    "padding": {
+                                     "top": 2
+                                    }
+                                   }
+                                  ]
+                                 }
+                                }
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "box": {
+                              "modifiers": [
+                               {
+                                "width": 4
+                               },
+                               {
+                                "height": 40
+                               },
+                               {
+                                "clip": {
+                                 "roundedRect": 2
+                                }
+                               },
+                               {
+                                "background": {
+                                 "$if": "e_color",
+                                 "then": "@e_color",
+                                 "else": "@colors.primary"
+                                }
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "column": {
+                              "modifiers": [
+                               {
+                                "weight": 1
+                               },
+                               {
+                                "padding": {
+                                 "start": 12
+                                }
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": "@e_title",
+                                 "fontSize": "@theme.text_md",
+                                 "fontWeight": 600,
+                                 "color": "@colors.onSurface",
+                                 "maxLines": 2,
+                                 "overflow": "ellipsis"
+                                }
+                               },
+                               {
+                                "$if": "e_subtitle",
+                                "then": {
+                                 "text": {
+                                  "value": "@e_subtitle",
+                                  "fontSize": 13,
+                                  "color": "@colors.muted",
+                                  "maxLines": 2,
+                                  "overflow": "ellipsis",
+                                  "modifiers": [
+                                   {
+                                    "padding": {
+                                     "top": 2
+                                    }
+                                   }
+                                  ]
+                                 }
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    ]
+                   },
+                   {
+                    "$each": "days",
+                    "as": "g",
+                    "index": "gi",
+                    "fields": [
+                     "day",
+                     "events"
+                    ],
+                    "do": [
+                     {
+                      "variable": {
+                       "name": "vd_@gi",
+                       "value": "1 - min(1, abs(@sd - @g_day))"
+                      }
+                     },
+                     {
+                      "column": {
+                       "modifiers": [
+                        {
+                         "visibility": "@vd_@gi"
+                        },
+                        "fillMaxWidth"
+                       ],
+                       "children": [
+                        {
+                         "$each": "g_events",
+                         "as": "e",
+                         "index": "j",
+                         "fields": [
+                          "time",
+                          "end",
+                          "title",
+                          "subtitle",
+                          "color"
+                         ],
+                         "do": {
+                          "row": {
+                           "modifiers": [
+                            "fillMaxWidth",
+                            {
+                             "padding": [
+                              16,
+                              10
+                             ]
+                            }
+                           ],
+                           "children": [
+                            {
+                             "column": {
+                              "modifiers": [
+                               {
+                                "width": 56
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": {
+                                  "$if": "e_time",
+                                  "then": "@e_time",
+                                  "else": "All day"
+                                 },
+                                 "fontSize": 14,
+                                 "fontWeight": 600,
+                                 "color": "@colors.onSurface",
+                                 "maxLines": 1
+                                }
+                               },
+                               {
+                                "$if": "e_end",
+                                "then": {
+                                 "text": {
+                                  "value": "@e_end",
+                                  "fontSize": "@theme.text_sm",
+                                  "color": "@colors.muted",
+                                  "maxLines": 1,
+                                  "modifiers": [
+                                   {
+                                    "padding": {
+                                     "top": 2
+                                    }
+                                   }
+                                  ]
+                                 }
+                                }
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "box": {
+                              "modifiers": [
+                               {
+                                "width": 4
+                               },
+                               {
+                                "height": 40
+                               },
+                               {
+                                "clip": {
+                                 "roundedRect": 2
+                                }
+                               },
+                               {
+                                "background": {
+                                 "$if": "e_color",
+                                 "then": "@e_color",
+                                 "else": "@colors.primary"
+                                }
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "column": {
+                              "modifiers": [
+                               {
+                                "weight": 1
+                               },
+                               {
+                                "padding": {
+                                 "start": 12
+                                }
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": "@e_title",
+                                 "fontSize": "@theme.text_md",
+                                 "fontWeight": 600,
+                                 "color": "@colors.onSurface",
+                                 "maxLines": 2,
+                                 "overflow": "ellipsis"
+                                }
+                               },
+                               {
+                                "$if": "e_subtitle",
+                                "then": {
+                                 "text": {
+                                  "value": "@e_subtitle",
+                                  "fontSize": 13,
+                                  "color": "@colors.muted",
+                                  "maxLines": 2,
+                                  "overflow": "ellipsis",
+                                  "modifiers": [
+                                   {
+                                    "padding": {
+                                     "top": 2
+                                    }
+                                   }
+                                  ]
+                                 }
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "$if": "agendaEnd",
+              "then": {
+               "box": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "padding": [
+                   16,
+                   8,
+                   16,
+                   16
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "$slot": "agendaEnd"
+                 }
+                ]
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Give the month and the events as data and let it decide: under sideAt (600 dp) or in a portrait window the month is on top (about 60% of the height) and the selected day's agenda under it; in a landscape window from 600 dp the agenda is a side panel (28% of the width, 260 to 360 dp). Cells from 64 dp wide and 60 dp tall show the events' titles as chips (as many as fit, then \"+N more\"); smaller cells show up to three dots in the events' colours. Decided by the window, never by content",
+  "Fixed month or the real one: year + month show that month (today is marked only while it is the current month, and the agenda starts on today or the 1st). Omit both for the current month from the clock, which rolls over by itself. Dated events (days) belong to a fixed month: the same day numbers in every month would be false. With the real month give weekly events (a class timetable, opening hours), or have the app rebuild the document each month",
+  "days: one object per day, {\"day\": 12, \"events\": [...]}; weekly: {\"weekday\": 0 (Monday) to 6, \"events\": [...]}; both can be given, weekly first in the agenda. An event is {\"time\", \"end\", \"title\", \"subtitle\", \"color\"}, only title required: no time reads \"All day\". Weeks start on Monday",
+  "Every event is written twice, as a chip or dot in the grid and as an agenda row (about 600 B for both), and each day with events costs about 250 B more: a full month of 20 events is about 30 KB. For a busy calendar fed by an app, keep titles short and leave subtitles out",
+  "Chip titles are cut at the cell's edge (a canvas cannot ellipsize): put the important word first. emptyText is drawn in one line under the day's events (they cover it when the day has any) and is not read by a screen reader: keep it under about 28 characters",
+  "selected is the day of the month, 1 to 31, and 0 means today (or the 1st when the month shown is not this month). Bind \"@sel\" to read it in agendaEnd (a Book button sending hostNamedAction with \"value\": \"@sel\") or to preset a day. Do not name a variable step",
+  "Each day of the month is a tap target written once (31 boxes in a flow after a spacer of the first weekday's width), announced as \"12 November\"; the grid itself is one canvas. Taps select; there is no swipe to another month",
+  "width and height default to the window: pass them when it is not the whole window. The month sits on surface, the agenda on background"
+ ]
+}

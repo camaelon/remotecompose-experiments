@@ -1,0 +1,532 @@
+{
+ "id": "SHW-19",
+ "name": "wave-interference",
+ "version": 1,
+ "title": "Two-source wave interference on a 3D pond",
+ "summary": "A round pond in 3D whose surface is the sum of circular waves from two bobbing sources, animated from the clock and coloured by height through a 147-byte gradient texture; an XY pad sets the frequency (sideways) and the distance between the sources (up and down), and the readouts give f, d and the wavelength.",
+ "prompt": "Make a physics-class demo of wave interference that is also beautiful: a 3D water surface animated as the sum of circular waves from two sources, coloured by height, with a 2D control to change the frequency and the distance between the sources.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "Chart3D draws z = f(x, y) over a square with flat colour bands; a round pond, colour by height through a texture, a live clock phase and the XY pad need the 3D ops by hand.",
+ "capabilities": {
+  "primary": [
+   "3d.surface",
+   "3d.texture",
+   "time.animation",
+   "input.drag"
+  ],
+  "secondary": [
+   "3d.scene",
+   "3d.mesh",
+   "image.bitmap",
+   "text.dynamic",
+   "layout.weight",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "generative-art",
+  "onboarding",
+  "control"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "wave interference",
+  "interference",
+  "two sources",
+  "ripple tank",
+  "ripples",
+  "waves",
+  "water",
+  "pond",
+  "physics",
+  "nodal lines",
+  "wavelength",
+  "frequency",
+  "superposition",
+  "3d surface",
+  "height field",
+  "colour by height",
+  "xy pad",
+  "2d control",
+  "showcase"
+ ],
+ "teaches": [
+  "Build a round surface with a general meshExpression3D: x = u*cos(v), z = u*sin(v) over u 0..4, v 0..2π, and y the sum of two waves sin(k*r - ω*t)/(1 + 0.35*r), each r written in polar form sqrt(u*u ∓ 2*u*s*cos(v) + s*s)",
+  "Colour a surface by its height: give meshExpression3D a uv pair [\"0.5\", \"0.5 + 2 * height\"] and bind a 2 x 32 gradient PNG with texture3D; the player multiplies the texel by the lighting, so the shading stays",
+  "Drive the waves from the clock: ph = ω * continuousSec() in a variable the height expression reads; the whole mesh is re-evaluated each frame (48 x 168 vertices)",
+  "Make an XY pad with two touchExpressions in touchMode 6 (absolute) on one canvas, each mapping touchX() or touchY() minus the canvas's root position (componentValue valueType 4 and 5) into a clamped range",
+  "Place the pad before the 3D canvas in document order (a touch variable is live only from its declaration on): a Box draws the overlay first and the transparent 3D canvas over it, and the 3D buffer only covers the pond",
+  "Frame the pond in the free part of the window: a 2D translate before the 3D draws moves the window-sized 3D buffer to the free region's centre, and the camera distance is the max of two fits (width and height of that region)",
+  "Make the mono look a ripple tank: a second texture whose crest rows are opaque white and the rest transparent (texels with alpha 0 are not drawn), multiplied by @colors.onSurface under three saturating lights, frozen in time"
+ ],
+ "pitfalls": [
+  "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players only",
+  "The waves repaint every frame (continuousSec()) and re-evaluate 8064 vertices a frame; keep the grid near this size",
+  "In the TypeScript web player a texture can be missing on the first frame (bitmaps decode asynchronously): the surface draws untextured white for a frame, then coloured",
+  "The surface expressions are long (two square roots per source, written twice: height and uv); Android's 32-entry expression limit does not apply as 3D does not play there yet, but it would",
+  "The phase is ω·t, so changing the frequency jumps the phase; harmless while dragging, but it is not a physical change of frequency in a running ripple tank",
+  "The literal colours are a deliberate dark art piece: only mono follows the theme"
+ ],
+ "java_difference": "3D support has not landed in androidx yet (coming): the Java JSON parser does not know camera3D, lights3D, matrix3D, meshPrimitive3D or drawMesh3D; plays in the C++ and TypeScript players",
+ "snippets": [
+  {
+   "pointer": "/root/box/children/1/canvas/commands/15",
+   "shows": "3d.surface",
+   "note": "the round pond: polar x/z, the two-source height, uv by height"
+  },
+  {
+   "pointer": "/root/box/children/1/canvas/commands/19",
+   "shows": "3d.texture",
+   "note": "gradient texture on the surface (colour), crest texture (mono)"
+  },
+  {
+   "pointer": "/root/box/children/1/canvas/commands/3",
+   "shows": "time.animation",
+   "note": "the phase from continuousSec()"
+  },
+  {
+   "pointer": "/root/box/children/0/column/children/3/row/children/0/canvas/commands/2",
+   "shows": "input.drag",
+   "note": "the XY pad: frequency from touchX()"
+  }
+ ],
+ "check": {
+  "describe": "A dark screen: 'Two sources, one pond' at the top; in the middle a round pond in perspective inside a grey stone rim, its surface rippling in rings from two small gold balls, deep navy in the troughs, cyan to white on the crests, with calm radial nodal lines between; at the bottom a rounded pad with a gold puck and readouts '1.0 Hz', '2.0 m', '1.1 m'. Later in time the ripples have moved and the view has swayed. Dragging the puck to the top right gives 1.8 Hz and 3.6 m: shorter waves, sources wider apart, many more nodal lines. Landscape: pond on the right, text and pad on the left. Small (2x2): the pond alone. Mono: the same layout in black and white, crests as solid onSurface bands (a ripple tank), still.",
+  "render": {
+   "clock": 1000
+  },
+  "renders": [
+   {
+    "name": "later",
+    "clock": 3700
+   },
+   {
+    "name": "dragged",
+    "clock": 1000,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 95,
+      "y": 560
+     },
+     {
+      "t": 0.25,
+      "type": "move",
+      "x": 130,
+      "y": 530
+     },
+     {
+      "t": 0.4,
+      "type": "move",
+      "x": 160,
+      "y": 510
+     },
+     {
+      "t": 0.5,
+      "type": "up",
+      "x": 160,
+      "y": 510
+     }
+    ],
+    "duration": 1.2
+   },
+   {
+    "name": "close",
+    "clock": 1000,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 95,
+      "y": 560
+     },
+     {
+      "t": 0.25,
+      "type": "move",
+      "x": 60,
+      "y": 590
+     },
+     {
+      "t": 0.4,
+      "type": "move",
+      "x": 40,
+      "y": 612
+     },
+     {
+      "t": 0.5,
+      "type": "up",
+      "x": 40,
+      "y": 612
+     }
+    ],
+    "duration": 1.2
+   },
+   {
+    "name": "landscape",
+    "width": 720,
+    "height": 400,
+    "clock": 1000
+   },
+   {
+    "name": "tablet",
+    "width": 800,
+    "height": 1100,
+    "clock": 1000
+   },
+   {
+    "name": "w2x2",
+    "width": 170,
+    "height": 170,
+    "clock": 1000
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "clock": 1000
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "clock": 1000
+   }
+  ]
+ },
+ "related": [
+  "CMP-38",
+  "DRW-17",
+  "Chart3D"
+ ],
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 4895,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 175,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 39,
+   "COMPONENT_VALUE": 6,
+   "CanvasContent": 2,
+   "CoreText": 11,
+   "DATA_BITMAP": 2,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 11,
+   "DRAW_CIRCLE": 2,
+   "DRAW_LINE": 4,
+   "DRAW_MESH_3D": 4,
+   "DRAW_ROUND_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 2,
+   "HEADER": 1,
+   "LAYOUT_BOX": 4,
+   "LAYOUT_CANVAS": 2,
+   "LAYOUT_COLUMN": 2,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 4,
+   "LayoutComponentContent": 20,
+   "LoopOperation": 1,
+   "MATRIX_3D_OP": 4,
+   "MATRIX_TRANSLATE": 1,
+   "MESH_EXPRESSION_3D": 1,
+   "MESH_PRIMITIVE_3D": 2,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 7,
+   "MODIFIER_PADDING": 6,
+   "MODIFIER_VISIBILITY": 1,
+   "MODIFIER_WIDTH": 9,
+   "PAINT_3D_STATE": 3,
+   "PAINT_VALUES": 9,
+   "SET_CAMERA_3D": 1,
+   "SET_LIGHTS_3D": 1,
+   "SET_TEXTURE_3D": 2,
+   "TextFromFloat": 3,
+   "TouchExpression": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 2
+  },
+  "audit_findings": [
+   "warning: dead_code",
+   "info: unused_variables",
+   "info: repaint_continuous"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 2,
+   "click": 0,
+   "area": 0,
+   "touch": 2
+  },
+  "java_identical": false,
+  "renders": {
+   "later": {
+    "render": "render-later.png",
+    "render_findings": []
+   },
+   "dragged": {
+    "render": "render-dragged.png",
+    "render_findings": []
+   },
+   "close": {
+    "render": "render-close.png",
+    "render_findings": []
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     720,
+     400
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
+     "info: repaint_continuous"
+    ]
+   },
+   "tablet": {
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1100
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
+     "info: repaint_continuous"
+    ]
+   },
+   "w2x2": {
+    "render": "render-w2x2.png",
+    "render_findings": [],
+    "size": [
+     170,
+     170
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
+     "info: repaint_continuous"
+    ]
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 4746,
+    "component_modes": {},
+    "op_count": 170,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 4746,
+    "component_modes": {},
+    "op_count": 170,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   }
+  },
+  "json_keys": [
+   "$if",
+   "apiLevel",
+   "aspect",
+   "background",
+   "base64",
+   "bitmap",
+   "bitmaps",
+   "bottom",
+   "box",
+   "camera3D",
+   "canvas",
+   "center",
+   "children",
+   "clearDepth3D",
+   "color",
+   "column",
+   "commands",
+   "componentValue",
+   "contentDescription",
+   "crest",
+   "cx",
+   "cy",
+   "decimal",
+   "defaultValue",
+   "dir",
+   "drawCircle",
+   "drawLine",
+   "drawMesh3D",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "else",
+   "expression",
+   "eye",
+   "far",
+   "fontSize",
+   "fontWeight",
+   "fovY",
+   "from",
+   "full",
+   "grad",
+   "header",
+   "height",
+   "id",
+   "index",
+   "intensity",
+   "land",
+   "left",
+   "lights",
+   "lights3D",
+   "loop",
+   "majorRadius",
+   "material3D",
+   "matrix3D",
+   "max",
+   "maxLines",
+   "mesh",
+   "meshExpression3D",
+   "meshPrimitive3D",
+   "min",
+   "minorRadius",
+   "mode",
+   "modifiers",
+   "name",
+   "near",
+   "op",
+   "ops",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "primitive",
+   "profiles",
+   "projection",
+   "px0",
+   "py0",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "row",
+   "rx",
+   "ry",
+   "segments",
+   "semantics",
+   "shininess",
+   "size",
+   "specular",
+   "strokeWidth",
+   "style",
+   "text",
+   "textSize",
+   "texture3D",
+   "then",
+   "tiny",
+   "top",
+   "touchExpression",
+   "touchMode",
+   "translate",
+   "type",
+   "uCount",
+   "uRange",
+   "until",
+   "up",
+   "uv",
+   "vCount",
+   "vRange",
+   "value",
+   "valueType",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalWeight",
+   "visibility",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2",
+   "z"
+  ],
+  "evidence": {
+   "3d.surface": [
+    "meshExpression3D"
+   ],
+   "3d.texture": [
+    "texture3D",
+    "material3D"
+   ],
+   "time.animation": [
+    "continuousSec"
+   ],
+   "input.drag": [
+    "touchExpression"
+   ],
+   "3d.scene": [
+    "camera3D",
+    "lights3D"
+   ],
+   "3d.mesh": [
+    "meshPrimitive3D",
+    "drawMesh3D"
+   ],
+   "image.bitmap": [
+    "bitmaps"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "layout.weight": [
+    "verticalWeight"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:48:27.305Z"
+ }
+}

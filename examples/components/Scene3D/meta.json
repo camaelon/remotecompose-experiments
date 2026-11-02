@@ -1,0 +1,439 @@
+{
+ "id": "Scene3D",
+ "name": "scene-3d",
+ "version": 1,
+ "title": "Scene3D: a 3D scene from named primitives",
+ "prompt": "Show a ring-stacking toy in 3D that I can drag to turn, without working out a camera or any matrices.",
+ "level": 3,
+ "use_cases": [
+  "onboarding"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "3d",
+  "3d scene",
+  "3d model",
+  "three d",
+  "turntable",
+  "product view",
+  "rotate object",
+  "orbit",
+  "drag to rotate",
+  "spin",
+  "exploded view",
+  "assembly animation",
+  "cube",
+  "sphere",
+  "cylinder",
+  "cone",
+  "torus",
+  "primitives",
+  "wireframe"
+ ],
+ "teaches": [
+  "Name the parts, not the maths: {\"Scene3D\": {\"objects\": [{\"shape\": \"box\", \"size\": [w, h, d], \"at\": [x, y, z], \"color\": \"@colors.primary\"}]}}; units are yours, Y up, Z toward the viewer",
+  "The server frames the scene: one camera distance expression of the window's aspect keeps every part in view at every angle the drag can reach, phone to landscape to a 2x2 widget",
+  "orbit (default on) is two touchExpressions on touchX() / touchY(); autorotate adds the clock; assemble flies the parts in by step and back out, eased with smooth_step",
+  "Mono: every part is a background-filled mesh with its quad edges drawn in onSurface (hidden lines removed), and nothing moves unless dragged",
+  "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players"
+ ],
+ "pitfalls": [
+  "The overlay slot is the place for a title: the scene itself always fills the window"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/Scene3D",
+   "shows": "3d.scene",
+   "note": "the whole call: parts with shape, size, position and theme colour; camera, lights and framing are the server's"
+  },
+  {
+   "pointer": "/root/Scene3D/objects",
+   "shows": "3d.mesh",
+   "note": "cylinders, tori and a sphere: each a meshPrimitive3D, shared by parts of the same shape and size"
+  },
+  {
+   "pointer": "/root/Scene3D",
+   "shows": "input.drag",
+   "note": "orbit is on by default: drag left-right to spin, up-down to tilt"
+  }
+ ],
+ "check": {
+  "describe": "A ring-stacking toy seen from slightly above and to the right: a grey base disc, a dark rod, four rings (red, orange, green, blue) getting smaller upward and a purple ball on top, title 'Ring stacker' at the top left. Mono: white hidden-line wireframes on black. Turned: seen from higher, from the other side.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360
+   },
+   {
+    "name": "w2x2",
+    "width": 160,
+    "height": 160
+   },
+   {
+    "name": "turned",
+    "theme": "light",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 80,
+      "y": 300
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 140,
+      "y": 330
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 200,
+      "y": 360
+     },
+     {
+      "t": 0.4,
+      "type": "up",
+      "x": 200,
+      "y": 360
+     }
+    ],
+    "duration": 3
+   }
+  ]
+ },
+ "related": [
+  "DRW-17",
+  "CMP-35",
+  "CMP-36"
+ ],
+ "java_difference": "3D support has not landed in androidx yet (coming): the Java JSON parser does not know camera3D, lights3D, matrix3D, meshPrimitive3D or drawMesh3D; plays in the C++ and TypeScript players",
+ "derived": {
+  "components": [
+   "Scene3D"
+  ],
+  "component_instances": 1,
+  "component_modes": {
+   "Scene3D": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 3136,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 175,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 5,
+   "COLOR_CONSTANT": 18,
+   "COLOR_EXPRESSIONS": 18,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "CoreText": 2,
+   "DATA_TEXT": 3,
+   "DRAW_MESH_3D": 7,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 5,
+   "LoopOperation": 18,
+   "MATRIX_3D_OP": 28,
+   "MATRIX_TRANSLATE": 1,
+   "MESH_PRIMITIVE_3D": 7,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 2,
+   "NAMED_VARIABLE": 9,
+   "PAINT_3D_STATE": 1,
+   "PAINT_VALUES": 7,
+   "SET_CAMERA_3D": 1,
+   "SET_LIGHTS_3D": 1,
+   "THEME": 27,
+   "TouchExpression": 2
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 2,
+   "click": 0,
+   "area": 0,
+   "touch": 2
+  },
+  "java_identical": false,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 2222,
+    "component_modes": {
+     "Scene3D": "expand"
+    },
+    "op_count": 105,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": [
+     "info: unused_space"
+    ]
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 2222,
+    "component_modes": {
+     "Scene3D": "expand"
+    },
+    "op_count": 105,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": []
+   },
+   "w2x2": {
+    "render": "render-w2x2.png",
+    "render_findings": [],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": []
+   },
+   "turned": {
+    "theme": "light",
+    "render": "render-turned.png",
+    "render_findings": []
+   }
+  },
+  "json_keys": [
+   "Scene3D",
+   "angle",
+   "apiLevel",
+   "aspect",
+   "at",
+   "axis",
+   "background",
+   "box",
+   "camera3D",
+   "canvas",
+   "center",
+   "children",
+   "clearDepth3D",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "dark",
+   "defaultValue",
+   "dir",
+   "drawMesh3D",
+   "dx",
+   "dy",
+   "error",
+   "expression",
+   "eye",
+   "far",
+   "fontSize",
+   "fovY",
+   "from",
+   "header",
+   "height",
+   "id",
+   "insetTop",
+   "intensity",
+   "label",
+   "light",
+   "lights",
+   "lights3D",
+   "majorRadius",
+   "matrix3D",
+   "max",
+   "mesh",
+   "meshPrimitive3D",
+   "min",
+   "minorRadius",
+   "mode",
+   "modifiers",
+   "muted",
+   "name",
+   "near",
+   "objects",
+   "onSurface",
+   "op",
+   "ops",
+   "outline",
+   "overlay",
+   "padding",
+   "paint",
+   "primary",
+   "primitive",
+   "profiles",
+   "projection",
+   "radius",
+   "resources",
+   "root",
+   "secondary",
+   "segments",
+   "semantics",
+   "shape",
+   "size",
+   "slots",
+   "stopMode",
+   "success",
+   "text",
+   "to",
+   "touchExpression",
+   "translate",
+   "type",
+   "up",
+   "value",
+   "variable",
+   "warning",
+   "width",
+   "x",
+   "y",
+   "z"
+  ],
+  "evidence": {
+   "3d.scene": [
+    "camera3D",
+    "lights3D"
+   ],
+   "3d.mesh": [
+    "meshPrimitive3D",
+    "drawMesh3D"
+   ],
+   "input.drag": [
+    "touchExpression"
+   ]
+  },
+  "built_at": "2026-11-02T18:53:08.079Z"
+ }
+}

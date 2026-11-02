@@ -1,0 +1,379 @@
+{
+ "id": "DRW-17",
+ "name": "3d-scene-recipe",
+ "version": 1,
+ "title": "A lit 3D shape you can drag to turn, by hand",
+ "summary": "The 3D recipe written out: a window-filling canvas, clearDepth3D, a perspective camera3D whose distance follows the aspect, two directional lights, one meshPrimitive3D torus, a matrix3D chain of tilt and spin driven by two touchExpressions, a theme paint colour and drawMesh3D; in mono a hidden-line wireframe instead.",
+ "prompt": "Show one 3D shape, lit, that I can drag to turn; write the camera, the lights and the transforms out so I can see how 3D works.",
+ "level": 3,
+ "family": "DRW",
+ "hand_built": "The ops themselves are the lesson. For a scene of several parts, a product turntable or an assembly, call Scene3D: it frames the camera at every angle and aspect, places parts by size and position, and adds autorotate, assembly and the mono look.",
+ "capabilities": {
+  "primary": [
+   "3d.scene",
+   "3d.mesh"
+  ],
+  "secondary": [
+   "input.drag"
+  ]
+ },
+ "use_cases": [],
+ "form_factor": "phone",
+ "keywords": [
+  "3d",
+  "three d",
+  "camera",
+  "camera3D",
+  "lights3D",
+  "matrix3D",
+  "meshPrimitive3D",
+  "drawMesh3D",
+  "torus",
+  "orbit",
+  "drag to rotate",
+  "perspective",
+  "lighting",
+  "wireframe",
+  "3d recipe"
+ ],
+ "teaches": [
+  "The order: clearDepth3D, camera3D, lights3D, meshPrimitive3D (an id), then per draw: matrix3D identity and its chain, a paint colour, drawMesh3D of that id",
+  "The 3D viewport is the whole window, drawn at the canvas's top left: make the 3D canvas fill the window, and give camera3D aspect componentWidth() / componentHeight()",
+  "Frame for the narrow side: eye distance = d * max(1, componentHeight() / componentWidth()), so a portrait window moves the camera back as much as it narrows the view",
+  "Orbit: two touchExpressions on touchX() and touchY() (stopMode gently, so a release coasts) become angles in radians for matrix3D rotate about X (tilt) and Y (spin); clamp tilt with the touch's min and max",
+  "matrix3D ops post-multiply: identity, rotate X, rotate Y, then the mesh; angles are radians",
+  "Lights are directions the light travels (down and into the screen is [x, -y, -z]); the colour is the paint colour, lit by 0.2 ambient plus each light's |N.L| times its intensity",
+  "Mono: {\"$if\": \"theme.mono\"} in the commands picks a hidden-line wireframe (drawMesh3D wireframe, edges [0, 1] draws the quads without diagonals) in onSurface instead of the lit fill"
+ ],
+ "pitfalls": [
+  "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players only, and the Java JSON parser drops the 3D operations. Don't use it for a screen that must play on Android today",
+  "A 3D canvas that does not start at the window's top left, or does not fill it, draws its scene off-centre and outside its box: the players draw into a window-sized buffer placed at the canvas's origin",
+  "matrixSave / matrixRestore do not save the 3D matrix: start each object's chain again with matrix3D identity",
+  "matrix3D needs an op; {\"translate\": [x, y, z]} is an error, write {\"op\": \"translate\", \"x\": .., \"y\": .., \"z\": ..}",
+  "Lighting is two-sided Lambert with a fixed 0.2 ambient and colours multiply: a dark theme colour stays dark, and lights brighter in sum than about 1.2 wash a light colour out to white"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/canvas/commands/6",
+   "shows": "3d.scene",
+   "note": "camera3D: perspective, fovY 0.6 rad, aspect from the canvas, eye distance from a variable"
+  },
+  {
+   "pointer": "/root/canvas/commands/7",
+   "shows": "3d.scene",
+   "note": "lights3D: a warm key light from the upper left, a cool fill from the right"
+  },
+  {
+   "pointer": "/root/canvas/commands/8",
+   "shows": "3d.mesh",
+   "note": "meshPrimitive3D torus: major and minor radius, 32 segments, built by the player"
+  },
+  {
+   "pointer": "/root/canvas/commands/0",
+   "shows": "input.drag",
+   "note": "touchExpression on touchX(): the drag accumulates and coasts; it becomes the spin angle"
+  }
+ ],
+ "inputs": {},
+ "check": {
+  "describe": "A blue ring (torus) seen from above at an angle, lit from the upper left, centred and filling about 80% of the width. Dark: a lighter blue on the dark background. Mono: the ring as a black (mono light) or white (mono dark) grid of quads with hidden lines removed. Turned: seen from another side and higher.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360
+   },
+   {
+    "name": "w2x2",
+    "width": 160,
+    "height": 160
+   },
+   {
+    "name": "turned",
+    "theme": "light",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 80,
+      "y": 280
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 150,
+      "y": 310
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 220,
+      "y": 340
+     },
+     {
+      "t": 0.4,
+      "type": "up",
+      "x": 220,
+      "y": 340
+     }
+    ],
+    "duration": 3
+   }
+  ]
+ },
+ "related": [
+  "Scene3D",
+  "CMP-35",
+  "DRW-11"
+ ],
+ "java_difference": "3D support has not landed in androidx yet (coming): the Java JSON parser does not know camera3D, lights3D, matrix3D, meshPrimitive3D or drawMesh3D; plays in the C++ and TypeScript players",
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 1019,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 48,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 5,
+   "COLOR_CONSTANT": 4,
+   "COLOR_EXPRESSIONS": 4,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 1,
+   "DRAW_MESH_3D": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 4,
+   "MATRIX_3D_OP": 3,
+   "MESH_PRIMITIVE_3D": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 2,
+   "PAINT_3D_STATE": 1,
+   "PAINT_VALUES": 1,
+   "SET_CAMERA_3D": 1,
+   "SET_LIGHTS_3D": 1,
+   "THEME": 6,
+   "TouchExpression": 2
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   }
+  ],
+  "render_findings": [
+   "info: unused_space"
+  ],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 2,
+   "click": 0,
+   "area": 0,
+   "touch": 2
+  },
+  "java_identical": false,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": [
+     "info: unused_space"
+    ]
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": [
+     "info: unused_space"
+    ]
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 817,
+    "component_modes": {},
+    "op_count": 32,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 817,
+    "component_modes": {},
+    "op_count": 32,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": [
+     "info: unused_space"
+    ]
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": []
+   },
+   "w2x2": {
+    "render": "render-w2x2.png",
+    "render_findings": [],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": []
+   },
+   "turned": {
+    "theme": "light",
+    "render": "render-turned.png",
+    "render_findings": []
+   }
+  },
+  "json_keys": [
+   "$if",
+   "angle",
+   "apiLevel",
+   "aspect",
+   "axis",
+   "background",
+   "camera3D",
+   "canvas",
+   "center",
+   "clearDepth3D",
+   "color",
+   "colors",
+   "commands",
+   "contentDescription",
+   "dark",
+   "defaultValue",
+   "dir",
+   "drawMesh3D",
+   "edges",
+   "else",
+   "expression",
+   "eye",
+   "far",
+   "fovY",
+   "header",
+   "height",
+   "id",
+   "intensity",
+   "light",
+   "lights",
+   "lights3D",
+   "majorRadius",
+   "matrix3D",
+   "max",
+   "mesh",
+   "meshPrimitive3D",
+   "min",
+   "minorRadius",
+   "mode",
+   "modifiers",
+   "name",
+   "near",
+   "op",
+   "ops",
+   "paint",
+   "primary",
+   "primitive",
+   "profiles",
+   "projection",
+   "resources",
+   "root",
+   "segments",
+   "semantics",
+   "stopMode",
+   "then",
+   "touchExpression",
+   "type",
+   "up",
+   "value",
+   "variable",
+   "width",
+   "wireframe"
+  ],
+  "evidence": {
+   "3d.scene": [
+    "camera3D",
+    "lights3D"
+   ],
+   "3d.mesh": [
+    "meshPrimitive3D",
+    "drawMesh3D"
+   ],
+   "input.drag": [
+    "touchExpression"
+   ]
+  },
+  "built_at": "2026-11-02T18:44:41.277Z"
+ }
+}

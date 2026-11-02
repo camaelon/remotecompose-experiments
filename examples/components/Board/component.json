@@ -1,0 +1,1419 @@
+{
+ "component": "Board",
+ "version": 1,
+ "summary": "A whole kanban board from data: columns (To do, In progress, Done, or pipeline stages), each with a title and a live count, holding cards with a tag, a title, a subtitle, an assignee avatar, a due date and a value. From 600 dp wide all columns stand side by side (240 to 340 dp each, the board centred, scrolling sideways when they do not fit); on a phone one column fills the screen under a tab strip that names every column with its count. A tap moves a card to the next column (counts follow), and/or sends its id to the app.",
+ "params": {
+  "columns": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One object per column, in order: {\"title\", \"color\", \"cards\"}. title names the column (tab and header), color an optional dot (\"@colors.success\"), cards its cards: {\"title\", \"subtitle\", \"tag\", \"tone\", \"who\", \"whoTone\", \"due\", \"late\", \"value\", \"id\", \"label\"}, all but the title optional. tag is a short label chip (\"Bug\") in tone (a theme colour, default primary); who an assignee's initials on an Avatar in whoTone; due a date under a clock icon, red with late: true; value a figure at the end (\"€18k\"); id what action sends (default the title); label replaces the card's spoken text. At most 6 columns and, with move, 15 cards"
+  },
+  "title": {
+   "type": "string",
+   "doc": "The board's heading (\"Sprint 24\"). Omit for no header"
+  },
+  "subtitle": {
+   "type": "string",
+   "doc": "A line under the title (\"Ends Friday · 12 cards\")"
+  },
+  "move": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "true: a tap moves a card one column on (the last column keeps it) and the counts follow. Every card is then written once per column, shown by visibility. false: cards stay where the data puts them, each written once; give action so a tap does something"
+  },
+  "action": {
+   "type": "string",
+   "static": true,
+   "doc": "A host action name: a tap on a card sends it with the card's id (a string). With move it runs after the move"
+  },
+  "column": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The column shown on a phone, from 0 (a tab tap sets it). Bind \"@col\" to preset or read it. Ignored when wide"
+  },
+  "emptyText": {
+   "type": "string",
+   "default": "No cards",
+   "doc": "Shown in a column with no cards"
+  },
+  "wideAt": {
+   "type": "float",
+   "default": 600,
+   "static": true,
+   "doc": "Width in dp from which all columns show side by side"
+  },
+  "colMin": {
+   "type": "float",
+   "default": 240,
+   "static": true,
+   "doc": "Narrowest column when wide; below it the board scrolls sideways"
+  },
+  "colMax": {
+   "type": "float",
+   "default": 340,
+   "static": true,
+   "doc": "Widest column when wide; the board is centred when the columns stop growing"
+  },
+  "tabMin": {
+   "type": "float",
+   "default": 112,
+   "static": true,
+   "doc": "Narrowest phone tab. When the tabs do not fit at this width the strip scrolls sideways, sized so that half a tab shows at the end"
+  },
+  "background": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "Behind the columns"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width it has, when it is not the whole window"
+  },
+  "height": {
+   "type": "float",
+   "default": "windowHeight()",
+   "doc": "The height it has"
+  }
+ },
+ "slots": {
+  "headerEnd": {
+   "optional": true,
+   "doc": "At the end of the header: an IconButton (add, filter), a Badge or an Avatar"
+  }
+ },
+ "locals": {
+  "nc": {
+   "$count": "columns"
+  },
+  "wide": "step(@width, @wideAt - 0.5)",
+  "bar": "1 - @wide",
+  "cw": "ifElse(@width - 24, clamp(@colMin, @colMax, floor((@width - 32 - 12 * (@nc - 1)) / @nc)), @wide)",
+  "bw": "@nc * @cw + 12 * (@nc - 1)",
+  "lp": "ifElse(12, max(16, floor((@width - @bw) / 2)), @wide)",
+  "hl": "max(16, @lp)",
+  "hh": {
+   "$if": "title",
+   "then": {
+    "$if": "subtitle",
+    "then": 64,
+    "else": 56
+   },
+   "else": 0
+  },
+  "bh": "@height - @hh - 49 * @bar",
+  "colH": "@bh - 12",
+  "listH": "@colH - 2 - 44 * @wide",
+  "tw": "ifElse(floor(@width / @nc), floor(@width / (floor(@width / @tabMin - 0.5) + 0.5)), step(@tabMin * @nc, @width + 0.5))"
+ },
+ "capabilities": [
+  "layout.state",
+  "input.tap",
+  "a11y.labels"
+ ],
+ "call": {
+  "Board": {
+   "title": "Chores",
+   "columns": [
+    {
+     "title": "To do",
+     "cards": [
+      {
+       "title": "Water the plants",
+       "who": "AL"
+      },
+      {
+       "title": "Take out the bins"
+      }
+     ]
+    },
+    {
+     "title": "Done",
+     "cards": [
+      {
+       "title": "Laundry"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "body": {
+  "column": {
+   "modifiers": [
+    {
+     "width": "@width"
+    },
+    {
+     "height": "@height"
+    },
+    {
+     "background": "@background"
+    }
+   ],
+   "children": [
+    {
+     "variable": {
+      "name": "bhs",
+      "value": 0
+     }
+    },
+    {
+     "variable": {
+      "name": "bts",
+      "value": 0
+     }
+    },
+    {
+     "$if": "move",
+     "then": [
+      {
+       "variable": {
+        "name": "bM",
+        "value": 0,
+        "export": true,
+        "commit": true
+       }
+      },
+      {
+       "$each": "columns",
+       "as": "d",
+       "index": "j",
+       "fields": [
+        "title",
+        "color",
+        "cards"
+       ],
+       "do": [
+        {
+         "$each": "d_cards",
+         "as": "r",
+         "index": "i",
+         "fields": [
+          "title",
+          "subtitle",
+          "tag",
+          "tone",
+          "who",
+          "whoTone",
+          "due",
+          "late",
+          "value",
+          "id",
+          "label"
+         ],
+         "do": {
+          "variable": {
+           "name": "bs@j@i",
+           "value": 0,
+           "export": true,
+           "commit": true
+          }
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "$each": "columns",
+     "as": "c",
+     "index": "q",
+     "fields": [
+      "title",
+      "color",
+      "cards"
+     ],
+     "do": [
+      {
+       "$if": "move",
+       "then": [
+        {
+         "variable": {
+          "name": "bi@q",
+          "value": {
+           "$count": "c_cards"
+          }
+         }
+        },
+        {
+         "variable": {
+          "name": "bn@q",
+          "value": "@bi@q + floor(@bM / pow(16, @q - 1)) % 16 - floor(@bM / pow(16, @q)) % 16"
+         }
+        }
+       ],
+       "else": [
+        {
+         "variable": {
+          "name": "bn@q",
+          "value": {
+           "$count": "c_cards"
+          }
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "$if": "title",
+     "then": {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "width": "@width"
+        },
+        {
+         "height": "@hh"
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": "@hl"
+           },
+           {
+            "height": 1
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@title",
+             "fontSize": "@theme.text_lg",
+             "fontWeight": 700,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           },
+           {
+            "$if": "subtitle",
+            "then": {
+             "text": {
+              "value": "@subtitle",
+              "fontSize": 13,
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "overflow": "ellipsis",
+              "modifiers": [
+               {
+                "padding": {
+                 "top": 2
+                }
+               }
+              ]
+             }
+            }
+           }
+          ]
+         }
+        },
+        {
+         "$slot": "headerEnd"
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": "@hl - 8"
+           },
+           {
+            "height": 1
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       {
+        "visibility": "@bar"
+       },
+       {
+        "width": "@width"
+       },
+       {
+        "height": 49
+       }
+      ],
+      "children": [
+       {
+        "row": {
+         "modifiers": [
+          {
+           "width": "@width"
+          },
+          {
+           "height": 48
+          },
+          {
+           "horizontalScroll": "@bts"
+          }
+         ],
+         "children": [
+          {
+           "$each": "columns",
+           "as": "c",
+           "index": "q",
+           "fields": [
+            "title",
+            "color",
+            "cards"
+           ],
+           "do": {
+            "box": {
+             "verticalAlignment": "bottom",
+             "modifiers": [
+              {
+               "width": "@tw"
+              },
+              {
+               "height": 48
+              },
+              {
+               "semantics": {
+                "clickable": true,
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": "@c_title",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": ", ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@bn@q",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " cards"
+                  }
+                 }
+                }
+               }
+              },
+              {
+               "onClick": [
+                {
+                 "type": "valueFloatChange",
+                 "target": "@column",
+                 "value": "@q"
+                }
+               ]
+              }
+             ],
+             "children": [
+              {
+               "row": {
+                "horizontalAlignment": "center",
+                "verticalAlignment": "center",
+                "modifiers": [
+                 "fillMaxSize",
+                 {
+                  "padding": [
+                   8,
+                   0
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "@c_title",
+                   "fontSize": 14,
+                   "fontWeight": 600,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "modifiers": [
+                    {
+                     "visibility": "min(1, abs(@column - @q))"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "@c_title",
+                   "fontSize": 14,
+                   "fontWeight": 600,
+                   "color": "@colors.primary",
+                   "maxLines": 1,
+                   "modifiers": [
+                    {
+                     "visibility": "1 - min(1, abs(@column - @q))"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "padding": {
+                      "start": 6
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "box": {
+                      "horizontalAlignment": "center",
+                      "verticalAlignment": "center",
+                      "modifiers": [
+                       {
+                        "height": 20
+                       },
+                       {
+                        "clip": {
+                         "roundedRect": 10
+                        }
+                       },
+                       {
+                        "background": "@colors.surfaceHigh"
+                       },
+                       {
+                        "padding": [
+                         7,
+                         0
+                        ]
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": {
+                          "type": "textFromFloat",
+                          "value": "@bn@q",
+                          "whole": 3,
+                          "decimal": 0,
+                          "flags": 5
+                         },
+                         "fontSize": "@theme.text_sm",
+                         "fontWeight": 600,
+                         "color": "@colors.muted",
+                         "maxLines": 1
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "1 - min(1, abs(@column - @q))"
+                 },
+                 "fillMaxWidth",
+                 {
+                  "height": 3
+                 },
+                 {
+                  "background": "@colors.primary"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": "@width"
+          },
+          {
+           "height": 1
+          },
+          {
+           "background": "@colors.outline"
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "modifiers": [
+       {
+        "width": "@width"
+       },
+       {
+        "height": "@bh"
+       },
+       {
+        "horizontalScroll": "@bhs"
+       }
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": "@lp"
+          },
+          {
+           "height": 1
+          }
+         ]
+        }
+       },
+       {
+        "$each": "columns",
+        "as": "c",
+        "index": "q",
+        "fields": [
+         "title",
+         "color",
+         "cards"
+        ],
+        "do": [
+         {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@wide"
+            },
+            {
+             "width": "12 * step(@q, 0.5)"
+            },
+            {
+             "height": 1
+            }
+           ]
+          }
+         },
+         {
+          "column": {
+           "modifiers": [
+            {
+             "visibility": "max(@wide, 1 - min(1, abs(@column - @q)))"
+            },
+            {
+             "width": "@cw"
+            },
+            {
+             "clip": {
+              "roundedRect": "@theme.radius_md"
+             }
+            },
+            {
+             "background": "@colors.monoOutline"
+            },
+            {
+             "padding": 1
+            },
+            {
+             "clip": {
+              "roundedRect": "@theme.radius_md - 1"
+             }
+            },
+            {
+             "background": "@colors.surfaceHigh"
+            }
+           ],
+           "children": [
+            {
+             "variable": {
+              "name": "bv@q",
+              "value": 0
+             }
+            },
+            {
+             "row": {
+              "verticalAlignment": "center",
+              "modifiers": [
+               {
+                "visibility": "@wide"
+               },
+               "fillMaxWidth",
+               {
+                "height": 44
+               },
+               {
+                "padding": [
+                 12,
+                 0,
+                 10,
+                 0
+                ]
+               }
+              ],
+              "children": [
+               {
+                "$if": "c_color",
+                "then": {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "padding": {
+                     "end": 8
+                    }
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "size": 10
+                      },
+                      {
+                       "clip": {
+                        "roundedRect": 5
+                       }
+                      },
+                      {
+                       "background": "@c_color"
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               },
+               {
+                "text": {
+                 "value": "@c_title",
+                 "fontSize": "@theme.text_md",
+                 "fontWeight": 600,
+                 "color": "@colors.onSurface",
+                 "maxLines": 1,
+                 "overflow": "ellipsis",
+                 "modifiers": [
+                  {
+                   "weight": 1
+                  }
+                 ]
+                }
+               },
+               {
+                "box": {
+                 "horizontalAlignment": "center",
+                 "verticalAlignment": "center",
+                 "modifiers": [
+                  {
+                   "height": 20
+                  },
+                  {
+                   "clip": {
+                    "roundedRect": 10
+                   }
+                  },
+                  {
+                   "background": "@colors.surface"
+                  },
+                  {
+                   "padding": [
+                    7,
+                    0
+                   ]
+                  }
+                 ],
+                 "children": [
+                  {
+                   "text": {
+                    "value": {
+                     "type": "textFromFloat",
+                     "value": "@bn@q",
+                     "whole": 3,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "fontSize": "@theme.text_sm",
+                    "fontWeight": 600,
+                    "color": "@colors.muted",
+                    "maxLines": 1
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "column": {
+              "modifiers": [
+               "fillMaxWidth",
+               {
+                "heightIn": [
+                 0,
+                 "@listH"
+                ]
+               },
+               {
+                "verticalScroll": "@bv@q"
+               },
+               {
+                "padding": [
+                 8,
+                 0
+                ]
+               }
+              ],
+              "children": [
+               {
+                "box": {
+                 "modifiers": [
+                  {
+                   "visibility": "@bar"
+                  },
+                  {
+                   "height": 8
+                  },
+                  {
+                   "width": 1
+                  }
+                 ]
+                }
+               },
+               {
+                "text": {
+                 "value": "@emptyText",
+                 "fontSize": 13,
+                 "color": "@colors.muted",
+                 "maxLines": 1,
+                 "modifiers": [
+                  {
+                   "visibility": "1 - min(1, @bn@q)"
+                  },
+                  {
+                   "padding": [
+                    4,
+                    4,
+                    4,
+                    12
+                   ]
+                  }
+                 ]
+                }
+               },
+               {
+                "$if": "move",
+                "then": [
+                 {
+                  "$each": "columns",
+                  "as": "d",
+                  "index": "j",
+                  "fields": [
+                   "title",
+                   "color",
+                   "cards"
+                  ],
+                  "do": [
+                   {
+                    "$each": "d_cards",
+                    "as": "r",
+                    "index": "i",
+                    "fields": [
+                     "title",
+                     "subtitle",
+                     "tag",
+                     "tone",
+                     "who",
+                     "whoTone",
+                     "due",
+                     "late",
+                     "value",
+                     "id",
+                     "label"
+                    ],
+                    "do": {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "visibility": "1 - min(1, abs(@j + @bs@j@i - @q))"
+                       },
+                       {
+                        "padding": {
+                         "bottom": 8
+                        }
+                       },
+                       "fillMaxWidth",
+                       {
+                        "clip": {
+                         "roundedRect": 10
+                        }
+                       },
+                       {
+                        "background": "@colors.monoOutline"
+                       },
+                       {
+                        "padding": 1
+                       },
+                       {
+                        "clip": {
+                         "roundedRect": 9
+                        }
+                       },
+                       {
+                        "background": "@colors.surface"
+                       },
+                       {
+                        "semantics": {
+                         "clickable": true,
+                         "contentDescription": {
+                          "$if": "r_label",
+                          "then": "@r_label",
+                          "else": {
+                           "type": "textMerge",
+                           "id1": "@r_title",
+                           "id2": {
+                            "$if": "r_tag",
+                            "then": ", @r_tag, in @c_title",
+                            "else": ", in @c_title"
+                           }
+                          }
+                         }
+                        }
+                       },
+                       {
+                        "$if": "action",
+                        "then": {
+                         "onClick": [
+                          {
+                           "type": "valueFloatExpressionChange",
+                           "target": "@bs@j@i",
+                           "value": "min(@bs@j@i + 1, @nc - 1 - @j)"
+                          },
+                          {
+                           "type": "valueFloatExpressionChange",
+                           "target": "@bM",
+                           "value": "@bM + pow(16, @q) * step(@nc - 1.5, @q)"
+                          },
+                          {
+                           "type": "hostNamedAction",
+                           "name": "@action",
+                           "value": {
+                            "$if": "r_id",
+                            "then": "@r_id",
+                            "else": "@r_title"
+                           }
+                          }
+                         ]
+                        },
+                        "else": {
+                         "onClick": [
+                          {
+                           "type": "valueFloatExpressionChange",
+                           "target": "@bs@j@i",
+                           "value": "min(@bs@j@i + 1, @nc - 1 - @j)"
+                          },
+                          {
+                           "type": "valueFloatExpressionChange",
+                           "target": "@bM",
+                           "value": "@bM + pow(16, @q) * step(@nc - 1.5, @q)"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "padding": [
+                         11,
+                         10,
+                         11,
+                         11
+                        ]
+                       }
+                      ],
+                      "children": [
+                       {
+                        "$if": "r_tag",
+                        "then": {
+                         "text": {
+                          "value": "@r_tag",
+                          "fontSize": 11,
+                          "fontWeight": 600,
+                          "maxLines": 1,
+                          "color": {
+                           "$if": "r_tone",
+                           "then": "@r_tone",
+                           "else": "@colors.primary"
+                          },
+                          "modifiers": [
+                           {
+                            "padding": {
+                             "bottom": 6
+                            }
+                           },
+                           {
+                            "clip": {
+                             "roundedRect": 6
+                            }
+                           },
+                           {
+                            "background": "@colors.surfaceHigh"
+                           },
+                           {
+                            "padding": [
+                             7,
+                             2
+                            ]
+                           }
+                          ]
+                         }
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": "@r_title",
+                         "fontSize": "@theme.text_md",
+                         "fontWeight": 500,
+                         "color": "@colors.onSurface",
+                         "maxLines": 2,
+                         "overflow": "ellipsis",
+                         "modifiers": [
+                          "fillMaxWidth"
+                         ]
+                        }
+                       },
+                       {
+                        "$if": "r_subtitle",
+                        "then": {
+                         "text": {
+                          "value": "@r_subtitle",
+                          "fontSize": 13,
+                          "color": "@colors.muted",
+                          "maxLines": 1,
+                          "overflow": "ellipsis",
+                          "modifiers": [
+                           {
+                            "padding": {
+                             "top": 2
+                            }
+                           }
+                          ]
+                         }
+                        }
+                       },
+                       {
+                        "$if": "r_who || r_due || r_value",
+                        "then": {
+                         "row": {
+                          "verticalAlignment": "center",
+                          "modifiers": [
+                           "fillMaxWidth",
+                           {
+                            "padding": {
+                             "top": 10
+                            }
+                           }
+                          ],
+                          "children": [
+                           {
+                            "$if": "r_who",
+                            "then": {
+                             "Avatar": {
+                              "initials": "@r_who",
+                              "size": 24,
+                              "color": {
+                               "$if": "r_whoTone",
+                               "then": "@r_whoTone",
+                               "else": "@colors.secondary"
+                              }
+                             }
+                            }
+                           },
+                           {
+                            "$if": "r_due",
+                            "then": {
+                             "text": {
+                              "value": "@r_due",
+                              "fontSize": "@theme.text_sm",
+                              "maxLines": 1,
+                              "fontWeight": {
+                               "$if": "r_late",
+                               "then": 600,
+                               "else": 400
+                              },
+                              "color": {
+                               "$if": "r_late",
+                               "then": "@colors.error",
+                               "else": "@colors.muted"
+                              },
+                              "modifiers": [
+                               {
+                                "$if": "r_who",
+                                "then": {
+                                 "padding": {
+                                  "start": 8
+                                 }
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           },
+                           {
+                            "box": {
+                             "modifiers": [
+                              {
+                               "weight": 1
+                              },
+                              {
+                               "height": 1
+                              }
+                             ]
+                            }
+                           },
+                           {
+                            "$if": "r_value",
+                            "then": {
+                             "text": {
+                              "value": "@r_value",
+                              "fontSize": 13,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 1,
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "start": 8
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           }
+                          ]
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   }
+                  ]
+                 }
+                ],
+                "else": [
+                 {
+                  "$each": "c_cards",
+                  "as": "r",
+                  "index": "i",
+                  "fields": [
+                   "title",
+                   "subtitle",
+                   "tag",
+                   "tone",
+                   "who",
+                   "whoTone",
+                   "due",
+                   "late",
+                   "value",
+                   "id",
+                   "label"
+                  ],
+                  "do": {
+                   "column": {
+                    "modifiers": [
+                     {
+                      "padding": {
+                       "bottom": 8
+                      }
+                     },
+                     "fillMaxWidth",
+                     {
+                      "clip": {
+                       "roundedRect": 10
+                      }
+                     },
+                     {
+                      "background": "@colors.monoOutline"
+                     },
+                     {
+                      "padding": 1
+                     },
+                     {
+                      "clip": {
+                       "roundedRect": 9
+                      }
+                     },
+                     {
+                      "background": "@colors.surface"
+                     },
+                     {
+                      "semantics": {
+                       "clickable": true,
+                       "contentDescription": {
+                        "$if": "r_label",
+                        "then": "@r_label",
+                        "else": {
+                         "type": "textMerge",
+                         "id1": "@r_title",
+                         "id2": {
+                          "$if": "r_tag",
+                          "then": ", @r_tag, in @c_title",
+                          "else": ", in @c_title"
+                         }
+                        }
+                       }
+                      }
+                     },
+                     {
+                      "$if": "action",
+                      "then": {
+                       "onClick": [
+                        {
+                         "type": "hostNamedAction",
+                         "name": "@action",
+                         "value": {
+                          "$if": "r_id",
+                          "then": "@r_id",
+                          "else": "@r_title"
+                         }
+                        }
+                       ]
+                      }
+                     },
+                     {
+                      "padding": [
+                       11,
+                       10,
+                       11,
+                       11
+                      ]
+                     }
+                    ],
+                    "children": [
+                     {
+                      "$if": "r_tag",
+                      "then": {
+                       "text": {
+                        "value": "@r_tag",
+                        "fontSize": 11,
+                        "fontWeight": 600,
+                        "maxLines": 1,
+                        "color": {
+                         "$if": "r_tone",
+                         "then": "@r_tone",
+                         "else": "@colors.primary"
+                        },
+                        "modifiers": [
+                         {
+                          "padding": {
+                           "bottom": 6
+                          }
+                         },
+                         {
+                          "clip": {
+                           "roundedRect": 6
+                          }
+                         },
+                         {
+                          "background": "@colors.surfaceHigh"
+                         },
+                         {
+                          "padding": [
+                           7,
+                           2
+                          ]
+                         }
+                        ]
+                       }
+                      }
+                     },
+                     {
+                      "text": {
+                       "value": "@r_title",
+                       "fontSize": "@theme.text_md",
+                       "fontWeight": 500,
+                       "color": "@colors.onSurface",
+                       "maxLines": 2,
+                       "overflow": "ellipsis",
+                       "modifiers": [
+                        "fillMaxWidth"
+                       ]
+                      }
+                     },
+                     {
+                      "$if": "r_subtitle",
+                      "then": {
+                       "text": {
+                        "value": "@r_subtitle",
+                        "fontSize": 13,
+                        "color": "@colors.muted",
+                        "maxLines": 1,
+                        "overflow": "ellipsis",
+                        "modifiers": [
+                         {
+                          "padding": {
+                           "top": 2
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     },
+                     {
+                      "$if": "r_who || r_due || r_value",
+                      "then": {
+                       "row": {
+                        "verticalAlignment": "center",
+                        "modifiers": [
+                         "fillMaxWidth",
+                         {
+                          "padding": {
+                           "top": 10
+                          }
+                         }
+                        ],
+                        "children": [
+                         {
+                          "$if": "r_who",
+                          "then": {
+                           "Avatar": {
+                            "initials": "@r_who",
+                            "size": 24,
+                            "color": {
+                             "$if": "r_whoTone",
+                             "then": "@r_whoTone",
+                             "else": "@colors.secondary"
+                            }
+                           }
+                          }
+                         },
+                         {
+                          "$if": "r_due",
+                          "then": {
+                           "text": {
+                            "value": "@r_due",
+                            "fontSize": "@theme.text_sm",
+                            "maxLines": 1,
+                            "fontWeight": {
+                             "$if": "r_late",
+                             "then": 600,
+                             "else": 400
+                            },
+                            "color": {
+                             "$if": "r_late",
+                             "then": "@colors.error",
+                             "else": "@colors.muted"
+                            },
+                            "modifiers": [
+                             {
+                              "$if": "r_who",
+                              "then": {
+                               "padding": {
+                                "start": 8
+                               }
+                              }
+                             }
+                            ]
+                           }
+                          }
+                         },
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "weight": 1
+                            },
+                            {
+                             "height": 1
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "$if": "r_value",
+                          "then": {
+                           "text": {
+                            "value": "@r_value",
+                            "fontSize": 13,
+                            "fontWeight": 600,
+                            "color": "@colors.onSurface",
+                            "maxLines": 1,
+                            "modifiers": [
+                             {
+                              "padding": {
+                               "start": 8
+                              }
+                             }
+                            ]
+                           }
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 }
+                ]
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": "@lp"
+          },
+          {
+           "height": 1
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Give columns and cards as data and let it decide, by the window width and never by content: under wideAt (600 dp) one column fills the screen under a tab strip (title and live count per column, the shown one underlined); from wideAt every column side by side, colMin to colMax wide (240 to 340), the board centred. When the columns do not fit (four at 800 dp, five at 640) the board scrolls sideways and the next column shows at the edge. There is no scroll bar",
+  "Columns hug their cards and scroll on their own once taller than the window, so a short column leaves the space under it empty, as on any kanban board",
+  "move (the default) writes every card once per column and shows the copy where it stands: about 1.2 KB per card per column (9 cards in 3 columns: 35 KB; 7 in 4: 37 KB). Keep a moving board to 15 cards and 6 columns (the counts are packed four bits per column in one float). For a big or app-fed board use move: false with action: each card is written once (about 1 KB) and the app moves cards and sends the board again",
+  "A tap moves a card one column on, never back, and the last column keeps its cards; there is no drag. A moved card takes its place in data order (cards from earlier columns first), not at the top. Where each card stands is the exported float boardN_bs<column><index> (columns moved), which the app can read",
+  "action is one host action name for every card, sending the card's id (its title if it has none) as a string. json2rc declares a name used by several cards once (Parser.ts EXTENSION); the Java parser writes it in the first card only, so the bytes differ from Java: say so in meta.java_difference. With move the action runs after the move and still sends the id, not the new column",
+  "A card: tag (one line), title (two lines, ellipsized), subtitle (one line), then a footer of who (24 dp Avatar), due and value. due and value are not ellipsized: keep them short (\"Due Thu\", \"€140k\"); late: true makes due red and bold, so it still reads in mono",
+  "Phone tabs are at least tabMin (112 dp) wide; a title must fit one tab with its count: about 11 characters (\"Negotiation\", \"In progress\"). The column variable chooses the phone's column and is ignored when wide",
+  "tone, whoTone and color are theme colours (\"@colors.warning\"), so dark and mono work. width and height default to the window: pass them when the board is not the whole window"
+ ]
+}

@@ -1,0 +1,1083 @@
+{
+ "id": "SHW-17",
+ "name": "terrain",
+ "version": 1,
+ "title": "Little island: a 3D terrain with a sea-level slider",
+ "summary": "A procedural island on a block of earth, drawn in 3D from one height formula (two Gaussian hills plus sine ripples): flat-shaded low-poly bands of beach sand, grass, forest, rock and snow, sixteen cone trees, a turquoise shallows ring with white surf and a deep-blue sea block whose level a slider sets. The camera drifts round with the clock and a drag orbits it; day sky in light, starry night in dark, a hidden-line wireframe in mono.",
+ "prompt": "Make a little 3D world: a procedural island coloured by elevation (water, sand, grass, rock, snow) that slowly turns, which I can drag round, with a slider for the sea level.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "One height expression is repeated per colour band (a min() at each band's top) and the shallows, surf, beach and tree visibility all follow the live sea level; Scene3D and Chart3D have no surface coloured by bands that move with a slider.",
+ "capabilities": {
+  "primary": [
+   "3d.surface",
+   "3d.scene",
+   "input.drag"
+  ],
+  "secondary": [
+   "3d.mesh",
+   "time.animation",
+   "data.loop",
+   "data.array",
+   "draw.gradient",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "generative-art",
+  "game"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "3d",
+  "terrain",
+  "landscape",
+  "island",
+  "height field",
+  "heightmap",
+  "procedural",
+  "low poly",
+  "elevation bands",
+  "sea level",
+  "water level",
+  "diorama",
+  "orbit",
+  "slider",
+  "showcase",
+  "little world"
+ ],
+ "teaches": [
+  "Elevation bands with one formula: each band is a meshExpression3D (surface general, x = u, z = v) whose y is min(h, top); drawn lowest band first, the strict depth test makes every point take the lowest band that reaches its height, so sand, grass, forest, rock and snow need no per-vertex colour",
+  "Bands that follow a live value: the beach's top is @sea + 0.035, the shallows are min(h + 0.1, @sea + 0.002) and the surf min(h + 0.03, @sea + 0.003), so raising the sea moves the coast, the beaches and the surf together; trees scale to 0 below @sea + 0.045",
+  "A diorama skirt: a general surface one grid ring wider than the land, x = clamp(-1, 1, u), whose outer ring drops to the base, gives vertical earth walls; the sea is a unit cube scaled to the live level and inset 0.003 so the earth wall stays in front of it",
+  "Trees are one cone drawn in a loop over a float array of [x, y, z, scale] (positions sampled on the grass by the generator), 16 draws instead of 16 meshes",
+  "The slider stays usable under a full-screen 3D view: the 3D canvas fills a column above a 76 dp spacer, and the slider (earlier in the document, so the 3D reads its live @sea) sits in that gap; the camera uses windowWidth() / windowHeight() because the 3D buffer is the window's",
+  "Sky: a theme colour gradient, and 40 seeded stars whose colour is transparent in light and white in dark; mono replaces the scene with one hidden-line wireframe of max(h, @sea) and stops the drift"
+ ],
+ "pitfalls": [
+  "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players only. Don't use it for a screen that must play on Android today",
+  "A 3D canvas on top of a slider takes its touches (a drag on the slider orbits the island instead): keep the 3D canvas out of the slider's area",
+  "The slider is a touchExpression with the absolute-position stop mode: on release it coasts with the finger's speed, so a quick flick overshoots to the end; tests release with vx 0",
+  "meshExpression3D surfaces are rebuilt every frame in both players (no cache), so the drift costs eight 41 x 41 to 43 x 43 grids of a 75-token height expression a frame (about 14,000 evaluations), plus seven full-window composites and 16 tree draws: fine on a phone, heavy for a watch",
+  "The 40 stars use seed()/rand(): the C++ and TypeScript players scatter them differently (the rest of the picture matches to within a few pixels)"
+ ],
+ "java_difference": "3D support has not landed in androidx yet (coming): the Java JSON parser does not know camera3D, lights3D, matrix3D, meshPrimitive3D or drawMesh3D; plays in the C++ and TypeScript players",
+ "inputs": {
+  "variables": {
+   "sea": {
+    "min": -0.2,
+    "max": 0.4
+   }
+  }
+ },
+ "snippets": [
+  {
+   "pointer": "/root/box/children/2/column/children/0/canvas/commands/7",
+   "shows": "3d.surface",
+   "note": "the band meshes: one height formula, min(h, top) per band, the skirt and the trees"
+  },
+  {
+   "pointer": "/root/box/children/2/column/children/0/canvas/commands/6",
+   "shows": "3d.scene",
+   "note": "camera framed for the window and the room the title and slider leave"
+  },
+  {
+   "pointer": "/root/box/children/2/column/children/0/canvas/commands/0",
+   "shows": "input.drag",
+   "note": "orbit: drag accumulators that coast"
+  },
+  {
+   "pointer": "/root/box/children/1/column/children/3/box/children/0/canvas/commands/1",
+   "shows": "input.drag",
+   "note": "the sea-level slider, before the 3D canvas so it reads the live value"
+  },
+  {
+   "pointer": "/root/box/children/2/column/children/0/canvas/commands/2",
+   "shows": "time.animation",
+   "note": "the camera drift from continuousSec(), none in mono"
+  }
+ ],
+ "check": {
+  "describe": "Title 'Little island' and a hint at the top, a 'Sea level  0 m' slider at the bottom; between them a square block of earth seen from above at an angle: a deep-blue sea with a turquoise shallows ring and white surf round a low-poly island — sand beaches, light and dark green slopes with small dark cone trees, grey rock and a snowy peak; brown earth walls below the sea's sides. Light: pale blue to cream sky; dark: navy night with stars. Later in time it has turned; dragging turns and tilts it; raising the slider floods the lowlands (only rock and snow above a ring of sand). Mono: a white (or black) hidden-line grid of the island with the sea flat.",
+  "render": {
+   "clock": 0
+  },
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "clock": 0
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "clock": 0
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "later",
+    "theme": "light",
+    "clock": 20000
+   },
+   {
+    "name": "tablet",
+    "theme": "dark",
+    "width": 800,
+    "height": 1280,
+    "clock": 0
+   },
+   {
+    "name": "landscape",
+    "theme": "light",
+    "width": 640,
+    "height": 360,
+    "clock": 0
+   },
+   {
+    "name": "square",
+    "theme": "dark",
+    "width": 300,
+    "height": 300,
+    "clock": 0
+   },
+   {
+    "name": "flooded",
+    "theme": "light",
+    "clock": 0,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 140,
+      "y": 610
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 180,
+      "y": 610
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 220,
+      "y": 610
+     },
+     {
+      "t": 0.5,
+      "type": "move",
+      "x": 222,
+      "y": 610
+     },
+     {
+      "t": 0.6,
+      "type": "up",
+      "x": 222,
+      "y": 610,
+      "vx": 0,
+      "vy": 0
+     }
+    ],
+    "duration": 1.2
+   },
+   {
+    "name": "low-tide",
+    "theme": "dark",
+    "clock": 0,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 140,
+      "y": 610
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 100,
+      "y": 610
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 60,
+      "y": 610
+     },
+     {
+      "t": 0.5,
+      "type": "move",
+      "x": 58,
+      "y": 610
+     },
+     {
+      "t": 0.6,
+      "type": "up",
+      "x": 58,
+      "y": 610,
+      "vx": 0,
+      "vy": 0
+     }
+    ],
+    "duration": 1.2
+   },
+   {
+    "name": "orbited",
+    "theme": "light",
+    "clock": 0,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 80,
+      "y": 260
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 150,
+      "y": 300
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 220,
+      "y": 340
+     },
+     {
+      "t": 0.4,
+      "type": "up",
+      "x": 220,
+      "y": 340
+     }
+    ],
+    "duration": 2
+   }
+  ]
+ },
+ "related": [
+  "CMP-38",
+  "CMP-37",
+  "DRW-17",
+  "Chart3D",
+  "Scene3D"
+ ],
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 9179,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 326,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 24,
+   "COLOR_CONSTANT": 34,
+   "COLOR_EXPRESSIONS": 34,
+   "COMPONENT_VALUE": 4,
+   "CanvasContent": 3,
+   "CoreText": 2,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 7,
+   "DRAW_CIRCLE": 2,
+   "DRAW_LINE": 2,
+   "DRAW_MESH_3D": 10,
+   "DRAW_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 3,
+   "DataListFloat": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 5,
+   "LAYOUT_CANVAS": 3,
+   "LAYOUT_COLUMN": 2,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 9,
+   "LoopOperation": 36,
+   "MATRIX_3D_OP": 16,
+   "MESH_EXPRESSION_3D": 8,
+   "MESH_PRIMITIVE_3D": 2,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 10,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 9,
+   "NAMED_VARIABLE": 18,
+   "PAINT_3D_STATE": 1,
+   "PAINT_VALUES": 16,
+   "SET_CAMERA_3D": 1,
+   "SET_LIGHTS_3D": 1,
+   "THEME": 51,
+   "TextFromFloat": 1,
+   "TouchExpression": 3
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "deep",
+    "type": "color",
+    "value": "#FF1D557F"
+   },
+   {
+    "name": "foam",
+    "type": "color",
+    "value": "#FFB5D8D6"
+   },
+   {
+    "name": "forest",
+    "type": "color",
+    "value": "#FF33693A"
+   },
+   {
+    "name": "grass",
+    "type": "color",
+    "value": "#FF5C8F45"
+   },
+   {
+    "name": "ink",
+    "type": "color",
+    "value": "#FFEAF0F7"
+   },
+   {
+    "name": "inkMuted",
+    "type": "color",
+    "value": "#FF9DABBC"
+   },
+   {
+    "name": "rock",
+    "type": "color",
+    "value": "#FF6E675E"
+   },
+   {
+    "name": "sand",
+    "type": "color",
+    "value": "#FFC2AB78"
+   },
+   {
+    "name": "shallow",
+    "type": "color",
+    "value": "#FF3592A3"
+   },
+   {
+    "name": "sky1",
+    "type": "color",
+    "value": "#FF070D1A"
+   },
+   {
+    "name": "sky2",
+    "type": "color",
+    "value": "#FF1B2742"
+   },
+   {
+    "name": "snow",
+    "type": "color",
+    "value": "#FFDDE3EC"
+   },
+   {
+    "name": "soil",
+    "type": "color",
+    "value": "#FF634632"
+   },
+   {
+    "name": "star",
+    "type": "color",
+    "value": "#CCFFFFFF"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#4DEAF0F7"
+   },
+   {
+    "name": "tree",
+    "type": "color",
+    "value": "#FF234F2C"
+   },
+   {
+    "name": "trees",
+    "type": "float_array",
+    "value": [
+     0.481000006,
+     0.131999999,
+     -0.633000016,
+     0.850000024,
+     0.0579999983,
+     0.231999993,
+     -0.377999991,
+     1,
+     0.0930000022,
+     0.151999995,
+     0.432000011,
+     0.949999988,
+     -0.263000011,
+     0.172999993,
+     -0.191,
+     0.800000012,
+     -0.572000027,
+     0.0649999976,
+     -0.0680000037,
+     1.14999998,
+     0.658999979,
+     0.151999995,
+     -0.261999995,
+     1,
+     -0.370000005,
+     0.226999998,
+     0.367000014,
+     0.800000012,
+     0.579999983,
+     0.0869999975,
+     0.0790000036,
+     1,
+     -0.0810000002,
+     0.165000007,
+     0.551999986,
+     1.20000005,
+     -0.644999981,
+     0.0729999989,
+     0.451999992,
+     1.20000005,
+     -0.194999993,
+     0.157000005,
+     -0.398000002,
+     1.20000005,
+     -0.518000007,
+     0.149000004,
+     0.606000006,
+     1.04999995,
+     0.666000009,
+     0.158000007,
+     -0.0900000036,
+     0.850000024,
+     -0.252000004,
+     0.222000003,
+     0.512000024,
+     1.04999995,
+     0.160999998,
+     0.129999995,
+     -0.564999998,
+     1.14999998,
+     -0.470999986,
+     0.160999998,
+     0.101999998,
+     1.20000005
+    ]
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: repaint_continuous"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 3,
+   "click": 0,
+   "area": 0,
+   "touch": 3
+  },
+  "java_identical": false,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 3198,
+    "component_modes": {},
+    "op_count": 134,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "deep",
+      "type": "color",
+      "value": "#FF1D557F"
+     },
+     {
+      "name": "foam",
+      "type": "color",
+      "value": "#FFB5D8D6"
+     },
+     {
+      "name": "forest",
+      "type": "color",
+      "value": "#FF33693A"
+     },
+     {
+      "name": "grass",
+      "type": "color",
+      "value": "#FF5C8F45"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FFEAF0F7"
+     },
+     {
+      "name": "inkMuted",
+      "type": "color",
+      "value": "#FF9DABBC"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "rock",
+      "type": "color",
+      "value": "#FF6E675E"
+     },
+     {
+      "name": "sand",
+      "type": "color",
+      "value": "#FFC2AB78"
+     },
+     {
+      "name": "shallow",
+      "type": "color",
+      "value": "#FF3592A3"
+     },
+     {
+      "name": "sky1",
+      "type": "color",
+      "value": "#FF070D1A"
+     },
+     {
+      "name": "sky2",
+      "type": "color",
+      "value": "#FF1B2742"
+     },
+     {
+      "name": "snow",
+      "type": "color",
+      "value": "#FFDDE3EC"
+     },
+     {
+      "name": "soil",
+      "type": "color",
+      "value": "#FF634632"
+     },
+     {
+      "name": "star",
+      "type": "color",
+      "value": "#CCFFFFFF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "tree",
+      "type": "color",
+      "value": "#FF234F2C"
+     },
+     {
+      "name": "trees",
+      "type": "float_array",
+      "value": [
+       0.481000006,
+       0.131999999,
+       -0.633000016,
+       0.850000024,
+       0.0579999983,
+       0.231999993,
+       -0.377999991,
+       1,
+       0.0930000022,
+       0.151999995,
+       0.432000011,
+       0.949999988,
+       -0.263000011,
+       0.172999993,
+       -0.191,
+       0.800000012,
+       -0.572000027,
+       0.0649999976,
+       -0.0680000037,
+       1.14999998,
+       0.658999979,
+       0.151999995,
+       -0.261999995,
+       1,
+       -0.370000005,
+       0.226999998,
+       0.367000014,
+       0.800000012,
+       0.579999983,
+       0.0869999975,
+       0.0790000036,
+       1,
+       -0.0810000002,
+       0.165000007,
+       0.551999986,
+       1.20000005,
+       -0.644999981,
+       0.0729999989,
+       0.451999992,
+       1.20000005,
+       -0.194999993,
+       0.157000005,
+       -0.398000002,
+       1.20000005,
+       -0.518000007,
+       0.149000004,
+       0.606000006,
+       1.04999995,
+       0.666000009,
+       0.158000007,
+       -0.0900000036,
+       0.850000024,
+       -0.252000004,
+       0.222000003,
+       0.512000024,
+       1.04999995,
+       0.160999998,
+       0.129999995,
+       -0.564999998,
+       1.14999998,
+       -0.470999986,
+       0.160999998,
+       0.101999998,
+       1.20000005
+      ]
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 3198,
+    "component_modes": {},
+    "op_count": 134,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "deep",
+      "type": "color",
+      "value": "#FF2B78B0"
+     },
+     {
+      "name": "foam",
+      "type": "color",
+      "value": "#FFEFFAF8"
+     },
+     {
+      "name": "forest",
+      "type": "color",
+      "value": "#FF4C9150"
+     },
+     {
+      "name": "grass",
+      "type": "color",
+      "value": "#FF86BC5E"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FF17222E"
+     },
+     {
+      "name": "inkMuted",
+      "type": "color",
+      "value": "#FF4A5866"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "rock",
+      "type": "color",
+      "value": "#FF948A7C"
+     },
+     {
+      "name": "sand",
+      "type": "color",
+      "value": "#FFE9D49E"
+     },
+     {
+      "name": "shallow",
+      "type": "color",
+      "value": "#FF5CC3D2"
+     },
+     {
+      "name": "sky1",
+      "type": "color",
+      "value": "#FF9CCBEB"
+     },
+     {
+      "name": "sky2",
+      "type": "color",
+      "value": "#FFF3EEE4"
+     },
+     {
+      "name": "snow",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "soil",
+      "type": "color",
+      "value": "#FF8C6446"
+     },
+     {
+      "name": "star",
+      "type": "color",
+      "value": "#00FFFFFF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "tree",
+      "type": "color",
+      "value": "#FF2F6B3A"
+     },
+     {
+      "name": "trees",
+      "type": "float_array",
+      "value": [
+       0.481000006,
+       0.131999999,
+       -0.633000016,
+       0.850000024,
+       0.0579999983,
+       0.231999993,
+       -0.377999991,
+       1,
+       0.0930000022,
+       0.151999995,
+       0.432000011,
+       0.949999988,
+       -0.263000011,
+       0.172999993,
+       -0.191,
+       0.800000012,
+       -0.572000027,
+       0.0649999976,
+       -0.0680000037,
+       1.14999998,
+       0.658999979,
+       0.151999995,
+       -0.261999995,
+       1,
+       -0.370000005,
+       0.226999998,
+       0.367000014,
+       0.800000012,
+       0.579999983,
+       0.0869999975,
+       0.0790000036,
+       1,
+       -0.0810000002,
+       0.165000007,
+       0.551999986,
+       1.20000005,
+       -0.644999981,
+       0.0729999989,
+       0.451999992,
+       1.20000005,
+       -0.194999993,
+       0.157000005,
+       -0.398000002,
+       1.20000005,
+       -0.518000007,
+       0.149000004,
+       0.606000006,
+       1.04999995,
+       0.666000009,
+       0.158000007,
+       -0.0900000036,
+       0.850000024,
+       -0.252000004,
+       0.222000003,
+       0.512000024,
+       1.04999995,
+       0.160999998,
+       0.129999995,
+       -0.564999998,
+       1.14999998,
+       -0.470999986,
+       0.160999998,
+       0.101999998,
+       1.20000005
+      ]
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "later": {
+    "theme": "light",
+    "render": "render-later.png",
+    "render_findings": []
+   },
+   "tablet": {
+    "theme": "dark",
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "landscape": {
+    "theme": "light",
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "square": {
+    "theme": "dark",
+    "render": "render-square.png",
+    "render_findings": [],
+    "size": [
+     300,
+     300
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "flooded": {
+    "theme": "light",
+    "render": "render-flooded.png",
+    "render_findings": []
+   },
+   "low-tide": {
+    "theme": "dark",
+    "render": "render-low-tide.png",
+    "render_findings": []
+   },
+   "orbited": {
+    "theme": "light",
+    "render": "render-orbited.png",
+    "render_findings": []
+   }
+  },
+  "json_keys": [
+   "$if",
+   "angle",
+   "apiLevel",
+   "aspect",
+   "axis",
+   "background",
+   "bottom",
+   "box",
+   "camera3D",
+   "canvas",
+   "center",
+   "children",
+   "clearDepth3D",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "componentValue",
+   "constant",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "deep",
+   "defaultValue",
+   "depthBias3D",
+   "dimX",
+   "dimY",
+   "dimZ",
+   "dir",
+   "drawCircle",
+   "drawLine",
+   "drawMesh3D",
+   "drawRect",
+   "drawTextAnchored",
+   "edges",
+   "else",
+   "expression",
+   "eye",
+   "far",
+   "flags",
+   "floatArrays",
+   "foam",
+   "fontSize",
+   "fontWeight",
+   "forest",
+   "fovY",
+   "from",
+   "grass",
+   "header",
+   "height",
+   "id",
+   "index",
+   "ink",
+   "inkMuted",
+   "intensity",
+   "left",
+   "light",
+   "lights",
+   "lights3D",
+   "linearGradient",
+   "loop",
+   "matrix3D",
+   "max",
+   "maxLines",
+   "mesh",
+   "meshExpression3D",
+   "meshPrimitive3D",
+   "min",
+   "mode",
+   "modifiers",
+   "name",
+   "near",
+   "op",
+   "ops",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "primitive",
+   "profiles",
+   "projection",
+   "radius",
+   "resources",
+   "right",
+   "rock",
+   "root",
+   "sand",
+   "sea",
+   "segments",
+   "semantics",
+   "shader",
+   "shallow",
+   "sky1",
+   "sky2",
+   "slope",
+   "slx",
+   "snow",
+   "soil",
+   "star",
+   "stateDescription",
+   "step",
+   "stopMode",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "surface",
+   "text",
+   "textSize",
+   "then",
+   "top",
+   "touchExpression",
+   "touchMode",
+   "track",
+   "tree",
+   "trees",
+   "type",
+   "uCount",
+   "uRange",
+   "until",
+   "up",
+   "vCount",
+   "vRange",
+   "value",
+   "valueType",
+   "variable",
+   "variables",
+   "verticalWeight",
+   "whole",
+   "width",
+   "wireframe",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2",
+   "z"
+  ],
+  "evidence": {
+   "3d.surface": [
+    "meshExpression3D"
+   ],
+   "3d.scene": [
+    "camera3D",
+    "lights3D"
+   ],
+   "input.drag": [
+    "touchExpression"
+   ],
+   "3d.mesh": [
+    "meshPrimitive3D",
+    "drawMesh3D"
+   ],
+   "time.animation": [
+    "continuousSec"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "draw.gradient": [
+    "linearGradient"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:47:28.420Z"
+ }
+}

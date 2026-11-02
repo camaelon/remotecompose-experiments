@@ -1,0 +1,678 @@
+{
+ "id": "CMP-53",
+ "name": "group-chat",
+ "version": 1,
+ "title": "A group chat anchored to the latest message, with the chat list beside it when wide",
+ "prompt": "Make a group chat for four friends planning a climbing Sunday: names above their messages, small avatars, my messages on the right in blue, a shared PDF topo, heart and thumbs-up reactions, who has seen my last message, someone typing, and a message field with attach and send. On a tablet or desktop show my list of chats on the left.",
+ "level": 2,
+ "family": "CMP",
+ "components": [
+  "ChatThread",
+  "Avatar",
+  "IconButton",
+  "Icon"
+ ],
+ "capabilities": {
+  "primary": [
+   "layout.scroll",
+   "input.drag",
+   "layout.state"
+  ],
+  "secondary": [
+   "input.tap",
+   "input.host",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "list"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "chat",
+  "group chat",
+  "messages",
+  "messaging",
+  "conversation",
+  "chat bubbles",
+  "whatsapp",
+  "imessage",
+  "telegram",
+  "signal",
+  "avatars",
+  "reactions",
+  "seen by",
+  "read receipt",
+  "typing indicator",
+  "attachment",
+  "file",
+  "chat list",
+  "conversation list",
+  "composer",
+  "send button",
+  "tablet",
+  "adaptive"
+ ],
+ "teaches": [
+  "One ChatThread call with avatars: true: name on the first message of a run of theirs, lead (a 32 dp Avatar) on the last, so the avatar sits beside the bottom of the run as in every messenger",
+  "attachment is any node drawn in the bubble above the text (a file card here); react and reactCount put a pill under the bubble; status is the line under your bubble (Seen by ...)",
+  "conversations adds the chat list at the start from 720 dp (the thread keeps the rest, centred at most 920 dp wide); a tap sets the exported chat variable for the app to serve that thread",
+  "The thread is anchored to the bottom and scrolls back with a drag; the composer field and the send button send compose and send to the app, which owns the keyboard"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/ChatThread",
+   "shows": "layout.scroll",
+   "note": "the whole call"
+  },
+  {
+   "pointer": "/root/ChatThread/messages/5",
+   "shows": "input.drag",
+   "note": "a message with a file attachment, a reaction and the sender's avatar"
+  },
+  {
+   "pointer": "/root/ChatThread/conversations",
+   "shows": "layout.state",
+   "note": "the chat list, shown beside the thread from 720 dp"
+  },
+  {
+   "pointer": "/root/ChatThread/conversations/1",
+   "shows": "input.tap",
+   "note": "a chat: a tap highlights it and sets chat"
+  },
+  {
+   "pointer": "/root/ChatThread/slots/composerStart",
+   "shows": "input.host",
+   "note": "attach button before the field"
+  },
+  {
+   "pointer": "/root/ChatThread/messages/2",
+   "shows": "a11y.labels",
+   "note": "bubbles are read as the sender then the text"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "chat": {
+    "min": 0,
+    "max": 5,
+    "meaning": "the highlighted conversation in the chat list, from 0"
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Phone: header SC, Sunday climbing crew, Tom, Karim, Inès, you, and an info icon; the end of the thread from the topo card's heart, Today, Inès's two messages beside her IN avatar, my pick-up message with a thumbs-up 2, Tom with TB, my table booking with Seen by Tom, Karim and Inès, then Inès is typing; an attach icon, Message the crew and a send button. scrolled: dragged down to Wed 29 Oct and Karim's first message. Landscape: the last messages one line each. Tablet (800) and desktop: Chats on the left (six chats, the crew highlighted with a bar, Maman unread in bold with a dot), the whole thread on the right, anchored to the bottom. desktop-tap: Maman highlighted instead.",
+  "render": {
+   "duration": 0.5
+  },
+  "renders": [
+   {
+    "name": "light",
+    "duration": 0.5,
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "duration": 0.5,
+    "theme": "dark"
+   },
+   {
+    "name": "scrolled",
+    "duration": 1.2,
+    "theme": "light",
+    "touch_events": [
+     {
+      "t": 0.2,
+      "type": "down",
+      "x": 180,
+      "y": 150
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.4,
+      "type": "move",
+      "x": 180,
+      "y": 450
+     },
+     {
+      "t": 0.5,
+      "type": "up",
+      "x": 180,
+      "y": 450,
+      "vx": 0,
+      "vy": 0
+     }
+    ]
+   },
+   {
+    "name": "landscape",
+    "duration": 0.5,
+    "width": 640,
+    "height": 360,
+    "theme": "light"
+   },
+   {
+    "name": "landscape-dark",
+    "duration": 0.5,
+    "width": 640,
+    "height": 360,
+    "theme": "dark"
+   },
+   {
+    "name": "desktop",
+    "duration": 0.5,
+    "width": 1280,
+    "height": 800,
+    "theme": "light"
+   },
+   {
+    "name": "desktop-dark",
+    "duration": 0.5,
+    "width": 1280,
+    "height": 800,
+    "theme": "dark"
+   },
+   {
+    "name": "tablet",
+    "duration": 0.5,
+    "width": 800,
+    "height": 1280,
+    "theme": "light"
+   },
+   {
+    "name": "tablet-dark",
+    "duration": 0.5,
+    "width": 800,
+    "height": 1280,
+    "theme": "dark"
+   },
+   {
+    "name": "desktop-tap",
+    "duration": 0.8,
+    "width": 1280,
+    "height": 800,
+    "theme": "light",
+    "touch_events": [
+     {
+      "t": 0.3,
+      "type": "tap",
+      "x": 150,
+      "y": 172
+     }
+    ]
+   }
+  ]
+ },
+ "related": [
+  "ChatThread",
+  "ListDetail",
+  "CMP-54",
+  "CMP-39"
+ ],
+ "derived": {
+  "components": [
+   "Avatar",
+   "ChatThread",
+   "Icon",
+   "IconButton"
+  ],
+  "component_instances": 22,
+  "component_modes": {
+   "IconButton": "expand",
+   "ChatThread": "expand",
+   "Avatar": "expand",
+   "Icon": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 22772,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 1203,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 21,
+   "ANIMATED_FLOAT": 20,
+   "COLOR_CONSTANT": 24,
+   "COLOR_EXPRESSIONS": 24,
+   "COMPONENT_VALUE": 13,
+   "CanvasContent": 7,
+   "ClipRectModifierOperation": 3,
+   "CoreText": 70,
+   "DATA_FLOAT": 3,
+   "DATA_TEXT": 71,
+   "DRAW_PATH": 6,
+   "GraphicsLayerModifier": 12,
+   "HEADER": 1,
+   "HostNamedAction": 4,
+   "IntegerExpression": 6,
+   "LAYOUT_BOX": 67,
+   "LAYOUT_CANVAS": 7,
+   "LAYOUT_COLUMN": 36,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 41,
+   "LayoutComponentContent": 204,
+   "LoopOperation": 24,
+   "MATRIX_RESTORE": 6,
+   "MATRIX_SAVE": 6,
+   "MATRIX_SCALE": 6,
+   "MODIFIER_BACKGROUND": 58,
+   "MODIFIER_CLICK": 10,
+   "MODIFIER_HEIGHT": 69,
+   "MODIFIER_PADDING": 96,
+   "MODIFIER_VISIBILITY": 8,
+   "MODIFIER_WIDTH": 142,
+   "MODIFIER_WIDTH_IN": 11,
+   "NAMED_VARIABLE": 13,
+   "PAINT_VALUES": 6,
+   "PATH_DATA": 6,
+   "RoundedClipRectModifierOperation": 40,
+   "ScrollModifierOperation": 2,
+   "THEME": 36,
+   "TextMerge": 14,
+   "TouchExpression": 3,
+   "ValueFloatExpressionChangeActionOperation": 6
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "chat",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "surfaceHigh",
+    "type": "color",
+    "value": "#FF263042"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [
+   "info: hidden_rows"
+  ],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 3
+  },
+  "audit_findings": [
+   "warning: hardcoded_date",
+   "info: layout_deep_nesting",
+   "info: layout_touch_target",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 7,
+   "click": 4,
+   "area": 0,
+   "touch": 3
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: unpainted_corners"
+    ]
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "scrolled": {
+    "theme": "light",
+    "render": "render-scrolled.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: unpainted_corners"
+    ]
+   },
+   "landscape": {
+    "theme": "light",
+    "render": "render-landscape.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: unpainted_corners"
+    ],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   },
+   "landscape-dark": {
+    "theme": "dark",
+    "render": "render-landscape-dark.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   },
+   "desktop": {
+    "theme": "light",
+    "render": "render-desktop.png",
+    "render_findings": [
+     "info: text_ellipsized",
+     "info: unpainted_corners"
+    ],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   },
+   "desktop-dark": {
+    "theme": "dark",
+    "render": "render-desktop-dark.png",
+    "render_findings": [
+     "info: text_ellipsized"
+    ],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   },
+   "tablet": {
+    "theme": "light",
+    "render": "render-tablet.png",
+    "render_findings": [
+     "info: text_ellipsized"
+    ],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   },
+   "tablet-dark": {
+    "theme": "dark",
+    "render": "render-tablet-dark.png",
+    "render_findings": [
+     "info: text_ellipsized"
+    ],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   },
+   "desktop-tap": {
+    "theme": "light",
+    "render": "render-desktop-tap.png",
+    "render_findings": [
+     "info: text_ellipsized",
+     "info: unpainted_corners"
+    ],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "Avatar",
+   "ChatThread",
+   "Icon",
+   "IconButton",
+   "alpha",
+   "apiLevel",
+   "attachment",
+   "avatars",
+   "background",
+   "bottom",
+   "bottomEnd",
+   "bottomStart",
+   "box",
+   "canvas",
+   "chat",
+   "chatthread1_bw",
+   "chatthread1_cw",
+   "chatthread1_th",
+   "chatthread1_tw",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "composerStart",
+   "contentDescription",
+   "conversations",
+   "dark",
+   "day",
+   "defaultValue",
+   "drawPath",
+   "enabled",
+   "end",
+   "error",
+   "export",
+   "expression",
+   "fontSize",
+   "fontWeight",
+   "graphicsLayer",
+   "header",
+   "headerEnd",
+   "height",
+   "horizontalAlignment",
+   "horizontalArrangement",
+   "icon",
+   "icon_attach_file_outlined",
+   "icon_description_outlined",
+   "icon_favorite_outlined_filled",
+   "icon_info_outlined",
+   "icon_send_outlined",
+   "icon_thumb_up_outlined_filled",
+   "id1",
+   "id2",
+   "initials",
+   "label",
+   "lead",
+   "light",
+   "max",
+   "maxLines",
+   "me",
+   "messages",
+   "meta",
+   "min",
+   "modifiers",
+   "muted",
+   "name",
+   "onClick",
+   "onPrimary",
+   "onSurface",
+   "outline",
+   "overflow",
+   "padding",
+   "paint",
+   "path",
+   "paths",
+   "placeholder",
+   "preview",
+   "primary",
+   "profiles",
+   "react",
+   "reactCount",
+   "rect",
+   "resources",
+   "root",
+   "roundedRect",
+   "row",
+   "save",
+   "scale",
+   "secondary",
+   "selected",
+   "semantics",
+   "size",
+   "slots",
+   "start",
+   "status",
+   "style",
+   "subtitle",
+   "success",
+   "surface",
+   "surfaceHigh",
+   "sx",
+   "sy",
+   "target",
+   "text",
+   "time",
+   "title",
+   "top",
+   "topEnd",
+   "topStart",
+   "touchExpression",
+   "touchMode",
+   "translationY",
+   "type",
+   "typing",
+   "unread",
+   "value",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalScroll",
+   "visibility",
+   "warning",
+   "weight",
+   "width",
+   "widthIn",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "layout.scroll": [
+    "verticalScroll"
+   ],
+   "input.drag": [
+    "touchExpression"
+   ],
+   "layout.state": [
+    "visibility"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "input.host": [
+    "hostNamedAction"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:43:42.269Z"
+ }
+}

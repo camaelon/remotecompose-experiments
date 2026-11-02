@@ -878,6 +878,50 @@ function spacedByWeightFindings(doc) {
     }] : [];
 }
 
+// "weight" is the horizontal weight (the reference JSON's meaning): in a column it gives the
+// child no height (an empty box gets 0, a filling one takes everything and squeezes out what
+// follows). And a later fill or size on the same axis replaces a weight: RecordingModifier keeps
+// one width and one height modifier.
+function weightAxisFindings(doc) {
+    const wrong = [], overridden = [];
+    const W = ["weight", "horizontalWeight"], H = ["verticalWeight"];
+    const has = (m, keys) => isObj(m) && keys.some((k) => k in m);
+    const nodeOf = (c) => !isObj(c) ? null : typeof c.type === "string" ? { kind: c.type, n: c }
+        : (([k, v]) => (isObj(v) ? { kind: k, n: v } : null))(Object.entries(c)[0] ?? []);
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        const me = nodeOf(x);
+        if (me && Array.isArray(me.n.children) && ["row", "column"].includes(me.kind)) {
+            const bad = me.kind === "column" ? W : H;
+            for (const c of me.n.children) {
+                const mods = nodeOf(c)?.n.modifiers;
+                if (Array.isArray(mods) && mods.some((m) => has(m, bad))) wrong.push(me.kind);
+            }
+        }
+        if (Array.isArray(x.modifiers)) {
+            const mods = x.modifiers, name = (m) => (typeof m === "string" ? m : isObj(m) ? Object.keys(m)[0] : "");
+            mods.forEach((m, i) => {
+                const later = mods.slice(i + 1).map(name);
+                if (has(m, W) && later.some((k) => ["fillMaxWidth", "fillMaxSize", "width", "size"].includes(k))) overridden.push("weight");
+                if (has(m, H) && later.some((k) => ["fillMaxHeight", "fillMaxSize", "height", "size"].includes(k))) overridden.push("verticalWeight");
+            });
+        }
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc.root); for (const c of Object.values(doc.components ?? {})) if (isObj(c)) visit(c.body);
+    const out = [];
+    if (wrong.length) out.push({ severity: "warning", code: "weight_wrong_axis",
+        title: `${wrong.length} weighted child(ren) use the other axis's weight`,
+        message: "\"weight\" is horizontal: in a row. In a column use {\"verticalWeight\": 1}. A column child with \"weight\" gets no height (an empty box collapses to 0; one that also fills takes the whole column and squeezes out what follows).",
+        count: wrong.length });
+    if (overridden.length) out.push({ severity: "warning", code: "weight_overridden",
+        title: `${overridden.length} weight(s) replaced by a later fill or size on the same axis`,
+        message: "An element keeps one width and one height modifier: a fillMaxWidth / fillMaxSize / width after {\"weight\"} (or fillMaxHeight / height after {\"verticalWeight\"}) replaces the weight. Drop the fill: the weight already fills its share.",
+        count: overridden.length });
+    return out;
+}
+
 // A label on a container that cannot be tapped is read, and then so is every text inside: only a
 // click merges them into one item (semantics in JSON are always mode SET).
 function repeatedLabelFindings(doc) {
@@ -1110,6 +1154,7 @@ export function designAudit(json) {
         ...modifierOrderFindings(doc),
         ...scrollFindings(doc),
         ...spacedByWeightFindings(doc),
+        ...weightAxisFindings(doc),
         ...repeatedLabelFindings(doc),
         ...fixedWidthFindings(doc),
         ...integerInFloatFindings(doc),

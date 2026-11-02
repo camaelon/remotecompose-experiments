@@ -1,0 +1,2010 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 780,
+  "profiles": 513,
+  "contentDescription": "A 3D solar system: the Sun and eight planets on their orbits, sped up; drag to tilt the view, tap a planet's name to follow it"
+ },
+ "resources": {
+  "variables": {
+   "sel": 2,
+   "speed": 1,
+   "t0": 0,
+   "c0": 0
+  },
+  "floatArrays": {
+   "orb": [
+    1.0,
+    1.42,
+    1.9,
+    2.4,
+    3.45,
+    4.45,
+    5.35,
+    6.15
+   ],
+   "prad": [
+    0.07,
+    0.11,
+    0.12,
+    0.09,
+    0.32,
+    0.27,
+    0.19,
+    0.18
+   ],
+   "lon0": [
+    4.4026,
+    3.1762,
+    1.7534,
+    6.2038,
+    0.6004,
+    0.8716,
+    5.4669,
+    5.3212
+   ],
+   "rate": [
+    26.093,
+    10.2132,
+    6.2832,
+    3.3407,
+    0.5297,
+    0.2133,
+    0.0748,
+    0.0381
+   ],
+   "spd": [
+    0.0027,
+    0.0192,
+    0.0833,
+    1.0
+   ]
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "selC",
+    "value": {
+     "value": "@sel % 4",
+     "anim": 0.35
+    }
+   }
+  },
+  {
+   "variable": {
+    "name": "selR",
+    "value": {
+     "value": "floor(@sel / 4)",
+     "anim": 0.35
+    }
+   }
+  },
+  {
+   "variable": {
+    "name": "spdA",
+    "value": {
+     "value": "@speed",
+     "anim": 0.35
+    }
+   }
+  },
+  {
+   "variable": {
+    "name": "rateNow",
+    "value": "arrayGet(@spd, @speed)"
+   }
+  },
+  {
+   "variable": {
+    "name": "today",
+    "value": "year() - 2000 + (dayOfYear() - 1.5) / 365.25"
+   }
+  },
+  {
+   "variable": {
+    "name": "simT",
+    "value": "@today + @t0 + (animationTime() - @c0) * @rateNow"
+   }
+  },
+  {
+   "variable": {
+    "name": "simY",
+    "value": "@simT + 2000"
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize"
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        {
+         "size": 0
+        }
+       ],
+       "commands": [
+        {
+         "global": {
+          "commands": [
+           {
+            "addDataList": {
+             "id": "names",
+             "list": [
+              "Mercury",
+              "Venus",
+              "Earth",
+              "Mars",
+              "Jupiter",
+              "Saturn",
+              "Uranus",
+              "Neptune"
+             ]
+            }
+           },
+           {
+            "textLookup": {
+             "array": "@names",
+             "index": "@sel",
+             "varName": "pname"
+            }
+           },
+           {
+            "addDataList": {
+             "id": "facts",
+             "list": [
+              "0.39 AU  \u00b7  88-day year",
+              "0.72 AU  \u00b7  225-day year",
+              "1.00 AU  \u00b7  365-day year",
+              "1.52 AU  \u00b7  687-day year",
+              "5.20 AU  \u00b7  11.9-year orbit",
+              "9.58 AU  \u00b7  29.5-year orbit",
+              "19.2 AU  \u00b7  84-year orbit",
+              "30.1 AU  \u00b7  165-year orbit"
+             ]
+            }
+           },
+           {
+            "textLookup": {
+             "array": "@facts",
+             "index": "@sel",
+             "varName": "pfact"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "canvas": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "background": "#FF04060C"
+        },
+        {
+         "semantics": {
+          "contentDescription": "The Sun and eight planets on their orbits, moving faster than real time. Drag to tilt and turn the view."
+         }
+        }
+       ],
+       "commands": [
+        {
+         "touchExpression": {
+          "name": "spinPx",
+          "defaultValue": 0,
+          "min": -100000,
+          "max": 100000,
+          "stopMode": "gently",
+          "expression": "touchX()"
+         }
+        },
+        {
+         "touchExpression": {
+          "name": "tiltPx",
+          "defaultValue": 0,
+          "min": -110,
+          "max": 140,
+          "stopMode": "gently",
+          "expression": "touchY()"
+         }
+        },
+        {
+         "variable": {
+          "name": "spin",
+          "value": "@spinPx * 0.008 + 0.35"
+         }
+        },
+        {
+         "variable": {
+          "name": "tilt",
+          "value": "@tiltPx * 0.006 + 0.72"
+         }
+        },
+        {
+         "variable": {
+          "name": "cs",
+          "value": "cos(@spin)"
+         }
+        },
+        {
+         "variable": {
+          "name": "ss",
+          "value": "sin(@spin)"
+         }
+        },
+        {
+         "variable": {
+          "name": "ct",
+          "value": "cos(@tilt)"
+         }
+        },
+        {
+         "variable": {
+          "name": "st",
+          "value": "sin(@tilt)"
+         }
+        },
+        {
+         "variable": {
+          "name": "wide",
+          "value": "step(componentWidth(), 699) * step(componentWidth() / componentHeight(), 1)"
+         }
+        },
+        {
+         "variable": {
+          "name": "rw",
+          "value": "componentWidth() - @wide * 320"
+         }
+        },
+        {
+         "variable": {
+          "name": "rh",
+          "value": "componentHeight() - (1 - @wide) * 334"
+         }
+        },
+        {
+         "variable": {
+          "name": "dist",
+          "value": "max(19 / max(@rw, 1), 14 * (0.42 + 0.58 * @st) / max(@rh, 1)) * componentHeight() + 3"
+         }
+        },
+        {
+         "variable": {
+          "name": "foc",
+          "value": "componentHeight() * 1.6166"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFFFFFFF"
+           }
+          ]
+         }
+        },
+        {
+         "loop": {
+          "index": "si",
+          "from": 0,
+          "until": 140,
+          "commands": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "alpha": "0.25 + 0.35 * fract(@si * 0.377) + 0.25 * sin(continuousSec() * (1 + fract(@si * 0.53) * 2) + @si)"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "fract(0.5 + @si * 0.75487767) * componentWidth()",
+             "cy": "fract(0.5 + @si * 0.56984029) * componentHeight()",
+             "radius": "0.5 + fract(@si * 0.917) * 0.9"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "translate": {
+          "dx": "@wide * -160",
+          "dy": "(1 - @wide) * -83"
+         }
+        },
+        {
+         "variable": {
+          "name": "sunR",
+          "value": "0.55 * @foc / @dist"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           },
+           {
+            "radialGradient": {
+             "centerX": "componentWidth() / 2",
+             "centerY": "componentHeight() / 2",
+             "radius": "@sunR * 4.2",
+             "colors": [
+              "#99FFB347",
+              "#33FF8A2A",
+              "#00FF6A00"
+             ],
+             "stops": [
+              0,
+              0.35,
+              1
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "componentWidth() / 2",
+          "cy": "componentHeight() / 2",
+          "radius": "@sunR * 4.2"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "shader": 0
+           }
+          ]
+         }
+        },
+        {
+         "clearDepth3D": {}
+        },
+        {
+         "camera3D": {
+          "projection": "perspective",
+          "fovY": 0.6,
+          "aspect": "componentWidth() / componentHeight()",
+          "near": 0.5,
+          "far": "@dist + 9",
+          "eye": [
+           "-@dist * @ct * @ss",
+           "@dist * @st",
+           "@dist * @ct * @cs"
+          ],
+          "center": [
+           0,
+           0,
+           0
+          ],
+          "up": [
+           0,
+           1,
+           0
+          ]
+         }
+        },
+        {
+         "lights3D": {
+          "lights": [
+           {
+            "type": "point",
+            "pos": [
+             0,
+             0,
+             0
+            ],
+            "color": "#FFFFF4E0",
+            "intensity": 1.05
+           }
+          ]
+         }
+        },
+        {
+         "meshPrimitive3D": {
+          "id": 1,
+          "primitive": "sphere",
+          "radius": 1,
+          "center": [
+           0,
+           0,
+           0
+          ],
+          "segments": 24
+         }
+        },
+        {
+         "meshPrimitive3D": {
+          "id": 2,
+          "primitive": "torus",
+          "majorRadius": 1,
+          "minorRadius": 0.005,
+          "center": [
+           0,
+           0,
+           0
+          ],
+          "segments": 96
+         }
+        },
+        {
+         "meshPrimitive3D": {
+          "id": 4,
+          "primitive": "torus",
+          "majorRadius": 1,
+          "minorRadius": 0.01,
+          "center": [
+           0,
+           0,
+           0
+          ],
+          "segments": 96
+         }
+        },
+        {
+         "meshPrimitive3D": {
+          "id": 3,
+          "primitive": "torus",
+          "majorRadius": 1.75,
+          "minorRadius": 0.32,
+          "center": [
+           0,
+           0,
+           0
+          ],
+          "segments": 40
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "identity"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": 0.55,
+          "y": 0.55,
+          "z": 0.55
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFFFC24E"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 1,
+          "mode": "smooth"
+         }
+        },
+        {
+         "variable": {
+          "name": "rs",
+          "value": "arrayGet(@orb, @sel)"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "identity"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": "@rs",
+          "y": 1,
+          "z": "@rs"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FF7FB2FF"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 4,
+          "mode": "smooth"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FF2A3550"
+           }
+          ]
+         }
+        },
+        {
+         "loop": {
+          "index": "oi",
+          "from": 0,
+          "until": 8,
+          "commands": [
+           {
+            "variable": {
+             "name": "ro",
+             "value": "arrayGet(@orb, @oi)"
+            }
+           },
+           {
+            "matrix3D": {
+             "op": "identity"
+            }
+           },
+           {
+            "matrix3D": {
+             "op": "scale",
+             "x": "@ro",
+             "y": 1,
+             "z": "@ro"
+            }
+           },
+           {
+            "drawMesh3D": {
+             "mesh": 2,
+             "mode": "smooth"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "variable": {
+          "name": "a0",
+          "value": "@simT * 26.093 + 4.4026"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "identity"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "translate",
+          "x": "cos(@a0) * 1.0",
+          "y": 0,
+          "z": "-sin(@a0) * 1.0"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": 0.07,
+          "y": 0.07,
+          "z": 0.07
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFB0A79C"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 1,
+          "mode": "smooth"
+         }
+        },
+        {
+         "variable": {
+          "name": "a1",
+          "value": "@simT * 10.2132 + 3.1762"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "identity"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "translate",
+          "x": "cos(@a1) * 1.42",
+          "y": 0,
+          "z": "-sin(@a1) * 1.42"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": 0.11,
+          "y": 0.11,
+          "z": 0.11
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFE9CB8C"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 1,
+          "mode": "smooth"
+         }
+        },
+        {
+         "variable": {
+          "name": "a2",
+          "value": "@simT * 6.2832 + 1.7534"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "identity"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "translate",
+          "x": "cos(@a2) * 1.9",
+          "y": 0,
+          "z": "-sin(@a2) * 1.9"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": 0.12,
+          "y": 0.12,
+          "z": 0.12
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FF4F8FE6"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 1,
+          "mode": "smooth"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "identity"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "translate",
+          "x": "cos(@a2) * 1.9 + cos(@simT * 83.997) * 0.22",
+          "y": 0,
+          "z": "-sin(@a2) * 1.9 - sin(@simT * 83.997) * 0.22"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": 0.035,
+          "y": 0.035,
+          "z": 0.035
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFC8CCD4"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 1,
+          "mode": "smooth"
+         }
+        },
+        {
+         "variable": {
+          "name": "a3",
+          "value": "@simT * 3.3407 + 6.2038"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "identity"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "translate",
+          "x": "cos(@a3) * 2.4",
+          "y": 0,
+          "z": "-sin(@a3) * 2.4"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": 0.09,
+          "y": 0.09,
+          "z": 0.09
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFD9643E"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 1,
+          "mode": "smooth"
+         }
+        },
+        {
+         "variable": {
+          "name": "a4",
+          "value": "@simT * 0.5297 + 0.6004"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "identity"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "translate",
+          "x": "cos(@a4) * 3.45",
+          "y": 0,
+          "z": "-sin(@a4) * 3.45"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": 0.32,
+          "y": 0.32,
+          "z": 0.32
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFDDB68A"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 1,
+          "mode": "smooth"
+         }
+        },
+        {
+         "variable": {
+          "name": "a5",
+          "value": "@simT * 0.2133 + 0.8716"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "identity"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "translate",
+          "x": "cos(@a5) * 4.45",
+          "y": 0,
+          "z": "-sin(@a5) * 4.45"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": 0.27,
+          "y": 0.27,
+          "z": 0.27
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFE8D193"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 1,
+          "mode": "smooth"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "rotate",
+          "angle": 0.47,
+          "axis": [
+           1,
+           0,
+           0.3
+          ]
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": 1,
+          "y": 0.04,
+          "z": 1
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFC9B27A"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 3,
+          "mode": "smooth"
+         }
+        },
+        {
+         "variable": {
+          "name": "a6",
+          "value": "@simT * 0.0748 + 5.4669"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "identity"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "translate",
+          "x": "cos(@a6) * 5.35",
+          "y": 0,
+          "z": "-sin(@a6) * 5.35"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": 0.19,
+          "y": 0.19,
+          "z": 0.19
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFA2DCE4"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 1,
+          "mode": "smooth"
+         }
+        },
+        {
+         "variable": {
+          "name": "a7",
+          "value": "@simT * 0.0381 + 5.3212"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "identity"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "translate",
+          "x": "cos(@a7) * 6.15",
+          "y": 0,
+          "z": "-sin(@a7) * 6.15"
+         }
+        },
+        {
+         "matrix3D": {
+          "op": "scale",
+          "x": 0.18,
+          "y": 0.18,
+          "z": 0.18
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FF557BEA"
+           }
+          ]
+         }
+        },
+        {
+         "drawMesh3D": {
+          "mesh": 1,
+          "mode": "smooth"
+         }
+        },
+        {
+         "variable": {
+          "name": "as",
+          "value": "@simT * arrayGet(@rate, @sel) + arrayGet(@lon0, @sel)"
+         }
+        },
+        {
+         "variable": {
+          "name": "px",
+          "value": "cos(@as) * @rs"
+         }
+        },
+        {
+         "variable": {
+          "name": "pz",
+          "value": "-sin(@as) * @rs"
+         }
+        },
+        {
+         "variable": {
+          "name": "x1",
+          "value": "@px * @cs + @pz * @ss"
+         }
+        },
+        {
+         "variable": {
+          "name": "z1",
+          "value": "@pz * @cs - @px * @ss"
+         }
+        },
+        {
+         "variable": {
+          "name": "k",
+          "value": "@foc / (@dist - @z1 * @ct)"
+         }
+        },
+        {
+         "variable": {
+          "name": "sx",
+          "value": "componentWidth() / 2 + @x1 * @k"
+         }
+        },
+        {
+         "variable": {
+          "name": "sy",
+          "value": "componentHeight() / 2 + @z1 * @st * @k"
+         }
+        },
+        {
+         "variable": {
+          "name": "pr",
+          "value": "arrayGet(@prad, @sel) * @k + 7"
+         }
+        },
+        {
+         "variable": {
+          "name": "pulse",
+          "value": "0.55 + 0.45 * sin(continuousSec() * 3)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FF7FB2FF"
+           },
+           {
+            "alpha": "@pulse"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.5
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@sx",
+          "cy": "@sy",
+          "radius": "@pr"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 0.8
+           },
+           {
+            "strokeWidth": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@sx + @pr * 0.71",
+          "y1": "@sy - @pr * 0.71",
+          "x2": "@sx + @pr * 0.71 + 18",
+          "y2": "@sy - @pr * 0.71 - 18"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFE8ECF4"
+           },
+           {
+            "alpha": 1
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "textSize": 15
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "@pname",
+          "x": "@sx + @pr * 0.71 + 21",
+          "y": "@sy - @pr * 0.71 - 20",
+          "panX": 1,
+          "panY": 0
+         }
+        }
+       ]
+      }
+     },
+     {
+      "column": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "padding": [
+          12,
+          18,
+          12,
+          12
+         ]
+        }
+       ],
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           {
+            "padding": [
+             8,
+             0,
+             8,
+             0
+            ]
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "children": [
+              {
+               "text": {
+                "value": "Solar System",
+                "fontSize": 24,
+                "color": "#FFE8ECF4",
+                "fontWeight": 700
+               }
+              },
+              {
+               "row": {
+                "children": [
+                 {
+                  "text": {
+                   "value": "Year ",
+                   "fontSize": 13,
+                   "color": "#FF8C96AA"
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textFromFloat",
+                    "value": "@simY",
+                    "whole": 4,
+                    "decimal": 1,
+                    "flags": 0
+                   },
+                   "fontSize": 13,
+                   "color": "#FF7FB2FF",
+                   "fontWeight": 600
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "  \u00b7  drag to tilt",
+                   "fontSize": 13,
+                   "color": "#FF8C96AA"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "verticalWeight": 1
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "horizontalArrangement": "end",
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "widthIn": [
+                0,
+                340
+               ]
+              },
+              {
+               "clip": 24
+              },
+              {
+               "background": "#E00B101B"
+              },
+              {
+               "padding": 12
+              }
+             ],
+             "children": [
+              {
+               "column": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "padding": [
+                   4,
+                   0,
+                   4,
+                   8
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "@pname",
+                   "fontSize": 22,
+                   "color": "#FFE8ECF4",
+                   "fontWeight": 600
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "@pfact",
+                   "fontSize": 13,
+                   "color": "#FF8C96AA"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "height": 88
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    "fillMaxSize"
+                   ],
+                   "commands": [
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "#FF141A28"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "ci",
+                      "from": 0,
+                      "until": 8,
+                      "commands": [
+                       {
+                        "drawRoundRect": {
+                         "left": "(@ci % 4) * (componentWidth() / 4) + 3",
+                         "top": "floor(@ci / 4) * 44 + 3",
+                         "right": "(@ci % 4 + 1) * (componentWidth() / 4) - 3",
+                         "bottom": "floor(@ci / 4) * 44 + 41",
+                         "rx": 12,
+                         "ry": 12
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "#FF1F3358"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawRoundRect": {
+                      "left": "@selC * (componentWidth() / 4) + 3",
+                      "top": "@selR * 44 + 3",
+                      "right": "(@selC + 1) * (componentWidth() / 4) - 3",
+                      "bottom": "@selR * 44 + 41",
+                      "rx": 12,
+                      "ry": 12
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "#FF7FB2FF"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1.5
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawRoundRect": {
+                      "left": "@selC * (componentWidth() / 4) + 3.75",
+                      "top": "@selR * 44 + 3.75",
+                      "right": "(@selC + 1) * (componentWidth() / 4) - 3.75",
+                      "bottom": "@selR * 44 + 40.25",
+                      "rx": 11,
+                      "ry": 11
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "column": {
+                   "modifiers": [
+                    "fillMaxSize"
+                   ],
+                   "children": [
+                    {
+                     "row": {
+                      "modifiers": [
+                       "fillMaxWidth",
+                       {
+                        "height": 44
+                       }
+                      ],
+                      "children": [
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Mercury",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": {
+                            "type": "valueFloatChange",
+                            "target": "@sel",
+                            "value": 0
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Mercury",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Venus",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": {
+                            "type": "valueFloatChange",
+                            "target": "@sel",
+                            "value": 1
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Venus",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Earth",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": {
+                            "type": "valueFloatChange",
+                            "target": "@sel",
+                            "value": 2
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Earth",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Mars",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": {
+                            "type": "valueFloatChange",
+                            "target": "@sel",
+                            "value": 3
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Mars",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "row": {
+                      "modifiers": [
+                       "fillMaxWidth",
+                       {
+                        "height": 44
+                       }
+                      ],
+                      "children": [
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Jupiter",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": {
+                            "type": "valueFloatChange",
+                            "target": "@sel",
+                            "value": 4
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Jupiter",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Saturn",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": {
+                            "type": "valueFloatChange",
+                            "target": "@sel",
+                            "value": 5
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Saturn",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Uranus",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": {
+                            "type": "valueFloatChange",
+                            "target": "@sel",
+                            "value": 6
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Uranus",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Neptune",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": {
+                            "type": "valueFloatChange",
+                            "target": "@sel",
+                            "value": 7
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Neptune",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "height": 10
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "Speed",
+                "fontSize": 12,
+                "color": "#FF8C96AA",
+                "modifiers": [
+                 {
+                  "padding": [
+                   4,
+                   0,
+                   4,
+                   4
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "height": 40
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    "fillMaxSize"
+                   ],
+                   "commands": [
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "#FF141A28"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "ci",
+                      "from": 0,
+                      "until": 4,
+                      "commands": [
+                       {
+                        "drawRoundRect": {
+                         "left": "(@ci % 4) * (componentWidth() / 4) + 3",
+                         "top": "floor(@ci / 4) * 40 + 3",
+                         "right": "(@ci % 4 + 1) * (componentWidth() / 4) - 3",
+                         "bottom": "floor(@ci / 4) * 40 + 37",
+                         "rx": 12,
+                         "ry": 12
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "#FF1F3358"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawRoundRect": {
+                      "left": "@spdA * (componentWidth() / 4) + 3",
+                      "top": "0 * 40 + 3",
+                      "right": "(@spdA + 1) * (componentWidth() / 4) - 3",
+                      "bottom": "0 * 40 + 37",
+                      "rx": 12,
+                      "ry": 12
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "#FF7FB2FF"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1.5
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawRoundRect": {
+                      "left": "@spdA * (componentWidth() / 4) + 3.75",
+                      "top": "0 * 40 + 3.75",
+                      "right": "(@spdA + 1) * (componentWidth() / 4) - 3.75",
+                      "bottom": "0 * 40 + 36.25",
+                      "rx": 11,
+                      "ry": 11
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "column": {
+                   "modifiers": [
+                    "fillMaxSize"
+                   ],
+                   "children": [
+                    {
+                     "row": {
+                      "modifiers": [
+                       "fillMaxWidth",
+                       {
+                        "height": 40
+                       }
+                      ],
+                      "children": [
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Speed Day/s",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": [
+                            {
+                             "type": "valueFloatExpressionChange",
+                             "target": "@t0",
+                             "value": "@simT - @today"
+                            },
+                            {
+                             "type": "valueFloatExpressionChange",
+                             "target": "@c0",
+                             "value": "animationTime() + 0"
+                            },
+                            {
+                             "type": "valueFloatChange",
+                             "target": "@speed",
+                             "value": 0
+                            }
+                           ]
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Day/s",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Speed Week/s",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": [
+                            {
+                             "type": "valueFloatExpressionChange",
+                             "target": "@t0",
+                             "value": "@simT - @today"
+                            },
+                            {
+                             "type": "valueFloatExpressionChange",
+                             "target": "@c0",
+                             "value": "animationTime() + 0"
+                            },
+                            {
+                             "type": "valueFloatChange",
+                             "target": "@speed",
+                             "value": 1
+                            }
+                           ]
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Week/s",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Speed Month/s",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": [
+                            {
+                             "type": "valueFloatExpressionChange",
+                             "target": "@t0",
+                             "value": "@simT - @today"
+                            },
+                            {
+                             "type": "valueFloatExpressionChange",
+                             "target": "@c0",
+                             "value": "animationTime() + 0"
+                            },
+                            {
+                             "type": "valueFloatChange",
+                             "target": "@speed",
+                             "value": 2
+                            }
+                           ]
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Month/s",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          },
+                          "fillMaxHeight",
+                          {
+                           "semantics": {
+                            "contentDescription": "Speed Year/s",
+                            "role": "button"
+                           }
+                          },
+                          {
+                           "onClick": [
+                            {
+                             "type": "valueFloatExpressionChange",
+                             "target": "@t0",
+                             "value": "@simT - @today"
+                            },
+                            {
+                             "type": "valueFloatExpressionChange",
+                             "target": "@c0",
+                             "value": "animationTime() + 0"
+                            },
+                            {
+                             "type": "valueFloatChange",
+                             "target": "@speed",
+                             "value": 3
+                            }
+                           ]
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Year/s",
+                            "fontSize": 13,
+                            "color": "#FFE8ECF4",
+                            "fontWeight": 500
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

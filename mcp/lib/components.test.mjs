@@ -639,3 +639,26 @@ test("a body that writes a slot twice is never a pattern", () => {
     assert.doesNotMatch(JSON.stringify(r.doc), /definePattern|patternArgument/);
 });
 
+
+test("an $each standing alone as an $if branch or another $each's do still loops", () => {
+    const out = expand({ header: { apiLevel: 7 }, root: { Dots: { n: 3 } } }, {
+        Dots: { params: { n: { type: "number" }, m: { type: "number", default: 2 }, show: { type: "boolean", default: true } },
+            body: { row: { children: [{ $if: "show", then: { $each: "n", index: "i", do: { $each: "m", index: "j", do: { text: { value: "x" } } } } }] } } },
+    });
+    const s = JSON.stringify(out);
+    assert.equal((s.match(/"value":"x"/g) ?? []).length, 6);
+    assert.ok(!s.includes("$each"));
+});
+
+test("resources that read a touch-written value move after the writer, so they follow the drag", () => {
+    const doc = {
+        header: { apiLevel: 7 },
+        resources: { variables: { hue: { value: 0 }, r: "@hue / 360" }, colors: { preview: { argb: [1, "@r", 0, 0] } } },
+        root: { column: { children: [{ T: { value: "@hue" } }, { box: { modifiers: [{ background: "@colors.preview" }] } }] } },
+    };
+    const out = expand(doc, { T: { params: { value: { type: "variable", initial: 0 } }, body: { canvas: { commands: [{ touchExpression: { name: { $name: "value" }, defaultValue: "@value", max: 360, expression: ["touchX()"], touchMode: 6 } }] } } } });
+    assert.ok(!("r" in out.resources.variables) && !("preview" in (out.resources.colors ?? {})));
+    const s = JSON.stringify(out.root);
+    assert.ok(s.indexOf('"name":"r"') > s.indexOf("touchExpression"), "r is declared after the touch");
+    assert.ok(s.includes('"vtype":"color"') && s.includes('"background":"@preview"'));
+});

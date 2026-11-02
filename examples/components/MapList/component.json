@@ -1,0 +1,2354 @@
+{
+ "component": "MapList",
+ "version": 1,
+ "summary": "A whole map-and-list screen from data: places as numbered markers on a map (WorldMap, framed to fit them or a given region) and the same places as a list (a number, a name, a detail, a distance or rating). On a phone or a tall window the map is on top (about 42% of the height) and the list under it; on a wide window (from 600 dp and landscape) the list is a side panel on the left (280 to 360 dp) and the map fills the rest. Tapping a row selects it and enlarges its marker; tapping a marker selects its row.",
+ "params": {
+  "items": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One object per place: {\"title\", \"subtitle\", \"meta\", \"metaIcon\", \"place\", \"label\"}. title (the name) and place are required: place is a city name (Natural Earth's 1,250 places: capitals, state capitals, large cities) or \"lon,lat\" as one string (\"2.2945,48.8584\"; not an array). subtitle is the second line (an address, opening hours, a category), meta the value at the row's end (\"1.2 km\", \"4.6\"), metaIcon an icon before it (\"star\", \"schedule\", \"directions_walk\"). label replaces the row's spoken text"
+  },
+  "title": {
+   "type": "string",
+   "doc": "The list's heading (\"Stores\"); omit for no header"
+  },
+  "subtitle": {
+   "type": "string",
+   "doc": "A line under the heading (\"6 within 10 km\")"
+  },
+  "selected": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The selected place, from 0. Bind a resources variable (\"@sel\") to preset or read it. Do not name it step"
+  },
+  "region": {
+   "type": "string",
+   "static": true,
+   "doc": "Frame this region instead of fitting the places: a continent (\"Europe\"), a subregion, a country (\"FRA\") or [lonMin, latMin, lonMax, latMax]. Omit to frame the places tightly (the default, and usually best)"
+  },
+  "detail": {
+   "type": "enum",
+   "values": [
+    "low",
+    "medium",
+    "high"
+   ],
+   "default": "low",
+   "static": true,
+   "doc": "Coastline detail (WorldMap detail)"
+  },
+  "borders": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Draw country borders (false: plain land). Worth it for places across several countries; a world of borders at medium detail costs ~40 KB"
+  },
+  "states": {
+   "type": "list",
+   "static": true,
+   "doc": "Draw state or province borders of these countries (ISO A3: USA, CAN, AUS, DEU, ...), as WorldMap states: inside one big country they are what gives the map its landmarks"
+  },
+  "land": {
+   "type": "color",
+   "default": "@colors.track",
+   "doc": "Land fill"
+  },
+  "sea": {
+   "type": "color",
+   "doc": "Sea fill (none by default: mapBackground shows)"
+  },
+  "mapBackground": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "Behind the map (the sea when sea is not given)"
+  },
+  "markerColor": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Markers, the row numbers and the selected row's bar"
+  },
+  "label": {
+   "type": "text",
+   "default": "Map of the places",
+   "doc": "The map's accessibility label (\"Map of six stores in Paris\")"
+  },
+  "hit": {
+   "type": "float",
+   "default": 22,
+   "static": true,
+   "doc": "Half the side in dp of a marker's tap square"
+  },
+  "mapShare": {
+   "type": "float",
+   "default": 0.42,
+   "static": true,
+   "doc": "The map's least share of the height under the header when stacked; it grows into height the rows leave empty (up to 0.9:1)"
+  },
+  "wideAt": {
+   "type": "float",
+   "default": 600,
+   "static": true,
+   "doc": "Width in dp from which a landscape window puts the list beside the map"
+  },
+  "listMin": {
+   "type": "float",
+   "default": 280,
+   "static": true,
+   "doc": "Narrowest side panel"
+  },
+  "listMax": {
+   "type": "float",
+   "default": 360,
+   "static": true,
+   "doc": "Widest side panel"
+  },
+  "background": {
+   "type": "color",
+   "default": "@colors.surface",
+   "doc": "The list's background"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width it has, when it is not the whole window"
+  },
+  "height": {
+   "type": "float",
+   "default": "windowHeight()",
+   "doc": "The height it has"
+  }
+ },
+ "slots": {
+  "headerEnd": {
+   "optional": true,
+   "doc": "At the end of the header: an IconButton (filter, search) or a Badge"
+  }
+ },
+ "locals": {
+  "side": "step(@width, @wideAt - 0.5) * step(@width, @height * 1.2)",
+  "lw": "ifElse(@width, clamp(@listMin, @listMax, floor(@width * 0.38)), @side)",
+  "hh": {
+   "$if": "title",
+   "then": {
+    "$if": "subtitle",
+    "then": 64,
+    "else": 56
+   },
+   "else": 0
+  },
+  "fx0": {
+   "$mapPoint": {
+    "region": {
+     "$if": "region",
+     "then": [
+      {
+       "fit": [
+        "@region"
+       ],
+       "frame": true,
+       "night": false
+      }
+     ],
+     "else": [
+      {
+       "fit": [
+        {
+         "$each": "items",
+         "as": "q",
+         "fields": [
+          "title",
+          "subtitle",
+          "meta",
+          "metaIcon",
+          "place",
+          "label"
+         ],
+         "do": "@q_place"
+        }
+       ]
+      }
+     ]
+    },
+    "at": {
+     "core": 0
+    }
+   }
+  },
+  "fy0": {
+   "$mapPoint": {
+    "region": {
+     "$if": "region",
+     "then": [
+      {
+       "fit": [
+        "@region"
+       ],
+       "frame": true,
+       "night": false
+      }
+     ],
+     "else": [
+      {
+       "fit": [
+        {
+         "$each": "items",
+         "as": "q",
+         "fields": [
+          "title",
+          "subtitle",
+          "meta",
+          "metaIcon",
+          "place",
+          "label"
+         ],
+         "do": "@q_place"
+        }
+       ]
+      }
+     ]
+    },
+    "at": {
+     "core": 0
+    },
+    "axis": "y"
+   }
+  },
+  "fx1": {
+   "$mapPoint": {
+    "region": {
+     "$if": "region",
+     "then": [
+      {
+       "fit": [
+        "@region"
+       ],
+       "frame": true,
+       "night": false
+      }
+     ],
+     "else": [
+      {
+       "fit": [
+        {
+         "$each": "items",
+         "as": "q",
+         "fields": [
+          "title",
+          "subtitle",
+          "meta",
+          "metaIcon",
+          "place",
+          "label"
+         ],
+         "do": "@q_place"
+        }
+       ]
+      }
+     ]
+    },
+    "at": {
+     "core": 1
+    }
+   }
+  },
+  "fy1": {
+   "$mapPoint": {
+    "region": {
+     "$if": "region",
+     "then": [
+      {
+       "fit": [
+        "@region"
+       ],
+       "frame": true,
+       "night": false
+      }
+     ],
+     "else": [
+      {
+       "fit": [
+        {
+         "$each": "items",
+         "as": "q",
+         "fields": [
+          "title",
+          "subtitle",
+          "meta",
+          "metaIcon",
+          "place",
+          "label"
+         ],
+         "do": "@q_place"
+        }
+       ]
+      }
+     ]
+    },
+    "at": {
+     "core": 1
+    },
+    "axis": "y"
+   }
+  },
+  "bh": {
+   "$mapHeight": {
+    "$if": "region",
+    "then": [
+     {
+      "fit": [
+       "@region"
+      ],
+      "frame": true,
+      "night": false
+     }
+    ],
+    "else": [
+     {
+      "fit": [
+       {
+        "$each": "items",
+        "as": "q",
+        "fields": [
+         "title",
+         "subtitle",
+         "meta",
+         "metaIcon",
+         "place",
+         "label"
+        ],
+        "do": "@q_place"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  "n": {
+   "$count": "items"
+  },
+  "mhs": "max(floor((@height - @hh) * @mapShare), min(@height - @hh - @n * 64 - 1, floor(@width * min(1.1, @bh / (@fx1 - @fx0)))))",
+  "mapW": "ifElse(@width, @width - @lw - 1, @side)",
+  "mapH": "ifElse(@mhs, @height, @side)",
+  "lh": "@height - @hh - (1 - @side) * @mhs",
+  "ms": "min(@mapW / (@fx1 - @fx0), @mapH / (@fy1 - @fy0))",
+  "mtx": "@mapW / 2 - (@fx0 + @fx1) / 2 * @ms",
+  "mty": "@mapH / 2 - (@fy0 + @fy1) / 2 * @ms",
+  "x0a": 0,
+  "y0a": 0,
+  "x0b": 0,
+  "y0b": 0,
+  "hx": 0,
+  "tu": 0,
+  "tv": 0,
+  "hr": "@hit / @ms",
+  "r11": "11 / @ms",
+  "r13": {
+   "$if": "theme.mono",
+   "then": "11 / @ms",
+   "else": "13 / @ms"
+  },
+  "r15": "15 / @ms",
+  "r18": "18 / @ms",
+  "r26": {
+   "$if": "theme.mono",
+   "then": 0,
+   "else": "26 / @ms"
+  },
+  "sw": {
+   "$if": "theme.mono",
+   "then": "@theme.stroke / @ms",
+   "else": 0
+  },
+  "t12": "12 / @ms",
+  "t15": "15 / @ms"
+ },
+ "capabilities": [
+  "layout.state",
+  "input.tap",
+  "a11y.labels"
+ ],
+ "call": {
+  "MapList": {
+   "title": "Offices",
+   "items": [
+    {
+     "title": "London",
+     "subtitle": "Head office",
+     "place": "London"
+    },
+    {
+     "title": "Berlin",
+     "subtitle": "Engineering",
+     "place": "Berlin"
+    }
+   ]
+  }
+ },
+ "body": {
+  "row": {
+   "modifiers": [
+    {
+     "width": "@width"
+    },
+    {
+     "height": "@height"
+    },
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       {
+        "width": "@lw"
+       },
+       {
+        "height": "@height"
+       },
+       {
+        "background": "@background"
+       }
+      ],
+      "children": [
+       {
+        "variable": {
+         "name": "sy",
+         "value": 0
+        }
+       },
+       {
+        "variable": {
+         "name": "mxs",
+         "vtype": "floatArrays",
+         "value": [
+          {
+           "$each": "items",
+           "as": "r",
+           "index": "i",
+           "fields": [
+            "title",
+            "subtitle",
+            "meta",
+            "metaIcon",
+            "place",
+            "label"
+           ],
+           "do": {
+            "$mapPoint": {
+             "region": {
+              "$if": "region",
+              "then": [
+               {
+                "fit": [
+                 "@region"
+                ],
+                "frame": true,
+                "night": false
+               }
+              ],
+              "else": [
+               {
+                "fit": [
+                 {
+                  "$each": "items",
+                  "as": "q",
+                  "fields": [
+                   "title",
+                   "subtitle",
+                   "meta",
+                   "metaIcon",
+                   "place",
+                   "label"
+                  ],
+                  "do": "@q_place"
+                 }
+                ]
+               }
+              ]
+             },
+             "at": "@r_place"
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "variable": {
+         "name": "mys",
+         "vtype": "floatArrays",
+         "value": [
+          {
+           "$each": "items",
+           "as": "r",
+           "index": "i",
+           "fields": [
+            "title",
+            "subtitle",
+            "meta",
+            "metaIcon",
+            "place",
+            "label"
+           ],
+           "do": {
+            "$mapPoint": {
+             "region": {
+              "$if": "region",
+              "then": [
+               {
+                "fit": [
+                 "@region"
+                ],
+                "frame": true,
+                "night": false
+               }
+              ],
+              "else": [
+               {
+                "fit": [
+                 {
+                  "$each": "items",
+                  "as": "q",
+                  "fields": [
+                   "title",
+                   "subtitle",
+                   "meta",
+                   "metaIcon",
+                   "place",
+                   "label"
+                  ],
+                  "do": "@q_place"
+                 }
+                ]
+               }
+              ]
+             },
+             "at": "@r_place",
+             "axis": "y"
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "$if": "title",
+        "then": {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "width": "@lw"
+           },
+           {
+            "height": "@hh"
+           },
+           {
+            "padding": [
+             16,
+             0
+            ]
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "@title",
+                "fontSize": "@theme.text_lg",
+                "fontWeight": 700,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "overflow": "ellipsis"
+               }
+              },
+              {
+               "$if": "subtitle",
+               "then": {
+                "text": {
+                 "value": "@subtitle",
+                 "fontSize": 14,
+                 "color": "@colors.muted",
+                 "maxLines": 1,
+                 "overflow": "ellipsis",
+                 "modifiers": [
+                  {
+                   "padding": {
+                    "top": 2
+                   }
+                  }
+                 ]
+                }
+               }
+              }
+             ]
+            }
+           },
+           {
+            "$slot": "headerEnd"
+           }
+          ]
+         }
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "1 - @side"
+          },
+          {
+           "width": "@mapW"
+          },
+          {
+           "height": "@mapH"
+          },
+          {
+           "background": "@mapBackground"
+          }
+         ],
+         "children": [
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxSize"
+            ],
+            "children": [
+             {
+              "$if": "region",
+              "then": {
+               "WorldMap": {
+                "region": "@region",
+                "fill": true,
+                "detail": "@detail",
+                "borders": "@borders",
+                "states": "@states",
+                "sea": "@sea",
+                "land": "@land",
+                "label": "@label"
+               }
+              },
+              "else": {
+               "WorldMap": {
+                "fit": [
+                 {
+                  "$each": "items",
+                  "as": "q",
+                  "fields": [
+                   "title",
+                   "subtitle",
+                   "meta",
+                   "metaIcon",
+                   "place",
+                   "label"
+                  ],
+                  "do": "@q_place"
+                 }
+                ],
+                "fill": true,
+                "detail": "@detail",
+                "borders": "@borders",
+                "states": "@states",
+                "sea": "@sea",
+                "land": "@land",
+                "label": "@label"
+               }
+              }
+             }
+            ]
+           }
+          },
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "onTouchDown": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@tu",
+                "value": "(touchX() - @x0a - @mtx) / @ms"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@tv",
+                "value": "(touchY() - @y0a - @mty) / @ms"
+               },
+               {
+                "$each": "items",
+                "as": "r",
+                "index": "i",
+                "fields": [
+                 "title",
+                 "subtitle",
+                 "meta",
+                 "metaIcon",
+                 "place",
+                 "label"
+                ],
+                "do": [
+                 {
+                  "type": "valueFloatExpressionChange",
+                  "target": "@hx",
+                  "value": {
+                   "$mapPoint": {
+                    "region": {
+                     "$if": "region",
+                     "then": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": false
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        {
+                         "$each": "items",
+                         "as": "q",
+                         "fields": [
+                          "title",
+                          "subtitle",
+                          "meta",
+                          "metaIcon",
+                          "place",
+                          "label"
+                         ],
+                         "do": "@q_place"
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    "at": "@r_place",
+                    "wrap": "step(@hr - abs(@tu - {}), 0)"
+                   }
+                  }
+                 },
+                 {
+                  "type": "valueFloatExpressionChange",
+                  "target": "@selected",
+                  "value": {
+                   "$mapPoint": {
+                    "region": {
+                     "$if": "region",
+                     "then": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": false
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        {
+                         "$each": "items",
+                         "as": "q",
+                         "fields": [
+                          "title",
+                          "subtitle",
+                          "meta",
+                          "metaIcon",
+                          "place",
+                          "label"
+                         ],
+                         "do": "@q_place"
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    "at": "@r_place",
+                    "axis": "y",
+                    "wrap": "ifElse(@selected, @i, @hx * step(@hr - abs(@tv - {}), 0))"
+                   }
+                  }
+                 }
+                ]
+               }
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "componentValue": {
+               "id": "@x0a",
+               "valueType": 4
+              }
+             },
+             {
+              "componentValue": {
+               "id": "@y0a",
+               "valueType": 5
+              }
+             },
+             {
+              "variable": {
+               "name": "sxa",
+               "value": "arrayGet(@mxs, @selected)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sya",
+               "value": "arrayGet(@mys, @selected)"
+              }
+             },
+             {
+              "save": [
+               {
+                "translate": {
+                 "dx": "@mtx",
+                 "dy": "@mty"
+                }
+               },
+               {
+                "scale": {
+                 "sx": "@ms",
+                 "sy": "@ms"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.surface"
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "$each": "items",
+                "as": "r",
+                "index": "i",
+                "fields": [
+                 "title",
+                 "subtitle",
+                 "meta",
+                 "metaIcon",
+                 "place",
+                 "label"
+                ],
+                "do": {
+                 "drawCircle": {
+                  "cx": {
+                   "$mapPoint": {
+                    "region": {
+                     "$if": "region",
+                     "then": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": false
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        {
+                         "$each": "items",
+                         "as": "q",
+                         "fields": [
+                          "title",
+                          "subtitle",
+                          "meta",
+                          "metaIcon",
+                          "place",
+                          "label"
+                         ],
+                         "do": "@q_place"
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    "at": "@r_place"
+                   }
+                  },
+                  "cy": {
+                   "$mapPoint": {
+                    "region": {
+                     "$if": "region",
+                     "then": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": false
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        {
+                         "$each": "items",
+                         "as": "q",
+                         "fields": [
+                          "title",
+                          "subtitle",
+                          "meta",
+                          "metaIcon",
+                          "place",
+                          "label"
+                         ],
+                         "do": "@q_place"
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    "at": "@r_place",
+                    "axis": "y"
+                   }
+                  },
+                  "radius": "@r13"
+                 }
+                }
+               },
+               {
+                "$if": "theme.mono",
+                "then": {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": "@sw"
+                   }
+                  ]
+                 }
+                },
+                "else": {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@markerColor"
+                   },
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                }
+               },
+               {
+                "$each": "items",
+                "as": "r",
+                "index": "i",
+                "fields": [
+                 "title",
+                 "subtitle",
+                 "meta",
+                 "metaIcon",
+                 "place",
+                 "label"
+                ],
+                "do": {
+                 "drawCircle": {
+                  "cx": {
+                   "$mapPoint": {
+                    "region": {
+                     "$if": "region",
+                     "then": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": false
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        {
+                         "$each": "items",
+                         "as": "q",
+                         "fields": [
+                          "title",
+                          "subtitle",
+                          "meta",
+                          "metaIcon",
+                          "place",
+                          "label"
+                         ],
+                         "do": "@q_place"
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    "at": "@r_place"
+                   }
+                  },
+                  "cy": {
+                   "$mapPoint": {
+                    "region": {
+                     "$if": "region",
+                     "then": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": false
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        {
+                         "$each": "items",
+                         "as": "q",
+                         "fields": [
+                          "title",
+                          "subtitle",
+                          "meta",
+                          "metaIcon",
+                          "place",
+                          "label"
+                         ],
+                         "do": "@q_place"
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    "at": "@r_place",
+                    "axis": "y"
+                   }
+                  },
+                  "radius": "@r11"
+                 }
+                }
+               },
+               {
+                "$if": "theme.mono",
+                "then": {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "textSize": "@t12"
+                   }
+                  ]
+                 }
+                },
+                "else": {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onPrimary"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "textSize": "@t12"
+                   }
+                  ]
+                 }
+                }
+               },
+               {
+                "$each": "items",
+                "as": "r",
+                "index": "i",
+                "fields": [
+                 "title",
+                 "subtitle",
+                 "meta",
+                 "metaIcon",
+                 "place",
+                 "label"
+                ],
+                "do": {
+                 "drawTextAnchored": {
+                  "text": {
+                   "type": "textFromFloat",
+                   "value": "@i + 1",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "x": {
+                   "$mapPoint": {
+                    "region": {
+                     "$if": "region",
+                     "then": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": false
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        {
+                         "$each": "items",
+                         "as": "q",
+                         "fields": [
+                          "title",
+                          "subtitle",
+                          "meta",
+                          "metaIcon",
+                          "place",
+                          "label"
+                         ],
+                         "do": "@q_place"
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    "at": "@r_place"
+                   }
+                  },
+                  "y": {
+                   "$mapPoint": {
+                    "region": {
+                     "$if": "region",
+                     "then": [
+                      {
+                       "fit": [
+                        "@region"
+                       ],
+                       "frame": true,
+                       "night": false
+                      }
+                     ],
+                     "else": [
+                      {
+                       "fit": [
+                        {
+                         "$each": "items",
+                         "as": "q",
+                         "fields": [
+                          "title",
+                          "subtitle",
+                          "meta",
+                          "metaIcon",
+                          "place",
+                          "label"
+                         ],
+                         "do": "@q_place"
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    "at": "@r_place",
+                    "axis": "y"
+                   }
+                  },
+                  "panX": 0,
+                  "panY": 0
+                 }
+                }
+               },
+               {
+                "$if": "theme.mono",
+                "else": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@markerColor"
+                    },
+                    {
+                     "style": "fill"
+                    },
+                    {
+                     "alpha": 0.22
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawCircle": {
+                   "cx": "@sxa",
+                   "cy": "@sya",
+                   "radius": "@r26"
+                  }
+                 }
+                ]
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.surface"
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": "@sxa",
+                 "cy": "@sya",
+                 "radius": "@r18"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "$if": "theme.mono",
+                   "then": {
+                    "color": "@colors.onSurface"
+                   },
+                   "else": {
+                    "color": "@markerColor"
+                   }
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": "@sxa",
+                 "cy": "@sya",
+                 "radius": "@r15"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onPrimary"
+                  },
+                  {
+                   "style": "fill"
+                  },
+                  {
+                   "textSize": "@t15"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawTextAnchored": {
+                 "text": {
+                  "type": "textFromFloat",
+                  "value": "@selected + 1",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "x": "@sxa",
+                 "y": "@sya",
+                 "panX": 0,
+                 "panY": 0
+                }
+               }
+              ]
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "1 - @side"
+          },
+          {
+           "width": "@lw"
+          },
+          {
+           "height": 1
+          },
+          {
+           "background": "@colors.outline"
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          {
+           "width": "@lw"
+          },
+          {
+           "height": "@lh - 1 + @side"
+          },
+          {
+           "verticalScroll": "@sy"
+          }
+         ],
+         "children": [
+          {
+           "$each": "items",
+           "as": "r",
+           "index": "i",
+           "fields": [
+            "title",
+            "subtitle",
+            "meta",
+            "metaIcon",
+            "place",
+            "label"
+           ],
+           "do": {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "$if": "r_subtitle",
+               "then": {
+                "height": 64
+               },
+               "else": {
+                "height": 52
+               }
+              },
+              {
+               "semantics": {
+                "clickable": true,
+                "contentDescription": {
+                 "$if": "r_label",
+                 "then": "@r_label",
+                 "else": {
+                  "type": "textMerge",
+                  "id1": "@r_title",
+                  "id2": {
+                   "$if": "r_subtitle",
+                   "then": {
+                    "type": "textMerge",
+                    "id1": ", ",
+                    "id2": {
+                     "$if": "r_meta",
+                     "then": {
+                      "type": "textMerge",
+                      "id1": "@r_subtitle",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": ", ",
+                       "id2": "@r_meta"
+                      }
+                     },
+                     "else": "@r_subtitle"
+                    }
+                   },
+                   "else": {
+                    "$if": "r_meta",
+                    "then": {
+                     "type": "textMerge",
+                     "id1": ", ",
+                     "id2": "@r_meta"
+                    },
+                    "else": ""
+                   }
+                  }
+                 }
+                }
+               }
+              },
+              {
+               "onClick": [
+                {
+                 "type": "valueFloatChange",
+                 "target": "@selected",
+                 "value": "@i"
+                }
+               ]
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "1 - min(1, abs(@selected - @i))"
+                 },
+                 "fillMaxSize",
+                 {
+                  "background": "@colors.surfaceHigh"
+                 }
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 4
+                    },
+                    "fillMaxHeight",
+                    {
+                     "background": "@markerColor"
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 "fillMaxSize",
+                 {
+                  "padding": [
+                   16,
+                   0
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "horizontalAlignment": "center",
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    {
+                     "size": 28
+                    },
+                    {
+                     "clip": {
+                      "roundedRect": 14
+                     }
+                    },
+                    {
+                     "$if": "theme.mono",
+                     "then": {
+                      "background": "@colors.onSurface"
+                     },
+                     "else": {
+                      "background": "@markerColor"
+                     }
+                    },
+                    {
+                     "$if": "theme.mono",
+                     "then": {
+                      "padding": 1.5
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "$if": "theme.mono",
+                     "then": {
+                      "box": {
+                       "horizontalAlignment": "center",
+                       "verticalAlignment": "center",
+                       "modifiers": [
+                        "fillMaxSize",
+                        {
+                         "clip": {
+                          "roundedRect": 13
+                         }
+                        },
+                        {
+                         "background": "@colors.surface"
+                        }
+                       ],
+                       "children": [
+                        {
+                         "text": {
+                          "value": {
+                           "type": "textFromFloat",
+                           "value": "@i + 1",
+                           "whole": 2,
+                           "decimal": 0,
+                           "flags": 5
+                          },
+                          "fontSize": 13,
+                          "fontWeight": 700,
+                          "color": "@colors.onSurface",
+                          "maxLines": 1
+                         }
+                        }
+                       ]
+                      }
+                     },
+                     "else": {
+                      "text": {
+                       "value": {
+                        "type": "textFromFloat",
+                        "value": "@i + 1",
+                        "whole": 2,
+                        "decimal": 0,
+                        "flags": 5
+                       },
+                       "fontSize": 13,
+                       "fontWeight": 700,
+                       "color": "@colors.onPrimary",
+                       "maxLines": 1
+                      }
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "column": {
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    },
+                    {
+                     "padding": {
+                      "start": 12
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "text": {
+                      "value": "@r_title",
+                      "fontSize": "@theme.text_md",
+                      "fontWeight": 500,
+                      "color": "@colors.onSurface",
+                      "maxLines": 1,
+                      "overflow": "ellipsis"
+                     }
+                    },
+                    {
+                     "$if": "r_subtitle",
+                     "then": {
+                      "text": {
+                       "value": "@r_subtitle",
+                       "fontSize": 14,
+                       "color": "@colors.muted",
+                       "maxLines": 1,
+                       "overflow": "ellipsis",
+                       "modifiers": [
+                        {
+                         "padding": {
+                          "top": 2
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "$if": "r_meta",
+                  "then": {
+                   "row": {
+                    "verticalAlignment": "center",
+                    "modifiers": [
+                     {
+                      "padding": {
+                       "start": 8
+                      }
+                     }
+                    ],
+                    "children": [
+                     {
+                      "$if": "r_metaIcon",
+                      "then": {
+                       "box": {
+                        "modifiers": [
+                         {
+                          "padding": {
+                           "end": 4
+                          }
+                         }
+                        ],
+                        "children": [
+                         {
+                          "Icon": {
+                           "name": "@r_metaIcon",
+                           "size": 16,
+                           "color": "@colors.muted"
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     },
+                     {
+                      "text": {
+                       "value": "@r_meta",
+                       "fontSize": "@theme.text_sm",
+                       "color": "@colors.muted",
+                       "maxLines": 1
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       {
+        "visibility": "@side"
+       },
+       {
+        "width": 1
+       },
+       {
+        "height": "@height"
+       },
+       {
+        "background": "@colors.outline"
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       {
+        "visibility": "@side"
+       },
+       {
+        "width": "@mapW"
+       },
+       {
+        "height": "@mapH"
+       },
+       {
+        "background": "@mapBackground"
+       }
+      ],
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "children": [
+          {
+           "$if": "region",
+           "then": {
+            "WorldMap": {
+             "region": "@region",
+             "fill": true,
+             "detail": "@detail",
+             "borders": "@borders",
+             "states": "@states",
+             "sea": "@sea",
+             "land": "@land",
+             "label": "@label"
+            }
+           },
+           "else": {
+            "WorldMap": {
+             "fit": [
+              {
+               "$each": "items",
+               "as": "q",
+               "fields": [
+                "title",
+                "subtitle",
+                "meta",
+                "metaIcon",
+                "place",
+                "label"
+               ],
+               "do": "@q_place"
+              }
+             ],
+             "fill": true,
+             "detail": "@detail",
+             "borders": "@borders",
+             "states": "@states",
+             "sea": "@sea",
+             "land": "@land",
+             "label": "@label"
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "onTouchDown": [
+            {
+             "type": "valueFloatExpressionChange",
+             "target": "@tu",
+             "value": "(touchX() - @x0b - @mtx) / @ms"
+            },
+            {
+             "type": "valueFloatExpressionChange",
+             "target": "@tv",
+             "value": "(touchY() - @y0b - @mty) / @ms"
+            },
+            {
+             "$each": "items",
+             "as": "r",
+             "index": "i",
+             "fields": [
+              "title",
+              "subtitle",
+              "meta",
+              "metaIcon",
+              "place",
+              "label"
+             ],
+             "do": [
+              {
+               "type": "valueFloatExpressionChange",
+               "target": "@hx",
+               "value": {
+                "$mapPoint": {
+                 "region": {
+                  "$if": "region",
+                  "then": [
+                   {
+                    "fit": [
+                     "@region"
+                    ],
+                    "frame": true,
+                    "night": false
+                   }
+                  ],
+                  "else": [
+                   {
+                    "fit": [
+                     {
+                      "$each": "items",
+                      "as": "q",
+                      "fields": [
+                       "title",
+                       "subtitle",
+                       "meta",
+                       "metaIcon",
+                       "place",
+                       "label"
+                      ],
+                      "do": "@q_place"
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 "at": "@r_place",
+                 "wrap": "step(@hr - abs(@tu - {}), 0)"
+                }
+               }
+              },
+              {
+               "type": "valueFloatExpressionChange",
+               "target": "@selected",
+               "value": {
+                "$mapPoint": {
+                 "region": {
+                  "$if": "region",
+                  "then": [
+                   {
+                    "fit": [
+                     "@region"
+                    ],
+                    "frame": true,
+                    "night": false
+                   }
+                  ],
+                  "else": [
+                   {
+                    "fit": [
+                     {
+                      "$each": "items",
+                      "as": "q",
+                      "fields": [
+                       "title",
+                       "subtitle",
+                       "meta",
+                       "metaIcon",
+                       "place",
+                       "label"
+                      ],
+                      "do": "@q_place"
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 "at": "@r_place",
+                 "axis": "y",
+                 "wrap": "ifElse(@selected, @i, @hx * step(@hr - abs(@tv - {}), 0))"
+                }
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ],
+         "commands": [
+          {
+           "componentValue": {
+            "id": "@x0b",
+            "valueType": 4
+           }
+          },
+          {
+           "componentValue": {
+            "id": "@y0b",
+            "valueType": 5
+           }
+          },
+          {
+           "variable": {
+            "name": "sxb",
+            "value": "arrayGet(@mxs, @selected)"
+           }
+          },
+          {
+           "variable": {
+            "name": "syb",
+            "value": "arrayGet(@mys, @selected)"
+           }
+          },
+          {
+           "save": [
+            {
+             "translate": {
+              "dx": "@mtx",
+              "dy": "@mty"
+             }
+            },
+            {
+             "scale": {
+              "sx": "@ms",
+              "sy": "@ms"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.surface"
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "$each": "items",
+             "as": "r",
+             "index": "i",
+             "fields": [
+              "title",
+              "subtitle",
+              "meta",
+              "metaIcon",
+              "place",
+              "label"
+             ],
+             "do": {
+              "drawCircle": {
+               "cx": {
+                "$mapPoint": {
+                 "region": {
+                  "$if": "region",
+                  "then": [
+                   {
+                    "fit": [
+                     "@region"
+                    ],
+                    "frame": true,
+                    "night": false
+                   }
+                  ],
+                  "else": [
+                   {
+                    "fit": [
+                     {
+                      "$each": "items",
+                      "as": "q",
+                      "fields": [
+                       "title",
+                       "subtitle",
+                       "meta",
+                       "metaIcon",
+                       "place",
+                       "label"
+                      ],
+                      "do": "@q_place"
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 "at": "@r_place"
+                }
+               },
+               "cy": {
+                "$mapPoint": {
+                 "region": {
+                  "$if": "region",
+                  "then": [
+                   {
+                    "fit": [
+                     "@region"
+                    ],
+                    "frame": true,
+                    "night": false
+                   }
+                  ],
+                  "else": [
+                   {
+                    "fit": [
+                     {
+                      "$each": "items",
+                      "as": "q",
+                      "fields": [
+                       "title",
+                       "subtitle",
+                       "meta",
+                       "metaIcon",
+                       "place",
+                       "label"
+                      ],
+                      "do": "@q_place"
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 "at": "@r_place",
+                 "axis": "y"
+                }
+               },
+               "radius": "@r13"
+              }
+             }
+            },
+            {
+             "$if": "theme.mono",
+             "then": {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": "@sw"
+                }
+               ]
+              }
+             },
+             "else": {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@markerColor"
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             }
+            },
+            {
+             "$each": "items",
+             "as": "r",
+             "index": "i",
+             "fields": [
+              "title",
+              "subtitle",
+              "meta",
+              "metaIcon",
+              "place",
+              "label"
+             ],
+             "do": {
+              "drawCircle": {
+               "cx": {
+                "$mapPoint": {
+                 "region": {
+                  "$if": "region",
+                  "then": [
+                   {
+                    "fit": [
+                     "@region"
+                    ],
+                    "frame": true,
+                    "night": false
+                   }
+                  ],
+                  "else": [
+                   {
+                    "fit": [
+                     {
+                      "$each": "items",
+                      "as": "q",
+                      "fields": [
+                       "title",
+                       "subtitle",
+                       "meta",
+                       "metaIcon",
+                       "place",
+                       "label"
+                      ],
+                      "do": "@q_place"
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 "at": "@r_place"
+                }
+               },
+               "cy": {
+                "$mapPoint": {
+                 "region": {
+                  "$if": "region",
+                  "then": [
+                   {
+                    "fit": [
+                     "@region"
+                    ],
+                    "frame": true,
+                    "night": false
+                   }
+                  ],
+                  "else": [
+                   {
+                    "fit": [
+                     {
+                      "$each": "items",
+                      "as": "q",
+                      "fields": [
+                       "title",
+                       "subtitle",
+                       "meta",
+                       "metaIcon",
+                       "place",
+                       "label"
+                      ],
+                      "do": "@q_place"
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 "at": "@r_place",
+                 "axis": "y"
+                }
+               },
+               "radius": "@r11"
+              }
+             }
+            },
+            {
+             "$if": "theme.mono",
+             "then": {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "textSize": "@t12"
+                }
+               ]
+              }
+             },
+             "else": {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onPrimary"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "textSize": "@t12"
+                }
+               ]
+              }
+             }
+            },
+            {
+             "$each": "items",
+             "as": "r",
+             "index": "i",
+             "fields": [
+              "title",
+              "subtitle",
+              "meta",
+              "metaIcon",
+              "place",
+              "label"
+             ],
+             "do": {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@i + 1",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "x": {
+                "$mapPoint": {
+                 "region": {
+                  "$if": "region",
+                  "then": [
+                   {
+                    "fit": [
+                     "@region"
+                    ],
+                    "frame": true,
+                    "night": false
+                   }
+                  ],
+                  "else": [
+                   {
+                    "fit": [
+                     {
+                      "$each": "items",
+                      "as": "q",
+                      "fields": [
+                       "title",
+                       "subtitle",
+                       "meta",
+                       "metaIcon",
+                       "place",
+                       "label"
+                      ],
+                      "do": "@q_place"
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 "at": "@r_place"
+                }
+               },
+               "y": {
+                "$mapPoint": {
+                 "region": {
+                  "$if": "region",
+                  "then": [
+                   {
+                    "fit": [
+                     "@region"
+                    ],
+                    "frame": true,
+                    "night": false
+                   }
+                  ],
+                  "else": [
+                   {
+                    "fit": [
+                     {
+                      "$each": "items",
+                      "as": "q",
+                      "fields": [
+                       "title",
+                       "subtitle",
+                       "meta",
+                       "metaIcon",
+                       "place",
+                       "label"
+                      ],
+                      "do": "@q_place"
+                     }
+                    ]
+                   }
+                  ]
+                 },
+                 "at": "@r_place",
+                 "axis": "y"
+                }
+               },
+               "panX": 0,
+               "panY": 0
+              }
+             }
+            },
+            {
+             "$if": "theme.mono",
+             "else": [
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@markerColor"
+                 },
+                 {
+                  "style": "fill"
+                 },
+                 {
+                  "alpha": 0.22
+                 }
+                ]
+               }
+              },
+              {
+               "drawCircle": {
+                "cx": "@sxb",
+                "cy": "@syb",
+                "radius": "@r26"
+               }
+              }
+             ]
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.surface"
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@sxb",
+              "cy": "@syb",
+              "radius": "@r18"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "$if": "theme.mono",
+                "then": {
+                 "color": "@colors.onSurface"
+                },
+                "else": {
+                 "color": "@markerColor"
+                }
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@sxb",
+              "cy": "@syb",
+              "radius": "@r15"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onPrimary"
+               },
+               {
+                "style": "fill"
+               },
+               {
+                "textSize": "@t15"
+               }
+              ]
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textFromFloat",
+               "value": "@selected + 1",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 5
+              },
+              "x": "@sxb",
+              "y": "@syb",
+              "panX": 0,
+              "panY": 0
+             }
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Give places as data and let it decide: under wideAt (600 dp), or when the window is not clearly landscape (width under 1.2 x height, a portrait tablet), the header, the map (mapShare of the height under it) and the list stack; otherwise the list is a side panel (38% of the width, 280 to 360 dp) and the map fills the rest. Decided by the window, never by content",
+  "place is a city name from Natural Earth's 1,250 places (capitals, state capitals, large cities; the error names a missing one) or \"lon,lat\" as ONE string (\"12.57,55.68\"). An array [lon, lat] is flattened by the expander and fails",
+  "The map frames the places tightly (WorldMap fit) at every size; markers are 22 dp discs, so places closer than about 30 dp on the smallest map overlap: on a phone a 360 dp wide map, so keep places at least ~1/12 of the frame's width apart. There is no street or city-level map: pick places a world or continent map can show (cities, stores across a country or continent, offices worldwide, a road trip's stops), not shops in one town",
+  "Rows and markers share one selected variable (from 0): a row tap selects, a marker tap (within hit dp of it) selects its row, highlighted with a tint and a bar. The list does not scroll to a marker's row; with more rows than fit, the selected row can be off screen on a phone",
+  "Each marker is its place's number (from 1), the same number leading its row. Rows are 64 dp with a subtitle, 52 without; title and subtitle are one line each (ellipsized), meta (a distance, a rating, a time) is not cut: keep it short",
+  "Bytes: the map geometry dominates (a world of land at low detail ~6 KB, Europe with borders ~10 KB, a world with borders at medium ~40 KB), then about 1.4 KB per place (its row, its marker in both panes, its tap test). The map is written twice (stacked and side panes, one shown); its path is one shared resource",
+  "Marker taps run on the map canvas's touch down (touchX/touchY against each marker), so they work where the marker is drawn in all players; rows are ordinary clicks with a spoken label (title, subtitle, meta)",
+  "A worldwide set of places frames the whole world, which cannot fill a square or tall box: the stacked map's height is capped at the frame's own aspect, but a side pane on a squarish window shows empty sea above and below. Places within a continent or a country fill every size; use detail medium when the frame is one region (a few states), where low detail shows crude coasts",
+  "width and height default to the window: pass them when it is not the whole window. The list sits on surface (background), the map on mapBackground; land is track"
+ ]
+}

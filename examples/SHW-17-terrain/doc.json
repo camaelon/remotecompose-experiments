@@ -1,0 +1,1219 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "A small 3D island on a block of earth: a terrain coloured by height from beach sand to grass, forest, rock and a snowy peak, with little trees, in a sea whose level a slider sets; it turns slowly and can be dragged round"
+ },
+ "resources": {
+  "variables": {
+   "sea": 0.02,
+   "slx": 0
+  },
+  "floatArrays": {
+   "trees": {
+    "value": [
+     0.481,
+     0.132,
+     -0.633,
+     0.85,
+     0.058,
+     0.232,
+     -0.378,
+     1,
+     0.093,
+     0.152,
+     0.432,
+     0.95,
+     -0.263,
+     0.173,
+     -0.191,
+     0.8,
+     -0.572,
+     0.065,
+     -0.068,
+     1.15,
+     0.659,
+     0.152,
+     -0.262,
+     1,
+     -0.37,
+     0.227,
+     0.367,
+     0.8,
+     0.58,
+     0.087,
+     0.079,
+     1,
+     -0.081,
+     0.165,
+     0.552,
+     1.2,
+     -0.645,
+     0.073,
+     0.452,
+     1.2,
+     -0.195,
+     0.157,
+     -0.398,
+     1.2,
+     -0.518,
+     0.149,
+     0.606,
+     1.05,
+     0.666,
+     0.158,
+     -0.09,
+     0.85,
+     -0.252,
+     0.222,
+     0.512,
+     1.05,
+     0.161,
+     0.13,
+     -0.565,
+     1.15,
+     -0.471,
+     0.161,
+     0.102,
+     1.2
+    ]
+   }
+  },
+  "colors": {
+   "sky1": {
+    "light": "#FF9CCBEB",
+    "dark": "#FF070D1A"
+   },
+   "sky2": {
+    "light": "#FFF3EEE4",
+    "dark": "#FF1B2742"
+   },
+   "deep": {
+    "light": "#FF2B78B0",
+    "dark": "#FF1D557F"
+   },
+   "shallow": {
+    "light": "#FF5CC3D2",
+    "dark": "#FF3592A3"
+   },
+   "foam": {
+    "light": "#FFEFFAF8",
+    "dark": "#FFB5D8D6"
+   },
+   "sand": {
+    "light": "#FFE9D49E",
+    "dark": "#FFC2AB78"
+   },
+   "grass": {
+    "light": "#FF86BC5E",
+    "dark": "#FF5C8F45"
+   },
+   "forest": {
+    "light": "#FF4C9150",
+    "dark": "#FF33693A"
+   },
+   "rock": {
+    "light": "#FF948A7C",
+    "dark": "#FF6E675E"
+   },
+   "snow": {
+    "light": "#FFFFFFFF",
+    "dark": "#FFDDE3EC"
+   },
+   "soil": {
+    "light": "#FF8C6446",
+    "dark": "#FF634632"
+   },
+   "tree": {
+    "light": "#FF2F6B3A",
+    "dark": "#FF234F2C"
+   },
+   "ink": {
+    "light": "#FF17222E",
+    "dark": "#FFEAF0F7"
+   },
+   "inkMuted": {
+    "light": "#FF4A5866",
+    "dark": "#FF9DABBC"
+   },
+   "track": {
+    "light": "#4D17222E",
+    "dark": "#4DEAF0F7"
+   },
+   "star": {
+    "light": "#00FFFFFF",
+    "dark": "#CCFFFFFF"
+   }
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "commands": [
+       {
+        "$if": "theme.mono",
+        "then": [],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "linearGradient": {
+              "x1": 0,
+              "y1": 0,
+              "x2": 0,
+              "y2": "componentHeight()",
+              "colors": [
+               "@colors.sky1",
+               "@colors.sky2"
+              ]
+             }
+            }
+           ]
+          }
+         },
+         {
+          "drawRect": {
+           "left": 0,
+           "top": 0,
+           "right": "componentWidth()",
+           "bottom": "componentHeight()"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "shader": 0
+            },
+            {
+             "color": "@colors.star"
+            }
+           ]
+          }
+         },
+         {
+          "loop": {
+           "index": "s",
+           "from": 0,
+           "until": 40,
+           "commands": [
+            {
+             "drawCircle": {
+              "cx": "componentWidth() * seed(s * 131 + 7, rand())",
+              "cy": "componentHeight() * 0.6 * seed(s * 57 + 1001, rand())",
+              "radius": "0.5 + 0.9 * seed(s * 13 + 9001, rand())"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "padding": [
+         20,
+         18,
+         20,
+         14
+        ]
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Little island",
+         "fontSize": 24,
+         "fontWeight": 650,
+         "color": "@colors.ink",
+         "maxLines": 1
+        }
+       },
+       {
+        "text": {
+         "value": "Drag to turn it · slide to raise the sea",
+         "fontSize": 13,
+         "color": "@colors.inkMuted",
+         "maxLines": 1
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "verticalWeight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 48
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize"
+            ],
+            "commands": [
+             {
+              "componentValue": {
+               "id": "@slx",
+               "valueType": 4
+              }
+             },
+             {
+              "touchExpression": {
+               "name": "sea",
+               "defaultValue": "@sea",
+               "min": -0.2,
+               "max": 0.4,
+               "expression": "-0.2 + (touchX() - @slx - 10) / (componentWidth() - 20) * 0.6",
+               "touchMode": 6
+              }
+             },
+             {
+              "variable": {
+               "name": "kx",
+               "value": "10 + (@sea + 0.2) / 0.6 * (componentWidth() - 20)"
+              }
+             },
+             {
+              "variable": {
+               "name": "seaM",
+               "value": "round((@sea - 0.02) * 1000)"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.ink"
+                },
+                {
+                 "textSize": 13
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "Sea level",
+               "x": 0,
+               "y": 10,
+               "panX": -1,
+               "panY": 0
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@seaM",
+                "whole": 3,
+                "decimal": 0,
+                "flags": 0
+               },
+               "x": "componentWidth() - 18",
+               "y": 10,
+               "panX": 1,
+               "panY": 0
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": " m",
+               "x": "componentWidth() - 18",
+               "y": 10,
+               "panX": -1,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 4
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 10,
+               "y1": 34,
+               "x2": "componentWidth() - 10",
+               "y2": 34
+              }
+             },
+             {
+              "$if": "theme.mono",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  }
+                 ]
+                }
+               }
+              ],
+              "else": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.deep"
+                  }
+                 ]
+                }
+               }
+              ]
+             },
+             {
+              "drawLine": {
+               "x1": 10,
+               "y1": 34,
+               "x2": "@kx",
+               "y2": 34
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@kx",
+               "cy": 34,
+               "radius": 10
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "semantics": {
+               "contentDescription": "Sea level, metres",
+               "stateDescription": {
+                "type": "textFromFloat",
+                "value": "@seaM",
+                "whole": 3,
+                "decimal": 0,
+                "flags": 0
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "verticalWeight": 1
+          }
+         ],
+         "commands": [
+          {
+           "touchExpression": {
+            "name": "spinPx",
+            "defaultValue": 0,
+            "min": -100000,
+            "max": 100000,
+            "stopMode": "gently",
+            "expression": "touchX()"
+           }
+          },
+          {
+           "touchExpression": {
+            "name": "tiltPx",
+            "defaultValue": 0,
+            "min": -60,
+            "max": 80,
+            "stopMode": "gently",
+            "expression": "touchY()"
+           }
+          },
+          {
+           "$if": "theme.mono",
+           "then": [
+            {
+             "variable": {
+              "name": "spin",
+              "value": "@spinPx * 0.01 - 0.6"
+             }
+            }
+           ],
+           "else": [
+            {
+             "variable": {
+              "name": "spin",
+              "value": "@spinPx * 0.01 + continuousSec() * 0.1 - 0.6"
+             }
+            }
+           ]
+          },
+          {
+           "variable": {
+            "name": "tilt",
+            "value": "@tiltPx * 0.006 + 0.62"
+           }
+          },
+          {
+           "variable": {
+            "name": "dist",
+            "value": "max(5 * windowHeight() / windowWidth(), 4.04 * windowHeight() / max(windowHeight() - 136, 60))"
+           }
+          },
+          {
+           "clearDepth3D": {}
+          },
+          {
+           "camera3D": {
+            "projection": "perspective",
+            "fovY": 0.6,
+            "aspect": "windowWidth() / windowHeight()",
+            "near": 0.1,
+            "far": "@dist + 4",
+            "eye": [
+             0,
+             0,
+             "@dist"
+            ],
+            "center": [
+             0,
+             0,
+             0
+            ],
+            "up": [
+             0,
+             1,
+             0
+            ]
+           }
+          },
+          {
+           "$if": "theme.mono",
+           "then": [
+            {
+             "lights3D": {
+              "lights": [
+               {
+                "type": "directional",
+                "dir": [
+                 1,
+                 0,
+                 0
+                ],
+                "color": "#FFFFFFFF",
+                "intensity": 0.85
+               },
+               {
+                "type": "directional",
+                "dir": [
+                 0,
+                 1,
+                 0
+                ],
+                "color": "#FFFFFFFF",
+                "intensity": 0.85
+               },
+               {
+                "type": "directional",
+                "dir": [
+                 0,
+                 0,
+                 1
+                ],
+                "color": "#FFFFFFFF",
+                "intensity": 0.85
+               }
+              ]
+             }
+            },
+            {
+             "meshExpression3D": {
+              "id": 11,
+              "surface": "general",
+              "uRange": [
+               -1,
+               1
+              ],
+              "vRange": [
+               -1,
+               1
+              ],
+              "uCount": 29,
+              "vCount": 29,
+              "x": "u",
+              "z": "v",
+              "y": "max((0.5 * exp(-2.4 * (square(u - 0.2) + square(v + 0.15))) + 0.3 * exp(-4.5 * (square(u + 0.45) + square(v - 0.42))) + 0.08 * sin(5.3 * u + 1.7) * sin(4.1 * v + 0.6) + 0.035 * sin(11 * u - 7 * v) + 0.02 * cos(17 * v + 9 * u + 1) - 0.12 - 0.2 * (square(square(u)) + square(square(v)))), @sea)"
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "identity"
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "rotate",
+              "angle": "@tilt",
+              "axis": [
+               1,
+               0,
+               0
+              ]
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "rotate",
+              "angle": "@spin",
+              "axis": [
+               0,
+               1,
+               0
+              ]
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "translate",
+              "x": 0,
+              "y": "-0.04",
+              "z": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.background"
+               }
+              ]
+             }
+            },
+            {
+             "drawMesh3D": {
+              "mesh": 11,
+              "mode": "software-flat"
+             }
+            },
+            {
+             "depthBias3D": {
+              "constant": -0.003,
+              "slope": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onSurface"
+               }
+              ]
+             }
+            },
+            {
+             "drawMesh3D": {
+              "mesh": 11,
+              "mode": "software-flat",
+              "wireframe": true,
+              "edges": [
+               0,
+               1
+              ]
+             }
+            },
+            {
+             "depthBias3D": {
+              "constant": 0,
+              "slope": 0
+             }
+            }
+           ],
+           "else": [
+            {
+             "lights3D": {
+              "lights": [
+               {
+                "type": "directional",
+                "dir": [
+                 0.5,
+                 -0.75,
+                 -0.35
+                ],
+                "color": "#FFFFF4E0",
+                "intensity": 0.85
+               },
+               {
+                "type": "directional",
+                "dir": [
+                 -0.6,
+                 -0.3,
+                 0.5
+                ],
+                "color": "#FFD8E6FF",
+                "intensity": 0.3
+               }
+              ]
+             }
+            },
+            {
+             "meshPrimitive3D": {
+              "id": 1,
+              "primitive": "cube",
+              "dimX": 1,
+              "dimY": 1,
+              "dimZ": 1,
+              "center": [
+               0,
+               0,
+               0
+              ]
+             }
+            },
+            {
+             "meshPrimitive3D": {
+              "id": 10,
+              "primitive": "cone",
+              "radius": 0.045,
+              "height": 0.13,
+              "center": [
+               0,
+               0,
+               0
+              ],
+              "segments": 7
+             }
+            },
+            {
+             "meshExpression3D": {
+              "id": 2,
+              "surface": "general",
+              "uRange": [
+               -0.99,
+               0.99
+              ],
+              "vRange": [
+               -0.99,
+               0.99
+              ],
+              "uCount": 41,
+              "vCount": 41,
+              "x": "u",
+              "z": "v",
+              "y": "min((0.5 * exp(-2.4 * (square(u - 0.2) + square(v + 0.15))) + 0.3 * exp(-4.5 * (square(u + 0.45) + square(v - 0.42))) + 0.08 * sin(5.3 * u + 1.7) * sin(4.1 * v + 0.6) + 0.035 * sin(11 * u - 7 * v) + 0.02 * cos(17 * v + 9 * u + 1) - 0.12 - 0.2 * (square(square(u)) + square(square(v)))) + 0.03, @sea + 0.003)"
+             }
+            },
+            {
+             "meshExpression3D": {
+              "id": 3,
+              "surface": "general",
+              "uRange": [
+               -0.99,
+               0.99
+              ],
+              "vRange": [
+               -0.99,
+               0.99
+              ],
+              "uCount": 41,
+              "vCount": 41,
+              "x": "u",
+              "z": "v",
+              "y": "min((0.5 * exp(-2.4 * (square(u - 0.2) + square(v + 0.15))) + 0.3 * exp(-4.5 * (square(u + 0.45) + square(v - 0.42))) + 0.08 * sin(5.3 * u + 1.7) * sin(4.1 * v + 0.6) + 0.035 * sin(11 * u - 7 * v) + 0.02 * cos(17 * v + 9 * u + 1) - 0.12 - 0.2 * (square(square(u)) + square(square(v)))) + 0.1, @sea + 0.002)"
+             }
+            },
+            {
+             "meshExpression3D": {
+              "id": 4,
+              "surface": "general",
+              "uRange": [
+               -0.997,
+               0.997
+              ],
+              "vRange": [
+               -0.997,
+               0.997
+              ],
+              "uCount": 41,
+              "vCount": 41,
+              "x": "u",
+              "z": "v",
+              "y": "min((0.5 * exp(-2.4 * (square(u - 0.2) + square(v + 0.15))) + 0.3 * exp(-4.5 * (square(u + 0.45) + square(v - 0.42))) + 0.08 * sin(5.3 * u + 1.7) * sin(4.1 * v + 0.6) + 0.035 * sin(11 * u - 7 * v) + 0.02 * cos(17 * v + 9 * u + 1) - 0.12 - 0.2 * (square(square(u)) + square(square(v)))), @sea + 0.035)"
+             }
+            },
+            {
+             "meshExpression3D": {
+              "id": 5,
+              "surface": "general",
+              "uRange": [
+               -0.997,
+               0.997
+              ],
+              "vRange": [
+               -0.997,
+               0.997
+              ],
+              "uCount": 41,
+              "vCount": 41,
+              "x": "u",
+              "z": "v",
+              "y": "min((0.5 * exp(-2.4 * (square(u - 0.2) + square(v + 0.15))) + 0.3 * exp(-4.5 * (square(u + 0.45) + square(v - 0.42))) + 0.08 * sin(5.3 * u + 1.7) * sin(4.1 * v + 0.6) + 0.035 * sin(11 * u - 7 * v) + 0.02 * cos(17 * v + 9 * u + 1) - 0.12 - 0.2 * (square(square(u)) + square(square(v)))), 0.17)"
+             }
+            },
+            {
+             "meshExpression3D": {
+              "id": 6,
+              "surface": "general",
+              "uRange": [
+               -0.997,
+               0.997
+              ],
+              "vRange": [
+               -0.997,
+               0.997
+              ],
+              "uCount": 41,
+              "vCount": 41,
+              "x": "u",
+              "z": "v",
+              "y": "min((0.5 * exp(-2.4 * (square(u - 0.2) + square(v + 0.15))) + 0.3 * exp(-4.5 * (square(u + 0.45) + square(v - 0.42))) + 0.08 * sin(5.3 * u + 1.7) * sin(4.1 * v + 0.6) + 0.035 * sin(11 * u - 7 * v) + 0.02 * cos(17 * v + 9 * u + 1) - 0.12 - 0.2 * (square(square(u)) + square(square(v)))), 0.27)"
+             }
+            },
+            {
+             "meshExpression3D": {
+              "id": 7,
+              "surface": "general",
+              "uRange": [
+               -0.997,
+               0.997
+              ],
+              "vRange": [
+               -0.997,
+               0.997
+              ],
+              "uCount": 41,
+              "vCount": 41,
+              "x": "u",
+              "z": "v",
+              "y": "min((0.5 * exp(-2.4 * (square(u - 0.2) + square(v + 0.15))) + 0.3 * exp(-4.5 * (square(u + 0.45) + square(v - 0.42))) + 0.08 * sin(5.3 * u + 1.7) * sin(4.1 * v + 0.6) + 0.035 * sin(11 * u - 7 * v) + 0.02 * cos(17 * v + 9 * u + 1) - 0.12 - 0.2 * (square(square(u)) + square(square(v)))), 0.37)"
+             }
+            },
+            {
+             "meshExpression3D": {
+              "id": 8,
+              "surface": "general",
+              "uRange": [
+               -0.997,
+               0.997
+              ],
+              "vRange": [
+               -0.997,
+               0.997
+              ],
+              "uCount": 41,
+              "vCount": 41,
+              "x": "u",
+              "z": "v",
+              "y": "(0.5 * exp(-2.4 * (square(u - 0.2) + square(v + 0.15))) + 0.3 * exp(-4.5 * (square(u + 0.45) + square(v - 0.42))) + 0.08 * sin(5.3 * u + 1.7) * sin(4.1 * v + 0.6) + 0.035 * sin(11 * u - 7 * v) + 0.02 * cos(17 * v + 9 * u + 1) - 0.12 - 0.2 * (square(square(u)) + square(square(v))))"
+             }
+            },
+            {
+             "meshExpression3D": {
+              "id": 9,
+              "surface": "general",
+              "uRange": [
+               -1.05,
+               1.05
+              ],
+              "vRange": [
+               -1.05,
+               1.05
+              ],
+              "uCount": 43,
+              "vCount": 43,
+              "x": "clamp(-1, 1, u)",
+              "z": "clamp(-1, 1, v)",
+              "y": "((0.5 * exp(-2.4 * (square(clamp(-1, 1, u) - 0.2) + square(clamp(-1, 1, v) + 0.15))) + 0.3 * exp(-4.5 * (square(clamp(-1, 1, u) + 0.45) + square(clamp(-1, 1, v) - 0.42))) + 0.08 * sin(5.3 * clamp(-1, 1, u) + 1.7) * sin(4.1 * clamp(-1, 1, v) + 0.6) + 0.035 * sin(11 * clamp(-1, 1, u) - 7 * clamp(-1, 1, v)) + 0.02 * cos(17 * clamp(-1, 1, v) + 9 * clamp(-1, 1, u) + 1) - 0.12 - 0.2 * (square(square(clamp(-1, 1, u))) + square(square(clamp(-1, 1, v))))) - 0.006) * (1 - clamp(0, 1, (max(abs(u), abs(v)) - 1.0001) * 1000)) + -0.42 * clamp(0, 1, (max(abs(u), abs(v)) - 1.0001) * 1000)"
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "identity"
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "rotate",
+              "angle": "@tilt",
+              "axis": [
+               1,
+               0,
+               0
+              ]
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "rotate",
+              "angle": "@spin",
+              "axis": [
+               0,
+               1,
+               0
+              ]
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "translate",
+              "x": 0,
+              "y": "-0.04",
+              "z": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.foam"
+               }
+              ]
+             }
+            },
+            {
+             "drawMesh3D": {
+              "mesh": 2,
+              "mode": "software-flat"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.shallow"
+               }
+              ]
+             }
+            },
+            {
+             "drawMesh3D": {
+              "mesh": 3,
+              "mode": "software-flat"
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "translate",
+              "x": 0,
+              "y": "(@sea + -0.42) / 2",
+              "z": 0
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "scale",
+              "x": 1.994,
+              "y": "@sea - -0.42",
+              "z": 1.994
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.deep"
+               }
+              ]
+             }
+            },
+            {
+             "drawMesh3D": {
+              "mesh": 1,
+              "mode": "software-flat"
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "identity"
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "rotate",
+              "angle": "@tilt",
+              "axis": [
+               1,
+               0,
+               0
+              ]
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "rotate",
+              "angle": "@spin",
+              "axis": [
+               0,
+               1,
+               0
+              ]
+             }
+            },
+            {
+             "matrix3D": {
+              "op": "translate",
+              "x": 0,
+              "y": "-0.04",
+              "z": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.sand"
+               }
+              ]
+             }
+            },
+            {
+             "drawMesh3D": {
+              "mesh": 4,
+              "mode": "software-flat"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.grass"
+               }
+              ]
+             }
+            },
+            {
+             "drawMesh3D": {
+              "mesh": 5,
+              "mode": "software-flat"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.forest"
+               }
+              ]
+             }
+            },
+            {
+             "drawMesh3D": {
+              "mesh": 6,
+              "mode": "software-flat"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.rock"
+               }
+              ]
+             }
+            },
+            {
+             "drawMesh3D": {
+              "mesh": 7,
+              "mode": "software-flat"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.snow"
+               }
+              ]
+             }
+            },
+            {
+             "drawMesh3D": {
+              "mesh": 8,
+              "mode": "software-flat"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.soil"
+               }
+              ]
+             }
+            },
+            {
+             "drawMesh3D": {
+              "mesh": 9,
+              "mode": "software-flat"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.tree"
+               }
+              ]
+             }
+            },
+            {
+             "loop": {
+              "index": "i",
+              "from": 0,
+              "step": 4,
+              "until": 64,
+              "commands": [
+               {
+                "matrix3D": {
+                 "op": "identity"
+                }
+               },
+               {
+                "matrix3D": {
+                 "op": "rotate",
+                 "angle": "@tilt",
+                 "axis": [
+                  1,
+                  0,
+                  0
+                 ]
+                }
+               },
+               {
+                "matrix3D": {
+                 "op": "rotate",
+                 "angle": "@spin",
+                 "axis": [
+                  0,
+                  1,
+                  0
+                 ]
+                }
+               },
+               {
+                "matrix3D": {
+                 "op": "translate",
+                 "x": 0,
+                 "y": "-0.04",
+                 "z": 0
+                }
+               },
+               {
+                "matrix3D": {
+                 "op": "translate",
+                 "x": "arrayGet(@trees, i)",
+                 "y": "arrayGet(@trees, i + 1)",
+                 "z": "arrayGet(@trees, i + 2)"
+                }
+               },
+               {
+                "matrix3D": {
+                 "op": "scale",
+                 "x": "arrayGet(@trees, i + 3) * step(arrayGet(@trees, i + 1), @sea + 0.045)",
+                 "y": "arrayGet(@trees, i + 3)",
+                 "z": "arrayGet(@trees, i + 3) * step(arrayGet(@trees, i + 1), @sea + 0.045)"
+                }
+               },
+               {
+                "drawMesh3D": {
+                 "mesh": 10,
+                 "mode": "software-flat"
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 76
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

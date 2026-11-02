@@ -1,7 +1,9 @@
 // Public web pages of the example catalog, served by rc-examples (examples-server.mjs) next to
 // its MCP endpoint, without auth (the catalog is public content):
-//   GET <base>/                 every example as a grid of renders, filterable
-//   GET <base>/components/      every library component, the same way
+//   GET <base>/                 every library component as a grid of renders, filterable (first:
+//                               components and structures are where a document starts)
+//   GET <base>/structures/      the screen structures, each opening its first example
+//   GET <base>/examples/        every example the same way, with its .rc size up front
 //   GET <base>/play/<id>/       a playground for one example or component demo: the deploy
 //                               server's page (lib/web-page.mjs), built on demand; #t=light
 //                               or #t=dark opens it in that theme, #t=mono-dark or
@@ -29,6 +31,7 @@ import { buildPage, escapeHtml as esc, formatBytes } from "./web-page.mjs";
 import { playerBundle } from "./web-player.mjs";
 import { MONO_VAR, monoPalettes, usesComponents } from "./components.mjs";
 import { compileComponents, jsonToRc } from "./json2rc.mjs";
+import { STRUCTURES } from "./structures.mjs";
 
 const WEB_SETTABLE = new Set(["float", "int", "color", "string", "float_array"]);
 const HEADERS = {
@@ -211,6 +214,11 @@ main { max-width:1280px; margin:0 auto; padding:8px 16px 48px; display:grid; gap
 .thumb span { color:var(--muted); font-size:12px; }
 .body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:4px; }
 .id { font:600 12px ui-monospace,Menlo,monospace; color:var(--accent); }
+.head { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.size { font:700 13px ui-monospace,Menlo,monospace; padding:2px 8px; border-radius:999px; background:var(--chip); color:var(--ink); white-space:nowrap; }
+.size.s { background:color-mix(in srgb, #2e9d57 18%, transparent); }
+.size.m { background:color-mix(in srgb, #d08a00 18%, transparent); }
+.size.l { background:color-mix(in srgb, #d0453a 18%, transparent); }
 .title { font-weight:600; }
 .desc { color:var(--muted); font-size:13px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
 .tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
@@ -270,6 +278,19 @@ if (modeSel) {
   const all = () => { for (const c of cards) show(c, modeSel.value); try { localStorage.setItem("rc-mode", modeSel.value); } catch (e) {} };
   modeSel.addEventListener("change", all); if (saved) all();
 }
+// Order by .rc size: the cards carry their bytes.
+const sortSel = document.getElementById("sort");
+if (sortSel) {
+  const main = document.querySelector("main"), none = document.getElementById("none"), byId = cards.slice();
+  const order = () => {
+    const v = sortSel.value, list = byId.slice();
+    if (v) list.sort((a, b) => (Number(a.dataset.bytes) - Number(b.dataset.bytes)) * (v === "small" ? 1 : -1));
+    for (const c of list) main.insertBefore(c, none);
+    try { localStorage.setItem("rc-sort", v); } catch (e) {}
+  };
+  try { sortSel.value = localStorage.getItem("rc-sort") || ""; } catch (e) {}
+  sortSel.addEventListener("change", order); if (sortSel.value) order();
+}
 for (const b of chips) b.addEventListener("click", () => {
   fam = fam === b.dataset.family ? "" : b.dataset.family;
   for (const x of chips) x.setAttribute("aria-pressed", String(x.dataset.family === fam));
@@ -277,19 +298,21 @@ for (const b of chips) b.addEventListener("click", () => {
 });
 `;
 
-function page({ title, sub, current, families, cards, modes = false, generated = 0, kinds = false }) {
+function page({ title, sub, current, families, cards, modes = false, generated = 0, kinds = false, sizes = false }) {
     return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title><style>${CSS}</style></head>
 <body>
 <header>
-<nav><a href="${current === "examples" ? "./" : "../"}"${current === "examples" ? ' aria-current="page"' : ""}>Examples</a><a href="${current === "examples" ? "components/" : "./"}"${current === "components" ? ' aria-current="page"' : ""}>Components</a></nav>
+<nav>${[["components", "Components", ""], ["structures", "Structures", "structures/"], ["examples", "Examples", "examples/"]].map(([k, label, href]) =>
+    `<a href="${current === "components" ? (href || "./") : "../" + (href || "")}"${current === k ? ' aria-current="page"' : ""}>${label}</a>`).join("")}</nav>
 <h1>${esc(title)}</h1>
 <p class="sub">${sub}</p>
 <div class="bar"><input id="q" type="search" placeholder="Filter by name, tag or keyword" aria-label="Filter">
 ${families.map((f) => `<button type="button" data-family="${esc(f)}" aria-pressed="false">${esc(f)}</button>`).join("")}
 ${kinds ? `<select id="kind" aria-label="How it is built"><option value="">Any build</option><option value="library">Uses library components</option><option value="own">Defines its own components</option><option value="plain">Plain JSON, no components</option></select>` : ""}
 ${generated ? `<label class="gen"><input id="gen" type="checkbox"> ${generated} generated (eval runs)</label>` : ""}
+${sizes ? `<select id="sort" aria-label="Order"><option value="">${current === "examples" ? "Showcases first" : "By name"}</option><option value="small">Smallest first</option><option value="large">Largest first</option></select>` : ""}
 ${modes ? `<select id="mode" aria-label="Render"><option value="">Default render</option><option value="light">Light</option><option value="dark">Dark</option><option value="mono-dark">Mono dark (always-on, OLED)</option><option value="mono-light">Mono light (e-ink)</option></select>` : ""}</div>
 </header>
 <main>${cards.join("\n")}<p id="none" class="empty" hidden>Nothing matches.</p></main>
@@ -297,7 +320,15 @@ ${modes ? `<select id="mode" aria-label="Render"><option value="">Default render
 </body></html>`;
 }
 
-function card({ e, base, text, desc, tags, links, build }) {
+/** A document's .rc size, always in KB (the unit to compare documents by), and its band. */
+function sizeBadge(bytes) {
+    if (!bytes) return "";
+    const kb = bytes / 1024;
+    const band = kb < 8 ? "s" : kb < 24 ? "m" : "l";
+    return `<span class="size ${band}" title="${bytes.toLocaleString("en-US")} bytes of .rc">${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB</span>`;
+}
+
+function card({ e, base, text, desc, tags, links, build, bytes = 0 }) {
     const id = encodeURIComponent(e.id);
     const main = `${base}img/${id}.png`, play = `${base}play/${id}/`;
     const img = existsSync(path.join(EXAMPLES_DIR, e.folder, "render.png"))
@@ -309,9 +340,9 @@ function card({ e, base, text, desc, tags, links, build }) {
         return `<button type="button" data-mode="${esc(m.name)}" data-src="${src}" data-play="${href}" aria-pressed="false" title="Show the ${esc(m.name)} render"><img src="${src}" alt="" loading="lazy">${esc(m.name)}</button>`;
     }).join("")}</div>` : "";
     const tag = (t) => typeof t === "object" ? `<span class="${t.cls}" title="${esc(t.title)}">${esc(t.text)}</span>` : `<span>${esc(t)}</span>`;
-    return `<a class="card" href="${play}" data-play="${play}" data-family="${esc(e.family ?? "")}" data-kind="${esc(build?.kinds ?? "")}" data-text="${esc(text.toLowerCase())}">
+    return `<a class="card" href="${play}" data-play="${play}" data-family="${esc(e.family ?? "")}" data-kind="${esc(build?.kinds ?? "")}" data-bytes="${bytes}" data-text="${esc(text.toLowerCase())}">
 <div class="thumb">${img}</div>${strip}
-<div class="body"><span class="id">${esc(e.id)}</span>${build ? `<span class="kind ${build.cls}" title="${esc(build.title)}">${esc(build.label)}</span>` : ""}<span class="title">${esc(e.title ?? e.id)}</span>
+<div class="body"><span class="head"><span class="id">${esc(e.id)}</span>${sizeBadge(bytes)}</span>${build ? `<span class="kind ${build.cls}" title="${esc(build.title)}">${esc(build.label)}</span>` : ""}<span class="title">${esc(e.title ?? e.id)}</span>
 <span class="desc">${esc(desc ?? "")}</span>
 <span class="tags">${tags.map(tag).join("")}</span>
 <span class="links">${links}</span></div></a>`;
@@ -333,31 +364,33 @@ function buildKind(e, lib) {
 
 function examplesPage() {
     const C = loadCatalog();
-    const list = [...C.examples].sort((a, b) => a.id.localeCompare(b.id, "en", { numeric: true }));
-    const families = [...new Set(list.map((e) => e.family))].sort();
+    // Showcases (SHW) first: they show what the format can do; then the rest by id.
+    const first = (e) => (e.family === "SHW" ? 0 : 1);
+    const list = [...C.examples].sort((a, b) => first(a) - first(b) || a.id.localeCompare(b.id, "en", { numeric: true }));
+    const families = [...new Set(list.map((e) => e.family))].sort((a, b) => (a === "SHW" ? -1 : b === "SHW" ? 1 : a.localeCompare(b)));
     const lib = new Set(C.library.components.keys());
     const cards = list.map((e) => { const b = buildKind(e, lib); return card({
-        e, base: "", build: b,
+        e, base: "../", build: b, bytes: e.derived?.bytes ?? 0,
         text: [e.id, e.title, e.summary, e.prompt, ...(e.keywords ?? []), ...(e.capabilities?.primary ?? []), ...(e.capabilities?.secondary ?? []), ...(e.derived?.components ?? [])].join(" "),
         desc: e.summary,
         tags: [...(e.capabilities?.primary ?? []), ...(e.derived?.components ?? []).map((n) => lib.has(n)
             ? { text: n, cls: "lib", title: `${n}: a library component` }
             : { text: n, cls: "own", title: `${n}: defined in this document` })],
-        links: `<span>${formatBytes(e.derived?.bytes ?? 0)}</span>`,
+        links: "",
     }); });
     // The generated corpus, behind its toggle: one document per eval prompt, built with the tools.
     const gen = loadGenerated().filter((g) => existsSync(path.join(EXAMPLES_DIR, g.folder, "doc.json")));
     for (const g of gen) cards.push(card({
-        e: { ...g, family: "GEN" }, base: "",
+        e: { ...g, family: "GEN" }, base: "../", bytes: g.bytes ?? 0,
         text: [g.id, g.title, g.prompt, ...(g.keywords ?? []), ...(g.components ?? []), "generated"].join(" "),
         desc: g.prompt,
         tags: ["generated", ...(g.components ?? []).slice(0, 4)],
-        links: `<span>${formatBytes(g.bytes ?? 0)}</span>${g.run ? `<span>${g.run.calls} calls</span>` : ""}`,
+        links: g.run ? `<span>${g.run.calls} calls</span>` : "",
     }));
     if (gen.length && !families.includes("GEN")) families.push("GEN");
     return page({
-        title: "RemoteCompose examples", current: "examples", families, cards, modes: list.some((e) => e.derived?.renders), generated: gen.length, kinds: true,
-        sub: `${list.length} verified examples, each byte-identical to the Java parser's output. Click one to open it in the playground.`,
+        title: "RemoteCompose examples", current: "examples", families, cards, modes: list.some((e) => e.derived?.renders), generated: gen.length, kinds: true, sizes: true,
+        sub: `${list.length} verified examples, each byte-identical to the Java parser's output. The badge is the size of the .rc document a device downloads (green under 8 KB, amber under 24 KB, red above). Click one to open it in the playground.`,
     });
 }
 
@@ -370,17 +403,43 @@ function componentsPage() {
         const e = demo ?? { id: name, title: name, family: "COMP", folder: `components/${name}` };
         const gallery = C.examples.find((x) => x.kind === "gallery" && (x.derived?.components ?? []).includes(name));
         return card({
-            e, base: "../",
+            e, base: "", bytes: demo?.derived?.bytes ?? 0,
             text: [name, def.summary, demo?.prompt, ...(demo?.keywords ?? []), ...(C.vocab.components?.[name]?.synonyms ?? []), ...(def.capabilities ?? [])].join(" "),
             desc: def.summary,
             tags: Object.keys(def.params ?? {}).slice(0, 6),
-            links: (gallery ? `<span>in ${esc(gallery.id)}</span>` : "") + (demo ? `<span>${formatBytes(demo.derived?.bytes ?? 0)}</span>` : "<span>no demo yet</span>"),
+            links: (gallery ? `<span>in ${esc(gallery.id)}</span>` : "") + (demo ? "" : "<span>no demo yet</span>"),
         });
     });
     return page({
-        title: "RemoteCompose components", current: "components", families: [], cards, modes: true,
+        title: "RemoteCompose components", current: "components", families: [], cards, modes: true, sizes: true,
         sub: `${names.length} reusable components, each in a light, dark and two monochrome versions: mono dark (light on black, for always-on displays) and mono light (dark on white, for e-ink). Call one by name in any document ({"Gauge": {"value": "@cpu"}}); every tool expands it. Click one to open its demo in the playground.`,
     });
+}
+
+/** The screen structures (structures.mjs): what a request is shaped like, how each adapts, and where to start. */
+function structuresPage() {
+    const C = loadCatalog();
+    const byId = (id) => C.examples.find((e) => e.id === id);
+    const cards = STRUCTURES.map((st) => {
+        const starts = st.examples.map(byId).filter(Boolean);
+        const first = starts[0];
+        const e = first ? { ...first, id: st.id, title: st.id.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase()) }
+            : { id: st.id, title: st.id.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase()), family: "STRUCT", folder: "" };
+        const comps = [...new Set([...(st.template ? [st.template] : []), ...(st.core ?? []), ...(st.components ?? [])])];
+        const c = card({
+            e: { ...e, folder: first?.folder ?? "" }, base: "",
+            text: [st.id, st.is, st.adapts, ...comps, ...starts.map((x) => `${x.id} ${x.title}`)].join(" "),
+            desc: `${st.is}. Adapts: ${st.adapts}.`,
+            tags: comps.map((n) => ({ text: n, cls: "lib", title: `${n}: a library component this structure uses` })),
+            links: starts.length ? `<span>Start from ${starts.map((x) => `${esc(x.id)} <b>${esc(formatBytes(x.derived?.bytes ?? 0))}</b>`).join(", ")}</span>` : "<span>no example yet</span>",
+        });
+        // (The card links to its first example's playground; its id and image are that example's.)
+        return first ? c.replaceAll(`play/${encodeURIComponent(st.id)}/`, `play/${encodeURIComponent(first.id)}/`).replaceAll(`img/${encodeURIComponent(st.id)}`, `img/${encodeURIComponent(first.id)}`) : c;
+    });
+    return page({
+        title: "Screen structures", current: "structures", families: [], cards,
+        sub: `${STRUCTURES.length} recurring screen shapes, whatever their subject. build_kit guesses one from a request (or takes it as its structure parameter) and starts from its examples. Each card opens the structure's first example in the playground.`,
+    }).replaceAll('href="play/', 'href="../play/').replaceAll('data-play="play/', 'data-play="../play/').replaceAll('src="img/', 'src="../img/').replaceAll('data-main="img/', 'data-main="../img/').replaceAll('data-src="img/', 'data-src="../img/');
 }
 
 /** lib/mcp-server.mjs publicRoute: true when it answered the request. */
@@ -392,16 +451,21 @@ export async function publicRoute(req, url, res) {
         if (pm[1] !== player.name) return send(req, res, 404, "text/plain", "not found\n");
         return send(req, res, 200, "text/javascript; charset=utf-8", player.code, { "Cache-Control": "public, max-age=31536000, immutable" });
     }
-    const known = p === "/" || p === "" || /^\/(components|play|img|json)(\/|$)/.test(p);
+    const known = p === "/" || p === "" || /^\/(components|structures|examples|play|img|json)(\/|$)/.test(p);
     if (!known) return false;
     if (req.method !== "GET" && req.method !== "HEAD") {
         res.writeHead(405, { Allow: "GET, HEAD" });
         res.end();
         return true;
     }
-    if (p === "/" || p === "") return send(req, res, 200, "text/html; charset=utf-8", examplesPage());
-    if (p === "/components") { res.writeHead(301, { Location: `components/${url.search}` }); res.end(); return true; }
-    if (p === "/components/") return send(req, res, 200, "text/html; charset=utf-8", componentsPage());
+    // Components first: the landing page. Examples have their own page; /components/ (its old
+    // address) still goes to the components.
+    if (p === "/" || p === "") return send(req, res, 200, "text/html; charset=utf-8", componentsPage());
+    if (p === "/components" || p === "/components/") { res.writeHead(301, { Location: `${p.endsWith("/") ? "../" : "./"}${url.search}` }); res.end(); return true; }
+    if (p === "/examples") { res.writeHead(301, { Location: `examples/${url.search}` }); res.end(); return true; }
+    if (p === "/examples/") return send(req, res, 200, "text/html; charset=utf-8", examplesPage());
+    if (p === "/structures") { res.writeHead(301, { Location: `structures/${url.search}` }); res.end(); return true; }
+    if (p === "/structures/") return send(req, res, 200, "text/html; charset=utf-8", structuresPage());
     // The looks' old names (mono, mono-inverted) in links made before the rename.
     const renamed = p.replace(/^(\/play\/[^/]+\/)mono-inverted(\/|$)/, "$1mono-light$2").replace(/^(\/play\/[^/]+\/)mono(\/|$)/, "$1mono-dark$2")
         .replace(/^(\/img\/[^/]+\/)mono-inverted\.png$/, "$1mono-light.png").replace(/^(\/img\/[^/]+\/)mono\.png$/, "$1mono-dark.png")

@@ -1,0 +1,493 @@
+{
+ "id": "SHW-22",
+ "name": "living-sky",
+ "version": 1,
+ "title": "Living sky: a landscape that follows the time of day and the weather",
+ "summary": "A wallpaper-like landscape whose sky follows the real clock. Night, dawn, day and dusk gradients crossfade with the sun's elevation, and the sun or the moon (in its real phase) travels its arc. Stars twinkle at night, clouds drift, and a cabin's windows light up after sunset. @weather (0 clear, 1 rain, 2 snow) adds overcast, rain streaks or falling snow and snow-covered hills, and @temp is the readout. The same document is a phone screen and a 4x2 widget.",
+ "prompt": "A living landscape for my phone's home screen or a 4x2 widget. The sky follows the actual time of day: night, dawn, day and dusk colours blending smoothly, with the sun or moon moving across the sky and stars at night. It rains or snows depending on a weather value from the app (0 clear, 1 rain, 2 snow), and it shows the temperature.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "A whole illustrated scene on one canvas (sky layers, celestial arcs, ridges, pines, a cabin, weather particles). The library's WeatherIcon is a glyph-sized icon, not a scene.",
+ "capabilities": {
+  "primary": [
+   "time.clock",
+   "draw.gradient",
+   "host.variables",
+   "data.loop"
+  ],
+  "secondary": [
+   "time.date",
+   "expr.shaping",
+   "expr.trig",
+   "expr.select",
+   "data.random",
+   "data.condition",
+   "draw.path",
+   "draw.shapes",
+   "text.dynamic",
+   "data.measure"
+  ]
+ },
+ "use_cases": [
+  "weather",
+  "widget",
+  "generative-art"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "living wallpaper",
+  "live wallpaper",
+  "sky",
+  "time of day",
+  "day night cycle",
+  "sunrise",
+  "sunset",
+  "dawn",
+  "dusk",
+  "twilight",
+  "sun arc",
+  "moon",
+  "moon phase",
+  "stars",
+  "twinkle",
+  "clouds",
+  "rain",
+  "snow",
+  "weather",
+  "temperature",
+  "landscape",
+  "mountains",
+  "cabin",
+  "home screen",
+  "4x2 widget"
+ ],
+ "teaches": [
+  "One elevation drives everything: s = (h − sunrise) / (sunset − sunrise) by day, q = ((h − sunset + 24) % 24) / night length by night, el = ifElse(−sin(πq), sin(πs), isDay − 0.5). This runs from −1 at midnight through 0 at sunrise and sunset to 1 at noon, and it is continuous whatever the day length",
+  "A sky interpolated from the clock with no colour expressions: draw the night gradient, then the day gradient at alpha smooth_step(el, 0.32, −0.02), then dawn or dusk at alpha tw = 1 − |el + 0.02| / 0.2, chosen by morning = step(12.5, h). Stars use smooth_step(−el, …), and so do the moon and the cabin lamps",
+  "The moon's lit part is a single pathExpression: the limb for a ∈ [0, π], then the terminator back with x scaled by k = −cos(2π·phase). The mirror is ifElse(−1, 1, 0.5 − phase). The phase is the day count since a known new moon (2000-01-06 18:14 UTC), (year() − 2000)·365.25 + dayOfYear() + h/24 − 6.76, modulo the synodic month of 29.5306 days. That is within a day of the true phase. epochSecond() would be exact, but the Java JSON parser does not know it",
+  "Clouds are a closed pathExpression each (a flat-bottomed oval with |sin| bumps), so one translucent fill per cloud has no seams. They drift with T = timeInHr()·3600 + continuousSec() and wrap with %. Their count is 3 + 4·min(@weather, 1)",
+  "Rain and snow are clock-driven loops, not particle systems: y = (seed·(H + 40) + t·speed) % (H + 40) − 20. Every frame is a pure function of the time, so any clock renders the same in every player and nothing needs warming up. A conditionalOperations on @weather == 1 or 2 runs only the active loop",
+  "Ridges are pathCreate plus 49 pathAppendLineTo in a loop, closed along the bottom. Each is painted in its day colour, then a night veil at 1 − dayA, a dusk tint at tw·0.35, and a snow cover when @weather == 2",
+  "Sizes come from the box: horizon at 0.7·H, sun and moon radii from min(W, 1.2·H), and text clamp(34, 96, min(H·0.095, W·0.2)). Below 300 dp of height the third line drops its 'Sunrise / Sunset' part (code = isDay + 2·step(H, 300) picks the variant), so the 4x2 widget keeps the temperature, condition and time",
+  "Condition text: ci = @weather + 3·step(starA, 0.3)·(1 − wet) picks one of four conditional drawTextAnchored ('Clear', 'Rain', 'Snow', 'Clear night'). addDataList + textLookup would be shorter, but the Java parser drops the list id (U4)"
+ ],
+ "pitfalls": [
+  "json2rc writes a `variable` (and a resource variable) where it is first used. If that first use is inside a conditionalOperations whose condition is false, the TypeScript player never computes it, and later uses read 0. Here, S first used in the moon block left the daytime sun at its minimum size and drew no clouds, pines or cabin. The C++ player computes it anyway. Make sure every shared variable is used once outside a conditional before any conditional block (here the sun and moon draw unconditionally, and their alpha hides them). The same goes for a TextFromFloat: a clock text first used inside a skipped conditional showed a stale hour in the TypeScript player. So the three variants of the third line are chosen by paint alpha (step(2, code), …), not by conditionals",
+  "Two loops that declare the same variable with the same expression share one FloatExpression: json2rc (like the Java parser, byte-identical) does not write it again in the second loop, so the second loop never recomputes it and reads the first loop's last value. Draw all the passes for a cloud inside one loop body, or use different names",
+  "smooth_step is smooth_step(value, upper, lower), and ifElse is ifElse(else, then, condition)",
+  "% is a float remainder that keeps the sign: add the span before % ((x + W) % W) when x can be negative",
+  "The moon travels the night arc between sunset and sunrise. That is a stylisation: the real moon rises later each day with its phase. The phase itself is real",
+  "Every expression stays within Android's 32 entries. The cloud position needed its span (cspan) split out to get there"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/7",
+   "shows": "time.clock",
+   "note": "elevation from the clock and the host sunrise/sunset"
+  },
+  {
+   "pointer": "/root/commands/34",
+   "shows": "draw.gradient",
+   "note": "the day sky over the night one, alpha from the elevation"
+  },
+  {
+   "pointer": "/root/commands/52",
+   "shows": "draw.path",
+   "note": "the moon's lit part in its real phase"
+  },
+  {
+   "pointer": "/root/commands/56",
+   "shows": "data.loop",
+   "note": "drifting clouds, one closed path each, three passes (white, dusk tint, rain grey)"
+  },
+  {
+   "pointer": "/root/commands/119",
+   "shows": "host.variables",
+   "note": "rain only when @weather == 1"
+  },
+  {
+   "pointer": "/root/commands/133",
+   "shows": "text.dynamic",
+   "note": "condition word chosen by ci = @weather + 3·night, one conditional text each"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "weather": {
+    "min": 0,
+    "max": 2,
+    "step": 1,
+    "meaning": "0 clear, 1 rain, 2 snow"
+   },
+   "temp": {
+    "min": -20,
+    "max": 40,
+    "meaning": "temperature in °C"
+   },
+   "sunrise": {
+    "min": 4,
+    "max": 10,
+    "meaning": "sunrise, hours (7.3 = 07:18)"
+   },
+   "sunset": {
+    "min": 15,
+    "max": 22,
+    "meaning": "sunset, hours"
+   }
+  },
+  "clock": "2026-11-02T12:30",
+  "touch": false
+ },
+ "check": {
+  "describe": "12:30: blue day sky, sun high, white clouds, green ridges, pines, a red-brown cabin with smoke; '9°', 'Clear' and '12:30 · Sunset 17:17' top left. 07:10: purple-to-peach dawn with pink clouds. 17:25: orange dusk with a purple ridge silhouette. 21:30: navy sky, twinkling stars, the waning moon, the cabin windows glowing. Rain: grey overcast veil, grey clouds, slanted streaks. Snow by night: snow-white ridges, roof and pines, falling flakes, '-3°'. The widget (360x180) keeps temperature, condition and time; the tablet scales the scene and the text.",
+  "render": {
+   "clock": "2026-11-02T12:30"
+  },
+  "renders": [
+   {
+    "name": "dawn",
+    "clock": "2026-11-02T07:10"
+   },
+   {
+    "name": "dusk",
+    "clock": "2026-11-02T17:25"
+   },
+   {
+    "name": "night",
+    "clock": "2026-11-02T21:30"
+   },
+   {
+    "name": "rain",
+    "clock": "2026-11-02T12:30",
+    "variables": {
+     "weather": 1,
+     "temp": 6
+    }
+   },
+   {
+    "name": "snow-night",
+    "clock": "2026-11-02T23:10",
+    "variables": {
+     "weather": 2,
+     "temp": -3
+    }
+   },
+   {
+    "name": "widget",
+    "width": 360,
+    "height": 180,
+    "clock": "2026-11-02T13:00"
+   },
+   {
+    "name": "widget-snow",
+    "width": 360,
+    "height": 180,
+    "clock": "2026-11-02T13:00",
+    "variables": {
+     "weather": 2,
+     "temp": -4
+    }
+   },
+   {
+    "name": "tablet",
+    "width": 800,
+    "height": 1280,
+    "clock": "2026-11-02T17:05"
+   }
+  ]
+ },
+ "related": [
+  "EXP-14",
+  "TIM-11",
+  "TIM-12",
+  "SHW-01",
+  "DRW-13",
+  "VAR-08",
+  "SHW-12"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 10742,
+  "header": {
+   "width": 360,
+   "height": 780
+  },
+  "op_count": 389,
+  "operations": {
+   "ANIMATED_FLOAT": 167,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "ConditionalOperations": 19,
+   "DATA_FLOAT": 4,
+   "DATA_TEXT": 15,
+   "DRAW_CIRCLE": 9,
+   "DRAW_LINE": 1,
+   "DRAW_PATH": 22,
+   "DRAW_RECT": 12,
+   "DRAW_TEXT_ANCHOR": 13,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 9,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 4,
+   "PAINT_VALUES": 56,
+   "PATH_CREATE": 5,
+   "PathAppend": 15,
+   "PathExpression": 2,
+   "TextFromFloat": 10,
+   "TextMerge": 16
+  },
+  "host_variables": [
+   {
+    "name": "sunrise",
+    "type": "float",
+    "value": 7.30000019
+   },
+   {
+    "name": "sunset",
+    "type": "float",
+    "value": 17.2999992
+   },
+   {
+    "name": "temp",
+    "type": "float",
+    "value": 9
+   },
+   {
+    "name": "weather",
+    "type": "float",
+    "value": 0
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 4
+  },
+  "audit_findings": [
+   "info: repaint_continuous",
+   "info: hardcoded_colors",
+   "info: text_in_canvas",
+   "info: expression_entries"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "dawn": {
+    "render": "render-dawn.png",
+    "render_findings": []
+   },
+   "dusk": {
+    "render": "render-dusk.png",
+    "render_findings": []
+   },
+   "night": {
+    "render": "render-night.png",
+    "render_findings": []
+   },
+   "rain": {
+    "render": "render-rain.png",
+    "render_findings": []
+   },
+   "snow-night": {
+    "render": "render-snow-night.png",
+    "render_findings": []
+   },
+   "widget": {
+    "render": "render-widget.png",
+    "render_findings": [],
+    "size": [
+     360,
+     180
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "widget-snow": {
+    "render": "render-widget-snow.png",
+    "render_findings": [],
+    "size": [
+     360,
+     180
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "tablet": {
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "apiLevel",
+   "background",
+   "bottom",
+   "centerX",
+   "centerY",
+   "color",
+   "colors",
+   "commands",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "decimal",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawRect",
+   "drawTextAnchored",
+   "end",
+   "export",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "from",
+   "header",
+   "height",
+   "id",
+   "id1",
+   "id2",
+   "index",
+   "left",
+   "linearGradient",
+   "loop",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "pathAppendClose",
+   "pathAppendLineTo",
+   "pathCreate",
+   "pathExpression",
+   "profiles",
+   "radialGradient",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "shader",
+   "start",
+   "stops",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "sunrise",
+   "sunset",
+   "temp",
+   "text",
+   "textSize",
+   "top",
+   "type",
+   "until",
+   "v1",
+   "v2",
+   "value",
+   "variable",
+   "variables",
+   "weather",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "time.clock": [
+    "timeInHr",
+    "timeInMin",
+    "timeInSec",
+    "continuousSec"
+   ],
+   "draw.gradient": [
+    "linearGradient",
+    "radialGradient"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "time.date": [
+    "year",
+    "dayOfYear"
+   ],
+   "expr.shaping": [
+    "smooth_step(",
+    "clamp(",
+    "step(",
+    "fract("
+   ],
+   "expr.trig": [
+    "sin(",
+    "cos("
+   ],
+   "expr.select": [
+    "ifElse(",
+    "step("
+   ],
+   "data.random": [
+    "rand"
+   ],
+   "data.condition": [
+    "conditionalOperations",
+    "ifElse",
+    "step()"
+   ],
+   "draw.path": [
+    "drawPath",
+    "pathCreate",
+    "pathAppendLineTo",
+    "pathAppendClose"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawCircle",
+    "drawLine"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "data.measure": [
+    "componentWidth()",
+    "componentHeight()"
+   ]
+  },
+  "built_at": "2026-11-02T18:48:37.805Z"
+ }
+}

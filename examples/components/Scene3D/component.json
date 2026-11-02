@@ -1,0 +1,214 @@
+{
+ "component": "Scene3D",
+ "version": 1,
+ "summary": "A 3D scene from named primitives (box, sphere, cylinder, cone, torus, plane), each with a size, a position, a rotation and a theme colour: the server frames them with a camera that fits every angle at any window shape, lights them, and adds drag to orbit, autorotate and an assembly animation. No 3D maths for the caller. Plays in the C++ and TypeScript players; 3D support has not landed in androidx yet (coming).",
+ "capabilities": [
+  "3d.scene",
+  "3d.mesh",
+  "input.drag"
+ ],
+ "params": {
+  "objects": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One entry per part: {\"shape\": \"box\", \"size\": [w, h, d], \"at\": [x, y, z], \"color\": \"@colors.primary\"}. Units are yours (metres, cm: the camera adapts), Y up, X right, Z toward the viewer; `at` is the centre of the part's box. Shapes: box (size [w, h, d]; \"round\": r for rounded edges), sphere (size = diameter, or [x, y, z] for an ellipsoid), cylinder and cone (size [diameter, height]; a cone's apex points along its axis), torus (size [outer diameter, tube thickness], lying flat), plane (size [w, d], lying flat, seen from above). Optional: \"axis\": \"x\" | \"z\" | \"-y\" ... turns a round shape (a cylinder with axis \"z\" faces the viewer like a speaker cone), \"rotate\": [rx, ry, rz] degrees, \"from\": [dx, dy, dz] where the part starts in the assembly animation (default: away from the centre), \"step\": parts with the same step move together. Up to 40 parts"
+  },
+  "label": {
+   "type": "string",
+   "doc": "What the scene shows, for a screen reader: \"A bookshelf assembling itself\""
+  },
+  "orbit": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Drag to turn the scene (left-right spins it, up-down tilts it within tiltRange); it coasts to a stop"
+  },
+  "autorotate": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Turns on its own, in degrees per second (20 is a slow turntable; negative turns the other way). Repaints every frame while shown. Off in mono"
+  },
+  "spin": {
+   "type": "float",
+   "default": -30,
+   "static": true,
+   "doc": "The starting view, degrees around the vertical axis: 0 is straight on, -30 shows the front and the right side"
+  },
+  "tilt": {
+   "type": "float",
+   "default": 20,
+   "static": true,
+   "doc": "The starting view, degrees looking down from above: 0 is level, 20 shows the top a little"
+  },
+  "tiltRange": {
+   "type": "list",
+   "default": [
+    -5,
+    50
+   ],
+   "static": true,
+   "doc": "How far a drag may tilt, [low, high] in degrees (within -89 to 89). The camera frames every angle in this range, so a wider range leaves the scene smaller"
+  },
+  "assemble": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Assembly animation: the parts fly in one after another (in list order, or by `step`), the whole holds, then flies apart and repeats. Each part starts at its `from` offset. In mono the scene shows assembled and still"
+  },
+  "stagger": {
+   "type": "float",
+   "default": 0.45,
+   "static": true,
+   "doc": "Seconds between one step's start and the next one's"
+  },
+  "hold": {
+   "type": "float",
+   "default": 2.5,
+   "static": true,
+   "doc": "Seconds the assembled whole holds before it flies apart"
+  },
+  "frame": {
+   "type": "enum",
+   "values": [
+    "auto",
+    "assembled",
+    "all"
+   ],
+   "default": "auto",
+   "static": true,
+   "doc": "What the camera keeps in view: the assembled object, or also the parts at their start offsets. auto: all with assemble, else assembled"
+  },
+  "light": {
+   "type": "enum",
+   "values": [
+    "studio",
+    "soft",
+    "flat"
+   ],
+   "default": "studio",
+   "static": true,
+   "doc": "studio: a key light from the upper left and a cool fill from the right (product shot). soft: three lights, no dark faces. flat: from the front, faces close to their colour (diagrams)"
+  },
+  "style": {
+   "type": "enum",
+   "values": [
+    "solid",
+    "outlined",
+    "wireframe"
+   ],
+   "default": "solid",
+   "static": true,
+   "doc": "solid: lit faces. outlined: lit faces with their edges drawn in lineColor (a technical look). wireframe: only the edges, in each part's colour. Mono is always background faces with onSurface edges"
+  },
+  "floor": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "A thin disc under the scene, in floorColor (a turntable)"
+  },
+  "floorColor": {
+   "type": "color",
+   "default": "@colors.surfaceHigh",
+   "doc": "The floor disc's colour"
+  },
+  "fill": {
+   "type": "float",
+   "default": 0.9,
+   "static": true,
+   "doc": "The fraction of the view the scene may reach at its widest reachable angle (0.3 to 1)"
+  },
+  "insetTop": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "dp kept clear at the top for the overlay (a title): the scene is framed in the window's height minus the insets and moved below it, at every window size"
+  },
+  "insetBottom": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "dp kept clear at the bottom for the overlay (a caption, a button)"
+  },
+  "background": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "The window behind the scene; also the faces' fill in mono"
+  },
+  "lineColor": {
+   "type": "color",
+   "default": "@colors.onSurface",
+   "doc": "Edges in the outlined style and in mono"
+  }
+ },
+ "slots": {
+  "overlay": {
+   "optional": true,
+   "doc": "Nodes drawn over the scene (a title, a caption, a button), in a box that fills the window: align them with a column or modifiers, and keep their room clear with insetTop / insetBottom. The 3D always fills the window behind them"
+  }
+ },
+ "body": {
+  "$gen": {
+   "kind": "scene3d",
+   "objects": "@objects",
+   "label": "@label",
+   "orbit": "@orbit",
+   "autorotate": "@autorotate",
+   "spin": "@spin",
+   "tilt": "@tilt",
+   "tiltRange": "@tiltRange",
+   "assemble": "@assemble",
+   "stagger": "@stagger",
+   "hold": "@hold",
+   "frame": "@frame",
+   "light": "@light",
+   "style": "@style",
+   "floor": "@floor",
+   "floorColor": "@floorColor",
+   "fill": "@fill",
+   "background": "@background",
+   "lineColor": "@lineColor",
+   "overlay": {
+    "$slot": "overlay"
+   },
+   "insetTop": "@insetTop",
+   "insetBottom": "@insetBottom"
+  }
+ },
+ "call": {
+  "Scene3D": {
+   "label": "A blue cube on a grey slab",
+   "objects": [
+    {
+     "shape": "box",
+     "size": [
+      2,
+      0.2,
+      1.2
+     ],
+     "color": "@colors.outline"
+    },
+    {
+     "shape": "box",
+     "size": 0.6,
+     "at": [
+      0,
+      0.4,
+      0
+     ],
+     "color": "@colors.primary"
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "3D support has not landed in androidx yet (coming): the scene plays in the C++ and TypeScript players (rc2image, the web player, the MCP renders) and the Java JSON parser drops its 3D operations. Don't use it for a screen that must play on Android today",
+  "Scene3D fills the window: the players draw 3D into a window-sized buffer placed at the canvas's top left, so a 3D canvas in a column or beside other content is drawn off-centre and spills out of its box. Put titles and captions in the overlay slot and reserve their height with insetTop / insetBottom (dp), so the scene is framed below them",
+  "Name parts, don't compute views: give sizes and centres in the object's own units; the camera, the tilt and spin and the framing are the server's. Don't add your own camera3D or matrix3D around it",
+  "Each part is drawn in software every frame: keep to about 30 parts (each costs about 60 to 90 B and a few ms per frame on a phone-sized window); spheres, cylinders and tori are 100 to 600 triangles each, boxes 12",
+  "Colours are theme colours lit by the preset: a light part on the light background (surface on background) loses its edges; use outline, surfaceHigh, muted, primary and secondary for bodies, or style outlined",
+  "autorotate and assemble repaint every frame for as long as the scene is shown (continuousSec); leave both off for a still product shot that only moves when dragged",
+  "A plane is single-sided (seen from above); for a panel seen from both sides use a thin box"
+ ]
+}

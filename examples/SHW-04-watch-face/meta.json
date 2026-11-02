@@ -1,0 +1,528 @@
+{
+ "id": "SHW-04",
+ "name": "watch-face",
+ "version": 1,
+ "title": "A premium analog watch face with steps, battery and an always-on mode",
+ "summary": "A 227x227 round watch face drawn in 3.5 KB: faceted dauphine hands with drop shadows, a smooth sweeping second hand with a counterweight, exact 60-minute track and hour batons from two loops, a steps ring from host variables at nine, a battery ring from the system battery at three (amber below 40%, red with LOW below 20%), and the weekday and date at six. The always-on (mono) look drops the second hand, the gradient and the colour, and outlines the hands.",
+ "prompt": "Design a premium round watch face (227x227, it should scale to any round watch): analog hands with a smooth second hand, the date, a battery arc from the system battery that turns red when low, my steps as a ring from a host value, and an always-on mode.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "A watch face is a drawing, not a layout: the hands, the dauphine facets, the shadows and the exact tick geometry are canvas commands in one 227-unit design space scaled to the screen; AnalogClock draws a plainer clock and has no complications.",
+ "capabilities": {
+  "primary": [
+   "time.clock",
+   "draw.transform",
+   "host.variables"
+  ],
+  "secondary": [
+   "time.date",
+   "data.loop",
+   "draw.arc",
+   "draw.path",
+   "draw.gradient",
+   "data.condition",
+   "text.dynamic",
+   "expr.string"
+  ]
+ },
+ "use_cases": [
+  "watch-face",
+  "fitness"
+ ],
+ "form_factor": "watch-round",
+ "keywords": [
+  "watch face",
+  "wear os",
+  "smartwatch",
+  "analog watch",
+  "sweep second hand",
+  "smooth seconds",
+  "complication",
+  "date window",
+  "battery",
+  "low battery",
+  "steps",
+  "step goal",
+  "always on",
+  "ambient mode",
+  "aod",
+  "dauphine hands",
+  "chronograph",
+  "round screen"
+ ],
+ "teaches": [
+  "One design space for every watch: k = min(componentWidth(), componentHeight()) / 227, a translate that centres it and a scale by k; the same document is crisp at 192, 227, 300 and 454 px",
+  "A smooth (sweeping) second hand: rotate by (continuousSec() % 60) * 6. continuousSec() has a fraction, timeInSec() does not (that is a ticking hand)",
+  "Faceted dauphine hands: two static triangles per hand (resources.paths), a light and a darker facet, drawn after a translate (1.2, 2.4) copy in black at alpha 0.45 for the shadow. The translate goes before the rotate so the shadow falls the same way whatever the hand's angle",
+  "Exact ticks with no table: a 60-step loop rotating i * 6 about the centre with paint alpha min(1, i % 5), so the hour positions are skipped; batons from a 1..11 loop whose length is ifElse(21, 17, step(i % 3, 0.5)) (longer at 3, 6, 9) and a double baton at 12",
+  "Battery from the system: batteryLevel() (system variable 38), its arc's sweep max(3.6, 3.6 * level) and its colour by two conditionalOperations (lt 40 amber, lt 20 red); the label swaps BATTERY for LOW the same way",
+  "Steps from the host: exported steps and stepGoal, a ring of 360 * clamp(0, 1, steps / goal) and the count grouped by thousands (textFromFloat flags 20: no padding, groups of three)",
+  "The date window: the weekday cut from \"MONTUEWEDTHUFRISATSUN\" with textSubtext at (weekDay() - 1) * 3, the day zero-padded (flags 12)",
+  "Always-on: every look-dependent command is a {\"$if\": \"theme.mono\"} fork; the mono-dark build is the ambient document (black dial, outlined hollow hands, grey batons, no second hand, so it repaints once a minute instead of every frame)"
+ ],
+ "pitfalls": [
+  "batteryLevel() is a json2rc / C++ / TypeScript extension: the Java reference parser has no system battery (EXAMPLES_FINDINGS U31) and refuses the expression. On Android today the host would export a float instead (as HST-03 does)",
+  "continuousSec() repaints every frame: right for the interactive face's sweeping hand, wrong for always-on. The mono look has no second hand, so it only wakes once a minute",
+  "The translate for a shadow must come before the rotate: after it, the shadow would turn with the hand and fall upwards at six o'clock",
+  "Text on a canvas does not take a font weight; the wordmark and figures are the default face at small sizes, so keep them few and short"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/canvas/commands/0",
+   "shows": "draw.transform",
+   "note": "the 227-unit design space scaled to the screen"
+  },
+  {
+   "pointer": "/root/canvas/commands/46",
+   "shows": "time.clock",
+   "note": "the sweeping second hand: rotate (continuousSec() % 60) * 6, shadow first"
+  },
+  {
+   "pointer": "/resources/variables/steps",
+   "shows": "host.variables",
+   "note": "steps and stepGoal exported for the app; batt reads batteryLevel()"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "steps": {
+    "min": 0,
+    "max": 30000,
+    "meaning": "steps today"
+   },
+   "stepGoal": {
+    "min": 1000,
+    "max": 30000,
+    "meaning": "daily step goal"
+   }
+  },
+  "clock": "2026-11-02T10:10:30",
+  "touch": false
+ },
+ "check": {
+  "describe": "10:10:30 on Monday 2 November: the hour and minute hands make the classic V over a lit charcoal dial, the red second hand points straight down to six, MON 02 sits in the window at six, 7,412 steps fill three quarters of the green ring at nine and 82% fills the battery ring at three. battery-low (battery 15, 14:47:05 on Saturday 7 November, 12,500 steps): the battery ring is a short red arc with LOW under 15%, the steps ring is closed, SAT 07, the second hand points to one. sweep-1 and sweep-2, a quarter of a second apart, show the second hand between the seconds (it sweeps, it does not tick). mono-dark (always-on): black dial, grey batons, hollow white hands, no second hand, no gradient. Sizes 192, 300 and 454 are the same face scaled.",
+  "render": {
+   "clock": "2026-11-02T10:10:30",
+   "system_variables": {
+    "38": 82
+   },
+   "round": true
+  },
+  "renders": [
+   {
+    "name": "battery-low",
+    "clock": "2026-11-07T14:47:05",
+    "system_variables": {
+     "38": 15
+    },
+    "variables": {
+     "steps": 12500
+    }
+   },
+   {
+    "name": "battery-mid",
+    "clock": "2026-11-04T07:32:41",
+    "system_variables": {
+     "38": 33
+    },
+    "variables": {
+     "steps": 2380
+    }
+   },
+   {
+    "name": "sweep-1",
+    "clock": 1793643007000,
+    "width": 300,
+    "height": 300
+   },
+   {
+    "name": "sweep-2",
+    "clock": 1793643007500,
+    "width": 300,
+    "height": 300
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "small",
+    "width": 192,
+    "height": 192
+   },
+   {
+    "name": "large",
+    "width": 454,
+    "height": 454
+   }
+  ]
+ },
+ "related": [
+  "TIM-02",
+  "TIM-03",
+  "HST-03",
+  "DRW-13"
+ ],
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 3442,
+  "header": {
+   "width": 227,
+   "height": 227
+  },
+  "op_count": 169,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 18,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "ConditionalOperations": 4,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 9,
+   "DRAW_ARC": 2,
+   "DRAW_CIRCLE": 12,
+   "DRAW_LINE": 3,
+   "DRAW_PATH": 6,
+   "DRAW_ROUND_RECT": 7,
+   "DRAW_TEXT_ANCHOR": 9,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 2,
+   "MATRIX_RESTORE": 8,
+   "MATRIX_ROTATE": 8,
+   "MATRIX_SAVE": 8,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 4,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 2,
+   "PAINT_VALUES": 42,
+   "PATH_DATA": 6,
+   "TextFromFloat": 3,
+   "TextMerge": 1,
+   "TextSubtext": 1
+  },
+  "host_variables": [
+   {
+    "name": "stepGoal",
+    "type": "float",
+    "value": 10000
+   },
+   {
+    "name": "steps",
+    "type": "float",
+    "value": 7412
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: repaint_continuous",
+   "info: text_in_canvas"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": false,
+  "renders": {
+   "battery-low": {
+    "render": "render-battery-low.png",
+    "render_findings": []
+   },
+   "battery-mid": {
+    "render": "render-battery-mid.png",
+    "render_findings": []
+   },
+   "sweep-1": {
+    "render": "render-sweep-1.png",
+    "render_findings": [],
+    "size": [
+     300,
+     300
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "sweep-2": {
+    "render": "render-sweep-2.png",
+    "render_findings": [],
+    "size": [
+     300,
+     300
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 2503,
+    "component_modes": {},
+    "op_count": 112,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "stepGoal",
+      "type": "float",
+      "value": 10000
+     },
+     {
+      "name": "steps",
+      "type": "float",
+      "value": 7412
+     }
+    ],
+    "java_identical": false,
+    "repaint": "scheduled",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 2503,
+    "component_modes": {},
+    "op_count": 112,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "stepGoal",
+      "type": "float",
+      "value": 10000
+     },
+     {
+      "name": "steps",
+      "type": "float",
+      "value": 7412
+     }
+    ],
+    "java_identical": false,
+    "repaint": "scheduled",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [],
+    "size": [
+     192,
+     192
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "large": {
+    "render": "render-large.png",
+    "render_findings": [],
+    "size": [
+     454,
+     454
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "$if",
+   "alpha",
+   "angle",
+   "apiLevel",
+   "background",
+   "batt",
+   "bottom",
+   "canvas",
+   "centerX",
+   "centerY",
+   "color",
+   "colors",
+   "commands",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "cx",
+   "cy",
+   "decimal",
+   "drawArc",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "else",
+   "export",
+   "flags",
+   "from",
+   "header",
+   "height",
+   "hourL",
+   "hourR",
+   "hourW",
+   "id1",
+   "id2",
+   "index",
+   "left",
+   "len",
+   "loop",
+   "minL",
+   "minR",
+   "minW",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "paths",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "radialGradient",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "rotate",
+   "rx",
+   "ry",
+   "save",
+   "scale",
+   "semantics",
+   "shader",
+   "start",
+   "startAngle",
+   "stepFrac",
+   "stepGoal",
+   "steps",
+   "stops",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "sweepAngle",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "textSubtext",
+   "then",
+   "top",
+   "translate",
+   "type",
+   "until",
+   "v1",
+   "v2",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "time.clock": [
+    "timeInMin",
+    "timeInSec",
+    "continuousSec"
+   ],
+   "draw.transform": [
+    "save",
+    "rotate",
+    "scale",
+    "translate"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "time.date": [
+    "weekDay",
+    "dayOfMonth"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "draw.arc": [
+    "drawArc"
+   ],
+   "draw.path": [
+    "drawPath"
+   ],
+   "draw.gradient": [
+    "radialGradient"
+   ],
+   "data.condition": [
+    "conditionalOperations",
+    "ifElse",
+    "step()"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "expr.string": [
+    "textMerge",
+    "textSubtext"
+   ]
+  },
+  "built_at": "2026-11-02T18:45:56.572Z"
+ },
+ "java_difference": "batteryLevel() (system variable 38) is a json2rc extension the Java reference parser does not know (EXAMPLES_FINDINGS U31): it refuses the expression. With the battery read from a host float instead the two converters write identical bytes (3451 B, checked)"
+}

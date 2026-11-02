@@ -1,0 +1,904 @@
+{
+ "id": "SHW-29",
+ "name": "swipe-card-stack",
+ "version": 1,
+ "title": "Swipe card stack: travel destinations to like or pass",
+ "summary": "A Tinder-style stack of five drawn travel cards (Lofoten under the northern lights, Kyoto at dusk with a torii, Santorini's caldera, the Wadi Rum desert, Patagonia's towers), each painted from float arrays by one loop: layered sky gradients, stars, aurora ribbons, a glowing sun, three pathExpression ridges, a sea band and landmarks. The top card follows the finger and tilts with it, a LIKE or NOPE stamp fades in, the card behind scales up; a fast flick or a drag past a third of the card flies it off with its release speed, anything else springs back with a damped spring. Buttons fling the card too, and the saved / passed counts update.",
+ "prompt": "Make a Tinder-style card stack of travel destinations with drawn art: I drag a card sideways and it rotates with my finger, if I fling it past a threshold it flies off left or right with a Like/Nope stamp, the next card scales up from behind, and it counts my likes. It should feel physical: fling and spring back.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "The library has no swipeable stack; the gesture state machine (press, release speed, fling-or-spring decision, flight, the stack's lift) and the card art are written by hand.",
+ "capabilities": {
+  "primary": [
+   "input.press",
+   "time.animation",
+   "data.loop",
+   "anim.trigger"
+  ],
+  "secondary": [
+   "input.tap",
+   "draw.path",
+   "draw.gradient",
+   "draw.transform",
+   "draw.clip",
+   "data.array",
+   "expr.trig",
+   "expr.select",
+   "text.dynamic",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "travel",
+  "card",
+  "game"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "tinder",
+  "swipe",
+  "swipe cards",
+  "card stack",
+  "deck",
+  "like",
+  "nope",
+  "fling",
+  "dismiss",
+  "spring back",
+  "drag",
+  "rotate",
+  "travel",
+  "destinations",
+  "stamp",
+  "showcase"
+ ],
+ "teaches": [
+  "Run a swipe without touchExpression: onTouchDown stores touchX(), touchY() and animationTime(); the card follows touchX() - downX while @drag is 1",
+  "Decide fling or spring at release in onTouchUp from the gesture alone: speed = distance / max(time held, 0.04), dismiss when |dx| > 110 or (speed > 700 and |dx| > 36), and store the direction, the release offset and upT = animationTime()",
+  "Spring back with a damped oscillator of the time since release: offset · e^(-7t) · (cos 13t + 0.54 sin 13t), and fly off with x = release + dir · (v·t + 2600 t²)",
+  "Draw a stack with one loop: i = 0..3 is depth 2, 1, 0 and the card in flight; each depth's scale, offset and dimming come from k + a shared lift that follows the drag (and finishes after a fling)",
+  "Paint five different scenes from one body: per-card float arrays drive layer alphas (night, warm, day skies, aurora, sea, landmarks) and ridge parameters for pathExpression",
+  "Close a pathExpression ridge to the bottom by running a[0] slightly past 0..1 with x clamped and y = ifElse(card height, ridge, inside)",
+  "Fire wakeIn only while a card moves: 0.016 + 3600 · step(t, 1.4)"
+ ],
+ "pitfalls": [
+  "Modifier actions are parsed before the canvas commands and cannot read tree variables (componentWidth(), touchExpression values): keep the gesture state in root variables and do geometry in the tree",
+  "The notch stop modes of touchExpression need touchSpec, which the Java JSON parser drops, and a notched touch value cannot be reset by the document: this is why the stack uses actions and time instead",
+  "touchVelX() is only loaded by the C++ player at touch-up (not Java, not TS): measure the speed yourself",
+  "A button tap also reaches the canvas behind it (TS), so the canvas's touch-up only commits when the finger moved more than 8 px",
+  "step(x, edge) is strict: step(1, 1) is 0, so test a direction with step(@dir, 0.5)",
+  "A computed colour is evaluated once per frame, not per loop iteration: vary paint alpha and gradients by the loop index instead",
+  "Taps are ignored for 0.3 s after a fling so two cards are never in flight",
+  "Java's addDataList drops the list id, so textLookup cannot reach it from JSON: each card's texts are five drawTextAnchored per field, the right one shown by alpha 1 - min(1, |c - j|)"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/16/box/children/0/canvas/modifiers/3",
+   "shows": "input.press",
+   "note": "release: distance, speed, fling-or-spring decision, counts"
+  },
+  {
+   "pointer": "/root/16/box/children/0/canvas/modifiers/2",
+   "shows": "input.press",
+   "note": "press: where and when the finger went down"
+  },
+  {
+   "pointer": "/root/16/box/children/0/canvas/commands/11",
+   "shows": "time.animation",
+   "note": "the damped spring of the time since release"
+  },
+  {
+   "pointer": "/root/16/box/children/0/canvas/commands/16",
+   "shows": "time.animation",
+   "note": "the flight: release offset plus speed and acceleration"
+  },
+  {
+   "pointer": "/root/16/box/children/0/canvas/commands/51",
+   "shows": "data.loop",
+   "note": "four iterations: three stacked cards and the one in flight"
+  },
+  {
+   "pointer": "/root/16/box/children/0/canvas/commands/51/loop/commands/8/save/commands/42",
+   "shows": "draw.path",
+   "note": "a ridge from per-card arrays, closed to the card bottom"
+  },
+  {
+   "pointer": "/root/16/box/children/0/canvas/commands/51/loop/commands/8/save/commands/129",
+   "shows": "expr.select",
+   "note": "the LIKE stamp fades in with the drag"
+  },
+  {
+   "pointer": "/root/16/box/children/1/row/children/1/box/modifiers/4",
+   "shows": "input.tap",
+   "note": "Save button: the same fling, guarded while a card flies"
+  },
+  {
+   "pointer": "/root/16/box/children/0/canvas/commands/22",
+   "shows": "anim.trigger",
+   "note": "frames only while a card moves"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Rest: Lofoten on top (night sky, aurora, red cabins), Kyoto and Santorini peeking below, 0 passed / 0 saved. Dragging right by 90 px tilts the card, fades in LIKE and lifts Kyoto. A flick (70 px in 80 ms) flies Lofoten off to the right and SAVED reads 1; a slow 65 px drag springs back with a small overshoot. Dragging Kyoto left shows NOPE over Santorini. The Pass and Save buttons fling the top card the same way. 320x568 and 700x1000 scale the card as one design.",
+  "render": {
+   "clock": "2026-11-02T10:00:00"
+  },
+  "interact": [
+   {
+    "drag": [
+     180,
+     300,
+     300,
+     290
+    ],
+    "steps": 3
+   },
+   {
+    "wait": 1
+   },
+   {
+    "drag": [
+     200,
+     300,
+     170,
+     300
+    ],
+    "steps": 3
+   },
+   {
+    "wait": 1
+   },
+   {
+    "tap": [
+     124,
+     660
+    ]
+   },
+   {
+    "wait": 1
+   },
+   {
+    "tap": [
+     236,
+     660
+    ]
+   },
+   {
+    "wait": 1
+   }
+  ],
+  "renders": [
+   {
+    "name": "drag-like",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 230,
+      "y": 310
+     },
+     {
+      "t": 0.5,
+      "type": "move",
+      "x": 270,
+      "y": 320
+     }
+    ],
+    "duration": 0.55
+   },
+   {
+    "name": "fling",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.14,
+      "type": "move",
+      "x": 215,
+      "y": 296
+     },
+     {
+      "t": 0.18,
+      "type": "up",
+      "x": 250,
+      "y": 290
+     }
+    ],
+    "duration": 0.3
+   },
+   {
+    "name": "after-fling",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.14,
+      "type": "move",
+      "x": 215,
+      "y": 296
+     },
+     {
+      "t": 0.18,
+      "type": "up",
+      "x": 250,
+      "y": 290
+     }
+    ],
+    "duration": 1.2
+   },
+   {
+    "name": "spring-back",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.15,
+      "type": "move",
+      "x": 210,
+      "y": 296
+     },
+     {
+      "t": 0.2,
+      "type": "up",
+      "x": 245,
+      "y": 290
+     }
+    ],
+    "duration": 0.32
+   },
+   {
+    "name": "nope",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.14,
+      "type": "move",
+      "x": 215,
+      "y": 296
+     },
+     {
+      "t": 0.18,
+      "type": "up",
+      "x": 250,
+      "y": 290
+     },
+     {
+      "t": 0.9,
+      "type": "down",
+      "x": 200,
+      "y": 300
+     },
+     {
+      "t": 1,
+      "type": "move",
+      "x": 120,
+      "y": 310
+     },
+     {
+      "t": 1.1,
+      "type": "move",
+      "x": 60,
+      "y": 330
+     }
+    ],
+    "duration": 1.15
+   },
+   {
+    "name": "buttons",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 124,
+      "y": 660
+     },
+     {
+      "t": 0.8,
+      "type": "tap",
+      "x": 236,
+      "y": 660
+     }
+    ],
+    "duration": 1.6
+   },
+   {
+    "name": "small-phone",
+    "clock": "2026-11-02T10:00:00",
+    "width": 320,
+    "height": 568
+   },
+   {
+    "name": "tablet",
+    "clock": "2026-11-02T10:00:00",
+    "width": 700,
+    "height": 1000
+   }
+  ]
+ },
+ "related": [
+  "INT-05",
+  "INT-06",
+  "ANM-12",
+  "TIM-06",
+  "DRW-06",
+  "VAR-06"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 13970,
+  "header": {
+   "width": 360,
+   "height": 720
+  },
+  "op_count": 556,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATED_FLOAT": 216,
+   "CLIP_PATH": 1,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 3,
+   "DATA_FLOAT": 18,
+   "DATA_TEXT": 31,
+   "DRAW_CIRCLE": 6,
+   "DRAW_LINE": 4,
+   "DRAW_PATH": 11,
+   "DRAW_RECT": 15,
+   "DRAW_ROUND_RECT": 5,
+   "DRAW_TEXT_ANCHOR": 28,
+   "DataListFloat": 17,
+   "HEADER": 1,
+   "LAYOUT_BOX": 3,
+   "LAYOUT_CANVAS": 3,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 7,
+   "LoopOperation": 5,
+   "MATRIX_RESTORE": 3,
+   "MATRIX_ROTATE": 3,
+   "MATRIX_SAVE": 3,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 4,
+   "MODIFIER_BACKGROUND": 2,
+   "MODIFIER_CLICK": 2,
+   "MODIFIER_HEIGHT": 7,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_TOUCH_DOWN": 1,
+   "MODIFIER_TOUCH_UP": 1,
+   "MODIFIER_WIDTH": 7,
+   "NAMED_VARIABLE": 17,
+   "PAINT_VALUES": 70,
+   "PATH_CREATE": 1,
+   "PATH_DATA": 1,
+   "PathAppend": 9,
+   "PathExpression": 5,
+   "RoundedClipRectModifierOperation": 2,
+   "TextFromFloat": 2,
+   "ValueFloatExpressionChangeActionOperation": 32,
+   "WAKE_IN": 1
+  },
+  "host_variables": [
+   {
+    "name": "aur",
+    "type": "float_array",
+    "value": [
+     1,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "name": "cabins",
+    "type": "float_array",
+    "value": [
+     1,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "name": "day",
+    "type": "float_array",
+    "value": [
+     0,
+     0,
+     0.800000012,
+     0,
+     0.600000024
+    ]
+   },
+   {
+    "name": "houses",
+    "type": "float_array",
+    "value": [
+     0,
+     0,
+     1,
+     0,
+     0
+    ]
+   },
+   {
+    "name": "lw",
+    "type": "float_array",
+    "value": [
+     0,
+     0.300000012,
+     0.349999994,
+     0.949999988,
+     0.150000006
+    ]
+   },
+   {
+    "name": "night",
+    "type": "float_array",
+    "value": [
+     0.920000017,
+     0.150000006,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "name": "ra1",
+    "type": "float_array",
+    "value": [
+     0.159999996,
+     0.0500000007,
+     0.0500000007,
+     0.0299999993,
+     0.219999999,
+     0.100000001,
+     0.0399999991,
+     0.100000001,
+     0.0500000007,
+     0.0599999987,
+     0.0500000007,
+     0.0299999993,
+     0.0599999987,
+     0.0399999991,
+     0.0299999993
+    ]
+   },
+   {
+    "name": "ra2",
+    "type": "float_array",
+    "value": [
+     0.0599999987,
+     0.0199999996,
+     0.00999999978,
+     0.00999999978,
+     0.0700000003,
+     0.0399999991,
+     0.0149999997,
+     0.0299999993,
+     0.0199999996,
+     0.0199999996,
+     0.0199999996,
+     0.00999999978,
+     0.0199999996,
+     0.00999999978,
+     0.00999999978
+    ]
+   },
+   {
+    "name": "rb",
+    "type": "float_array",
+    "value": [
+     0.560000002,
+     0.600000024,
+     0.620000005,
+     0.579999983,
+     0.5,
+     0.660000026,
+     0.680000007,
+     0.699999988,
+     0.660000026,
+     0.620000005,
+     0.779999971,
+     0.800000012,
+     0.680000007,
+     0.75999999,
+     0.800000012
+    ]
+   },
+   {
+    "name": "rf1",
+    "type": "float_array",
+    "value": [
+     9,
+     3,
+     2.20000005,
+     2,
+     7.5,
+     11,
+     4,
+     3,
+     2.5999999,
+     5,
+     6,
+     5,
+     2,
+     1.60000002,
+     3
+    ]
+   },
+   {
+    "name": "rf2",
+    "type": "float_array",
+    "value": [
+     23,
+     11,
+     9,
+     7,
+     19,
+     27,
+     13,
+     10,
+     8,
+     14,
+     17,
+     15,
+     7,
+     5,
+     12
+    ]
+   },
+   {
+    "name": "sea",
+    "type": "float_array",
+    "value": [
+     0.300000012,
+     0,
+     1,
+     0,
+     0.699999988
+    ]
+   },
+   {
+    "name": "sunR",
+    "type": "float_array",
+    "value": [
+     0.0500000007,
+     0.109999999,
+     0.0799999982,
+     0.170000002,
+     0.0599999987
+    ]
+   },
+   {
+    "name": "sunX",
+    "type": "float_array",
+    "value": [
+     0.720000029,
+     0.300000012,
+     0.779999971,
+     0.5,
+     0.239999995
+    ]
+   },
+   {
+    "name": "sunY",
+    "type": "float_array",
+    "value": [
+     0.159999996,
+     0.360000014,
+     0.300000012,
+     0.419999987,
+     0.180000007
+    ]
+   },
+   {
+    "name": "torii",
+    "type": "float_array",
+    "value": [
+     0,
+     1,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "name": "warm",
+    "type": "float_array",
+    "value": [
+     0,
+     0.850000024,
+     0.349999994,
+     1,
+     0.25
+    ]
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: hardcoded_colors",
+   "info: text_in_canvas",
+   "info: expression_entries"
+  ],
+  "repaint": "scheduled",
+  "interaction_targets": {
+   "total": 2,
+   "click": 2,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "drag-like": {
+    "render": "render-drag-like.png",
+    "render_findings": []
+   },
+   "fling": {
+    "render": "render-fling.png",
+    "render_findings": []
+   },
+   "after-fling": {
+    "render": "render-after-fling.png",
+    "render_findings": []
+   },
+   "spring-back": {
+    "render": "render-spring-back.png",
+    "render_findings": []
+   },
+   "nope": {
+    "render": "render-nope.png",
+    "render_findings": []
+   },
+   "buttons": {
+    "render": "render-buttons.png",
+    "render_findings": []
+   },
+   "small-phone": {
+    "render": "render-small-phone.png",
+    "render_findings": [],
+    "size": [
+     320,
+     568
+    ],
+    "audit_findings": [
+     "info: expression_entries"
+    ]
+   },
+   "tablet": {
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     700,
+     1000
+    ],
+    "audit_findings": [
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "angle",
+   "apiLevel",
+   "aur",
+   "background",
+   "bottom",
+   "box",
+   "cabins",
+   "canvas",
+   "centerX",
+   "centerY",
+   "children",
+   "clip",
+   "clipPath",
+   "color",
+   "colors",
+   "commands",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "day",
+   "decimal",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "end",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "floatArrays",
+   "from",
+   "header",
+   "heart",
+   "height",
+   "horizontalAlignment",
+   "houses",
+   "id",
+   "index",
+   "left",
+   "linearGradient",
+   "loop",
+   "lw",
+   "modifiers",
+   "name",
+   "night",
+   "onClick",
+   "onTouchDown",
+   "onTouchUp",
+   "ops",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "pathAppendClose",
+   "pathAppendLineTo",
+   "pathAppendQuadTo",
+   "pathCreate",
+   "pathExpression",
+   "paths",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "ra1",
+   "ra2",
+   "radialGradient",
+   "radius",
+   "rb",
+   "resources",
+   "rf1",
+   "rf2",
+   "right",
+   "role",
+   "root",
+   "rotate",
+   "roundedRect",
+   "row",
+   "rx",
+   "ry",
+   "save",
+   "scale",
+   "sea",
+   "seconds",
+   "semantics",
+   "shader",
+   "size",
+   "spacedBy",
+   "start",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "sunR",
+   "sunX",
+   "sunY",
+   "sx",
+   "sy",
+   "target",
+   "text",
+   "textSize",
+   "top",
+   "torii",
+   "translate",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "warm",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "x3",
+   "y",
+   "y1",
+   "y2",
+   "y3"
+  ],
+  "evidence": {
+   "input.press": [
+    "onTouchDown",
+    "onTouchUp"
+   ],
+   "time.animation": [
+    "animationTime()",
+    "animationTime"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "anim.trigger": [
+    "wakeIn"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "draw.path": [
+    "drawPath",
+    "pathCreate",
+    "pathAppendLineTo",
+    "pathAppendClose"
+   ],
+   "draw.gradient": [
+    "linearGradient",
+    "radialGradient"
+   ],
+   "draw.transform": [
+    "save",
+    "rotate",
+    "scale",
+    "translate"
+   ],
+   "draw.clip": [
+    "clipPath"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "expr.trig": [
+    "sin(",
+    "cos("
+   ],
+   "expr.select": [
+    "ifElse(",
+    "step("
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:49:00.678Z"
+ }
+}

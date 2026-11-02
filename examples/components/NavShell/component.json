@@ -1,0 +1,1018 @@
+{
+ "component": "NavShell",
+ "version": 1,
+ "summary": "A whole app shell with 3 to 5 top-level destinations: you give each one an icon, a label and its page; it brings the adaptive navigation (a bottom bar with icons and labels on a phone, a navigation rail from 600 dp wide, a drawer with full rows and the app title from 840 dp), the selected destination's highlight in every form, its title over the page, and switches the page on a tap.",
+ "params": {
+  "destinations": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One entry per destination, 3 to 5: {\"icon\", \"label\", \"page\"}. icon is a Material Symbols name (find kind \"icons\"), label a short word (it must fit 72 dp at 12 sp in the bottom bar: Today, Workouts, Library), page the node shown while it is selected (a column of your content; it gets the page's width, see pitfalls)"
+  },
+  "selected": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The selected destination (0-based). Bind a document variable to preset it or to read it elsewhere; every form highlights it and the page follows it"
+  },
+  "title": {
+   "type": "string",
+   "doc": "The app's name, at the top of the drawer (wide windows only). Omitted: the drawer starts with its rows"
+  },
+  "header": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "A 56 dp heading over the page with the selected destination's label. false: the page gets the whole height"
+  },
+  "scroll": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Each page scrolls vertically when its content is taller than the window (so do not use weights or fillMaxHeight inside it). false: the page is an exact box to fill"
+  },
+  "pagePadding": {
+   "type": "float",
+   "default": 16,
+   "static": true,
+   "doc": "Padding at the page's start, end and bottom"
+  },
+  "railAt": {
+   "type": "float",
+   "default": 600,
+   "static": true,
+   "doc": "Width in dp from which the bottom bar becomes a navigation rail"
+  },
+  "drawerAt": {
+   "type": "float",
+   "default": 840,
+   "static": true,
+   "doc": "Width in dp from which the rail becomes a drawer with full rows"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "The selected destination's icon and label"
+  },
+  "onClick": {
+   "type": "action",
+   "doc": "Extra actions run on every destination tap after `selected` is set (they see the NEW index): [{\"type\": \"hostNamedAction\", \"name\": \"navigate\", \"value\": \"@sel\", \"valueType\": \"float\"}] with \"selected\": \"@sel\" tells the app"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width the shell has; the form is chosen from it. Only when it is not the whole window"
+  },
+  "height": {
+   "type": "float",
+   "default": "windowHeight()",
+   "doc": "The height the shell has. Only when it is not the whole window"
+  }
+ },
+ "locals": {
+  "s": {
+   "value": "@selected",
+   "anim": 0.25
+  },
+  "bottom": "1 - step(@width, @railAt - 0.5)",
+  "rail": "step(@width, @railAt - 0.5) * (1 - step(@width, @drawerAt - 0.5))",
+  "drawer": "step(@width, @drawerAt - 0.5)",
+  "pw": {
+   "$if": "theme.mono",
+   "then": "@width - 241 * @drawer - 81 * @rail",
+   "else": "@width - 240 * @drawer - 80 * @rail"
+  },
+  "ph": {
+   "$if": "header",
+   "then": {
+    "$if": "theme.mono",
+    "then": "@height - 56 - 81 * @bottom",
+    "else": "@height - 56 - 80 * @bottom"
+   },
+   "else": {
+    "$if": "theme.mono",
+    "then": "@height - 81 * @bottom",
+    "else": "@height - 80 * @bottom"
+   }
+  }
+ },
+ "capabilities": [
+  "input.tap",
+  "layout.state",
+  "layout.weight",
+  "image.icon",
+  "a11y.labels",
+  "a11y.state"
+ ],
+ "call": {
+  "NavShell": {
+   "destinations": [
+    {
+     "icon": "home",
+     "label": "Home",
+     "page": {
+      "text": {
+       "value": "Home page",
+       "color": "@colors.onSurface"
+      }
+     }
+    },
+    {
+     "icon": "search",
+     "label": "Search",
+     "page": {
+      "text": {
+       "value": "Search page",
+       "color": "@colors.onSurface"
+      }
+     }
+    },
+    {
+     "icon": "person",
+     "label": "Profile",
+     "page": {
+      "text": {
+       "value": "Profile page",
+       "color": "@colors.onSurface"
+      }
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "The form is chosen by the shell's width, never by content: under railAt (600) a bottom bar, from railAt a rail 80 dp wide on the left, from drawerAt (840) a drawer 240 dp wide with the title. A tablet held upright (800 wide) gets the rail",
+  "A page cannot read the shell's values. Its width is width - 2 * pagePadding on a phone, width - 81 - 2 * pagePadding with the rail and width - 241 - 2 * pagePadding with the drawer: compute the same in your document (for example ifElse(windowWidth() - 273, ifElse(windowWidth() - 113, windowWidth() - 32, step(windowWidth(), 599.5)), step(windowWidth(), 839.5))) when a page must change its own layout, such as cards in two columns when wide",
+  "Its height is the window minus the 56 dp header, minus the 80 dp bottom bar on a phone. With scroll (the default) a taller page scrolls; inside a scrolling page, weights and fillMaxHeight do nothing: give heights",
+  "Every page is in the document at once, each with a visibility on the selection, so the document is the sum of its pages; each page has its own scroll position",
+  "Labels are written three times (bar, rail, drawer) and drawn twice in each (a plain and a highlighted copy), so they must be static strings; icons are one path per name however often drawn",
+  "The selection animates: the indicator pill and the highlighted copy fade with an animated local over 0.25 s, while the page switches at once on the new value. Mono: no motion, the selected item is a filled pill with a black icon",
+  "Accessibility: each destination is one labelled click (its label) with Selected or Not selected as its state, cut from \"Not selectedSelected    \" as in Tabs; the header is the selected label as text",
+  "Keep to 5 destinations: the bottom bar gives each 1/n of the width, 72 dp at 360 for 5, and a longer label is cut"
+ ],
+ "body": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         0,
+         0
+        ]
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "$each": "destinations",
+           "index": "i",
+           "do": [
+            {
+             "textSubtext": {
+              "text": "Not selectedSelected    ",
+              "start": "(1 - min(1, abs(@selected - @i))) * 12",
+              "len": 12,
+              "varName": "nsState12_@i"
+             }
+            },
+            {
+             "textTransform": {
+              "text": "@nsState12_@i",
+              "start": 0,
+              "len": -1,
+              "operation": 3,
+              "varName": "nsState_@i"
+             }
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          {
+           "visibility": "@drawer"
+          },
+          {
+           "width": 240
+          },
+          "fillMaxHeight",
+          {
+           "background": "@colors.surface"
+          },
+          {
+           "padding": 12
+          }
+         ],
+         "children": [
+          {
+           "$if": "title",
+           "then": {
+            "text": {
+             "value": "@title",
+             "fontSize": "@theme.text_lg",
+             "fontWeight": 700,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "padding": [
+                16,
+                12,
+                16,
+                20
+               ]
+              }
+             ]
+            }
+           }
+          },
+          {
+           "$each": "destinations",
+           "as": "d",
+           "index": "i",
+           "fields": [
+            "icon",
+            "label",
+            "page"
+           ],
+           "do": {
+            "box": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 56
+              },
+              {
+               "clip": 28
+              },
+              {
+               "semantics": {
+                "contentDescription": "@d_label",
+                "stateDescription": "@nsState_@i",
+                "clickable": true
+               }
+              },
+              {
+               "onClick": [
+                {
+                 "type": "valueFloatChange",
+                 "target": "@selected",
+                 "value": "@i"
+                },
+                {
+                 "$if": "onClick",
+                 "then": "@onClick"
+                }
+               ]
+              }
+             ],
+             "children": [
+              {
+               "canvas": {
+                "modifiers": [
+                 "fillMaxSize"
+                ],
+                "commands": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": {
+                      "$if": "theme.mono",
+                      "then": "@colors.primary",
+                      "else": "@colors.surfaceHigh"
+                     }
+                    },
+                    {
+                     "alpha": "1 - min(1, abs(@s - @i))"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawRoundRect": {
+                   "left": 0,
+                   "top": 0,
+                   "right": "componentWidth()",
+                   "bottom": "componentHeight()",
+                   "rx": 28,
+                   "ry": 28
+                  }
+                 },
+                 {
+                  "save": [
+                   {
+                    "translate": {
+                     "dx": 16,
+                     "dy": 16
+                    }
+                   },
+                   {
+                    "scale": {
+                     "sx": 0.025,
+                     "sy": 0.025
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.muted"
+                      },
+                      {
+                       "style": "fill"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": {
+                      "$icon": {
+                       "name": "@d_icon"
+                      }
+                     }
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": {
+                        "$if": "theme.mono",
+                        "then": "@colors.onPrimary",
+                        "else": "@color"
+                       }
+                      },
+                      {
+                       "alpha": "1 - min(1, abs(@s - @i))"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": {
+                      "$icon": {
+                       "name": "@d_icon"
+                      }
+                     }
+                    }
+                   }
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "@d_label",
+                "fontSize": "@theme.text_md",
+                "fontWeight": 500,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "padding": [
+                   56,
+                   0,
+                   16,
+                   0
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "@d_label",
+                "fontSize": "@theme.text_md",
+                "fontWeight": 500,
+                "color": {
+                 "$if": "theme.mono",
+                 "then": "@colors.onPrimary",
+                 "else": "@color"
+                },
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "graphicsLayer": {
+                   "alpha": "1 - min(1, abs(@s - @i))"
+                  }
+                 },
+                 {
+                  "padding": [
+                   56,
+                   0,
+                   16,
+                   0
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "horizontalAlignment": "center",
+         "modifiers": [
+          {
+           "visibility": "@rail"
+          },
+          {
+           "width": 80
+          },
+          "fillMaxHeight",
+          {
+           "background": "@colors.surface"
+          },
+          {
+           "padding": [
+            0,
+            12
+           ]
+          },
+          {
+           "spacedBy": 8
+          }
+         ],
+         "children": [
+          {
+           "$each": "destinations",
+           "as": "d",
+           "index": "i",
+           "fields": [
+            "icon",
+            "label",
+            "page"
+           ],
+           "do": {
+            "column": {
+             "horizontalAlignment": "center",
+             "verticalArrangement": "center",
+             "modifiers": [
+              {
+               "width": 80
+              },
+              {
+               "height": 60
+              },
+              {
+               "semantics": {
+                "contentDescription": "@d_label",
+                "stateDescription": "@nsState_@i",
+                "clickable": true
+               }
+              },
+              {
+               "onClick": [
+                {
+                 "type": "valueFloatChange",
+                 "target": "@selected",
+                 "value": "@i"
+                },
+                {
+                 "$if": "onClick",
+                 "then": "@onClick"
+                }
+               ]
+              }
+             ],
+             "children": [
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": [
+                   56,
+                   32
+                  ]
+                 }
+                ],
+                "commands": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": {
+                      "$if": "theme.mono",
+                      "then": "@colors.primary",
+                      "else": "@colors.surfaceHigh"
+                     }
+                    },
+                    {
+                     "alpha": "1 - min(1, abs(@s - @i))"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawRoundRect": {
+                   "left": 0,
+                   "top": 0,
+                   "right": 56,
+                   "bottom": 32,
+                   "rx": 16,
+                   "ry": 16
+                  }
+                 },
+                 {
+                  "save": [
+                   {
+                    "translate": {
+                     "dx": 16,
+                     "dy": 4
+                    }
+                   },
+                   {
+                    "scale": {
+                     "sx": 0.025,
+                     "sy": 0.025
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.muted"
+                      },
+                      {
+                       "style": "fill"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": {
+                      "$icon": {
+                       "name": "@d_icon"
+                      }
+                     }
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": {
+                        "$if": "theme.mono",
+                        "then": "@colors.onPrimary",
+                        "else": "@color"
+                       }
+                      },
+                      {
+                       "alpha": "1 - min(1, abs(@s - @i))"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": {
+                      "$icon": {
+                       "name": "@d_icon"
+                      }
+                     }
+                    }
+                   }
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "padding": [
+                   0,
+                   4,
+                   0,
+                   0
+                  ]
+                 }
+                ],
+                "horizontalAlignment": "center",
+                "children": [
+                 {
+                  "text": {
+                   "value": "@d_label",
+                   "fontSize": "@theme.text_sm",
+                   "fontWeight": 500,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "@d_label",
+                   "fontSize": "@theme.text_sm",
+                   "fontWeight": 500,
+                   "color": "@color",
+                   "maxLines": 1,
+                   "modifiers": [
+                    {
+                     "graphicsLayer": {
+                      "alpha": "1 - min(1, abs(@s - @i))"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "box": {
+          "modifiers": [
+           {
+            "visibility": "1 - @bottom"
+           },
+           {
+            "width": 1
+           },
+           "fillMaxHeight",
+           {
+            "background": "@colors.outline"
+           }
+          ]
+         }
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          {
+           "width": "@pw"
+          },
+          "fillMaxHeight"
+         ],
+         "children": [
+          {
+           "$if": "header",
+           "then": {
+            "box": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 56
+              },
+              {
+               "padding": [
+                "@pagePadding",
+                0
+               ]
+              }
+             ],
+             "children": [
+              {
+               "$each": "destinations",
+               "as": "d",
+               "index": "i",
+               "fields": [
+                "icon",
+                "label",
+                "page"
+               ],
+               "do": {
+                "text": {
+                 "value": "@d_label",
+                 "fontSize": 22,
+                 "fontWeight": 600,
+                 "color": "@colors.onSurface",
+                 "maxLines": 1,
+                 "modifiers": [
+                  {
+                   "visibility": "1 - min(1, abs(@selected - @i))"
+                  }
+                 ]
+                }
+               }
+              }
+             ]
+            }
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": "@ph"
+             }
+            ],
+            "children": [
+             {
+              "$each": "destinations",
+              "as": "d",
+              "index": "i",
+              "fields": [
+               "icon",
+               "label",
+               "page"
+              ],
+              "do": {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "1 - min(1, abs(@selected - @i))"
+                 },
+                 "fillMaxSize",
+                 {
+                  "$if": "scroll",
+                  "then": {
+                   "verticalScroll": 0
+                  }
+                 },
+                 {
+                  "padding": [
+                   "@pagePadding",
+                   0,
+                   "@pagePadding",
+                   "@pagePadding"
+                  ]
+                 }
+                ],
+                "children": [
+                 "@d_page"
+                ]
+               }
+              }
+             }
+            ]
+           }
+          },
+          {
+           "$if": "theme.mono",
+           "then": {
+            "box": {
+             "modifiers": [
+              {
+               "visibility": "@bottom"
+              },
+              "fillMaxWidth",
+              {
+               "height": 1
+              },
+              {
+               "background": "@colors.outline"
+              }
+             ]
+            }
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             {
+              "visibility": "@bottom"
+             },
+             "fillMaxWidth",
+             {
+              "height": 80
+             },
+             {
+              "background": "@colors.surface"
+             }
+            ],
+            "children": [
+             {
+              "$each": "destinations",
+              "as": "d",
+              "index": "i",
+              "fields": [
+               "icon",
+               "label",
+               "page"
+              ],
+              "do": {
+               "column": {
+                "horizontalAlignment": "center",
+                "verticalArrangement": "center",
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 "fillMaxHeight",
+                 {
+                  "semantics": {
+                   "contentDescription": "@d_label",
+                   "stateDescription": "@nsState_@i",
+                   "clickable": true
+                  }
+                 },
+                 {
+                  "onClick": [
+                   {
+                    "type": "valueFloatChange",
+                    "target": "@selected",
+                    "value": "@i"
+                   },
+                   {
+                    "$if": "onClick",
+                    "then": "@onClick"
+                   }
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": [
+                      56,
+                      32
+                     ]
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": {
+                         "$if": "theme.mono",
+                         "then": "@colors.primary",
+                         "else": "@colors.surfaceHigh"
+                        }
+                       },
+                       {
+                        "alpha": "1 - min(1, abs(@s - @i))"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawRoundRect": {
+                      "left": 0,
+                      "top": 0,
+                      "right": 56,
+                      "bottom": 32,
+                      "rx": 16,
+                      "ry": 16
+                     }
+                    },
+                    {
+                     "save": [
+                      {
+                       "translate": {
+                        "dx": 16,
+                        "dy": 4
+                       }
+                      },
+                      {
+                       "scale": {
+                        "sx": 0.025,
+                        "sy": 0.025
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.muted"
+                         },
+                         {
+                          "style": "fill"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": {
+                         "$icon": {
+                          "name": "@d_icon"
+                         }
+                        }
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": {
+                           "$if": "theme.mono",
+                           "then": "@colors.onPrimary",
+                           "else": "@color"
+                          }
+                         },
+                         {
+                          "alpha": "1 - min(1, abs(@s - @i))"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": {
+                         "$icon": {
+                          "name": "@d_icon"
+                         }
+                        }
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "padding": [
+                      0,
+                      4,
+                      0,
+                      0
+                     ]
+                    }
+                   ],
+                   "horizontalAlignment": "center",
+                   "children": [
+                    {
+                     "text": {
+                      "value": "@d_label",
+                      "fontSize": "@theme.text_sm",
+                      "fontWeight": 500,
+                      "color": "@colors.muted",
+                      "maxLines": 1
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "@d_label",
+                      "fontSize": "@theme.text_sm",
+                      "fontWeight": 500,
+                      "color": "@color",
+                      "maxLines": 1,
+                      "modifiers": [
+                       {
+                        "graphicsLayer": {
+                         "alpha": "1 - min(1, abs(@s - @i))"
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

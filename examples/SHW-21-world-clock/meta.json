@@ -1,0 +1,647 @@
+{
+ "id": "SHW-21",
+ "name": "world-clock",
+ "version": 1,
+ "title": "A world clock with day and night",
+ "summary": "A world map with the live night side (three soft-edged terminator layers), the sun drawn over the subsolar point, and six cities: on the map each dot glows when the sun is up there, and each city card shows its local time, the day relative to UTC and its own sky (blue by day, dusk colours within 6 degrees of the horizon, stars and a crescent by night) with the sun at its real height. Two columns on a phone or a portrait tablet, one row of six on a landscape tablet.",
+ "prompt": "Make a world clock: a world map showing where it is day and night right now, with the sun where it is overhead, and a row of cities with their local times that highlights the ones in daylight. It should work on a phone and on a tablet.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "WorldMap draws the land and a hard night edge but cannot colour its city dots by daylight or draw the sun; the map here is the same projection built from {\"$map\"} with the city logic (sun elevation per city) shared by the dots and the cards.",
+ "components": [
+  "CityCard"
+ ],
+ "capabilities": {
+  "primary": [
+   "map.world",
+   "map.daynight",
+   "time.clock"
+  ],
+  "secondary": [
+   "map.marker",
+   "expr.trig",
+   "data.array",
+   "data.loop",
+   "data.condition",
+   "draw.gradient",
+   "layout.flow",
+   "host.variables",
+   "text.dynamic"
+  ]
+ },
+ "use_cases": [
+  "map",
+  "travel",
+  "dashboard"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "world clock",
+  "time zones",
+  "day and night",
+  "terminator",
+  "subsolar point",
+  "sun position",
+  "daylight",
+  "local time",
+  "cities",
+  "world map",
+  "twilight",
+  "dusk",
+  "tablet",
+  "adaptive grid"
+ ],
+ "teaches": [
+  "The land is {\"$map\": {\"region\": \"world\", \"detail\": \"medium\"}}: a path in a 1000 x 394.4 box (lat 84 to -58), drawn after a scale of min(w / 1000, h / 394.4); every other mark is placed in the same box, sizes divided by the scale (u = 1 / scale) so dots and text keep their dp size",
+  "The sun's position from the clock: declination 23.44 * sin(2 pi (284 + dayOfYear()) / 365), subsolar longitude -15 * (UTC hours - 12). On the equirectangular world box (x = (lon + 180) * 2.778, y = (84 - lat) * 2.778) that is the sun's dot",
+  "Is the sun up in a city: sin(elevation) = sin(lat) sin(decl) + cos(lat) cos(decl) cos(lon - sunLon), with sin and cos of the latitude stored once in float arrays. Above sin(6 deg) = 0.105 it is day, within plus or minus 0.105 twilight, below night",
+  "One loop of six iterations draws every map dot from the arrays (arrayGet(@cX, i)): a halo whose alpha is step(el, 0), and a conditionalOperations that turns the dot warm when el > 0",
+  "A soft terminator from three night shades a few degrees of longitude apart, each at alpha 0.16: deep night gets all three, the twilight edges one or two",
+  "Local time per city from one exported float array of UTC offsets (utcOffsets, the app keeps it right through DST): raw = utcMin + off * 60, the time (raw + 1440) % 1440, the day floor(raw / 1440) cut from \"YesterdayToday    Tomorrow \"",
+  "One inline component, CityCard, for the six cards: its sky is a gradient picked by two conditionalOperations, the sun drawn at 0.62 - 0.55 * el of the card's height, so a card's sun rises and sets with the real one",
+  "Responsive without branches: cols = 6 on a landscape window from 600 dp, else 2; the card width floor((W - 32) / cols) and its height from what the map leaves (up to 0.8 x its width), in a flow; the map takes the rest (verticalWeight) and keeps its 2.54:1, centred"
+ ],
+ "pitfalls": [
+  "The offsets are standard time in November (New York -5, London 0, Sydney +11): the format has no time-zone database, so the app sets utcOffsets when DST changes",
+  "The sun's longitude ignores the equation of time (up to 16 minutes, about 4 degrees), so the subsolar dot and the terminator can be a few degrees off; fine for a clock, not for astronomy",
+  "Twilight bands from shifted longitudes are an approximation: the band is wider than civil twilight near the poles",
+  "text drawn in a card is white on every sky: keep the day sky saturated enough (#2F78D2) for the white time to read",
+  "step(0, 0) is 0: the sign of a zero offset needs step(off, -0.5) to read +0",
+  "Medium detail is about 15 KB of the 30 KB: low detail makes the document 21 KB and looks blocky on a tablet-wide map; pick low for a phone-only or widget build"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/variables/decl",
+   "shows": "map.daynight",
+   "note": "solar declination from the day of the year"
+  },
+  {
+   "pointer": "/resources/variables/utcMin",
+   "shows": "time.clock",
+   "note": "UTC minutes from the local time and offsetToUtc()"
+  },
+  {
+   "pointer": "/root/column/children/1",
+   "shows": "map.world",
+   "note": "the map canvas: land, three night shades, the sun, the city loop"
+  },
+  {
+   "pointer": "/resources/floatArrays/utcOffsets",
+   "shows": "host.variables",
+   "note": "the cities' UTC offsets, exported for the app"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": "2026-11-02T10:30:00Z",
+  "touch": false
+ },
+ "check": {
+  "describe": "10:30 UTC on 2 November: the day side is centred on Africa and Europe with the sun just south of the equator over 22.5 E; London 10:30 and Dubai 14:30 are lit (blue skies, a high sun, warm dots with a halo on the map); San Francisco 02:30, New York 05:30, Tokyo 19:30 and Sydney 21:30 are night cards with stars and a crescent. dawn (07:15 UTC): London's card is in dusk colours with the sun on its horizon, the terminator just past it. evening (19:45 UTC): the day is over the Americas, San Francisco and New York lit, Tokyo 04:45 and Sydney 06:45 read Tomorrow (Sydney's sun rising). june and december tilt the terminator opposite ways (the sun north or south of the equator). tablet (1024x640): the map wide on top, one row of six cards; tablet-portrait (800x1280) and phone: two columns, the cards taller to use the height.",
+  "render": {
+   "clock": 1793615400000,
+   "theme": "dark"
+  },
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dawn",
+    "clock": 1793603700000
+   },
+   {
+    "name": "evening",
+    "clock": 1793648700000
+   },
+   {
+    "name": "june",
+    "clock": 1782043200000
+   },
+   {
+    "name": "december",
+    "clock": 1797832800000
+   },
+   {
+    "name": "tablet",
+    "width": 1024,
+    "height": 640
+   },
+   {
+    "name": "tablet-light",
+    "width": 1024,
+    "height": 640,
+    "theme": "light"
+   },
+   {
+    "name": "tablet-portrait",
+    "width": 800,
+    "height": 1280
+   },
+   {
+    "name": "small",
+    "width": 320,
+    "height": 600
+   }
+  ]
+ },
+ "related": [
+  "MAP-01",
+  "TIM-12",
+  "TIM-03",
+  "LAY-08"
+ ],
+ "derived": {
+  "components": [
+   "CityCard"
+  ],
+  "component_instances": 6,
+  "component_modes": {
+   "CityCard": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 30200,
+  "header": {
+   "width": 360,
+   "height": 720
+  },
+  "op_count": 833,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 215,
+   "CLIP_RECT": 7,
+   "COLOR_CONSTANT": 20,
+   "COLOR_EXPRESSIONS": 18,
+   "COMPONENT_VALUE": 14,
+   "CanvasContent": 7,
+   "ConditionalOperations": 25,
+   "CoreText": 20,
+   "DATA_TEXT": 20,
+   "DRAW_CIRCLE": 55,
+   "DRAW_LINE": 4,
+   "DRAW_PATH": 4,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 6,
+   "DRAW_TEXT_ANCHOR": 6,
+   "DataListFloat": 6,
+   "HEADER": 1,
+   "LAYOUT_BOX": 19,
+   "LAYOUT_CANVAS": 7,
+   "LAYOUT_COLUMN": 7,
+   "LAYOUT_FLOW": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 7,
+   "LayoutComponentContent": 48,
+   "LoopOperation": 20,
+   "MATRIX_RESTORE": 7,
+   "MATRIX_SAVE": 7,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 28,
+   "MODIFIER_PADDING": 13,
+   "MODIFIER_WIDTH": 41,
+   "NAMED_VARIABLE": 17,
+   "PAINT_VALUES": 75,
+   "PATH_DATA": 1,
+   "PathExpression": 3,
+   "THEME": 27,
+   "TextFromFloat": 20,
+   "TextMerge": 33,
+   "TextSubtext": 12,
+   "TextTransform": 6
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "cCosLat",
+    "type": "float_array",
+    "value": [
+     0.790499985,
+     0.758000016,
+     0.622399986,
+     0.904799998,
+     0.81220001,
+     0.830299973
+    ]
+   },
+   {
+    "name": "cLon",
+    "type": "float_array",
+    "value": [
+     -122.419998,
+     -74.0100021,
+     -0.129999995,
+     55.2700005,
+     139.690002,
+     151.210007
+    ]
+   },
+   {
+    "name": "cSinLat",
+    "type": "float_array",
+    "value": [
+     0.612500012,
+     0.652199984,
+     0.782700002,
+     0.425799996,
+     0.583400011,
+     -0.557299972
+    ]
+   },
+   {
+    "name": "cX",
+    "type": "float_array",
+    "value": [
+     159.899994,
+     294.399994,
+     499.600006,
+     653.5,
+     888,
+     920
+    ]
+   },
+   {
+    "name": "cY",
+    "type": "float_array",
+    "value": [
+     128.399994,
+     120.199997,
+     90.3000031,
+     163.300003,
+     134.199997,
+     327.399994
+    ]
+   },
+   {
+    "name": "cityDay",
+    "type": "color",
+    "value": "#FFFF9F1C"
+   },
+   {
+    "name": "cityNight",
+    "type": "color",
+    "value": "#FFB8C7DD"
+   },
+   {
+    "name": "grid",
+    "type": "color",
+    "value": "#FF16263B"
+   },
+   {
+    "name": "label",
+    "type": "color",
+    "value": "#FFDCE4EF"
+   },
+   {
+    "name": "land",
+    "type": "color",
+    "value": "#FF46597A"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "nightShade",
+    "type": "color",
+    "value": "#FF000000"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "sea",
+    "type": "color",
+    "value": "#FF0C1828"
+   },
+   {
+    "name": "sun",
+    "type": "color",
+    "value": "#FFFFC93C"
+   },
+   {
+    "name": "utcOffsets",
+    "type": "float_array",
+    "value": [
+     -8,
+     -5,
+     0,
+     4,
+     9,
+     11
+    ]
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: size_single_op",
+   "info: expression_entries"
+  ],
+  "repaint": "scheduled",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dawn": {
+    "render": "render-dawn.png",
+    "render_findings": []
+   },
+   "evening": {
+    "render": "render-evening.png",
+    "render_findings": []
+   },
+   "june": {
+    "render": "render-june.png",
+    "render_findings": []
+   },
+   "december": {
+    "render": "render-december.png",
+    "render_findings": []
+   },
+   "tablet": {
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     1024,
+     640
+    ],
+    "audit_findings": [
+     "info: size_single_op",
+     "info: expression_entries"
+    ]
+   },
+   "tablet-light": {
+    "theme": "light",
+    "render": "render-tablet-light.png",
+    "render_findings": [],
+    "size": [
+     1024,
+     640
+    ],
+    "audit_findings": [
+     "info: size_single_op",
+     "info: expression_entries"
+    ]
+   },
+   "tablet-portrait": {
+    "render": "render-tablet-portrait.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "info: size_single_op",
+     "info: expression_entries"
+    ]
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [
+     "info: text_ellipsized"
+    ],
+    "size": [
+     320,
+     600
+    ],
+    "audit_findings": [
+     "info: size_single_op",
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "$map",
+   "CityCard",
+   "alpha",
+   "apiLevel",
+   "avail",
+   "background",
+   "body",
+   "bottom",
+   "box",
+   "cCosLat",
+   "cLon",
+   "cSinLat",
+   "cX",
+   "cY",
+   "call",
+   "canvas",
+   "ch",
+   "children",
+   "cityDay",
+   "cityNight",
+   "clipRect",
+   "color",
+   "colors",
+   "cols",
+   "column",
+   "commands",
+   "components",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "count",
+   "cw",
+   "cx",
+   "cy",
+   "dark",
+   "dd",
+   "decimal",
+   "decl",
+   "detail",
+   "doc",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "el",
+   "end",
+   "export",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "floatArrays",
+   "flow",
+   "fontSize",
+   "fontWeight",
+   "from",
+   "fsz",
+   "global",
+   "grid",
+   "header",
+   "height",
+   "hh",
+   "id",
+   "id1",
+   "id2",
+   "index",
+   "k",
+   "label",
+   "land",
+   "left",
+   "len",
+   "light",
+   "linearGradient",
+   "lm",
+   "locals",
+   "loop",
+   "map_world_land_medium",
+   "maxLines",
+   "mm",
+   "modifiers",
+   "muted",
+   "nEdge",
+   "name",
+   "nightShade",
+   "nsz",
+   "off",
+   "onSurface",
+   "operation",
+   "ops",
+   "overflow",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "params",
+   "path",
+   "pathExpression",
+   "paths",
+   "profiles",
+   "radius",
+   "raw",
+   "region",
+   "required",
+   "resources",
+   "right",
+   "root",
+   "row",
+   "rows",
+   "rx",
+   "ry",
+   "save",
+   "scale",
+   "sea",
+   "semantics",
+   "shader",
+   "start",
+   "static",
+   "stops",
+   "strokeWidth",
+   "style",
+   "summary",
+   "sun",
+   "sunLon",
+   "sunY",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "textSubtext",
+   "textTransform",
+   "top",
+   "translate",
+   "tsz",
+   "type",
+   "until",
+   "utcH",
+   "utcM",
+   "utcMin",
+   "utcOffsets",
+   "v1",
+   "v2",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalWeight",
+   "weight",
+   "whole",
+   "width",
+   "ww",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "map.world": [
+    "$map"
+   ],
+   "map.daynight": [
+    "night"
+   ],
+   "time.clock": [
+    "timeInMin"
+   ],
+   "map.marker": [
+    "cities"
+   ],
+   "expr.trig": [
+    "sin(",
+    "cos(",
+    "tan(",
+    "atan("
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "data.condition": [
+    "conditionalOperations",
+    "ifElse",
+    "step()"
+   ],
+   "draw.gradient": [
+    "linearGradient"
+   ],
+   "layout.flow": [
+    "flow"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ]
+  },
+  "built_at": "2026-11-02T18:48:35.619Z"
+ }
+}

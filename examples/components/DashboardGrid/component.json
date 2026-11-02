@@ -1,0 +1,140 @@
+{
+ "component": "DashboardGrid",
+ "version": 1,
+ "summary": "A whole dashboard screen from a list of cards: one column on a phone (stacked, scrolling), two on a landscape phone or small tablet, three or four when wide. Cards can span columns, cards in a row share a height, a row never has a hole (the cards of a short row widen in proportion to reach the edge) and rows grow to fill a tall window; low-priority cards show only when there is room. The column count and every span are packed on the server for each count and switched at run time by the width.",
+ "capabilities": [
+  "layout.flow",
+  "layout.scroll"
+ ],
+ "params": {
+  "cards": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One entry per card in reading order: {\"title\", \"note\", \"content\", \"span\", \"height\", \"priority\", \"align\", \"label\"}. content is a node or a list of nodes (StatTile-free: use BigNumber, LineChart fill, BarChart fill, ProgressRing, Gauge fill, RankedList, KeyValueRow, a RowList embedded) placed in a box of exact width and the card's content height; inside it \"@cardWidth\" and \"@cardHeight\" are that box's size in dp. title is the card's heading (14 sp, one line), note a muted text at its end (\"7 days\"). span: columns it wants when there are that many (2 for a chart; default 1). height: dp its content needs (default 120); a row takes its tallest card. priority: the column count from which the card shows (default 1, always; 2 hides it on a phone). align: top (default), center or bottom, for content smaller than the row. label: what a screen reader says for the whole card"
+  },
+  "title": {
+   "type": "string",
+   "doc": "The screen's heading (20 sp). Omit for no header"
+  },
+  "subtitle": {
+   "type": "string",
+   "doc": "A muted line under the title: the period, the last update"
+  },
+  "minColumnWidth": {
+   "type": "float",
+   "default": 240,
+   "static": true,
+   "doc": "Narrowest a column gets: columns = (width - padding) / (minColumnWidth + gap), from 1 to maxColumns. 240 gives 1 column at 360, 2 at 640, 3 at 800 and 4 from about 1030 dp"
+  },
+  "maxColumns": {
+   "type": "float",
+   "default": 4,
+   "static": true,
+   "doc": "Most columns, 1 to 6"
+  },
+  "gap": {
+   "type": "float",
+   "default": 12,
+   "static": true,
+   "doc": "Space between cards, across and down"
+  },
+  "padding": {
+   "type": "float",
+   "default": 16,
+   "static": true,
+   "doc": "Space around the grid"
+  },
+  "grow": {
+   "type": "float",
+   "default": 1.3,
+   "static": true,
+   "doc": "Rows grow up to this many times their height to fill a window taller than the content (a desktop or tablet shows no empty band under the cards); 1 never grows. Past it the grid scrolls"
+  },
+  "background": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "The screen behind the cards"
+  },
+  "width": {
+   "type": "float",
+   "doc": "The width it has, when it is not the whole window (default windowWidth())"
+  },
+  "height": {
+   "type": "float",
+   "doc": "The height it has, when it is not the whole window (default windowHeight())"
+  }
+ },
+ "slots": {
+  "headerEnd": {
+   "optional": true,
+   "doc": "At the end of the header line: a Badge, a Chip, an IconButton"
+  }
+ },
+ "locals": {
+  "scroll": 0
+ },
+ "call": {
+  "DashboardGrid": {
+   "title": "Today",
+   "cards": [
+    {
+     "title": "Visits",
+     "content": {
+      "text": {
+       "value": "1,284",
+       "fontSize": 28,
+       "color": "@colors.onSurface"
+      }
+     },
+     "height": 40
+    },
+    {
+     "title": "Trend",
+     "span": 2,
+     "content": {
+      "box": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "background": "@colors.surfaceHigh"
+        }
+       ]
+      }
+     },
+     "height": 80
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Content gets a box of exact width and height: a chart must fill it (fill: true, or fillMaxSize), and a component that needs its size given (RowList embedded, WorldMap) takes \"@cardWidth\" and \"@cardHeight\", which the grid replaces with that box's size. Nothing else in a card can read the grid's values",
+  "height is the content's height, title not included. Give each card what it needs at a phone's width: a row takes its tallest card and a 1-column phone gives each card exactly its own, so a KPI with height 120 beside a chart wastes nothing, but the same KPI alone on a phone is 120 dp tall",
+  "Do not put a StatTile or a Card in a card: they draw their own surface, so you get a tile inside a tile. Use BigNumber (and a Sparkline or TrendSparkline under it) for a KPI card",
+  "Order is reading order at every width: the grid does not reorder. Put the cards that should share a row next to each other (two KPIs, then a span-2 chart) and a span-2 chart after an even number of single cards, or its row-mate stretches to fill the hole it leaves",
+  "span is clamped to the columns there are, so a span-3 card is full width on 1 and 2 columns. A card that does not fit what is left of a row moves to the next row and the cards it leaves widen in proportion to their spans (two single cards in 3 columns get 1.5 each): no holes, but their edges no longer line up with the columns of other rows",
+  "priority 2 hides a card below 2 columns (a phone); it is still in the document. Keep at least one card at priority 1, and never hide the only place a number is shown",
+  "Rows grow up to grow times (1.3) to fill a taller window: content that fills (charts, rings) uses it, fixed content keeps its size and sits at align. A window much taller than the content still has space under the grid; set grow higher or add cards",
+  "Text does not shrink: the grid scrolls when there is not room, which is what a phone does; a widget-size window should not use it"
+ ],
+ "body": {
+  "$gen": {
+   "kind": "dashboard-grid",
+   "cards": "@cards",
+   "title": "@title",
+   "subtitle": "@subtitle",
+   "minColumnWidth": "@minColumnWidth",
+   "maxColumns": "@maxColumns",
+   "gap": "@gap",
+   "padding": "@padding",
+   "grow": "@grow",
+   "background": "@background",
+   "width": "@width",
+   "height": "@height",
+   "scroll": "@scroll",
+   "headerEnd": {
+    "$slot": "headerEnd"
+   }
+  }
+ }
+}

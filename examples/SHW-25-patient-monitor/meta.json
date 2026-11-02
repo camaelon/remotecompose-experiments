@@ -1,0 +1,507 @@
+{
+ "id": "SHW-25",
+ "name": "patient-monitor",
+ "version": 1,
+ "title": "ICU patient monitor: sweeping ECG, pleth and respiration traces with alarm limits",
+ "summary": "A bedside monitor drawn in one canvas: ECG lead II, SpO2 pleth and respiration traces sweep left to right with the erase gap of a real monitor, rebuilt every frame from three small float arrays and the clock; heart rate, SpO2, respiration rate and blood pressure come from host variables, and the HR (or SpO2) tile and a top banner flash red when a value leaves its alarm limits. Landscape on a tablet, numerics under the traces on a phone.",
+ "prompt": "Build an ICU-style patient monitor: a scrolling ECG trace drawn from a waveform array looping with the clock, with the sweep-and-erase gap of a real monitor, an SpO2 pleth wave, heart rate and SpO2 numbers from host variables, and a flashing red alarm when the heart rate is out of range. Dark, crisp, legible, on a tablet and on a phone.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "A sweep-and-erase trace is two path expressions per wave evaluated against the clock, plus a hand-placed tile grid that switches between landscape and portrait with lerp; no library component draws either.",
+ "capabilities": {
+  "primary": [
+   "draw.plot",
+   "data.spline",
+   "time.clock",
+   "host.variables"
+  ],
+  "secondary": [
+   "data.array",
+   "data.condition",
+   "expr.select",
+   "expr.format",
+   "text.dynamic",
+   "text.anchor",
+   "draw.stroke",
+   "anim.loop",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "dashboard",
+  "fitness",
+  "chart"
+ ],
+ "form_factor": "tablet",
+ "keywords": [
+  "patient monitor",
+  "icu",
+  "ecg",
+  "ekg",
+  "heart rate",
+  "spo2",
+  "pulse oximetry",
+  "pleth",
+  "plethysmograph",
+  "respiration",
+  "nibp",
+  "blood pressure",
+  "vital signs",
+  "bedside monitor",
+  "medical",
+  "alarm",
+  "sweep",
+  "oscilloscope",
+  "waveform",
+  "telemetry"
+ ],
+ "teaches": [
+  "A sweep-and-erase trace without a sample buffer: the head is x_h = fract(T / D) * width, and the sample at x shows the time T - fract((x_h - x) / width + 1) * D, so the new sweep and the previous one both stay put on screen while the head moves",
+  "Two pathExpressions per wave, 0..head and head+gap..width, are the trace and its erase gap; end and count are expressions (floor(head / step) * step, head / step + 1) so the samples sit on a fixed pixel grid and the trace does not shimmer",
+  "The ECG beat is stored as a fixed 0.62 s window (100 samples) read with min(1, fract(phase) * k): the QRS keeps its real width at any heart rate and the baseline fills the rest of the RR interval, so 148 bpm looks like tachycardia rather than a squashed beat",
+  "The alarm is data, not layout: hrA = ifElse(0, 1, max(hr - hrHi, hrLo - hr)) and blink = ifElse(0, 1, 0.5 - fract(T * 2)) drive conditionalOperations that paint the tile red, turn its text white and show the banner",
+  "One canvas serves both orientations: land = ifElse(0, 1, W - 1.15 H) and every tile rectangle is lerp(portrait, landscape, @land)",
+  "A soft glow is the same path stroked twice: 2.4x wider at alpha 0.16, then the 2 px trace on top"
+ ],
+ "pitfalls": [
+  "TypeScript player: PathExpression.evalRPN has no case for splineLoop (op 75), so a pathExpression using splineLoop draws vertical spikes there; use spline(@a, fract(t)) with the first value repeated at the end, which both players evaluate",
+  "Without flags 2 (monotonic) the default spline path overshoots around the sharp R wave",
+  "Changing hr re-times the history already on screen (the trace is recomputed from the clock, not stored), so the old sweep reflows once when the rate changes",
+  "continuousSec() wraps at the hour: the traces jump once an hour",
+  "Canvas text has no font weight: the big numerics use the default face"
+ ],
+ "inputs": {
+  "variables": {
+   "hr": {
+    "type": "float",
+    "meaning": "heart rate, bpm",
+    "default": 72,
+    "min": 20,
+    "max": 220
+   },
+   "spo2": {
+    "type": "float",
+    "meaning": "oxygen saturation, %",
+    "default": 98,
+    "min": 60,
+    "max": 100
+   },
+   "rr": {
+    "type": "float",
+    "meaning": "respiration rate, breaths per minute",
+    "default": 16,
+    "min": 4,
+    "max": 50
+   },
+   "sys": {
+    "type": "float",
+    "meaning": "systolic blood pressure, mmHg",
+    "default": 118,
+    "min": 50,
+    "max": 240
+   },
+   "dia": {
+    "type": "float",
+    "meaning": "diastolic blood pressure, mmHg",
+    "default": 76,
+    "min": 30,
+    "max": 150
+   },
+   "hrHi": {
+    "type": "float",
+    "meaning": "upper HR alarm limit",
+    "default": 120,
+    "min": 60,
+    "max": 220
+   },
+   "hrLo": {
+    "type": "float",
+    "meaning": "lower HR alarm limit",
+    "default": 50,
+    "min": 20,
+    "max": 100
+   },
+   "spo2Lo": {
+    "type": "float",
+    "meaning": "lower SpO2 alarm limit",
+    "default": 90,
+    "min": 70,
+    "max": 99
+   }
+  },
+  "clock": "drives the sweep",
+  "touch": false
+ },
+ "check": {
+  "describe": "800x480 at 14:37:04: three traces (green ECG with narrow R waves, cyan pleth with a dicrotic notch, yellow respiration), each with an 18 px erase gap and a bright head dot; tiles HR 72, SpO2 98 with a perfusion bar, RR 16, NIBP 118/76 MAP 90. At 14:37:06 the heads have moved 200 px (ECG, pleth) and 50 px (resp). hr 148: banner HR HIGH 148, the HR tile red with white text, 148 bpm beats with normal-width QRS. 360x640: traces on top, tiles in a 2x2 grid. alarm-off-phase (0.3 s later in the blink): the red tile and banner dimmed.",
+  "render": {
+   "clock": "2026-11-02T14:37:04"
+  },
+  "renders": [
+   {
+    "name": "later",
+    "clock": "2026-11-02T14:37:06"
+   },
+   {
+    "name": "alarm",
+    "clock": "2026-11-02T14:37:04",
+    "variables": {
+     "hr": 148
+    },
+    "duration": 1.1
+   },
+   {
+    "name": "alarm-off-phase",
+    "clock": 1793659024300,
+    "variables": {
+     "hr": 148
+    },
+    "duration": 1.1
+   },
+   {
+    "name": "spo2-low",
+    "clock": "2026-11-02T14:37:04",
+    "variables": {
+     "spo2": 86,
+     "hr": 96
+    },
+    "duration": 1.1
+   },
+   {
+    "name": "phone",
+    "width": 360,
+    "height": 640,
+    "clock": "2026-11-02T14:37:04"
+   },
+   {
+    "name": "phone-alarm",
+    "width": 360,
+    "height": 640,
+    "clock": "2026-11-02T14:37:04",
+    "variables": {
+     "hr": 42
+    },
+    "duration": 1.1
+   },
+   {
+    "name": "large",
+    "width": 1280,
+    "height": 800,
+    "clock": "2026-11-02T14:37:04"
+   }
+  ]
+ },
+ "related": [
+  "DRW-06",
+  "VAR-07",
+  "EXP-07",
+  "HST-02",
+  "TIM-04"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 10519,
+  "header": {
+   "width": 800,
+   "height": 480
+  },
+  "op_count": 372,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 170,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "ConditionalOperations": 17,
+   "DATA_FLOAT": 8,
+   "DATA_TEXT": 19,
+   "DRAW_CIRCLE": 7,
+   "DRAW_LINE": 3,
+   "DRAW_PATH": 10,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 10,
+   "DRAW_TEXT_ANCHOR": 32,
+   "DataListFloat": 3,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 8,
+   "PAINT_VALUES": 56,
+   "PathExpression": 6,
+   "TextFromFloat": 12
+  },
+  "host_variables": [
+   {
+    "name": "dia",
+    "type": "float",
+    "value": 76
+   },
+   {
+    "name": "hr",
+    "type": "float",
+    "value": 72
+   },
+   {
+    "name": "hrHi",
+    "type": "float",
+    "value": 120
+   },
+   {
+    "name": "hrLo",
+    "type": "float",
+    "value": 50
+   },
+   {
+    "name": "rr",
+    "type": "float",
+    "value": 16
+   },
+   {
+    "name": "spo2",
+    "type": "float",
+    "value": 98
+   },
+   {
+    "name": "spo2Lo",
+    "type": "float",
+    "value": 90
+   },
+   {
+    "name": "sys",
+    "type": "float",
+    "value": 118
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 2,
+   "info": 1
+  },
+  "audit_findings": [
+   "warning: hardcoded_colors",
+   "warning: text_in_canvas",
+   "info: repaint_continuous"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "later": {
+    "render": "render-later.png",
+    "render_findings": []
+   },
+   "alarm": {
+    "render": "render-alarm.png",
+    "render_findings": []
+   },
+   "alarm-off-phase": {
+    "render": "render-alarm-off-phase.png",
+    "render_findings": []
+   },
+   "spo2-low": {
+    "render": "render-spo2-low.png",
+    "render_findings": []
+   },
+   "phone": {
+    "render": "render-phone.png",
+    "render_findings": [],
+    "size": [
+     360,
+     640
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "phone-alarm": {
+    "render": "render-phone-alarm.png",
+    "render_findings": [],
+    "size": [
+     360,
+     640
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "large": {
+    "render": "render-large.png",
+    "render_findings": [],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "apiLevel",
+   "bottom",
+   "canvas",
+   "color",
+   "commands",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "decimal",
+   "dia",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "ecg",
+   "end",
+   "export",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "floatArrays",
+   "header",
+   "height",
+   "hr",
+   "hrHi",
+   "hrLo",
+   "id",
+   "left",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "pathExpression",
+   "pleth",
+   "profiles",
+   "radius",
+   "resources",
+   "resp",
+   "right",
+   "root",
+   "rr",
+   "rx",
+   "ry",
+   "semantics",
+   "spo2",
+   "spo2Lo",
+   "start",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "sys",
+   "text",
+   "textSize",
+   "top",
+   "type",
+   "v1",
+   "v2",
+   "value",
+   "variable",
+   "variables",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "draw.plot": [
+    "pathExpression"
+   ],
+   "data.spline": [
+    "spline"
+   ],
+   "time.clock": [
+    "timeInHr",
+    "timeInMin",
+    "continuousSec"
+   ],
+   "host.variables": [
+    "export"
+   ],
+   "data.array": [
+    "floatArrays"
+   ],
+   "data.condition": [
+    "conditionalOperations",
+    "ifElse"
+   ],
+   "expr.select": [
+    "ifElse("
+   ],
+   "expr.format": [
+    "textFromFloat"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeCap",
+    "strokeJoin"
+   ],
+   "anim.loop": [
+    "continuousSec"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:48:48.625Z"
+ },
+ "snippets": [
+  {
+   "pointer": "/resources/floatArrays/ecg",
+   "shows": "data.array",
+   "note": "one beat as a fixed 0.62 s window"
+  },
+  {
+   "pointer": "/root/canvas/commands/50",
+   "shows": "time.clock",
+   "note": "the sweep head from the clock"
+  },
+  {
+   "pointer": "/root/canvas/commands/54",
+   "shows": "draw.plot",
+   "note": "the ECG trace up to the head, sampled on a 1 px grid"
+  },
+  {
+   "pointer": "/root/canvas/commands/54",
+   "shows": "data.spline",
+   "note": "beat shape by spline over the waveform array"
+  },
+  {
+   "pointer": "/root/canvas/commands/16",
+   "shows": "host.variables",
+   "note": "alarm state from the host heart rate and its limits"
+  },
+  {
+   "pointer": "/resources/variables",
+   "shows": "host.variables",
+   "note": "vitals and alarm limits the host sets"
+  }
+ ]
+}

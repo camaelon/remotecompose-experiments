@@ -1,0 +1,971 @@
+{
+ "id": "CMP-43",
+ "name": "home-overview",
+ "version": 1,
+ "title": "A smart-home overview that becomes a dashboard grid when wide",
+ "prompt": "Make a smart-home overview: indoor temperature and today's energy with their trend, energy use by hour, the lights of four rooms with switches, the home battery, the doors and alarm, and the weather outside. One column on a phone, a real dashboard on a tablet or a desktop.",
+ "level": 2,
+ "family": "CMP",
+ "components": [
+  "DashboardGrid",
+  "BigNumber",
+  "Sparkline",
+  "BarChart",
+  "RowList",
+  "Icon",
+  "Switch",
+  "ProgressRing",
+  "KeyValueRow",
+  "WeatherIcon"
+ ],
+ "capabilities": {
+  "primary": [
+   "layout.flow",
+   "input.toggle"
+  ],
+  "secondary": [
+   "layout.scroll",
+   "data.array",
+   "host.variables",
+   "image.icon",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "dashboard",
+  "iot-panel"
+ ],
+ "form_factor": "tablet",
+ "keywords": [
+  "smart home",
+  "home overview",
+  "home dashboard",
+  "iot",
+  "lights",
+  "switches",
+  "energy",
+  "energy use",
+  "kwh",
+  "thermostat",
+  "temperature",
+  "home battery",
+  "security",
+  "door lock",
+  "alarm",
+  "weather",
+  "dashboard",
+  "card grid",
+  "responsive grid",
+  "columns when wide",
+  "tablet dashboard",
+  "wall panel"
+ ],
+ "teaches": [
+  "The whole screen is one DashboardGrid call: seven cards in reading order, the energy chart with span 2 and the weather with priority 2 (hidden on a phone)",
+  "A card's content gets an exact box; RowList embedded takes \"@cardWidth\" and \"@cardHeight\", so the lights list with switches fits whatever card the width makes",
+  "KPI cards are BigNumber over a Sparkline capped at min(@cardHeight - 80, 64) dp: rows grow to fill a tablet, the number stays at the top and the line stays calm",
+  "Switches bind exported document variables (@liv, @kit...), so the host reads and drives each room"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/DashboardGrid/cards",
+   "shows": "layout.flow",
+   "note": "seven cards: span 2 chart, priority 2 weather"
+  },
+  {
+   "pointer": "/root/DashboardGrid/cards/3",
+   "shows": "input.toggle",
+   "note": "lights: RowList embedded in a card with @cardWidth / @cardHeight"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "liv": {
+    "min": 0,
+    "max": 1,
+    "default": 1
+   },
+   "kit": {
+    "min": 0,
+    "max": 1,
+    "default": 0
+   },
+   "bed": {
+    "min": 0,
+    "max": 1,
+    "default": 0
+   },
+   "off": {
+    "min": 0,
+    "max": 1,
+    "default": 1
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "360x640: Home header, Indoor 21.5 °C and Energy today 3.8 kWh cards with lines, Energy by hour bars, then (scrolling) Lights with four switches, Home battery ring 72, Security rows; no weather card. 640x360: the two KPIs side by side, the bar chart full width under them. 800x1280: KPIs side by side, bars (2 columns) beside Lights, then battery, security and weather in one row. 1280x800: KPIs and the bars on the first row, lights, battery, security and weather on the second.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360,
+    "theme": "light"
+   },
+   {
+    "name": "landscape-dark",
+    "width": 640,
+    "height": 360,
+    "theme": "dark"
+   },
+   {
+    "name": "desktop",
+    "width": 1280,
+    "height": 800,
+    "theme": "light"
+   },
+   {
+    "name": "desktop-dark",
+    "width": 1280,
+    "height": 800,
+    "theme": "dark"
+   },
+   {
+    "name": "tablet",
+    "width": 800,
+    "height": 1280,
+    "theme": "light"
+   },
+   {
+    "name": "tablet-dark",
+    "width": 800,
+    "height": 1280,
+    "theme": "dark"
+   }
+  ]
+ },
+ "related": [
+  "DashboardGrid",
+  "RowList",
+  "CMP-44",
+  "CMP-24"
+ ],
+ "derived": {
+  "components": [
+   "BarChart",
+   "BigNumber",
+   "DashboardGrid",
+   "Icon",
+   "KeyValueRow",
+   "ProgressRing",
+   "RowList",
+   "Sparkline",
+   "Switch",
+   "WeatherIcon"
+  ],
+  "component_instances": 20,
+  "component_modes": {
+   "Sparkline": "pattern",
+   "BarChart": "expand",
+   "DashboardGrid": "expand",
+   "BigNumber": "expand",
+   "RowList": "expand",
+   "Icon": "expand",
+   "Switch": "expand",
+   "ProgressRing": "expand",
+   "KeyValueRow": "expand",
+   "WeatherIcon": "expand"
+  },
+  "component_patterns": [
+   "Sparkline__fill x2"
+  ],
+  "converter": "json2rc",
+  "bytes": 21055,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 1038,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 10,
+   "ANIMATED_FLOAT": 124,
+   "CLIP_RECT": 1,
+   "COLOR_CONSTANT": 20,
+   "COLOR_EXPRESSIONS": 20,
+   "COMPONENT_VALUE": 20,
+   "CanvasContent": 15,
+   "ClipRectModifierOperation": 2,
+   "CoreText": 22,
+   "DATA_FLOAT": 9,
+   "DATA_TEXT": 59,
+   "DRAW_ARC": 1,
+   "DRAW_CIRCLE": 12,
+   "DRAW_LINE": 22,
+   "DRAW_PATH": 4,
+   "DRAW_ROUND_RECT": 10,
+   "DRAW_TEXT_ANCHOR": 23,
+   "DataListFloat": 3,
+   "HEADER": 1,
+   "IntegerExpression": 7,
+   "LAYOUT_BOX": 41,
+   "LAYOUT_CANVAS": 15,
+   "LAYOUT_COLUMN": 23,
+   "LAYOUT_FLOW": 3,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 14,
+   "LayoutComponentContent": 108,
+   "LoopOperation": 24,
+   "MATRIX_RESTORE": 12,
+   "MATRIX_ROTATE": 1,
+   "MATRIX_SAVE": 12,
+   "MATRIX_SCALE": 10,
+   "MATRIX_TRANSLATE": 8,
+   "MODIFIER_BACKGROUND": 11,
+   "MODIFIER_CLICK": 4,
+   "MODIFIER_HEIGHT": 68,
+   "MODIFIER_PADDING": 31,
+   "MODIFIER_VISIBILITY": 10,
+   "MODIFIER_WIDTH": 87,
+   "MODIFIER_WIDTH_IN": 4,
+   "NAMED_VARIABLE": 17,
+   "PAINT_VALUES": 47,
+   "PATH_DATA": 4,
+   "RoundedClipRectModifierOperation": 7,
+   "ScrollModifierOperation": 2,
+   "THEME": 30,
+   "TextFromFloat": 5,
+   "TextMeasure": 6,
+   "TextMerge": 32,
+   "TextSubtext": 6,
+   "TextTransform": 4,
+   "TouchExpression": 2,
+   "ValueFloatExpressionChangeActionOperation": 4
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "bed",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "hourly",
+    "type": "float_array",
+    "value": [
+     0.300000012,
+     0.200000003,
+     0.200000003,
+     0.400000006,
+     0.899999976,
+     0.600000024,
+     0.5,
+     0.699999988,
+     1.10000002,
+     1.39999998,
+     0.800000012,
+     0.5
+    ]
+   },
+   {
+    "name": "kit",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "kwh",
+    "type": "float_array",
+    "value": [
+     5.0999999,
+     4.5999999,
+     4.9000001,
+     4.19999981,
+     3.9000001,
+     4,
+     3.79999995
+    ]
+   },
+   {
+    "name": "liv",
+    "type": "float",
+    "value": 1
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "off",
+    "type": "float",
+    "value": 1
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "temp",
+    "type": "float_array",
+    "value": [
+     20.1000004,
+     19.7999992,
+     19.6000004,
+     20.3999996,
+     21,
+     21.2999992,
+     21.5
+    ]
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: layout_deep_nesting",
+   "info: layout_touch_target",
+   "info: expression_entries"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 6,
+   "click": 4,
+   "area": 0,
+   "touch": 2
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 20698,
+    "component_modes": {
+     "Sparkline": "pattern",
+     "BarChart": "expand",
+     "DashboardGrid": "expand",
+     "BigNumber": "expand",
+     "RowList": "expand",
+     "Icon": "expand",
+     "Switch": "expand",
+     "ProgressRing": "expand",
+     "KeyValueRow": "expand",
+     "WeatherIcon": "expand"
+    },
+    "op_count": 992,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "bed",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "hourly",
+      "type": "float_array",
+      "value": [
+       0.300000012,
+       0.200000003,
+       0.200000003,
+       0.400000006,
+       0.899999976,
+       0.600000024,
+       0.5,
+       0.699999988,
+       1.10000002,
+       1.39999998,
+       0.800000012,
+       0.5
+      ]
+     },
+     {
+      "name": "kit",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "kwh",
+      "type": "float_array",
+      "value": [
+       5.0999999,
+       4.5999999,
+       4.9000001,
+       4.19999981,
+       3.9000001,
+       4,
+       3.79999995
+      ]
+     },
+     {
+      "name": "liv",
+      "type": "float",
+      "value": 1
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "off",
+      "type": "float",
+      "value": 1
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "temp",
+      "type": "float_array",
+      "value": [
+       20.1000004,
+       19.7999992,
+       19.6000004,
+       20.3999996,
+       21,
+       21.2999992,
+       21.5
+      ]
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 20698,
+    "component_modes": {
+     "Sparkline": "pattern",
+     "BarChart": "expand",
+     "DashboardGrid": "expand",
+     "BigNumber": "expand",
+     "RowList": "expand",
+     "Icon": "expand",
+     "Switch": "expand",
+     "ProgressRing": "expand",
+     "KeyValueRow": "expand",
+     "WeatherIcon": "expand"
+    },
+    "op_count": 992,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "bed",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "hourly",
+      "type": "float_array",
+      "value": [
+       0.300000012,
+       0.200000003,
+       0.200000003,
+       0.400000006,
+       0.899999976,
+       0.600000024,
+       0.5,
+       0.699999988,
+       1.10000002,
+       1.39999998,
+       0.800000012,
+       0.5
+      ]
+     },
+     {
+      "name": "kit",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "kwh",
+      "type": "float_array",
+      "value": [
+       5.0999999,
+       4.5999999,
+       4.9000001,
+       4.19999981,
+       3.9000001,
+       4,
+       3.79999995
+      ]
+     },
+     {
+      "name": "liv",
+      "type": "float",
+      "value": 1
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "off",
+      "type": "float",
+      "value": 1
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "temp",
+      "type": "float_array",
+      "value": [
+       20.1000004,
+       19.7999992,
+       19.6000004,
+       20.3999996,
+       21,
+       21.2999992,
+       21.5
+      ]
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "landscape": {
+    "theme": "light",
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: expression_entries"
+    ]
+   },
+   "landscape-dark": {
+    "theme": "dark",
+    "render": "render-landscape-dark.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: expression_entries"
+    ]
+   },
+   "desktop": {
+    "theme": "light",
+    "render": "render-desktop.png",
+    "render_findings": [],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: expression_entries"
+    ]
+   },
+   "desktop-dark": {
+    "theme": "dark",
+    "render": "render-desktop-dark.png",
+    "render_findings": [],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: expression_entries"
+    ]
+   },
+   "tablet": {
+    "theme": "light",
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: expression_entries"
+    ]
+   },
+   "tablet-dark": {
+    "theme": "dark",
+    "render": "render-tablet-dark.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: layout_touch_target",
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "BarChart",
+   "BigNumber",
+   "DashboardGrid",
+   "Icon",
+   "KeyValueRow",
+   "ProgressRing",
+   "RowList",
+   "Sparkline",
+   "Sparkline__fill",
+   "Switch",
+   "WeatherIcon",
+   "align",
+   "alpha",
+   "angle",
+   "anim",
+   "apiLevel",
+   "arguments",
+   "background",
+   "bed",
+   "bottom",
+   "box",
+   "canvas",
+   "caption",
+   "cards",
+   "change",
+   "checked",
+   "children",
+   "clickable",
+   "clip",
+   "clipRect",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "condition",
+   "content",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "dashboardgrid1_scroll",
+   "decimal",
+   "decimals",
+   "definePattern",
+   "drawArc",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "embedded",
+   "end",
+   "error",
+   "export",
+   "fill",
+   "flags",
+   "floatArrays",
+   "flow",
+   "fontSize",
+   "fontWeight",
+   "from",
+   "global",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "horizontalArrangement",
+   "hourly",
+   "icon_bed_outlined",
+   "icon_chair_outlined",
+   "icon_desk_outlined",
+   "icon_kitchen_outlined",
+   "id1",
+   "id2",
+   "index",
+   "invert",
+   "key",
+   "kit",
+   "kwh",
+   "label",
+   "labels",
+   "lead",
+   "left",
+   "len",
+   "light",
+   "liv",
+   "loop",
+   "maxLines",
+   "mode",
+   "modifiers",
+   "muted",
+   "name",
+   "note",
+   "off",
+   "onClick",
+   "onSurface",
+   "operation",
+   "ops",
+   "outline",
+   "overflow",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "parameters",
+   "path",
+   "paths",
+   "pivotX",
+   "pivotY",
+   "primary",
+   "priority",
+   "profiles",
+   "progress",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "rotate",
+   "roundedRect",
+   "row",
+   "rowlist1_open",
+   "rows",
+   "rx",
+   "ry",
+   "save",
+   "scale",
+   "semantics",
+   "size",
+   "spacedBy",
+   "span",
+   "start",
+   "startAngle",
+   "stateDescription",
+   "step",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "subtitle",
+   "success",
+   "suffix",
+   "surface",
+   "sweepAngle",
+   "sx",
+   "sy",
+   "target",
+   "temp",
+   "text",
+   "textAlign",
+   "textMeasure",
+   "textSize",
+   "textSubtext",
+   "textTransform",
+   "thickness",
+   "title",
+   "top",
+   "track",
+   "trail",
+   "translate",
+   "type",
+   "until",
+   "value",
+   "values",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalArrangement",
+   "verticalScroll",
+   "verticalWeight",
+   "vis_0",
+   "vis_1",
+   "visibility",
+   "warning",
+   "weight",
+   "whole",
+   "width",
+   "widthIn",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "layout.flow": [
+    "flow"
+   ],
+   "input.toggle": [
+    "valueFloatExpressionChange",
+    "onClick"
+   ],
+   "layout.scroll": [
+    "verticalScroll"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "image.icon": [
+    "icon_"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:42:16.597Z"
+ }
+}

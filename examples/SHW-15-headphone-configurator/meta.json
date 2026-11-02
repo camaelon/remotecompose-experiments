@@ -1,0 +1,806 @@
+{
+ "id": "SHW-15",
+ "name": "headphone-configurator",
+ "version": 1,
+ "title": "A 3D product configurator: headphones to turn, recolour and explode",
+ "summary": "Wireless headphones built from 21 lit 3D draws of nine primitives (extruded arcs for the band, pad and yokes, a capped lathe for each cup, tori, cones, cylinders) turn slowly on a turntable; a drag orbits the camera, four swatches cross-fade the shell and cushion colours, and Explode eases the parts apart while five labels, projected from 3D in the same canvas, follow their parts on the nearer cup. A fitBox swaps a phone layout (title above, swatch card below) for a tablet one (a side panel with specs), and the 3D framing follows.",
+ "prompt": "Make a product configurator for our Aura One headphones: a 3D model on a turntable people can drag round, colour swatches that repaint it, and an explode button that pulls the parts apart with labels. It should work on a phone (swatches under the model) and a tablet (a side panel).",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "Scene3D has no runtime colour or explode toggle and no projected labels: the camera orbit, the colour cross-fade (computed argb colours from float arrays) and the label projection are written by hand.",
+ "capabilities": {
+  "primary": [
+   "3d.scene",
+   "3d.mesh",
+   "input.toggle",
+   "layout.responsive"
+  ],
+  "secondary": [
+   "input.drag",
+   "input.tap",
+   "time.animation",
+   "anim.value",
+   "data.array",
+   "data.loop",
+   "expr.trig",
+   "text.dynamic",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "onboarding",
+  "control"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "3d",
+  "product configurator",
+  "configurator",
+  "product viewer",
+  "turntable",
+  "headphones",
+  "colour swatches",
+  "color picker",
+  "exploded view",
+  "explode",
+  "labels",
+  "callouts",
+  "drag to rotate",
+  "orbit camera",
+  "tablet layout",
+  "showcase"
+ ],
+ "teaches": [
+  "Orbit the camera instead of turning every part: eye = (-d cos(tilt) sin(spin), d sin(tilt), d cos(tilt) cos(spin)) and each part needs only identity + translate (+ its own rotation); turn the light directions by the same angles so the lighting stays on the viewer's side",
+  "Recolour a mesh at run time with a computed colour: resources.colors shell = {argb: [1, r, g, b]} where each channel is {value: arrayGet(@shR, @sel), anim: 0.5}, so a swatch tap cross-fades straight from the old colour to the new one",
+  "Explode an assembly with one eased variable: exA = {value: @ex, anim: 0.9}; every translate adds exA times the part's offset, and the camera distance grows with exA so the exploded model still fits",
+  "Label 3D parts from 2D: project each anchor with the same spin, tilt, distance and focal length (H / 2 / tan(fovY / 2)) in a loop over float arrays, and draw a dot, a leader line and textLookup's name after the meshes, faded in with exA",
+  "Put labels on the nearer side: the right cup is nearer while sin(spin) < 0, so the anchors' x is multiplied by the sign of -sin(spin)",
+  "Swap a phone and a tablet layout with a fitBox (a row with widthIn min 600 first, the column second), and let the 3D canvas behind them shift and reframe with step(componentWidth(), 599)",
+  "Draw a swatch row in one small canvas with a sliding selection ring (cx from an eased @selA) under a row of transparent tap boxes that carry the semantics and the onClick"
+ ],
+ "pitfalls": [
+  "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players only",
+  "clamp(x, a, b) is min(max(x, b), a): the upper bound comes second. clamp(v, -1, 1) is always -1; write max(-1, min(v, 1))",
+  "A computed colour (argb/hsv) is written after all other resources and cannot read a root variable: keep the swatch index in resources.variables",
+  "The 3D buffer is window-sized and drawn at the canvas origin: keep the 3D canvas fillMaxSize behind the layout and move the model with a 2D translate rather than placing the canvas in the layout",
+  "rc-render with clock 0 (the epoch) freezes eased values in a touch simulation: pin a real date-time for interaction renders",
+  "Continuous repaint: the turntable reads continuousSec() every frame while shown"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/2/box/children/1/canvas/commands/15",
+   "shows": "3d.scene",
+   "note": "the orbiting camera: eye from spin and tilt"
+  },
+  {
+   "pointer": "/root/2/box/children/1/canvas/commands/16",
+   "shows": "3d.scene",
+   "note": "lights turned with the camera"
+  },
+  {
+   "pointer": "/root/2/box/children/1/canvas/commands/22",
+   "shows": "3d.mesh",
+   "note": "the ear cup: a capped lathe profile"
+  },
+  {
+   "pointer": "/root/2/box/children/1/canvas/commands/18",
+   "shows": "3d.mesh",
+   "note": "the headband: an extruded arc"
+  },
+  {
+   "pointer": "/resources/colors/shell",
+   "shows": "input.toggle",
+   "note": "the shell colour cross-fades between swatches"
+  },
+  {
+   "pointer": "/root/2/box/children/1/canvas/commands/89",
+   "shows": "data.loop",
+   "note": "five projected labels from float arrays"
+  },
+  {
+   "pointer": "/root/2/box/children/2/fitBox",
+   "shows": "layout.responsive",
+   "note": "tablet row first, phone column second"
+  },
+  {
+   "pointer": "/root/1",
+   "shows": "anim.value",
+   "note": "exA: the eased explode amount"
+  }
+ ],
+ "check": {
+  "describe": "Phone: 'Aura One' and $349 at the top, dark (Midnight) headphones on a pale turntable disc, a card below with 'Colour Midnight', four swatches (the first ringed) and an Explode view button. Exploded: the band lifts, cups move out, cushions in, yokes up; five labelled leader lines (Headband, Foam cushion, 40 mm driver, Aluminium yoke, Ear cup) on the nearer cup, and the button says Assemble. A swatch tap recolours shell and cushions. Tablet: model left, a side panel with title, price, colour, swatches, button, four specs and a sentence.",
+  "render": {
+   "clock": "2026-11-02T10:00:00"
+  },
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "clock": "2026-11-02T10:00:00"
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "clock": "2026-11-02T10:00:00"
+   },
+   {
+    "name": "exploded",
+    "theme": "light",
+    "clock": "2026-11-02T10:00:08",
+    "touch_events": [
+     {
+      "t": 0.2,
+      "type": "tap",
+      "x": 180,
+      "y": 667
+     },
+     {
+      "t": 0.3,
+      "type": "tap",
+      "x": 234,
+      "y": 608
+     }
+    ],
+    "duration": 2.5
+   },
+   {
+    "name": "recolour",
+    "theme": "dark",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.2,
+      "type": "tap",
+      "x": 130,
+      "y": 608
+     }
+    ],
+    "duration": 1.5
+   },
+   {
+    "name": "turned",
+    "theme": "light",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 60,
+      "y": 300
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 140,
+      "y": 330
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 220,
+      "y": 350
+     },
+     {
+      "t": 0.4,
+      "type": "up",
+      "x": 220,
+      "y": 350
+     }
+    ],
+    "duration": 2
+   },
+   {
+    "name": "later",
+    "theme": "light",
+    "clock": "2026-11-02T10:00:10"
+   },
+   {
+    "name": "tablet",
+    "theme": "light",
+    "width": 1024,
+    "height": 720,
+    "clock": "2026-11-02T10:00:00"
+   },
+   {
+    "name": "tablet-exploded",
+    "theme": "dark",
+    "width": 1024,
+    "height": 720,
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.2,
+      "type": "tap",
+      "x": 840,
+      "y": 256
+     },
+     {
+      "t": 0.4,
+      "type": "tap",
+      "x": 890,
+      "y": 186
+     }
+    ],
+    "duration": 2
+   },
+   {
+    "name": "tablet-portrait",
+    "theme": "light",
+    "width": 800,
+    "height": 1280,
+    "clock": "2026-11-02T10:00:00"
+   },
+   {
+    "name": "small-phone",
+    "theme": "dark",
+    "width": 320,
+    "height": 600,
+    "clock": "2026-11-02T10:00:00"
+   }
+  ]
+ },
+ "related": [
+  "CMP-35",
+  "DRW-17",
+  "CMP-36",
+  "Scene3D",
+  "LAY-09"
+ ],
+ "java_difference": "3D support has not landed in androidx yet (coming): the Java JSON parser does not know camera3D, lights3D, matrix3D, meshPrimitive3D or drawMesh3D; plays in the C++ and TypeScript players. Also json2rc-only: Java's addDataList drops the list id, so textLookup can't reach it (EXAMPLES_FINDINGS U4)",
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 10593,
+  "header": {
+   "width": 360,
+   "height": 720
+  },
+  "op_count": 590,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 11,
+   "ANIMATED_FLOAT": 69,
+   "COLOR_CONSTANT": 18,
+   "COLOR_EXPRESSIONS": 20,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 4,
+   "CoreText": 22,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 32,
+   "DRAW_CIRCLE": 19,
+   "DRAW_LINE": 1,
+   "DRAW_MESH_3D": 15,
+   "DRAW_TEXT_ANCHOR": 1,
+   "DataListFloat": 12,
+   "DataListIds": 3,
+   "FitBoxLayout": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 27,
+   "LAYOUT_CANVAS": 4,
+   "LAYOUT_COLUMN": 7,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 10,
+   "LayoutComponentContent": 50,
+   "LoopOperation": 19,
+   "MATRIX_3D_OP": 40,
+   "MATRIX_TRANSLATE": 1,
+   "MESH_PRIMITIVE_3D": 9,
+   "MODIFIER_BACKGROUND": 5,
+   "MODIFIER_CLICK": 10,
+   "MODIFIER_HEIGHT": 33,
+   "MODIFIER_PADDING": 9,
+   "MODIFIER_WIDTH": 39,
+   "MODIFIER_WIDTH_IN": 1,
+   "NAMED_VARIABLE": 23,
+   "PAINT_3D_STATE": 2,
+   "PAINT_VALUES": 19,
+   "RoundedClipRectModifierOperation": 4,
+   "SET_CAMERA_3D": 1,
+   "SET_LIGHTS_3D": 1,
+   "TEXT_LOOKUP": 3,
+   "THEME": 27,
+   "TouchExpression": 2,
+   "ValueFloatExpressionChangeActionOperation": 10
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "cuB",
+    "type": "float_array",
+    "value": [
+     0.125,
+     0.352999985,
+     0.282000005,
+     0.172999993
+    ]
+   },
+   {
+    "name": "cuG",
+    "type": "float_array",
+    "value": [
+     0.109999999,
+     0.430999994,
+     0.337000012,
+     0.203999996
+    ]
+   },
+   {
+    "name": "cuR",
+    "type": "float_array",
+    "value": [
+     0.101999998,
+     0.493999988,
+     0.277999997,
+     0.430999994
+    ]
+   },
+   {
+    "name": "cushion",
+    "type": "color",
+    "value": "#FF1A1C20"
+   },
+   {
+    "name": "lax",
+    "type": "float_array",
+    "value": [
+     0,
+     0.800000012,
+     0.899999976,
+     0.959999979,
+     1.12
+    ]
+   },
+   {
+    "name": "lay",
+    "type": "float_array",
+    "value": [
+     1,
+     -0.300000012,
+     -0.419999987,
+     0.140000001,
+     -0.25
+    ]
+   },
+   {
+    "name": "laz",
+    "type": "float_array",
+    "value": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "name": "ldx",
+    "type": "float_array",
+    "value": [
+     0,
+     -0.200000003,
+     0.100000001,
+     0.100000001,
+     0.360000014
+    ]
+   },
+   {
+    "name": "ldy",
+    "type": "float_array",
+    "value": [
+     0.400000006,
+     0,
+     0,
+     0.349999994,
+     0
+    ]
+   },
+   {
+    "name": "lup",
+    "type": "float_array",
+    "value": [
+     -26,
+     52,
+     80,
+     -34,
+     -62
+    ]
+   },
+   {
+    "name": "metal",
+    "type": "color",
+    "value": "#FFC4CAD2"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "shB",
+    "type": "float_array",
+    "value": [
+     0.231000006,
+     0.675000012,
+     0.545000017,
+     0.344999999
+    ]
+   },
+   {
+    "name": "shG",
+    "type": "float_array",
+    "value": [
+     0.200000003,
+     0.776000023,
+     0.647000015,
+     0.426999986
+    ]
+   },
+   {
+    "name": "shR",
+    "type": "float_array",
+    "value": [
+     0.180000007,
+     0.847000003,
+     0.549000025,
+     0.885999978
+    ]
+   },
+   {
+    "name": "shell",
+    "type": "color",
+    "value": "#FF2E333B"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "turntable",
+    "type": "color",
+    "value": "#FF222C3D"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 4
+  },
+  "audit_findings": [
+   "warning: dead_code",
+   "info: layout_fitbox_shows",
+   "info: unused_variables",
+   "info: repaint_continuous",
+   "info: expression_entries"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 7,
+   "click": 5,
+   "area": 0,
+   "touch": 2
+  },
+  "java_identical": false,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "exploded": {
+    "theme": "light",
+    "render": "render-exploded.png",
+    "render_findings": []
+   },
+   "recolour": {
+    "theme": "dark",
+    "render": "render-recolour.png",
+    "render_findings": []
+   },
+   "turned": {
+    "theme": "light",
+    "render": "render-turned.png",
+    "render_findings": []
+   },
+   "later": {
+    "theme": "light",
+    "render": "render-later.png",
+    "render_findings": []
+   },
+   "tablet": {
+    "theme": "light",
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     1024,
+     720
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: layout_fitbox_shows",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "tablet-exploded": {
+    "theme": "dark",
+    "render": "render-tablet-exploded.png",
+    "render_findings": [],
+    "size": [
+     1024,
+     720
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: layout_fitbox_shows",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "tablet-portrait": {
+    "theme": "light",
+    "render": "render-tablet-portrait.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: layout_fitbox_shows",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "small-phone": {
+    "theme": "dark",
+    "render": "render-small-phone.png",
+    "render_findings": [],
+    "size": [
+     320,
+     600
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: layout_fitbox_shows",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "addDataList",
+   "alpha",
+   "angle",
+   "anim",
+   "apiLevel",
+   "argb",
+   "array",
+   "aspect",
+   "axis",
+   "background",
+   "box",
+   "camera3D",
+   "canvas",
+   "center",
+   "children",
+   "clearDepth3D",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cuB",
+   "cuG",
+   "cuR",
+   "cushion",
+   "cx",
+   "cy",
+   "dark",
+   "defaultValue",
+   "depth",
+   "dir",
+   "drawCircle",
+   "drawLine",
+   "drawMesh3D",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "ex",
+   "expression",
+   "eye",
+   "far",
+   "fitBox",
+   "floatArrays",
+   "fontSize",
+   "fontWeight",
+   "fovY",
+   "from",
+   "global",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "id",
+   "index",
+   "innerRadius",
+   "intensity",
+   "lax",
+   "lay",
+   "laz",
+   "ldx",
+   "ldy",
+   "light",
+   "lights",
+   "lights3D",
+   "list",
+   "loop",
+   "lup",
+   "majorRadius",
+   "material3D",
+   "matrix3D",
+   "max",
+   "mesh",
+   "meshPrimitive3D",
+   "metal",
+   "min",
+   "minorRadius",
+   "mode",
+   "modifiers",
+   "muted",
+   "name",
+   "near",
+   "onClick",
+   "onPrimary",
+   "onSurface",
+   "op",
+   "ops",
+   "outerRadius",
+   "outline",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "primary",
+   "primitive",
+   "profile",
+   "profiles",
+   "projection",
+   "radius",
+   "resources",
+   "role",
+   "root",
+   "row",
+   "segments",
+   "sel",
+   "semantics",
+   "shB",
+   "shG",
+   "shR",
+   "shell",
+   "shininess",
+   "size",
+   "specular",
+   "startAngle",
+   "stopMode",
+   "strokeWidth",
+   "style",
+   "surface",
+   "sweepAngle",
+   "target",
+   "text",
+   "textLookup",
+   "textSize",
+   "to",
+   "touchExpression",
+   "translate",
+   "turntable",
+   "type",
+   "until",
+   "up",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalWeight",
+   "weight",
+   "width",
+   "widthIn",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2",
+   "z"
+  ],
+  "evidence": {
+   "3d.scene": [
+    "camera3D",
+    "lights3D"
+   ],
+   "3d.mesh": [
+    "meshPrimitive3D",
+    "drawMesh3D"
+   ],
+   "input.toggle": [
+    "valueFloatExpressionChange",
+    "onClick"
+   ],
+   "layout.responsive": [
+    "fitBox"
+   ],
+   "input.drag": [
+    "touchExpression"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "time.animation": [
+    "continuousSec"
+   ],
+   "anim.value": [
+    "anim"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet",
+    "addDataList"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "expr.trig": [
+    "sin(",
+    "cos("
+   ],
+   "text.dynamic": [
+    "textLookup"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:46:35.590Z"
+ }
+}

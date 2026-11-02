@@ -1,0 +1,2463 @@
+{
+ "component": "Comparison",
+ "version": 1,
+ "summary": "A whole comparison screen from data: two to four options (plans, phones, laptops) on the same rows, each option a card with its name, price and a Choose button. From the width where every column fits (about 150 dp each, 440 to 760 dp wide) a real table: the options as columns beside a column of row labels, values aligned, the featured option tinted with a Most popular badge, the header kept while the rows scroll. Narrower, two options side by side on the same rows, each side with a picker that steps to another option; it opens on the featured one and its neighbour. Choose highlights the option with a ring and sends its index to the host.",
+ "params": {
+  "options": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "2 to 4 objects: {\"name\", \"price\", \"period\", \"note\", \"badge\", \"values\"}, all but name and values optional. name (Pro, Pixel 10) one line; price a short string (\"€9.99\", \"$799\", \"Free\"); period after it, small (\"/month\"); note two short lines under it (\"For one person\"); badge a chip over the name (\"Best value\"; badges show only when featured is set, which reserves their row). values: one per row, in the order of rows: a string (\"128 GB\", \"4K\"), true (a tick), false (a cross) or null (a dash). Numbers must be strings: \"2\", not 2"
+  },
+  "rows": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "The attributes compared, in order: strings (\"Screens\", \"Battery\") or {\"label\"}. Up to two lines in the table's label column, one line as a caption on a phone"
+  },
+  "title": {
+   "type": "string",
+   "doc": "The heading (\"Choose your plan\"): the table's top-left corner when wide, a 56 dp row on a phone (dropped when the window is short)"
+  },
+  "subtitle": {
+   "type": "string",
+   "doc": "A short line under the title, in the corner of the table only (\"Cancel any time\")"
+  },
+  "featured": {
+   "type": "float",
+   "default": -1,
+   "static": true,
+   "doc": "The highlighted option, from 0: its column is tinted, it gets featuredLabel as a badge (unless it has its own), and a phone opens on it and its neighbour. -1: none"
+  },
+  "featuredLabel": {
+   "type": "string",
+   "default": "Most popular",
+   "doc": "The featured option's badge"
+  },
+  "selected": {
+   "type": "variable",
+   "initial": -1,
+   "doc": "The chosen option, from 0, -1 for none yet. Choose sets it and its card gets a ring and a filled Selected button. Bind a resources variable (\"@plan\") to preset or read it. Do not name it step"
+  },
+  "action": {
+   "type": "string",
+   "default": "choose",
+   "doc": "The host action every Choose and Selected button sends, with the option's index as a float value"
+  },
+  "chooseLabel": {
+   "type": "string",
+   "default": "Choose",
+   "doc": "The buttons' label (\"Select\", \"Buy\")"
+  },
+  "selectedLabel": {
+   "type": "string",
+   "default": "Selected",
+   "doc": "The chosen option's button"
+  },
+  "rowHeight": {
+   "type": "float",
+   "default": 48,
+   "static": true,
+   "doc": "A table row's height when wide; a phone's rows are 60 (a caption and two lines)"
+  },
+  "colMin": {
+   "type": "float",
+   "default": 140,
+   "static": true,
+   "doc": "Narrowest option column of the table; the table shows from labelMin + n x colMin + 32 dp"
+  },
+  "colMax": {
+   "type": "float",
+   "default": 280,
+   "static": true,
+   "doc": "Widest option column; the table is centred when the window is wider"
+  },
+  "labelMin": {
+   "type": "float",
+   "default": 132,
+   "static": true,
+   "doc": "Narrowest label column"
+  },
+  "labelMax": {
+   "type": "float",
+   "default": 220,
+   "static": true,
+   "doc": "Widest label column"
+  },
+  "background": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "The screen's background (the cards are surface)"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width it has, when it is not the whole window"
+  },
+  "height": {
+   "type": "float",
+   "default": "windowHeight()",
+   "doc": "The height it has"
+  }
+ },
+ "locals": {
+  "n": {
+   "$count": "options"
+  },
+  "r": {
+   "$count": "rows"
+  },
+  "pl": 0,
+  "pr": 0,
+  "rh2": 60,
+  "wa": "@labelMin + @n * @colMin + 32",
+  "wide": "step(@width, @wa - 0.5)",
+  "short": "1 - step(@height, 479.5)",
+  "avail": "@width - 32",
+  "lw": "clamp(@labelMin, @labelMax, floor(@avail * 0.24))",
+  "cw": "min(@colMax, floor((@avail - @lw) / @n))",
+  "tw": "@lw + @n * @cw",
+  "nob": {
+   "$if": "featured == '-1'",
+   "then": 1,
+   "else": 0
+  },
+  "hh": "212 - 36 * @short - 28 * @nob",
+  "rh": "clamp(@rowHeight, @rowHeight + 8, floor((@height - @hh - 40) / @r))",
+  "top": "clamp(0, 200, floor((@height - @hh - @r * @rh - 64) / 3))",
+  "a0": "min(max(@featured, 0), @n - 2)",
+  "b0": "min(max(@featured, 0), @n - 2) + 1",
+  "ia": "(@pl + @a0) % @n",
+  "ib": "(@pr + @b0) % @n",
+  "sw": "floor((@width - 44) / 2)",
+  "ph": "216 - 36 * @short - 24 * @nob",
+  "th": {
+   "$if": "title",
+   "then": "56 - 56 * @short",
+   "else": 0
+  }
+ },
+ "slots": {
+  "footer": {
+   "optional": true,
+   "doc": "Under the rows, scrolling with them: fine print (\"Prices include VAT. Cancel any time.\"), a link-like Button. It gets the table's width when wide, the window's less 32 dp on a phone"
+  }
+ },
+ "capabilities": [
+  "layout.state",
+  "input.tap",
+  "input.host",
+  "a11y.labels"
+ ],
+ "call": {
+  "Comparison": {
+   "options": [
+    {
+     "name": "Free",
+     "price": "€0",
+     "values": [
+      "1",
+      false
+     ]
+    },
+    {
+     "name": "Plus",
+     "price": "€5",
+     "period": "/month",
+     "values": [
+      "5",
+      true
+     ]
+    }
+   ],
+   "rows": [
+    "Devices",
+    "Offline"
+   ]
+  }
+ },
+ "body": {
+  "box": {
+   "modifiers": [
+    {
+     "width": "@width"
+    },
+    {
+     "height": "@height"
+    },
+    {
+     "background": "@background"
+    }
+   ],
+   "children": [
+    {
+     "column": {
+      "horizontalAlignment": "center",
+      "modifiers": [
+       {
+        "visibility": "@wide"
+       },
+       {
+        "width": "@width"
+       },
+       {
+        "height": "@height"
+       }
+      ],
+      "children": [
+       {
+        "variable": {
+         "name": "wy",
+         "value": 0
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": 1
+          },
+          {
+           "height": "@top"
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          {
+           "width": "@tw"
+          },
+          {
+           "height": "@hh + 8"
+          },
+          {
+           "padding": {
+            "top": 8
+           }
+          }
+         ],
+         "children": [
+          {
+           "column": {
+            "modifiers": [
+             {
+              "width": "@lw"
+             },
+             {
+              "height": "@hh"
+             },
+             {
+              "padding": [
+               4,
+               12,
+               12,
+               0
+              ]
+             }
+            ],
+            "children": [
+             {
+              "$if": "title",
+              "then": {
+               "text": {
+                "value": "@title",
+                "fontSize": "@theme.text_lg",
+                "fontWeight": 700,
+                "color": "@colors.onSurface",
+                "maxLines": 3,
+                "overflow": "ellipsis"
+               }
+              }
+             },
+             {
+              "$if": "subtitle",
+              "then": {
+               "text": {
+                "value": "@subtitle",
+                "fontSize": 13,
+                "color": "@colors.muted",
+                "maxLines": 3,
+                "overflow": "ellipsis",
+                "modifiers": [
+                 {
+                  "padding": {
+                   "top": 6
+                  }
+                 }
+                ]
+               }
+              }
+             }
+            ]
+           }
+          },
+          {
+           "$each": "options",
+           "as": "o",
+           "index": "j",
+           "fields": [
+            "name",
+            "price",
+            "period",
+            "note",
+            "badge",
+            "values"
+           ],
+           "do": {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@cw"
+              },
+              {
+               "height": "@hh"
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "1 - min(1, abs(@j - @featured))"
+                 },
+                 {
+                  "width": "@cw"
+                 },
+                 {
+                  "height": "@hh"
+                 }
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": "@cw"
+                    },
+                    {
+                     "height": 40
+                    },
+                    {
+                     "clip": {
+                      "roundedRect": 18
+                     }
+                    },
+                    {
+                     "background": "@colors.surfaceHigh"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": "@cw"
+                    },
+                    {
+                     "height": "@hh"
+                    },
+                    {
+                     "padding": {
+                      "top": 20
+                     }
+                    },
+                    {
+                     "background": "@colors.surfaceHigh"
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@cw"
+                 },
+                 {
+                  "height": "@hh"
+                 },
+                 {
+                  "padding": 6
+                 }
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    "fillMaxSize",
+                    {
+                     "clip": {
+                      "roundedRect": 14
+                     }
+                    },
+                    {
+                     "background": {
+                      "$if": "theme.mono",
+                      "then": "@colors.outline",
+                      "else": "@colors.surfaceHigh"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "1 - min(1, abs(@selected - @j))"
+                    },
+                    "fillMaxSize",
+                    {
+                     "clip": {
+                      "roundedRect": 14
+                     }
+                    },
+                    {
+                     "background": "@colors.primary"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "column": {
+                   "modifiers": [
+                    "fillMaxSize",
+                    {
+                     "padding": 2
+                    },
+                    {
+                     "clip": {
+                      "roundedRect": 12
+                     }
+                    },
+                    {
+                     "background": "@colors.surface"
+                    },
+                    {
+                     "padding": [
+                      12,
+                      10
+                     ]
+                    }
+                   ],
+                   "children": [
+                    {
+                     "$if": "featured != '-1'",
+                     "then": {
+                      "box": {
+                       "modifiers": [
+                        "fillMaxWidth",
+                        {
+                         "height": 28
+                        }
+                       ],
+                       "children": [
+                        {
+                         "$if": "o_badge",
+                         "then": {
+                          "Badge": {
+                           "text": "@o_badge",
+                           "color": "@colors.primary"
+                          }
+                         },
+                         "else": {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@j - @featured))"
+                            }
+                           ],
+                           "children": [
+                            {
+                             "Badge": {
+                              "text": "@featuredLabel",
+                              "color": "@colors.primary"
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "@o_name",
+                      "fontSize": 17,
+                      "fontWeight": 700,
+                      "color": "@colors.onSurface",
+                      "maxLines": 1,
+                      "overflow": "ellipsis",
+                      "modifiers": [
+                       "fillMaxWidth",
+                       {
+                        "height": 24
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "row": {
+                      "verticalAlignment": "bottom",
+                      "modifiers": [
+                       "fillMaxWidth",
+                       {
+                        "height": 36
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": "@o_price",
+                         "fontSize": 24,
+                         "fontWeight": 700,
+                         "color": "@colors.onSurface",
+                         "maxLines": 1
+                        }
+                       },
+                       {
+                        "$if": "o_period",
+                        "then": {
+                         "text": {
+                          "value": "@o_period",
+                          "fontSize": 13,
+                          "color": "@colors.muted",
+                          "maxLines": 1,
+                          "modifiers": [
+                           {
+                            "padding": {
+                             "start": 3,
+                             "bottom": 4
+                            }
+                           }
+                          ]
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "1 - @short"
+                       },
+                       "fillMaxWidth",
+                       {
+                        "height": 36
+                       }
+                      ],
+                      "children": [
+                       {
+                        "$if": "o_note",
+                        "then": {
+                         "text": {
+                          "value": "@o_note",
+                          "fontSize": 13,
+                          "color": "@colors.muted",
+                          "maxLines": 2,
+                          "overflow": "ellipsis",
+                          "modifiers": [
+                           "fillMaxWidth"
+                          ]
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "height": 8
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       "fillMaxWidth",
+                       {
+                        "height": 48
+                       }
+                      ],
+                      "children": [
+                       {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "visibility": "1 - (1 - min(1, abs(@selected - @j)))"
+                          },
+                          "fillMaxWidth"
+                         ],
+                         "children": [
+                          {
+                           "Button": {
+                            "label": "@chooseLabel",
+                            "style": "outlined",
+                            "fill": true,
+                            "surface": "@colors.surface",
+                            "onClick": [
+                             {
+                              "type": "valueFloatChange",
+                              "target": "@selected",
+                              "value": "@j"
+                             },
+                             {
+                              "type": "hostNamedAction",
+                              "name": "@action",
+                              "value": "@selected",
+                              "valueType": "float",
+                              "actionType": 0
+                             }
+                            ]
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "visibility": "1 - min(1, abs(@selected - @j))"
+                          },
+                          "fillMaxWidth"
+                         ],
+                         "children": [
+                          {
+                           "Button": {
+                            "label": "@selectedLabel",
+                            "fill": true,
+                            "onClick": [
+                             {
+                              "type": "hostNamedAction",
+                              "name": "@action",
+                              "value": "@selected",
+                              "valueType": "float",
+                              "actionType": 0
+                             }
+                            ],
+                            "slots": {
+                             "icon": [
+                              {
+                               "Icon": {
+                                "name": "check",
+                                "size": 18,
+                                "color": "@colors.onPrimary"
+                               }
+                              }
+                             ]
+                            }
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "horizontalAlignment": "center",
+         "modifiers": [
+          {
+           "width": "@width"
+          },
+          {
+           "height": "@height - @hh - 8 - @top"
+          },
+          {
+           "verticalScroll": "@wy"
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": "@tw"
+             },
+             {
+              "height": "@r * @rh + 16"
+             }
+            ],
+            "children": [
+             {
+              "row": {
+               "modifiers": [
+                {
+                 "visibility": "step(@featured, -0.5)"
+                },
+                {
+                 "width": "@tw"
+                },
+                {
+                 "height": "@r * @rh + 8"
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "width": "@lw + max(0, @featured) * @cw"
+                   },
+                   {
+                    "height": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "width": "@cw"
+                   },
+                   {
+                    "height": "@r * @rh + 8"
+                   },
+                   {
+                    "clip": {
+                     "roundedRect": 18
+                    }
+                   },
+                   {
+                    "background": "@colors.surfaceHigh"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "step(@featured, -0.5)"
+                },
+                {
+                 "width": "@tw"
+                },
+                {
+                 "height": 20
+                }
+               ],
+               "children": [
+                {
+                 "row": {
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@lw + max(0, @featured) * @cw"
+                      },
+                      {
+                       "height": 1
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@cw"
+                      },
+                      {
+                       "height": 20
+                      },
+                      {
+                       "background": "@colors.surfaceHigh"
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "column": {
+               "modifiers": [
+                {
+                 "width": "@tw"
+                }
+               ],
+               "children": [
+                {
+                 "$each": "rows",
+                 "as": "w",
+                 "index": "k",
+                 "fields": [
+                  "label"
+                 ],
+                 "do": {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": "@tw"
+                    },
+                    {
+                     "height": "@rh"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "width": "@tw"
+                       },
+                       {
+                        "height": 1
+                       },
+                       {
+                        "background": "@colors.surfaceHigh"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "verticalAlignment": "center",
+                      "modifiers": [
+                       {
+                        "width": "@lw"
+                       },
+                       {
+                        "height": "@rh"
+                       },
+                       {
+                        "padding": [
+                         4,
+                         0,
+                         12,
+                         0
+                        ]
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": "@w_label",
+                         "fontSize": 14,
+                         "fontWeight": 500,
+                         "color": "@colors.onSurface",
+                         "maxLines": 2,
+                         "overflow": "ellipsis"
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "width": "@lw"
+                   },
+                   {
+                    "height": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "$each": "options",
+                 "as": "o",
+                 "index": "j",
+                 "fields": [
+                  "name",
+                  "price",
+                  "period",
+                  "note",
+                  "badge",
+                  "values"
+                 ],
+                 "do": {
+                  "column": {
+                   "modifiers": [
+                    {
+                     "width": "@cw"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "$each": "o_values",
+                     "as": "v",
+                     "index": "k",
+                     "fields": [
+                      "x"
+                     ],
+                     "do": {
+                      "box": {
+                       "horizontalAlignment": "center",
+                       "verticalAlignment": "center",
+                       "modifiers": [
+                        {
+                         "width": "@cw"
+                        },
+                        {
+                         "height": "@rh"
+                        },
+                        {
+                         "padding": [
+                          10,
+                          0
+                         ]
+                        }
+                       ],
+                       "children": [
+                        {
+                         "$if": "v_x == 'true'",
+                         "then": {
+                          "Icon": {
+                           "name": "check",
+                           "size": 20,
+                           "color": "@colors.success",
+                           "label": "Included"
+                          }
+                         },
+                         "else": {
+                          "$if": "v_x == 'false'",
+                          "then": {
+                           "Icon": {
+                            "name": "close",
+                            "size": 20,
+                            "color": "@colors.muted",
+                            "label": "Not included"
+                           }
+                          },
+                          "else": {
+                           "$if": "v_x",
+                           "then": {
+                            "text": {
+                             "value": "@v_x",
+                             "fontSize": 14,
+                             "color": "@colors.onSurface",
+                             "maxLines": 2,
+                             "overflow": "ellipsis",
+                             "textAlign": "center"
+                            }
+                           },
+                           "else": {
+                            "text": {
+                             "value": "–",
+                             "fontSize": 14,
+                             "color": "@colors.muted"
+                            }
+                           }
+                          }
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    }
+                   ]
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "$if": "footer",
+           "then": {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@tw"
+              },
+              {
+               "padding": [
+                4,
+                0,
+                4,
+                24
+               ]
+              }
+             ],
+             "children": [
+              {
+               "$slot": "footer"
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       {
+        "visibility": "1 - @wide"
+       },
+       {
+        "width": "@width"
+       },
+       {
+        "height": "@height"
+       }
+      ],
+      "children": [
+       {
+        "variable": {
+         "name": "py",
+         "value": 0
+        }
+       },
+       {
+        "$if": "title",
+        "then": {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "visibility": "1 - @short"
+           },
+           {
+            "width": "@width"
+           },
+           {
+            "height": 56
+           },
+           {
+            "padding": [
+             16,
+             0
+            ]
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@title",
+             "fontSize": "@theme.text_lg",
+             "fontWeight": 700,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           }
+          ]
+         }
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          {
+           "width": "@width"
+          },
+          {
+           "height": "@ph + 8"
+          },
+          {
+           "padding": {
+            "start": 16,
+            "end": 16,
+            "top": 8
+           }
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": "@sw"
+             },
+             {
+              "height": "@ph"
+             }
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "clip": {
+                  "roundedRect": 14
+                 }
+                },
+                {
+                 "background": {
+                  "$if": "theme.mono",
+                  "then": "@colors.outline",
+                  "else": "@colors.surfaceHigh"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "1 - min(1, abs(@selected - @ia))"
+                },
+                "fillMaxSize",
+                {
+                 "clip": {
+                  "roundedRect": 14
+                 }
+                },
+                {
+                 "background": "@colors.primary"
+                }
+               ]
+              }
+             },
+             {
+              "column": {
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "padding": 2
+                },
+                {
+                 "clip": {
+                  "roundedRect": 12
+                 }
+                },
+                {
+                 "background": "@colors.surface"
+                },
+                {
+                 "padding": [
+                  12,
+                  10
+                 ]
+                }
+               ],
+               "children": [
+                {
+                 "$if": "featured != '-1'",
+                 "then": {
+                  "box": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": 24
+                    }
+                   ],
+                   "children": [
+                    {
+                     "$each": "options",
+                     "as": "o",
+                     "index": "j",
+                     "fields": [
+                      "name",
+                      "price",
+                      "period",
+                      "note",
+                      "badge",
+                      "values"
+                     ],
+                     "do": {
+                      "box": {
+                       "modifiers": [
+                        {
+                         "visibility": "1 - min(1, abs(@ia - @j))"
+                        },
+                        "fillMaxSize"
+                       ],
+                       "children": [
+                        {
+                         "$if": "o_badge",
+                         "then": {
+                          "Badge": {
+                           "text": "@o_badge",
+                           "color": "@colors.primary"
+                          }
+                         },
+                         "else": {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@j - @featured))"
+                            }
+                           ],
+                           "children": [
+                            {
+                             "Badge": {
+                              "text": "@featuredLabel",
+                              "color": "@colors.primary"
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    }
+                   ]
+                  }
+                 }
+                },
+                {
+                 "row": {
+                  "verticalAlignment": "center",
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "height": 40
+                   },
+                   {
+                    "clip": {
+                     "roundedRect": 20
+                    }
+                   },
+                   {
+                    "background": "@colors.surfaceHigh"
+                   },
+                   {
+                    "semantics": {
+                     "clickable": true,
+                     "contentDescription": "Change the first option"
+                    }
+                   },
+                   {
+                    "onClick": [
+                     {
+                      "type": "valueFloatExpressionChange",
+                      "target": "@pl",
+                      "value": "(@pl + 1 + (1 - min(1, abs((@pl + 1 + @a0) % @n - (@pr + @b0) % @n)))) % @n"
+                     }
+                    ]
+                   },
+                   {
+                    "padding": {
+                     "start": 12,
+                     "end": 6
+                    }
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "weight": 1
+                      }
+                     ],
+                     "children": [
+                      {
+                       "$each": "options",
+                       "as": "o",
+                       "index": "j",
+                       "fields": [
+                        "name",
+                        "price",
+                        "period",
+                        "note",
+                        "badge",
+                        "values"
+                       ],
+                       "do": {
+                        "text": {
+                         "value": "@o_name",
+                         "fontSize": 16,
+                         "fontWeight": 700,
+                         "color": "@colors.onSurface",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "modifiers": [
+                          {
+                           "visibility": "1 - min(1, abs(@ia - @j))"
+                          },
+                          "fillMaxWidth"
+                         ]
+                        }
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "step(@n, 2.5)"
+                      }
+                     ],
+                     "children": [
+                      {
+                       "Icon": {
+                        "name": "unfold_more",
+                        "size": 20,
+                        "color": "@colors.muted"
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "height": 36
+                   }
+                  ],
+                  "children": [
+                   {
+                    "$each": "options",
+                    "as": "o",
+                    "index": "j",
+                    "fields": [
+                     "name",
+                     "price",
+                     "period",
+                     "note",
+                     "badge",
+                     "values"
+                    ],
+                    "do": {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "1 - min(1, abs(@ia - @j))"
+                       },
+                       "fillMaxWidth"
+                      ],
+                      "children": [
+                       {
+                        "row": {
+                         "verticalAlignment": "bottom",
+                         "modifiers": [
+                          "fillMaxWidth",
+                          {
+                           "height": 36
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "@o_price",
+                            "fontSize": 24,
+                            "fontWeight": 700,
+                            "color": "@colors.onSurface",
+                            "maxLines": 1
+                           }
+                          },
+                          {
+                           "$if": "o_period",
+                           "then": {
+                            "text": {
+                             "value": "@o_period",
+                             "fontSize": 13,
+                             "color": "@colors.muted",
+                             "maxLines": 1,
+                             "modifiers": [
+                              {
+                               "padding": {
+                                "start": 3,
+                                "bottom": 4
+                               }
+                              }
+                             ]
+                            }
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "visibility": "1 - @short"
+                   },
+                   "fillMaxWidth",
+                   {
+                    "height": 36
+                   }
+                  ],
+                  "children": [
+                   {
+                    "$each": "options",
+                    "as": "o",
+                    "index": "j",
+                    "fields": [
+                     "name",
+                     "price",
+                     "period",
+                     "note",
+                     "badge",
+                     "values"
+                    ],
+                    "do": {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "1 - min(1, abs(@ia - @j))"
+                       },
+                       "fillMaxWidth"
+                      ],
+                      "children": [
+                       {
+                        "$if": "o_note",
+                        "then": {
+                         "text": {
+                          "value": "@o_note",
+                          "fontSize": 13,
+                          "color": "@colors.muted",
+                          "maxLines": 2,
+                          "overflow": "ellipsis",
+                          "modifiers": [
+                           "fillMaxWidth"
+                          ]
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "height": 8
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "height": 48
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "1 - (1 - min(1, abs(@selected - @ia)))"
+                      },
+                      "fillMaxWidth"
+                     ],
+                     "children": [
+                      {
+                       "Button": {
+                        "label": "@chooseLabel",
+                        "style": "outlined",
+                        "fill": true,
+                        "surface": "@colors.surface",
+                        "onClick": [
+                         {
+                          "type": "valueFloatExpressionChange",
+                          "target": "@selected",
+                          "value": "(@pl + @a0) % @n"
+                         },
+                         {
+                          "type": "hostNamedAction",
+                          "name": "@action",
+                          "value": "@selected",
+                          "valueType": "float",
+                          "actionType": 0
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "1 - min(1, abs(@selected - @ia))"
+                      },
+                      "fillMaxWidth"
+                     ],
+                     "children": [
+                      {
+                       "Button": {
+                        "label": "@selectedLabel",
+                        "fill": true,
+                        "onClick": [
+                         {
+                          "type": "hostNamedAction",
+                          "name": "@action",
+                          "value": "@selected",
+                          "valueType": "float",
+                          "actionType": 0
+                         }
+                        ],
+                        "slots": {
+                         "icon": [
+                          {
+                           "Icon": {
+                            "name": "check",
+                            "size": 18,
+                            "color": "@colors.onPrimary"
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 12
+             },
+             {
+              "height": 1
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": "@sw"
+             },
+             {
+              "height": "@ph"
+             }
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "clip": {
+                  "roundedRect": 14
+                 }
+                },
+                {
+                 "background": {
+                  "$if": "theme.mono",
+                  "then": "@colors.outline",
+                  "else": "@colors.surfaceHigh"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "1 - min(1, abs(@selected - @ib))"
+                },
+                "fillMaxSize",
+                {
+                 "clip": {
+                  "roundedRect": 14
+                 }
+                },
+                {
+                 "background": "@colors.primary"
+                }
+               ]
+              }
+             },
+             {
+              "column": {
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "padding": 2
+                },
+                {
+                 "clip": {
+                  "roundedRect": 12
+                 }
+                },
+                {
+                 "background": "@colors.surface"
+                },
+                {
+                 "padding": [
+                  12,
+                  10
+                 ]
+                }
+               ],
+               "children": [
+                {
+                 "$if": "featured != '-1'",
+                 "then": {
+                  "box": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": 24
+                    }
+                   ],
+                   "children": [
+                    {
+                     "$each": "options",
+                     "as": "o",
+                     "index": "j",
+                     "fields": [
+                      "name",
+                      "price",
+                      "period",
+                      "note",
+                      "badge",
+                      "values"
+                     ],
+                     "do": {
+                      "box": {
+                       "modifiers": [
+                        {
+                         "visibility": "1 - min(1, abs(@ib - @j))"
+                        },
+                        "fillMaxSize"
+                       ],
+                       "children": [
+                        {
+                         "$if": "o_badge",
+                         "then": {
+                          "Badge": {
+                           "text": "@o_badge",
+                           "color": "@colors.primary"
+                          }
+                         },
+                         "else": {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@j - @featured))"
+                            }
+                           ],
+                           "children": [
+                            {
+                             "Badge": {
+                              "text": "@featuredLabel",
+                              "color": "@colors.primary"
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    }
+                   ]
+                  }
+                 }
+                },
+                {
+                 "row": {
+                  "verticalAlignment": "center",
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "height": 40
+                   },
+                   {
+                    "clip": {
+                     "roundedRect": 20
+                    }
+                   },
+                   {
+                    "background": "@colors.surfaceHigh"
+                   },
+                   {
+                    "semantics": {
+                     "clickable": true,
+                     "contentDescription": "Change the second option"
+                    }
+                   },
+                   {
+                    "onClick": [
+                     {
+                      "type": "valueFloatExpressionChange",
+                      "target": "@pr",
+                      "value": "(@pr + 1 + (1 - min(1, abs((@pr + 1 + @b0) % @n - (@pl + @a0) % @n)))) % @n"
+                     }
+                    ]
+                   },
+                   {
+                    "padding": {
+                     "start": 12,
+                     "end": 6
+                    }
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "weight": 1
+                      }
+                     ],
+                     "children": [
+                      {
+                       "$each": "options",
+                       "as": "o",
+                       "index": "j",
+                       "fields": [
+                        "name",
+                        "price",
+                        "period",
+                        "note",
+                        "badge",
+                        "values"
+                       ],
+                       "do": {
+                        "text": {
+                         "value": "@o_name",
+                         "fontSize": 16,
+                         "fontWeight": 700,
+                         "color": "@colors.onSurface",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "modifiers": [
+                          {
+                           "visibility": "1 - min(1, abs(@ib - @j))"
+                          },
+                          "fillMaxWidth"
+                         ]
+                        }
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "step(@n, 2.5)"
+                      }
+                     ],
+                     "children": [
+                      {
+                       "Icon": {
+                        "name": "unfold_more",
+                        "size": 20,
+                        "color": "@colors.muted"
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "height": 36
+                   }
+                  ],
+                  "children": [
+                   {
+                    "$each": "options",
+                    "as": "o",
+                    "index": "j",
+                    "fields": [
+                     "name",
+                     "price",
+                     "period",
+                     "note",
+                     "badge",
+                     "values"
+                    ],
+                    "do": {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "1 - min(1, abs(@ib - @j))"
+                       },
+                       "fillMaxWidth"
+                      ],
+                      "children": [
+                       {
+                        "row": {
+                         "verticalAlignment": "bottom",
+                         "modifiers": [
+                          "fillMaxWidth",
+                          {
+                           "height": 36
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "@o_price",
+                            "fontSize": 24,
+                            "fontWeight": 700,
+                            "color": "@colors.onSurface",
+                            "maxLines": 1
+                           }
+                          },
+                          {
+                           "$if": "o_period",
+                           "then": {
+                            "text": {
+                             "value": "@o_period",
+                             "fontSize": 13,
+                             "color": "@colors.muted",
+                             "maxLines": 1,
+                             "modifiers": [
+                              {
+                               "padding": {
+                                "start": 3,
+                                "bottom": 4
+                               }
+                              }
+                             ]
+                            }
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "visibility": "1 - @short"
+                   },
+                   "fillMaxWidth",
+                   {
+                    "height": 36
+                   }
+                  ],
+                  "children": [
+                   {
+                    "$each": "options",
+                    "as": "o",
+                    "index": "j",
+                    "fields": [
+                     "name",
+                     "price",
+                     "period",
+                     "note",
+                     "badge",
+                     "values"
+                    ],
+                    "do": {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "1 - min(1, abs(@ib - @j))"
+                       },
+                       "fillMaxWidth"
+                      ],
+                      "children": [
+                       {
+                        "$if": "o_note",
+                        "then": {
+                         "text": {
+                          "value": "@o_note",
+                          "fontSize": 13,
+                          "color": "@colors.muted",
+                          "maxLines": 2,
+                          "overflow": "ellipsis",
+                          "modifiers": [
+                           "fillMaxWidth"
+                          ]
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "height": 8
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "height": 48
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "1 - (1 - min(1, abs(@selected - @ib)))"
+                      },
+                      "fillMaxWidth"
+                     ],
+                     "children": [
+                      {
+                       "Button": {
+                        "label": "@chooseLabel",
+                        "style": "outlined",
+                        "fill": true,
+                        "surface": "@colors.surface",
+                        "onClick": [
+                         {
+                          "type": "valueFloatExpressionChange",
+                          "target": "@selected",
+                          "value": "(@pr + @b0) % @n"
+                         },
+                         {
+                          "type": "hostNamedAction",
+                          "name": "@action",
+                          "value": "@selected",
+                          "valueType": "float",
+                          "actionType": 0
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "1 - min(1, abs(@selected - @ib))"
+                      },
+                      "fillMaxWidth"
+                     ],
+                     "children": [
+                      {
+                       "Button": {
+                        "label": "@selectedLabel",
+                        "fill": true,
+                        "onClick": [
+                         {
+                          "type": "hostNamedAction",
+                          "name": "@action",
+                          "value": "@selected",
+                          "valueType": "float",
+                          "actionType": 0
+                         }
+                        ],
+                        "slots": {
+                         "icon": [
+                          {
+                           "Icon": {
+                            "name": "check",
+                            "size": 18,
+                            "color": "@colors.onPrimary"
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          {
+           "width": "@width"
+          },
+          {
+           "height": "@height - @th - @ph - 8"
+          },
+          {
+           "verticalScroll": "@py"
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": "@width"
+             },
+             {
+              "height": "@r * @rh2 + 24"
+             }
+            ],
+            "children": [
+             {
+              "column": {
+               "modifiers": [
+                {
+                 "width": "@width"
+                },
+                {
+                 "padding": [
+                  16,
+                  8,
+                  16,
+                  0
+                 ]
+                }
+               ],
+               "children": [
+                {
+                 "$each": "rows",
+                 "as": "w",
+                 "index": "k",
+                 "fields": [
+                  "label"
+                 ],
+                 "do": {
+                  "box": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": "@rh2"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "box": {
+                      "modifiers": [
+                       "fillMaxWidth",
+                       {
+                        "height": 1
+                       },
+                       {
+                        "background": "@colors.surfaceHigh"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "@w_label",
+                      "fontSize": "@theme.text_sm",
+                      "fontWeight": 500,
+                      "color": "@colors.muted",
+                      "maxLines": 1,
+                      "overflow": "ellipsis",
+                      "modifiers": [
+                       "fillMaxWidth",
+                       {
+                        "padding": {
+                         "top": 6
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "modifiers": [
+                {
+                 "padding": {
+                  "top": 8
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "width": 16
+                   },
+                   {
+                    "height": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "width": "@sw"
+                   }
+                  ],
+                  "children": [
+                   {
+                    "$each": "options",
+                    "as": "o",
+                    "index": "j",
+                    "fields": [
+                     "name",
+                     "price",
+                     "period",
+                     "note",
+                     "badge",
+                     "values"
+                    ],
+                    "do": {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "visibility": "1 - min(1, abs(@ia - @j))"
+                       },
+                       {
+                        "width": "@sw"
+                       }
+                      ],
+                      "children": [
+                       {
+                        "$each": "o_values",
+                        "as": "v",
+                        "index": "k",
+                        "fields": [
+                         "x"
+                        ],
+                        "do": {
+                         "box": {
+                          "verticalAlignment": "center",
+                          "modifiers": [
+                           {
+                            "width": "@sw"
+                           },
+                           {
+                            "height": "@rh2"
+                           },
+                           {
+                            "padding": {
+                             "top": 22,
+                             "end": 4
+                            }
+                           }
+                          ],
+                          "children": [
+                           {
+                            "$if": "v_x == 'true'",
+                            "then": {
+                             "Icon": {
+                              "name": "check",
+                              "size": 20,
+                              "color": "@colors.success",
+                              "label": "Included"
+                             }
+                            },
+                            "else": {
+                             "$if": "v_x == 'false'",
+                             "then": {
+                              "Icon": {
+                               "name": "close",
+                               "size": 20,
+                               "color": "@colors.muted",
+                               "label": "Not included"
+                              }
+                             },
+                             "else": {
+                              "$if": "v_x",
+                              "then": {
+                               "text": {
+                                "value": "@v_x",
+                                "fontSize": 14,
+                                "color": "@colors.onSurface",
+                                "maxLines": 2,
+                                "overflow": "ellipsis"
+                               }
+                              },
+                              "else": {
+                               "text": {
+                                "value": "–",
+                                "fontSize": 14,
+                                "color": "@colors.muted"
+                               }
+                              }
+                             }
+                            }
+                           }
+                          ]
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "width": 12
+                   },
+                   {
+                    "height": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "width": "@sw"
+                   }
+                  ],
+                  "children": [
+                   {
+                    "$each": "options",
+                    "as": "o",
+                    "index": "j",
+                    "fields": [
+                     "name",
+                     "price",
+                     "period",
+                     "note",
+                     "badge",
+                     "values"
+                    ],
+                    "do": {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "visibility": "1 - min(1, abs(@ib - @j))"
+                       },
+                       {
+                        "width": "@sw"
+                       }
+                      ],
+                      "children": [
+                       {
+                        "$each": "o_values",
+                        "as": "v",
+                        "index": "k",
+                        "fields": [
+                         "x"
+                        ],
+                        "do": {
+                         "box": {
+                          "verticalAlignment": "center",
+                          "modifiers": [
+                           {
+                            "width": "@sw"
+                           },
+                           {
+                            "height": "@rh2"
+                           },
+                           {
+                            "padding": {
+                             "top": 22,
+                             "end": 4
+                            }
+                           }
+                          ],
+                          "children": [
+                           {
+                            "$if": "v_x == 'true'",
+                            "then": {
+                             "Icon": {
+                              "name": "check",
+                              "size": 20,
+                              "color": "@colors.success",
+                              "label": "Included"
+                             }
+                            },
+                            "else": {
+                             "$if": "v_x == 'false'",
+                             "then": {
+                              "Icon": {
+                               "name": "close",
+                               "size": 20,
+                               "color": "@colors.muted",
+                               "label": "Not included"
+                              }
+                             },
+                             "else": {
+                              "$if": "v_x",
+                              "then": {
+                               "text": {
+                                "value": "@v_x",
+                                "fontSize": 14,
+                                "color": "@colors.onSurface",
+                                "maxLines": 2,
+                                "overflow": "ellipsis"
+                               }
+                              },
+                              "else": {
+                               "text": {
+                                "value": "–",
+                                "fontSize": 14,
+                                "color": "@colors.muted"
+                               }
+                              }
+                             }
+                            }
+                           }
+                          ]
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "$if": "footer",
+           "then": {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@width"
+              },
+              {
+               "padding": [
+                16,
+                0,
+                16,
+                24
+               ]
+              }
+             ],
+             "children": [
+              {
+               "$slot": "footer"
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "The form follows the width, never the content: from labelMin + n x colMin + 32 dp (552 for 3 options, 692 for 4) a table with the options as columns; narrower, two options side by side with a picker on each. A 640 dp landscape phone gets the table for 3 options and the pair for 4",
+  "Why two at a time on a phone, not stacked cards: a comparison is read across a row (which plan has offline downloads?), and stacked cards make that a memory game; two columns of 160 dp on the same rows keep it a comparison. The pair opens on the featured option and its neighbour; each picker steps to the next option the other side is not showing",
+  "values are per option, in the order of rows, one for each row: true a tick, false a cross, null a dash, anything else a string. A number (2) is not text: write \"2\". A value is two lines at most (14 sp): about 16 characters a line in a 140 dp column",
+  "Every option is written three times (its table column and once on each side of the pair) and shown by visibility: the document grows with options x rows. Fine for 4 options and 15 rows; keep values short",
+  "One host action name (action, default choose) is sent by every Choose button with the index as a float: the converter declares the name once, the Java reference parser writes it into the first button's actions only (a known difference, see meta.java_difference). Read the index from the value, not from the name",
+  "Choose sets selected first, so the action carries the new index; Selected sends it again. -1 is nothing chosen yet. Bind selected to a resources variable to preset a choice (the ring and the filled button follow)",
+  "featured is static: a tint behind the column, a badge (featuredLabel, unless the option has its own badge) and the phone's starting pair. Use it for the recommended plan, not for the user's choice (that is selected)",
+  "Price and name are one line: keep prices short (\"€9.99\", \"$1,199\") and put the rest in period and note. The note is dropped when the window is under 480 dp tall, and so is the phone's title row",
+  "The header (cards with name, price and Choose) stays while the rows scroll. Heights are exact: 212 dp of header (176 when short), rowHeight per row; do not put it in a scrolling parent",
+  "width and height default to the window: pass them when it is not the whole window"
+ ]
+}

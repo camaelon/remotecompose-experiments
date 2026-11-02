@@ -1,0 +1,185 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "A lit 3D ring you can drag to turn"
+ },
+ "root": {
+  "canvas": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "semantics": {
+      "contentDescription": "A blue ring in 3D, lit from the upper left. Drag to turn it."
+     }
+    }
+   ],
+   "commands": [
+    {
+     "touchExpression": {
+      "name": "spinPx",
+      "defaultValue": 0,
+      "min": -100000,
+      "max": 100000,
+      "stopMode": "gently",
+      "expression": "touchX()"
+     }
+    },
+    {
+     "touchExpression": {
+      "name": "tiltPx",
+      "defaultValue": 0,
+      "min": -100,
+      "max": 100,
+      "stopMode": "gently",
+      "expression": "touchY()"
+     }
+    },
+    {
+     "variable": {
+      "name": "spin",
+      "value": "@spinPx * 0.01 - 0.4"
+     }
+    },
+    {
+     "variable": {
+      "name": "tilt",
+      "value": "@tiltPx * 0.006 + 0.6"
+     }
+    },
+    {
+     "variable": {
+      "name": "dist",
+      "value": "5.6 * max(1, componentHeight() / componentWidth())"
+     }
+    },
+    {
+     "clearDepth3D": {}
+    },
+    {
+     "camera3D": {
+      "projection": "perspective",
+      "fovY": 0.6,
+      "aspect": "componentWidth() / componentHeight()",
+      "near": 0.1,
+      "far": "@dist + 3",
+      "eye": [
+       0,
+       0,
+       "@dist"
+      ],
+      "center": [
+       0,
+       0,
+       0
+      ],
+      "up": [
+       0,
+       1,
+       0
+      ]
+     }
+    },
+    {
+     "lights3D": {
+      "lights": [
+       {
+        "type": "directional",
+        "dir": [
+         0.45,
+         -0.7,
+         -0.55
+        ],
+        "color": "#FFFFF8F0",
+        "intensity": 0.8
+       },
+       {
+        "type": "directional",
+        "dir": [
+         -0.7,
+         -0.15,
+         -0.5
+        ],
+        "color": "#FFE8F0FF",
+        "intensity": 0.35
+       }
+      ]
+     }
+    },
+    {
+     "meshPrimitive3D": {
+      "id": 1,
+      "primitive": "torus",
+      "majorRadius": 1,
+      "minorRadius": 0.38,
+      "center": [
+       0,
+       0,
+       0
+      ],
+      "segments": 32
+     }
+    },
+    {
+     "matrix3D": {
+      "op": "identity"
+     }
+    },
+    {
+     "matrix3D": {
+      "op": "rotate",
+      "angle": "@tilt",
+      "axis": [
+       1,
+       0,
+       0
+      ]
+     }
+    },
+    {
+     "matrix3D": {
+      "op": "rotate",
+      "angle": "@spin",
+      "axis": [
+       0,
+       1,
+       0
+      ]
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.primary"
+       }
+      ]
+     }
+    },
+    {
+     "drawMesh3D": {
+      "mesh": 1,
+      "mode": "smooth"
+     }
+    }
+   ]
+  }
+ },
+ "resources": {
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   }
+  }
+ }
+}

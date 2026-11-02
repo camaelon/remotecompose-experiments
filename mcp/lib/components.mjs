@@ -159,7 +159,7 @@ export function similarIcons(name, n = 6) {
 /**
  * {"$icon": {"name": "wifi", "style": "rounded", "filled": true}}: the icon's path, registered
  * once per document in resources.paths, as a "$paths.<id>" reference. The icons are 960-unit
- * viewports with one filled path (the Icon component scales and colours it).
+ * viewports (a 24-unit source is scaled up on load) with one filled path (the Icon component scales and colours it).
  */
 function iconPath(spec, state, name) {
     const c = loadIconCatalog();
@@ -176,7 +176,13 @@ function iconPath(spec, state, name) {
     const id = `icon_${icon.name}_${key.replace("-", "_")}`;
     if (!state.paths.has(id)) {
         const doc = JSON.parse(readFileSync(path.join(ICONS_DIR, `${v.path}.json`), "utf8"));
-        state.paths.set(id, doc.resources.paths.p0);
+        // Most icons are 960-unit viewports; a few (about 130, from 24-unit sources) keep a
+        // 24-unit one, which the converted document scales by but $icon's callers do not:
+        // bring their coordinates to 960 so every icon draws at the same size.
+        const vp = Number(/componentWidth\(\) \/ (\d+(?:\.\d+)?)/.exec(JSON.stringify(doc.root ?? {}))?.[1] ?? 960);
+        const k = 960 / vp;
+        state.paths.set(id, k === 1 ? doc.resources.paths.p0 : doc.resources.paths.p0.map((c) =>
+            Object.fromEntries(Object.entries(c).map(([key, x]) => [key, typeof x === "number" ? +(x * k).toFixed(3) : x]))));
     }
     return `$paths.${id}`;
 }
@@ -247,7 +253,10 @@ export const BATCH_EXAMPLES = ["CMP-25", "CMP-26", "CMP-27", "CMP-28", "CMP-29"]
 // RC_HIDE_BATCH2=1: the generator-backed sets (callouts, diagrams, timelines, plots, music).
 export const BATCH2_COMPONENTS = ["Callouts", "FlowDiagram", "TimelineTrack", "MathPlot", "PianoKeys", "Fretboard"];
 export const BATCH2_EXAMPLES = ["CMP-30", "CMP-31", "CMP-32", "CMP-33", "CMP-34", "MAP-06"];
-const HIDDEN_VERTICALS = new Set([...(process.env.RC_HIDE_VERTICALS ? VERTICAL_COMPONENTS : []), ...(process.env.RC_HIDE_BATCH ? BATCH_COMPONENTS : []), ...(process.env.RC_HIDE_BATCH2 ? BATCH2_COMPONENTS : [])]);
+// RC_HIDE_3D=1: the 3D scene and chart sets.
+export const THREE_D_COMPONENTS = ["Scene3D", "Chart3D"];
+export const THREE_D_EXAMPLES = ["DRW-17", "CMP-35", "CMP-36", "CMP-37", "CMP-38"];
+const HIDDEN_VERTICALS = new Set([...(process.env.RC_HIDE_VERTICALS ? VERTICAL_COMPONENTS : []), ...(process.env.RC_HIDE_BATCH ? BATCH_COMPONENTS : []), ...(process.env.RC_HIDE_BATCH2 ? BATCH2_COMPONENTS : []), ...(process.env.RC_HIDE_3D ? THREE_D_COMPONENTS : [])]);
 export function loadLibrary(dir = LIBRARY_DIR) {
     if (cached && cached.dir === dir) return cached;
     const components = new Map();
@@ -703,6 +712,81 @@ function defaultMeasure(doc) {
  * templates and calls, every other call is expanded.
  */
 function compileDoc(src, opts, patterns, live = null) {
+    const out = compileDocTouched(src, opts, patterns, live);
+    if (!live) liveAfterTouch(out.doc, out.warnings);
+    return out;
+}
+
+/**
+ * The document's OWN resources that read a value a touch writes (a Slider's live value), moved
+ * into the tree right after the writer. A touchExpression declares a new variable under the
+ * bound name, so resources (written before the tree) keep reading the starting value until the
+ * release commits it: a colour computed from three Sliders changed only on release. Variables
+ * become tree `variable`s, computed colours tree colour variables (json2rc extension), read as
+ * "@name". Left where they are, with a warning, when something reads them before the writer.
+ */
+function liveAfterTouch(doc, warnings = []) {
+    const vars = doc?.resources?.variables, colors = doc?.resources?.colors;
+    if (!vars || Array.isArray(vars) || (colors && Array.isArray(colors))) return;
+    const touched = new Set();
+    walk(doc.root, (n) => { const te = n.touchExpression ?? (String(n.type ?? "").toLowerCase() === "touchexpression" ? n : null); if (te && typeof te.name === "string") touched.add(te.name.replace(/^[@$]/, "")); });
+    if (!touched.size) return;
+    const refs = (v) => new Set([...JSON.stringify(v ?? "").matchAll(/[@$]([A-Za-z_]\w*)/g)].map((m) => m[1]));
+    const exprOf = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v.value : v);
+    // Variables that read a touched name, directly or through each other (in declaration order).
+    const moved = [];
+    const dep = new Set(touched);
+    for (const [k, v] of Object.entries(vars)) {
+        if (touched.has(k) || typeof exprOf(v) !== "string") continue;
+        if ([...refs(exprOf(v))].some((r) => dep.has(r))) { moved.push(k); dep.add(k); }
+    }
+    const comp = (v) => v && typeof v === "object" && !Array.isArray(v) && (Array.isArray(v.argb) || Array.isArray(v.hsv));
+    const movedColors = Object.entries(colors ?? {}).filter(([, v]) => comp(v) && [...refs(v)].some((r) => dep.has(r))).map(([k]) => k);
+    if (!moved.length && !movedColors.length) return;
+    // Where: after the last component (in document order) holding a writer of a name they read.
+    const readsTouched = new Set([...moved.flatMap((k) => [...refs(exprOf(vars[k]))]), ...movedColors.flatMap((k) => [...refs(colors[k])])].filter((r) => touched.has(r)));
+    let at = null;   // {list, index}
+    const writes = (x) => { let w = false; walk(x, (n) => { const te = n.touchExpression; if (te && readsTouched.has(String(te.name).replace(/^[@$]/, ""))) w = true; }); return w; };
+    const visit = (node) => {
+        const body = node && typeof node === "object" ? (typeof node.type === "string" ? node : Object.values(node)[0]) : null;
+        const kids = body && Array.isArray(body.children) ? body.children : null;
+        if (!kids) return;
+        kids.forEach((c, i) => { if (writes(c)) { at = { list: kids, index: i }; visit(c); } });
+    };
+    visit(doc.root);
+    if (!at) return;
+    const colorName = (k) => (k in vars || touched.has(k) ? `${k}_live` : k);
+    // Readers before the insertion point would see no name: then leave it all as it was.
+    const names = new Set([...moved.map((k) => `@${k}`), ...movedColors.map((k) => `@colors.${k}`)]);
+    let early = false, done = false;
+    const scan = (x) => {
+        if (done || early) return;
+        if (x === at.list[at.index]) { done = true; return; }
+        if (typeof x === "string") { for (const n of names) if (new RegExp(`${n.replace(".", "\\.")}(?![\\w])`).test(x)) early = true; return; }
+        if (Array.isArray(x)) { for (const y of x) scan(y); return; }
+        if (x && typeof x === "object") for (const y of Object.values(x)) scan(y);
+    };
+    scan(doc.root);
+    if (early) { warnings.push(`${[...names].join(", ")} read a Slider's live value but are used before the slider: they update on release only. Read them after the slider.`); return; }
+    const decls = [
+        ...moved.map((k) => ({ variable: { name: k, ...(vars[k] && typeof vars[k] === "object" ? vars[k] : { value: vars[k] }) } })),
+        ...movedColors.map((k) => ({ variable: { name: colorName(k), vtype: "color", value: colors[k] } })),
+    ];
+    for (const k of moved) delete vars[k];
+    for (const k of movedColors) delete colors[k];
+    at.list.splice(at.index + 1, 0, ...decls);
+    if (movedColors.length) {
+        const rename = (x) => {
+            if (typeof x === "string") return movedColors.reduce((s, k) => s.replace(new RegExp(`[@$]colors\\.${k}(?![\\w])`, "g"), `@${colorName(k)}`), x);
+            if (Array.isArray(x)) return x.map(rename);
+            if (x && typeof x === "object") return Object.fromEntries(Object.entries(x).map(([k, v]) => [k, rename(v)]));
+            return x;
+        };
+        doc.root = rename(doc.root);
+    }
+}
+
+function compileDocTouched(src, opts, patterns, live = null) {
     const first = compileDocOnce(src, opts, patterns, live ?? new Set());
     if (live) return first;
     // A variable a touch writes (a Slider's value) changes while the finger moves, but resources
@@ -1045,7 +1129,7 @@ function scopeBodyNames(body, prefix, keep) {
         if (Array.isArray(n)) return n.forEach(collect);
         if (!n || typeof n !== "object") return;
         if (typeof n.varName === "string") declared.add(n.varName);
-        for (const k of ["variable", "textMeasure", "textLength"]) if (typeof n[k]?.name === "string") declared.add(n[k].name);
+        for (const k of ["variable", "textMeasure", "textLength", "touchExpression"]) if (typeof n[k]?.name === "string") declared.add(n[k].name);
         if (typeof n.pathExpression?.id === "string") declared.add(n.pathExpression.id);
         Object.values(n).forEach(collect);
     };
@@ -1133,7 +1217,7 @@ function declaresNames(body) {
         if (found || !n || typeof n !== "object") return;
         if (Array.isArray(n)) return n.forEach(scan);
         if (typeof n.varName === "string" || typeof n.pathExpression?.id === "string"
-            || ["variable", "textMeasure", "textLength"].some((k) => typeof n[k]?.name === "string")) { found = true; return; }
+            || ["variable", "textMeasure", "textLength", "touchExpression"].some((k) => typeof n[k]?.name === "string")) { found = true; return; }
         Object.values(n).forEach(scan);
     };
     scan(body);
@@ -1423,6 +1507,9 @@ function localText(l, whole) {
 
 const slotsWritten = new WeakMap();
 function substitute(node, env, state, name) {
+    // An $each standing alone (an $if branch, another $each's `do`) loops as if it were the
+    // only item of a list; the list it becomes is spread where it lands.
+    if (node && typeof node === "object" && !Array.isArray(node) && "$each" in node) return substitute([node], env, state, name);
     if (Array.isArray(node)) {
         const out = [];
         for (const x of node) {
@@ -1721,7 +1808,7 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
             // textLookup), a tree variable, a measure.
             // (A name per loop pass, "state_@i", is read as "@state_@i": its stem is the name.)
             if (typeof n.varName === "string") { bound.add(n.varName); bound.add(n.varName.replace(/@[A-Za-z_]\w*/g, "")); }
-            for (const k of ["variable", "textMeasure", "textLength"]) if (typeof n[k]?.name === "string") { bound.add(n[k].name); bound.add(n[k].name.replace(/@[A-Za-z_]\w*/g, "")); }
+            for (const k of ["variable", "textMeasure", "textLength", "touchExpression"]) if (typeof n[k]?.name === "string") { bound.add(n[k].name); bound.add(n[k].name.replace(/@[A-Za-z_]\w*/g, "")); }
             if (typeof n.$if === "string") {
                 const t = n.$if.replace(/'[^']*'|"[^"]*"/g, "");
                 for (const m of t.matchAll(/@?theme\.([A-Za-z_]\w*)/g)) refs.add(`theme.${m[1]}`);

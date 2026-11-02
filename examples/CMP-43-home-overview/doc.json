@@ -1,0 +1,397 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Smart home overview: indoor temperature, energy today, energy by hour, room lights with switches, the home battery, door and alarm status and the weather outside; one column on a phone, up to four on a tablet or desktop"
+ },
+ "resources": {
+  "variables": {
+   "liv": {
+    "value": 1,
+    "export": true
+   },
+   "kit": {
+    "value": 0,
+    "export": true
+   },
+   "bed": {
+    "value": 0,
+    "export": true
+   },
+   "off": {
+    "value": 1,
+    "export": true
+   }
+  },
+  "floatArrays": {
+   "temp": {
+    "value": [
+     20.1,
+     19.8,
+     19.6,
+     20.4,
+     21.0,
+     21.3,
+     21.5
+    ],
+    "export": true
+   },
+   "kwh": {
+    "value": [
+     5.1,
+     4.6,
+     4.9,
+     4.2,
+     3.9,
+     4.0,
+     3.8
+    ],
+    "export": true
+   },
+   "hourly": {
+    "value": [
+     0.3,
+     0.2,
+     0.2,
+     0.4,
+     0.9,
+     0.6,
+     0.5,
+     0.7,
+     1.1,
+     1.4,
+     0.8,
+     0.5
+    ],
+    "export": true
+   }
+  }
+ },
+ "root": {
+  "DashboardGrid": {
+   "title": "Home",
+   "subtitle": "Sunday, 18:40 · everyone away",
+   "cards": [
+    {
+     "height": 124,
+     "content": {
+      "column": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "children": [
+        {
+         "BigNumber": {
+          "caption": "Indoor",
+          "value": 21.5,
+          "fontSize": 32,
+          "suffix": " °C",
+          "decimals": 1,
+          "change": 0.6
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           }
+          ],
+          "verticalAlignment": "bottom",
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": "min(@cardHeight - 80, 64)"
+              }
+             ],
+             "children": [
+              {
+               "Sparkline": {
+                "values": "@temp",
+                "fill": true,
+                "label": "Indoor, today"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "height": 124,
+     "content": {
+      "column": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "children": [
+        {
+         "BigNumber": {
+          "caption": "Energy today",
+          "value": 3.8,
+          "fontSize": 32,
+          "suffix": " kWh",
+          "decimals": 1,
+          "change": -8.4,
+          "invert": true
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           }
+          ],
+          "verticalAlignment": "bottom",
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": "min(@cardHeight - 80, 64)"
+              }
+             ],
+             "children": [
+              {
+               "Sparkline": {
+                "values": "@kwh",
+                "fill": true,
+                "label": "Energy today, today"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "title": "Energy by hour",
+     "note": "kWh",
+     "span": 2,
+     "height": 150,
+     "content": {
+      "BarChart": {
+       "values": "@hourly",
+       "fill": true,
+       "labels": [
+        "0",
+        "2",
+        "4",
+        "6",
+        "8",
+        "10",
+        "12",
+        "14",
+        "16",
+        "18",
+        "20",
+        "22"
+       ],
+       "label": "Energy by two hours, highest at 18:00"
+      }
+     }
+    },
+    {
+     "title": "Lights",
+     "height": 192,
+     "content": {
+      "RowList": {
+       "embedded": true,
+       "width": "@cardWidth",
+       "height": "@cardHeight",
+       "rows": [
+        {
+         "title": "Living room",
+         "lead": {
+          "Icon": {
+           "name": "chair",
+           "size": 20
+          }
+         },
+         "trail": {
+          "Switch": {
+           "checked": "@liv",
+           "label": "Living room lights"
+          }
+         }
+        },
+        {
+         "title": "Kitchen",
+         "lead": {
+          "Icon": {
+           "name": "kitchen",
+           "size": 20
+          }
+         },
+         "trail": {
+          "Switch": {
+           "checked": "@kit",
+           "label": "Kitchen lights"
+          }
+         }
+        },
+        {
+         "title": "Bedroom",
+         "lead": {
+          "Icon": {
+           "name": "bed",
+           "size": 20
+          }
+         },
+         "trail": {
+          "Switch": {
+           "checked": "@bed",
+           "label": "Bedroom lights"
+          }
+         }
+        },
+        {
+         "title": "Office",
+         "lead": {
+          "Icon": {
+           "name": "desk",
+           "size": 20
+          }
+         },
+         "trail": {
+          "Switch": {
+           "checked": "@off",
+           "label": "Office lights"
+          }
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "title": "Home battery",
+     "note": "charging",
+     "align": "center",
+     "height": 120,
+     "content": {
+      "box": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "horizontalAlignment": "center",
+       "children": [
+        {
+         "ProgressRing": {
+          "progress": 0.72,
+          "size": 150,
+          "thickness": 10,
+          "color": "@colors.success"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "title": "Security",
+     "height": 116,
+     "content": {
+      "column": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "KeyValueRow": {
+          "key": "Front door",
+          "value": "Locked"
+         }
+        },
+        {
+         "KeyValueRow": {
+          "key": "Garage",
+          "value": "Closed"
+         }
+        },
+        {
+         "KeyValueRow": {
+          "key": "Alarm",
+          "value": "Armed"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "title": "Outside",
+     "priority": 2,
+     "height": 96,
+     "content": {
+      "row": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "verticalAlignment": "center",
+       "children": [
+        {
+         "WeatherIcon": {
+          "condition": "partly",
+          "size": 56
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "padding": {
+             "start": 12
+            }
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "14 °C",
+             "fontSize": 28,
+             "color": "@colors.onSurface",
+             "modifiers": [
+              {
+               "height": 36
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "Partly cloudy",
+             "fontSize": 13,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

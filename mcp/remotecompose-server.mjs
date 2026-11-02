@@ -31,6 +31,7 @@ import { RC2IMAGE, runRc2image } from "./lib/rc2image.mjs";
 import { enginesTool } from "./lib/engines.mjs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createHash, randomBytes } from "node:crypto";
 import { designNotes, blockingFindings, readsClock } from "./lib/design-audit.mjs";
 
@@ -217,7 +218,8 @@ Structure
 - A canvas is for drawings (a chart, a dial, an arc), sized by its modifiers inside the layout. Do not draw a
   whole screen on one canvas: its texts are placed by hand and nothing relayouts when the size changes.
 - Modifiers are a list: ["fillMaxWidth", {"padding": 16}, {"spacedBy": 8}, {"background": "@colors.surface"},
-  {"clip": {"roundedRect": 16}}, {"weight": 1} (in a row), {"verticalWeight": 1} (in a column), {"visibility":
+  {"clip": {"roundedRect": 16}}, {"weight": 1} (in a row), {"verticalWeight": 1} (in a column; "weight" there gives
+  no height), {"visibility":
   "@shown"}]. visibility takes a DECLARED variable that is exactly 1 (shown) or 0 (hidden): put the condition in
   resources.variables ({"shown": "step(@days, 0.5)"}) and reference it. An expression written inline is an INTEGER
   expression (+ - * / %, abs, min, max, clamp, whole numbers only): "step(@days, 0.5)" is not one, becomes a text id
@@ -226,6 +228,10 @@ Structure
   Any layout node takes it (text, box, row, canvas…); a library or inline component CALL takes its params only — to
   hide or switch a call, wrap it in a box carrying the visibility. width/height take a "@variable" or an expression;
   size takes numbers only ({"size": 40} or [w, h]) — write width and height for a computed size.
+- An element keeps ONE width and ONE height modifier: a later fillMaxWidth / width replaces a weight (drop the fill).
+  {"offset": ...} moves the drawing only: on Android the tap area stays where layout put it, so never place a
+  tappable element with offset — lay it out, or test touchX()/touchY() in a canvas. A tap that sets a variable from an
+  expression is valueFloatExpressionChange (valueFloatChange takes a literal and silently ignores an expression).
 - Arrays: "resources": {"floatArrays": {"week": [6200, 8400, 7100, 10300, 5600, 12100, 9000]}} (or {"week":
   {"value": [...], "export": true}} for one the host sets); a chart component takes it as "@week"; in an expression
   arrayGet(@week, 3), arrayMax(@week), arraySum(@week), arrayLength(@week) (EXP-08). There is no sum of PART of an
@@ -1225,11 +1231,11 @@ tools.push({
         "\"components\": the component authoring guide (syntax, light/dark/mono, animation, drawing " +
         "something the library lacks). topic \"tools\": every tool's full schema and options, or one " +
         "with tool: <name>. query: a few words instead of a topic returns just the matching paragraphs from all of them " +
-        "(\"step argument order\", \"visibility taps\"): use it to check one rule without rereading a topic.",
+        "(\"step argument order\", \"visibility taps\"): use it to check one rule without rereading a topic. topic \"3d\": scenes with a camera, lights, meshes and orbiting (docs/GUIDE_3D.md); 3D support has not landed in androidx yet (coming): it plays in the C++ and TypeScript players.",
     inputSchema: {
         type: "object",
         properties: {
-            topic: { type: "string", enum: ["workflow", "format", "components", "expressions", "tools"] },
+            topic: { type: "string", enum: ["workflow", "format", "components", "expressions", "3d", "tools"] },
             tool: { type: "string", description: "With topic \"tools\": one tool name." },
             query: { type: "string", description: "Words to look up across every topic (\"step argument order\", \"visibility invisible taps\", \"map region\"): the best-matching paragraphs, each with its topic, instead of a whole topic." },
         },
@@ -1239,6 +1245,7 @@ tools.push({
         if (topic === "components") return tool(examples, "component_authoring_guide").handler({});
         if (topic === "format") return text(FORMAT);
         if (topic === "expressions") return text(EXPRESSIONS);
+        if (topic === "3d") return text(guide3d());
         if (topic === "tools") {
             const list = name ? tools.filter((t) => t.name === name) : tools;
             if (!list.length) throw new Error(`no tool '${name}'`);
@@ -1282,12 +1289,18 @@ async function getGenerated(id, { parts = ["meta", "json"] } = {}) {
     return out;
 }
 
+/** The 3D guide (docs/GUIDE_3D.md), read when asked so an edit needs no restart. */
+function guide3d() {
+    const f = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "docs", "GUIDE_3D.md");
+    return existsSync(f) ? readFileSync(f, "utf8") : "The 3D guide (docs/GUIDE_3D.md) is not written yet.";
+}
+
 /** The reference's paragraphs that best match some words, across every topic. */
 async function searchReference(query) {
     const guide = (await tool(examples, "component_authoring_guide").handler({})).map((c) => c.text ?? "").join("\n");
     // The library's components, one paragraph each: a kit's advice names them ("a TextChoice").
     const library = [...loadLibrary().components.values()].map((c) => `- ${c.component}: ${c.summary ?? ""} Call: ${JSON.stringify(c.call ?? {})}. Full details: get {"id": "${c.component}"}.`).join("\n\n");
-    const topics = { format: FORMAT, expressions: EXPRESSIONS, workflow: WORKFLOW, components: guide, library,
+    const topics = { format: FORMAT, expressions: EXPRESSIONS, workflow: WORKFLOW, components: guide, library, "3d": guide3d(),
         tools: tools.map(describeTool).join("\n\n") };
     const stem = (w) => w.toLowerCase().replace(/(ies)$/, "y").replace(/(es|s)$/, "");
     const words = [...new Set(String(query).toLowerCase().split(/[^a-z0-9$@#.]+/).filter((w) => w.length > 1).map(stem))];

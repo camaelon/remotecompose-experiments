@@ -1,0 +1,573 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "A small 3D island on a block of earth: a terrain coloured by height from beach sand to grass, forest, rock and a snowy peak, with little trees, in a sea whose level a slider sets; it turns slowly and can be dragged round"
+ },
+ "resources": {
+  "variables": {
+   "sea": 0.02,
+   "slx": 0
+  },
+  "floatArrays": {
+   "trees": {
+    "value": [
+     0.481,
+     0.132,
+     -0.633,
+     0.85,
+     0.058,
+     0.232,
+     -0.378,
+     1,
+     0.093,
+     0.152,
+     0.432,
+     0.95,
+     -0.263,
+     0.173,
+     -0.191,
+     0.8,
+     -0.572,
+     0.065,
+     -0.068,
+     1.15,
+     0.659,
+     0.152,
+     -0.262,
+     1,
+     -0.37,
+     0.227,
+     0.367,
+     0.8,
+     0.58,
+     0.087,
+     0.079,
+     1,
+     -0.081,
+     0.165,
+     0.552,
+     1.2,
+     -0.645,
+     0.073,
+     0.452,
+     1.2,
+     -0.195,
+     0.157,
+     -0.398,
+     1.2,
+     -0.518,
+     0.149,
+     0.606,
+     1.05,
+     0.666,
+     0.158,
+     -0.09,
+     0.85,
+     -0.252,
+     0.222,
+     0.512,
+     1.05,
+     0.161,
+     0.13,
+     -0.565,
+     1.15,
+     -0.471,
+     0.161,
+     0.102,
+     1.2
+    ]
+   }
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "onSurface": "#FF000000",
+   "sky1": "#FF9CCBEB",
+   "sky2": "#FFF3EEE4",
+   "deep": "#FF2B78B0",
+   "shallow": "#FF5CC3D2",
+   "foam": "#FFEFFAF8",
+   "sand": "#FFE9D49E",
+   "grass": "#FF86BC5E",
+   "forest": "#FF4C9150",
+   "rock": "#FF948A7C",
+   "snow": "#FFFFFFFF",
+   "soil": "#FF8C6446",
+   "tree": "#FF2F6B3A",
+   "ink": "#FF17222E",
+   "inkMuted": "#FF4A5866",
+   "track": "#FF616161",
+   "star": "#00FFFFFF"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "commands": []
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "padding": [
+         20,
+         18,
+         20,
+         14
+        ]
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Little island",
+         "fontSize": 24,
+         "fontWeight": 650,
+         "color": "@colors.ink",
+         "maxLines": 1
+        }
+       },
+       {
+        "text": {
+         "value": "Drag to turn it · slide to raise the sea",
+         "fontSize": 13,
+         "color": "@colors.inkMuted",
+         "maxLines": 1
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "verticalWeight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 48
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize"
+            ],
+            "commands": [
+             {
+              "componentValue": {
+               "id": "@slx",
+               "valueType": 4
+              }
+             },
+             {
+              "touchExpression": {
+               "name": "sea",
+               "defaultValue": "@sea",
+               "min": -0.2,
+               "max": 0.4,
+               "expression": "-0.2 + (touchX() - @slx - 10) / (componentWidth() - 20) * 0.6",
+               "touchMode": 6
+              }
+             },
+             {
+              "variable": {
+               "name": "kx",
+               "value": "10 + (@sea + 0.2) / 0.6 * (componentWidth() - 20)"
+              }
+             },
+             {
+              "variable": {
+               "name": "seaM",
+               "value": "round((@sea - 0.02) * 1000)"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.ink"
+                },
+                {
+                 "textSize": 13
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "Sea level",
+               "x": 0,
+               "y": 10,
+               "panX": -1,
+               "panY": 0
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@seaM",
+                "whole": 3,
+                "decimal": 0,
+                "flags": 0
+               },
+               "x": "componentWidth() - 18",
+               "y": 10,
+               "panX": 1,
+               "panY": 0
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": " m",
+               "x": "componentWidth() - 18",
+               "y": 10,
+               "panX": -1,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 4
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 10,
+               "y1": 34,
+               "x2": "componentWidth() - 10",
+               "y2": 34
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 10,
+               "y1": 34,
+               "x2": "@kx",
+               "y2": 34
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@kx",
+               "cy": 34,
+               "radius": 10
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "semantics": {
+               "contentDescription": "Sea level, metres",
+               "stateDescription": {
+                "type": "textFromFloat",
+                "value": "@seaM",
+                "whole": 3,
+                "decimal": 0,
+                "flags": 0
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "verticalWeight": 1
+          }
+         ],
+         "commands": [
+          {
+           "touchExpression": {
+            "name": "spinPx",
+            "defaultValue": 0,
+            "min": -100000,
+            "max": 100000,
+            "stopMode": "gently",
+            "expression": "touchX()"
+           }
+          },
+          {
+           "touchExpression": {
+            "name": "tiltPx",
+            "defaultValue": 0,
+            "min": -60,
+            "max": 80,
+            "stopMode": "gently",
+            "expression": "touchY()"
+           }
+          },
+          {
+           "variable": {
+            "name": "spin",
+            "value": "@spinPx * 0.01 - 0.6"
+           }
+          },
+          {
+           "variable": {
+            "name": "tilt",
+            "value": "@tiltPx * 0.006 + 0.62"
+           }
+          },
+          {
+           "variable": {
+            "name": "dist",
+            "value": "max(5 * windowHeight() / windowWidth(), 4.04 * windowHeight() / max(windowHeight() - 136, 60))"
+           }
+          },
+          {
+           "clearDepth3D": {}
+          },
+          {
+           "camera3D": {
+            "projection": "perspective",
+            "fovY": 0.6,
+            "aspect": "windowWidth() / windowHeight()",
+            "near": 0.1,
+            "far": "@dist + 4",
+            "eye": [
+             0,
+             0,
+             "@dist"
+            ],
+            "center": [
+             0,
+             0,
+             0
+            ],
+            "up": [
+             0,
+             1,
+             0
+            ]
+           }
+          },
+          {
+           "lights3D": {
+            "lights": [
+             {
+              "type": "directional",
+              "dir": [
+               1,
+               0,
+               0
+              ],
+              "color": "#FFFFFFFF",
+              "intensity": 0.85
+             },
+             {
+              "type": "directional",
+              "dir": [
+               0,
+               1,
+               0
+              ],
+              "color": "#FFFFFFFF",
+              "intensity": 0.85
+             },
+             {
+              "type": "directional",
+              "dir": [
+               0,
+               0,
+               1
+              ],
+              "color": "#FFFFFFFF",
+              "intensity": 0.85
+             }
+            ]
+           }
+          },
+          {
+           "meshExpression3D": {
+            "id": 11,
+            "surface": "general",
+            "uRange": [
+             -1,
+             1
+            ],
+            "vRange": [
+             -1,
+             1
+            ],
+            "uCount": 29,
+            "vCount": 29,
+            "x": "u",
+            "z": "v",
+            "y": "max((0.5 * exp(-2.4 * (square(u - 0.2) + square(v + 0.15))) + 0.3 * exp(-4.5 * (square(u + 0.45) + square(v - 0.42))) + 0.08 * sin(5.3 * u + 1.7) * sin(4.1 * v + 0.6) + 0.035 * sin(11 * u - 7 * v) + 0.02 * cos(17 * v + 9 * u + 1) - 0.12 - 0.2 * (square(square(u)) + square(square(v)))), @sea)"
+           }
+          },
+          {
+           "matrix3D": {
+            "op": "identity"
+           }
+          },
+          {
+           "matrix3D": {
+            "op": "rotate",
+            "angle": "@tilt",
+            "axis": [
+             1,
+             0,
+             0
+            ]
+           }
+          },
+          {
+           "matrix3D": {
+            "op": "rotate",
+            "angle": "@spin",
+            "axis": [
+             0,
+             1,
+             0
+            ]
+           }
+          },
+          {
+           "matrix3D": {
+            "op": "translate",
+            "x": 0,
+            "y": "-0.04",
+            "z": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             }
+            ]
+           }
+          },
+          {
+           "drawMesh3D": {
+            "mesh": 11,
+            "mode": "software-flat"
+           }
+          },
+          {
+           "depthBias3D": {
+            "constant": -0.003,
+            "slope": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
+           }
+          },
+          {
+           "drawMesh3D": {
+            "mesh": 11,
+            "mode": "software-flat",
+            "wireframe": true,
+            "edges": [
+             0,
+             1
+            ]
+           }
+          },
+          {
+           "depthBias3D": {
+            "constant": 0,
+            "slope": 0
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 76
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

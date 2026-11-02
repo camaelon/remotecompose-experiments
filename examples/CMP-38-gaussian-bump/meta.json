@@ -1,0 +1,578 @@
+{
+ "id": "CMP-38",
+ "name": "gaussian-bump",
+ "version": 1,
+ "title": "A 2D Gaussian bump with a width slider",
+ "prompt": "Show the 2D Gaussian z = e^(−(x² + y²)/2σ²) as a 3D surface over −3..3 that I can turn, with a slider for its width σ from 0.4 to 2.",
+ "level": 3,
+ "family": "CMP",
+ "components": [
+  "Chart3D",
+  "Slider"
+ ],
+ "capabilities": {
+  "primary": [
+   "3d.surface",
+   "input.drag"
+  ],
+  "secondary": [
+   "3d.scene",
+   "3d.mesh",
+   "layout.weight",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "chart",
+  "onboarding"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "3d surface",
+  "surface plot",
+  "gaussian",
+  "normal distribution",
+  "bell curve 3d",
+  "2d gaussian",
+  "function of two variables",
+  "z = f(x, y)",
+  "width",
+  "sigma",
+  "standard deviation",
+  "slider",
+  "maths",
+  "statistics",
+  "orbit"
+ ],
+ "teaches": [
+  "A formula, not a mesh: {\"fn\": \"exp(-(x^2 + y^2) / (2 * s^2))\", \"x\": [-3, 3], \"vars\": [{\"name\": \"s\", \"value\": \"@sigma\", \"min\": 0.4, \"max\": 2}]}; the player evaluates it on a 44 x 44 grid every frame",
+  "vars with min and max: the server sizes the z axis for every σ the slider can reach (here 0..1, the peak is always 1)",
+  "The slider comes before the chart in the document: from the slider on, @sigma is the slider's live value, so the surface reshapes while dragging",
+  "Five height bands (light to dark blue) are five copies of the mesh, each clamped below its band's top; a grey skirt closes the sides; mono is a hidden-line wireframe"
+ ],
+ "pitfalls": [
+  "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players only. Don't use it for a screen that must play on Android today",
+  "The TypeScript player's MeshExpression (players/typescript/src/core/operations/d3/MeshExpression.ts) reads its grid parameters as raw float bits, so today no meshExpression3D surface draws in the web player: the box, labels and slider show with an empty floor. Fixing gridCount and paramsFor to read the bits as floats makes it match the C++ render"
+ ],
+ "java_difference": "3D operations: not in the Java JSON parser or androidx remote-core yet; 3D support has not landed in androidx yet (coming); plays in the C++ and TypeScript players",
+ "inputs": {
+  "variables": {
+   "sigma": {
+    "min": 0.4,
+    "max": 2
+   }
+  }
+ },
+ "snippets": [
+  {
+   "pointer": "/root/column/children/3/box/children/0",
+   "shows": "3d.surface",
+   "note": "the formula and its variable"
+  },
+  {
+   "pointer": "/root/column/children/2/row/children/1/box/children/0",
+   "shows": "input.drag",
+   "note": "the slider for σ, before the chart"
+  },
+  {
+   "pointer": "/root/column/children/3/box/children/0",
+   "shows": "3d.scene",
+   "note": "floor, walls, camera framed for the canvas"
+  },
+  {
+   "pointer": "/root/column/children/3/box/children/0",
+   "shows": "3d.mesh",
+   "note": "the walls' grids and the skirt"
+  },
+  {
+   "pointer": "/root/column/children/3",
+   "shows": "layout.weight",
+   "note": "the chart takes the rest of the height"
+  },
+  {
+   "pointer": "/root/column/children/3/box/children/0",
+   "shows": "a11y.labels",
+   "note": "the description gives the domain, the z range and the peak"
+  }
+ ],
+ "check": {
+  "describe": "Title 'A Gaussian bump', the formula, a 'Width σ' slider at 0.8, then a 3D surface over x, y from −3 to 3: a bell rising to 1 at the centre, banded light blue near 0 to dark blue at the top, on a floor with gridlines at −2, 0, 2 and walls ticked 0.25..1; a legend 'z 0 [five blues] 1' and a caption. Wider: with σ dragged to about 1.8, a broad dome reaching the walls, its grey skirt showing at the edges.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 400
+   },
+   {
+    "name": "small",
+    "width": 220,
+    "height": 320
+   },
+   {
+    "name": "wider",
+    "theme": "light",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 137,
+      "y": 78
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 180,
+      "y": 78
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 230,
+      "y": 78
+     },
+     {
+      "t": 0.4,
+      "type": "move",
+      "x": 262,
+      "y": 78
+     },
+     {
+      "t": 0.5,
+      "type": "up",
+      "x": 262,
+      "y": 78
+     }
+    ],
+    "duration": 1.5
+   }
+  ]
+ },
+ "related": [
+  "Chart3D",
+  "MathPlot",
+  "CMP-33",
+  "CMP-37",
+  "Slider"
+ ],
+ "derived": {
+  "components": [
+   "Chart3D",
+   "Slider"
+  ],
+  "component_instances": 2,
+  "component_modes": {
+   "Slider": "expand",
+   "Chart3D": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 13064,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 438,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 2,
+   "ANIMATED_FLOAT": 111,
+   "COLOR_CONSTANT": 16,
+   "COLOR_EXPRESSIONS": 16,
+   "COMPONENT_VALUE": 4,
+   "CanvasContent": 2,
+   "CoreText": 7,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 17,
+   "DEFINE_MESH_3D": 2,
+   "DRAW_CIRCLE": 1,
+   "DRAW_LINE": 2,
+   "DRAW_MESH_3D": 16,
+   "DRAW_TEXT_ANCHOR": 15,
+   "HEADER": 1,
+   "LAYOUT_BOX": 11,
+   "LAYOUT_CANVAS": 2,
+   "LAYOUT_COLUMN": 2,
+   "LAYOUT_FLOW": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 2,
+   "LayoutComponentContent": 17,
+   "LoopOperation": 16,
+   "MATRIX_3D_OP": 38,
+   "MATRIX_RESTORE": 1,
+   "MATRIX_SAVE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MESH_EXPRESSION_3D": 6,
+   "MODIFIER_BACKGROUND": 6,
+   "MODIFIER_HEIGHT": 14,
+   "MODIFIER_PADDING": 7,
+   "MODIFIER_VISIBILITY": 2,
+   "MODIFIER_WIDTH": 17,
+   "NAMED_VARIABLE": 8,
+   "PAINT_3D_STATE": 11,
+   "PAINT_VALUES": 23,
+   "RoundedClipRectModifierOperation": 5,
+   "SET_CAMERA_3D": 1,
+   "SET_LIGHTS_3D": 3,
+   "THEME": 24,
+   "TextFromFloat": 1,
+   "TouchExpression": 3
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "surfaceHigh",
+    "type": "color",
+    "value": "#FF263042"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: unused_variables",
+   "info: expression_entries"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 3,
+   "click": 0,
+   "area": 0,
+   "touch": 3
+  },
+  "java_identical": false,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 10217,
+    "component_modes": {
+     "Slider": "expand",
+     "Chart3D": "expand"
+    },
+    "op_count": 296,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 10217,
+    "component_modes": {
+     "Slider": "expand",
+     "Chart3D": "expand"
+    },
+    "op_count": 296,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     400
+    ],
+    "audit_findings": [
+     "info: unused_variables",
+     "info: expression_entries"
+    ]
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [],
+    "size": [
+     220,
+     320
+    ],
+    "audit_findings": [
+     "info: unused_variables",
+     "info: expression_entries"
+    ]
+   },
+   "wider": {
+    "theme": "light",
+    "render": "render-wider.png",
+    "render_findings": []
+   }
+  },
+  "json_keys": [
+   "Chart3D",
+   "Slider",
+   "alpha",
+   "angle",
+   "apiLevel",
+   "aspect",
+   "axis",
+   "background",
+   "box",
+   "camera3D",
+   "canvas",
+   "center",
+   "children",
+   "clearDepth3D",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "componentValue",
+   "constant",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "decimals",
+   "defaultValue",
+   "defineMesh3D",
+   "depthBias3D",
+   "dir",
+   "drawCircle",
+   "drawLine",
+   "drawMesh3D",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "edges",
+   "expression",
+   "eye",
+   "far",
+   "fill",
+   "flags",
+   "flow",
+   "fn",
+   "fontSize",
+   "fontWeight",
+   "fovY",
+   "header",
+   "height",
+   "horizontalArrangement",
+   "horizontalWeight",
+   "id",
+   "indices",
+   "intensity",
+   "label",
+   "light",
+   "lights",
+   "lights3D",
+   "matrix3D",
+   "max",
+   "maxLines",
+   "mesh",
+   "meshExpression3D",
+   "min",
+   "mode",
+   "modifiers",
+   "muted",
+   "name",
+   "near",
+   "onSurface",
+   "op",
+   "ops",
+   "outline",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "primary",
+   "profiles",
+   "projection",
+   "radius",
+   "resources",
+   "root",
+   "roundedRect",
+   "row",
+   "save",
+   "semantics",
+   "showCaption",
+   "showFormula",
+   "showValue",
+   "sigma",
+   "slider1_x0",
+   "slope",
+   "stateDescription",
+   "step",
+   "stopMode",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "surface",
+   "surfaceHigh",
+   "text",
+   "textSize",
+   "touchExpression",
+   "touchMode",
+   "track",
+   "translate",
+   "type",
+   "uCount",
+   "uRange",
+   "up",
+   "vCount",
+   "vRange",
+   "value",
+   "valueType",
+   "variable",
+   "variables",
+   "vars",
+   "verticalAlignment",
+   "verticalWeight",
+   "verts",
+   "visibility",
+   "whole",
+   "width",
+   "wireframe",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2",
+   "z",
+   "zLabel"
+  ],
+  "evidence": {
+   "3d.surface": [
+    "meshExpression3D"
+   ],
+   "input.drag": [
+    "touchExpression"
+   ],
+   "3d.scene": [
+    "camera3D",
+    "lights3D"
+   ],
+   "3d.mesh": [
+    "defineMesh3D",
+    "drawMesh3D"
+   ],
+   "layout.weight": [
+    "horizontalWeight",
+    "verticalWeight"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:41:43.129Z"
+ }
+}

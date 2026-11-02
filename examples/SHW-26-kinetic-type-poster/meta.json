@@ -1,0 +1,408 @@
+{
+ "id": "SHW-26",
+ "name": "kinetic-type-poster",
+ "version": 1,
+ "title": "A festival poster where the type moves",
+ "summary": "A Swiss-style concert poster on one canvas: ECHO in huge letters that drop in one after another with an overshoot and then breathe, five red outline echoes trailing beneath them, a red disc beating inside a ring of text that turns, sound rings spreading past the edges, a sentence flowing along a moving sine wave, and a tilted black band with the dates scrolling. About 3.5 KB.",
+ "prompt": "Make a typographic poster that moves, like a concert poster: a big headline whose letters animate in one after another, text running along a curve that flows, a scrolling band with the dates, and a strong graphic design.",
+ "level": 4,
+ "family": "SHW",
+ "hand_built": "Kinetic type is per-letter transforms and text on animated paths drawn on a canvas; no library component does this, and the whole poster is under 4 KB.",
+ "capabilities": {
+  "primary": [
+   "text.path",
+   "anim.stagger",
+   "time.animation"
+  ],
+  "secondary": [
+   "anim.loop",
+   "text.measure",
+   "text.anchor",
+   "expr.string",
+   "draw.plot",
+   "draw.transform",
+   "data.loop",
+   "expr.math"
+  ]
+ },
+ "use_cases": [
+  "generative-art",
+  "media-player",
+  "onboarding"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "kinetic typography",
+  "kinetic type",
+  "motion typography",
+  "typographic poster",
+  "poster",
+  "concert poster",
+  "festival poster",
+  "gig poster",
+  "swiss style",
+  "text on path",
+  "curved text",
+  "circular text",
+  "rotating text",
+  "wavy text",
+  "text along a wave",
+  "flowing text",
+  "staggered letters",
+  "letters drop in",
+  "overshoot",
+  "back easing",
+  "echo",
+  "outline text",
+  "marquee",
+  "scrolling band",
+  "ticker",
+  "sound waves",
+  "pulse"
+ ],
+ "teaches": [
+  "Per-letter animation: a loop over the word draws each letter, sliced out with textSubtext(\"ECHO\", i, 1), its own drop (back-out easing 1 + 2.70158 p^3 + 1.70158 p^2 over 0.8 s, 0.14 s apart) and its own breathing scale about the baseline",
+  "Echoes: the same letters again in stroke style, five copies from the farthest to the nearest, each offset further down and fainter, the offsets swinging with sin(t)",
+  "Text on a circle that turns: a closed pathExpression circle and drawTextOnPath inside save { rotate(t * 14) about the centre }",
+  "Text flowing along a moving wave: a pathExpression whose y uses animationTime(), so the path itself moves, and an hOffset of -((t * 38) % width) from textMeasure, so the words slide along it seamlessly",
+  "The poster is laid out on a 360 x 640 sheet scaled to fit and centred; the paper, the rings, the wave and the tilted band run past the sheet to the screen edges, so a landscape tablet shows a wide composition, not a letterbox",
+  "The band: rotate -5 degrees about its centre, a black bar wider than the screen, and the dates repeated ceil(width / measured) + 1 times, moving by the measured width modulo",
+  "Two clocks: animationTime() (from 0 when the poster appears) for the one-off entrance, continuousSec() for everything that loops. A canvas that reads only animationTime() is not repainted by the players (the inspector reports repaint idle); continuousSec() schedules every frame"
+ ],
+ "pitfalls": [
+  "Canvas text has no font weight in the JSON (paint has textSize and colour only): the headline is made heavy with fillAndStroke and a 3 px stroke",
+  "loop with a negative step does not run (from 5 until 0 step -1 drew nothing): count up and compute the reversed index",
+  "clamp is clamp(value, max, min) in these players",
+  "The TypeScript player draws the wave text off its curve at some frames (from about 4 s into the web render the words run nearly straight while drawPath of the same path still curves); the C++ player follows the wave at every time",
+  "A document whose motion reads only animationTime() is not repainted: drive looping motion from continuousSec() (or add wakeIn). It then repaints every frame for as long as it is shown — right for a poster or an idle screen, not for a widget"
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": "animationTime drives the entrance (letters, echoes); continuousSec drives the loops (rings, disc, ring text, wave, band, breathing), which is also what keeps the poster repainting",
+  "touch": false
+ },
+ "snippets": [
+  {
+   "pointer": "/root/commands/9/save/commands/19",
+   "shows": "text.path",
+   "note": "the sentence flowing along the moving wave"
+  },
+  {
+   "pointer": "/root/commands/9/save/commands/15",
+   "shows": "anim.stagger",
+   "note": "ECHO: each letter drops in 0.14 s after the last, then breathes"
+  },
+  {
+   "pointer": "/root/commands/9/save/commands/8",
+   "shows": "time.animation",
+   "note": "the ring of text turning"
+  },
+  {
+   "pointer": "/root/commands/9/save/commands/13",
+   "shows": "data.loop",
+   "note": "the five echoes, a loop of loops"
+  },
+  {
+   "pointer": "/root/commands/11",
+   "shows": "text.measure",
+   "note": "the tilted band, repeated at its measured width"
+  }
+ ],
+ "check": {
+  "describe": "Settled (t = 4 s): warm paper, grey concentric rings centred on a red disc at the top right, the disc inside a ring of small black text SOUND · LIGHT · MOTION · THREE NIGHTS · LISBOA · MMXXVI, N° 07 / LX FACTORY / LISBOA top left, ECHO in huge black letters across the middle with five red outline copies stepping down under it, a sentence (fourteen artists — three nights — one room full of noise) riding a sine wave, a two-line lineup, and a black band tilted up to the right with ECHO FESTIVAL 2026 — LISBON — 14 · 15 · 16 MAY in red. drop (t = 0.62 s): E and C landed or landing, H high up and O not yet in, no echoes yet. ring (t = 7.3 s): the ring text turned and the wave and band moved on. Landscape 1280x800: the sheet centred, rings, wave and band across the full width. Tablet portrait and a 300x300 square: the whole sheet scaled to fit.",
+  "render": {
+   "animation_time": 4,
+   "clock": "2026-11-02T20:30:00"
+  },
+  "renders": [
+   {
+    "name": "drop",
+    "animation_time": 0.62,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "landing",
+    "animation_time": 1.05,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "later",
+    "animation_time": 7.3,
+    "clock": "2026-11-02T20:30:03.3"
+   },
+   {
+    "name": "landscape",
+    "width": 1280,
+    "height": 800,
+    "animation_time": 7.3,
+    "clock": "2026-11-02T20:30:03.3"
+   },
+   {
+    "name": "landscape-drop",
+    "width": 1280,
+    "height": 800,
+    "animation_time": 0.62,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "tablet",
+    "width": 800,
+    "height": 1280,
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "square",
+    "width": 300,
+    "height": 300,
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00"
+   }
+  ]
+ },
+ "related": [
+  "TXT-06",
+  "TXT-05",
+  "ANM-03",
+  "DRW-06",
+  "SHW-27"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 3473,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 107,
+  "operations": {
+   "ANIMATED_FLOAT": 35,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 12,
+   "DRAW_CIRCLE": 2,
+   "DRAW_RECT": 2,
+   "DRAW_TEXT_ANCHOR": 8,
+   "DRAW_TEXT_ON_PATH": 2,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 5,
+   "MATRIX_RESTORE": 4,
+   "MATRIX_ROTATE": 2,
+   "MATRIX_SAVE": 4,
+   "MATRIX_SCALE": 2,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 12,
+   "PathExpression": 2,
+   "TextMeasure": 2,
+   "TextSubtext": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: repaint_continuous",
+   "info: hardcoded_date",
+   "info: expression_entries"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "drop": {
+    "render": "render-drop.png",
+    "render_findings": []
+   },
+   "landing": {
+    "render": "render-landing.png",
+    "render_findings": []
+   },
+   "later": {
+    "render": "render-later.png",
+    "render_findings": []
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "landscape-drop": {
+    "render": "render-landscape-drop.png",
+    "render_findings": [],
+    "size": [
+     1280,
+     800
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "tablet": {
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "square": {
+    "render": "render-square.png",
+    "render_findings": [],
+    "size": [
+     300,
+     300
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "angle",
+   "apiLevel",
+   "background",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawRect",
+   "drawTextAnchored",
+   "drawTextOnPath",
+   "dx",
+   "dy",
+   "end",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "from",
+   "hOffset",
+   "header",
+   "height",
+   "id",
+   "index",
+   "left",
+   "len",
+   "loop",
+   "mode",
+   "modifiers",
+   "name",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "pathExpression",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "radius",
+   "right",
+   "root",
+   "rotate",
+   "save",
+   "scale",
+   "start",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "text",
+   "textMeasure",
+   "textSize",
+   "textSubtext",
+   "top",
+   "translate",
+   "type",
+   "until",
+   "vOffset",
+   "value",
+   "varName",
+   "variable",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "text.path": [
+    "drawTextOnPath"
+   ],
+   "anim.stagger": [
+    "animationTime()"
+   ],
+   "time.animation": [
+    "animationTime()",
+    "animationTime",
+    "continuousSec"
+   ],
+   "anim.loop": [
+    "continuousSec"
+   ],
+   "text.measure": [
+    "textMeasure"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "expr.string": [
+    "textSubtext",
+    "textMeasure"
+   ],
+   "draw.plot": [
+    "pathExpression"
+   ],
+   "draw.transform": [
+    "save",
+    "rotate",
+    "scale",
+    "translate"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "expr.math": [
+    "pow(",
+    "ceil(",
+    "min("
+   ]
+  },
+  "built_at": "2026-11-02T18:48:50.553Z"
+ },
+ "expect_findings": [
+  "hardcoded_date"
+ ]
+}

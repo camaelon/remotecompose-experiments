@@ -1,0 +1,610 @@
+{
+ "id": "SHW-16",
+ "name": "solar-system",
+ "version": 1,
+ "title": "A 3D solar system that runs on the clock",
+ "summary": "The Sun and eight planets in 3D on a twinkling starfield: the Sun is a point light, so every planet shows a lit day side; the planets start where they really are today (mean longitudes from J2000 and the date) and run faster than real time at a chosen speed (a day, a week, a month or a year a second). A drag tilts and turns the camera from edge-on to straight down; tapping a planet's chip highlights its orbit and rings and names it in 3D; the panel fills a phone's width and sits in the corner of a wide window.",
+ "prompt": "Make a 3D solar system: the Sun and planets on their orbits moving with the clock but sped up, with a speed control, orbit rings, a starry background, drag to tilt the view, and tap a planet's name to see where it is.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "Scene3D has no clock-driven orbits, point light or projected labels: the camera orbit, the sun-as-light, the date-anchored simulated time and the 2D highlight projected from 3D are written by hand.",
+ "capabilities": {
+  "primary": [
+   "3d.scene",
+   "3d.mesh",
+   "time.clock",
+   "input.drag"
+  ],
+  "secondary": [
+   "input.tap",
+   "time.animation",
+   "time.date",
+   "anim.value",
+   "data.array",
+   "data.loop",
+   "expr.trig",
+   "draw.gradient",
+   "text.dynamic",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "generative-art",
+  "onboarding"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "3d",
+  "solar system",
+  "planets",
+  "orbits",
+  "orrery",
+  "sun",
+  "starfield",
+  "space",
+  "astronomy",
+  "planetarium",
+  "time lapse",
+  "speed control",
+  "drag to tilt",
+  "orbit camera",
+  "showcase"
+ ],
+ "teaches": [
+  "Light a scene from inside: a single point light at the origin makes the Sun sphere fully lit (two-sided |N.L| is 1 everywhere) and gives each planet a day and a night side",
+  "Start the orbits at today's real positions: simT = year() - 2000 + dayOfYear() / 365.25 (years since J2000) and angle = simT * 2 pi / period + the planet's mean longitude at J2000",
+  "Change speed without the planets jumping: keep t0 and c0, and on a speed tap set t0 = @simT - @today and c0 = animationTime() before the new speed, so simT = today + t0 + (animationTime() - c0) * rate stays continuous",
+  "Draw every orbit ring with one unit torus scaled (r, 1, r) in a loop over a float array; draw the selected one first, thicker and in the accent colour, because the depth test keeps the first of two equal depths",
+  "Project the selected planet to 2D with the same spin, tilt, distance and focal length as the camera and draw a pulsing ring, a leader and its name after the meshes",
+  "Scatter 140 stars without random state on an R2 low-discrepancy sequence: x = fract(0.5 + i * 0.7549) * W, y = fract(0.5 + i * 0.5698) * H, each twinkling at its own rate",
+  "Use one overlay for every size: the panel is fillMaxWidth then widthIn max 340 inside a row arranged at the end, so it is full width on a phone and a corner card on a wide window; the 3D framing reads step(componentWidth(), 699)"
+ ],
+ "pitfalls": [
+  "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players only",
+  "Mean longitudes on circular orbits: positions are right to a few degrees, not an ephemeris; sizes and distances are stylised (order kept)",
+  "A thin ring torus scaled by its orbit radius gets thicker with the radius; keep the minor radius small (0.005)",
+  "animationTime() is seconds since the document loaded: the simulated date restarts from today on every load",
+  "Continuous repaint: the stars and the orbits read the clock every frame"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/7/box/children/1/canvas/commands/21",
+   "shows": "3d.scene",
+   "note": "the orbiting camera"
+  },
+  {
+   "pointer": "/root/7/box/children/1/canvas/commands/22",
+   "shows": "3d.scene",
+   "note": "the Sun as a point light"
+  },
+  {
+   "pointer": "/root/7/box/children/1/canvas/commands/37",
+   "shows": "3d.mesh",
+   "note": "every orbit from one scaled torus"
+  },
+  {
+   "pointer": "/root/5",
+   "shows": "time.clock",
+   "note": "simulated years since J2000 from the date and animationTime"
+  },
+  {
+   "pointer": "/root/7/box/children/1/canvas/commands/0",
+   "shows": "input.drag",
+   "note": "drag spins the camera"
+  },
+  {
+   "pointer": "/root/7/box/children/1/canvas/commands/14",
+   "shows": "data.loop",
+   "note": "the starfield"
+  }
+ ],
+ "check": {
+  "describe": "Black space with faint twinkling stars; a glowing yellow Sun in the middle, eight thin blue-grey orbit ellipses, Earth's orbit in light blue, small lit planets (Saturn with its ring), 'Earth' labelled with a pulsing ring; 'Solar System' and 'Year 2026.8' at the top; a dark panel below with Earth's facts, eight planet chips (Earth selected) and four speed chips (Week/s selected). Later the planets have moved round their orbits; a drag changes the tilt; tapping Saturn moves the highlight and the label; Year/s makes the year count up fast.",
+  "render": {
+   "clock": "2026-11-02T10:00:00"
+  },
+  "renders": [
+   {
+    "name": "later",
+    "clock": "2026-11-02T10:00:00",
+    "duration": 6
+   },
+   {
+    "name": "saturn-fast",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.2,
+      "type": "tap",
+      "x": 140,
+      "y": 668
+     },
+     {
+      "t": 0.3,
+      "type": "tap",
+      "x": 297,
+      "y": 736
+     }
+    ],
+    "duration": 4
+   },
+   {
+    "name": "tilted",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 180,
+      "y": 200
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 220,
+      "y": 280
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 260,
+      "y": 360
+     },
+     {
+      "t": 0.4,
+      "type": "up",
+      "x": 260,
+      "y": 360
+     }
+    ],
+    "duration": 2
+   },
+   {
+    "name": "edge-on",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 180,
+      "y": 420
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 180,
+      "y": 330
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 180,
+      "y": 240
+     },
+     {
+      "t": 0.4,
+      "type": "up",
+      "x": 180,
+      "y": 240
+     }
+    ],
+    "duration": 2
+   },
+   {
+    "name": "tablet",
+    "width": 1180,
+    "height": 820,
+    "clock": "2026-11-02T10:00:00"
+   },
+   {
+    "name": "tablet-portrait",
+    "width": 800,
+    "height": 1280,
+    "clock": "2026-11-02T10:00:00"
+   },
+   {
+    "name": "square",
+    "width": 480,
+    "height": 480,
+    "clock": "2026-11-02T10:00:00"
+   }
+  ]
+ },
+ "related": [
+  "DRW-17",
+  "CMP-35",
+  "Scene3D",
+  "TIM-14"
+ ],
+ "java_difference": "3D support has not landed in androidx yet (coming): the Java JSON parser does not know camera3D, lights3D, matrix3D, meshPrimitive3D or drawMesh3D; plays in the C++ and TypeScript players. Also json2rc-only: Java's addDataList drops the list id, so textLookup can't reach it (EXAMPLES_FINDINGS U4)",
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 9520,
+  "header": {
+   "width": 360,
+   "height": 780
+  },
+  "op_count": 483,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 13,
+   "ANIMATED_FLOAT": 112,
+   "COMPONENT_VALUE": 4,
+   "CanvasContent": 4,
+   "CoreText": 19,
+   "DATA_FLOAT": 4,
+   "DATA_TEXT": 32,
+   "DRAW_CIRCLE": 3,
+   "DRAW_LINE": 1,
+   "DRAW_MESH_3D": 13,
+   "DRAW_ROUND_RECT": 6,
+   "DRAW_TEXT_ANCHOR": 1,
+   "DataListFloat": 5,
+   "DataListIds": 2,
+   "HEADER": 1,
+   "LAYOUT_BOX": 17,
+   "LAYOUT_CANVAS": 4,
+   "LAYOUT_COLUMN": 7,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 5,
+   "LayoutComponentContent": 50,
+   "LoopOperation": 4,
+   "MATRIX_3D_OP": 35,
+   "MATRIX_TRANSLATE": 1,
+   "MESH_PRIMITIVE_3D": 4,
+   "MODIFIER_BACKGROUND": 2,
+   "MODIFIER_CLICK": 12,
+   "MODIFIER_HEIGHT": 27,
+   "MODIFIER_PADDING": 5,
+   "MODIFIER_WIDTH": 28,
+   "MODIFIER_WIDTH_IN": 1,
+   "NAMED_VARIABLE": 5,
+   "PAINT_3D_STATE": 1,
+   "PAINT_VALUES": 26,
+   "RoundedClipRectModifierOperation": 1,
+   "SET_CAMERA_3D": 1,
+   "SET_LIGHTS_3D": 1,
+   "TEXT_LOOKUP": 2,
+   "TextFromFloat": 1,
+   "TouchExpression": 2,
+   "ValueFloatExpressionChangeActionOperation": 20
+  },
+  "host_variables": [
+   {
+    "name": "lon0",
+    "type": "float_array",
+    "value": [
+     4.40259981,
+     3.17619991,
+     1.75339997,
+     6.2038002,
+     0.600399971,
+     0.871599972,
+     5.46689987,
+     5.32119989
+    ]
+   },
+   {
+    "name": "orb",
+    "type": "float_array",
+    "value": [
+     1,
+     1.41999996,
+     1.89999998,
+     2.4000001,
+     3.45000005,
+     4.44999981,
+     5.3499999,
+     6.1500001
+    ]
+   },
+   {
+    "name": "prad",
+    "type": "float_array",
+    "value": [
+     0.0700000003,
+     0.109999999,
+     0.119999997,
+     0.0900000036,
+     0.319999993,
+     0.270000011,
+     0.189999998,
+     0.180000007
+    ]
+   },
+   {
+    "name": "rate",
+    "type": "float_array",
+    "value": [
+     26.0930004,
+     10.2131996,
+     6.28319979,
+     3.34069991,
+     0.529699981,
+     0.213300005,
+     0.0747999996,
+     0.0381000005
+    ]
+   },
+   {
+    "name": "spd",
+    "type": "float_array",
+    "value": [
+     0.00270000007,
+     0.0192000009,
+     0.0833000019,
+     1
+    ]
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 5
+  },
+  "audit_findings": [
+   "info: layout_touch_target",
+   "info: layout_deep_nesting",
+   "info: repaint_continuous",
+   "info: hardcoded_colors",
+   "info: expression_entries"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 14,
+   "click": 12,
+   "area": 0,
+   "touch": 2
+  },
+  "java_identical": false,
+  "renders": {
+   "later": {
+    "render": "render-later.png",
+    "render_findings": []
+   },
+   "saturn-fast": {
+    "render": "render-saturn-fast.png",
+    "render_findings": []
+   },
+   "tilted": {
+    "render": "render-tilted.png",
+    "render_findings": []
+   },
+   "edge-on": {
+    "render": "render-edge-on.png",
+    "render_findings": []
+   },
+   "tablet": {
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     1180,
+     820
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: layout_deep_nesting",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "tablet-portrait": {
+    "render": "render-tablet-portrait.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: layout_deep_nesting",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "square": {
+    "render": "render-square.png",
+    "render_findings": [],
+    "size": [
+     480,
+     480
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: layout_deep_nesting",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "addDataList",
+   "alpha",
+   "angle",
+   "anim",
+   "apiLevel",
+   "array",
+   "aspect",
+   "axis",
+   "background",
+   "bottom",
+   "box",
+   "c0",
+   "camera3D",
+   "canvas",
+   "center",
+   "centerX",
+   "centerY",
+   "children",
+   "clearDepth3D",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "decimal",
+   "defaultValue",
+   "drawCircle",
+   "drawLine",
+   "drawMesh3D",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "expression",
+   "eye",
+   "far",
+   "flags",
+   "floatArrays",
+   "fontSize",
+   "fontWeight",
+   "fovY",
+   "from",
+   "global",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "horizontalArrangement",
+   "id",
+   "index",
+   "intensity",
+   "left",
+   "lights",
+   "lights3D",
+   "list",
+   "lon0",
+   "loop",
+   "majorRadius",
+   "matrix3D",
+   "max",
+   "mesh",
+   "meshPrimitive3D",
+   "min",
+   "minorRadius",
+   "mode",
+   "modifiers",
+   "name",
+   "near",
+   "onClick",
+   "op",
+   "ops",
+   "orb",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "pos",
+   "prad",
+   "primitive",
+   "profiles",
+   "projection",
+   "radialGradient",
+   "radius",
+   "rate",
+   "resources",
+   "right",
+   "role",
+   "root",
+   "row",
+   "rx",
+   "ry",
+   "segments",
+   "sel",
+   "semantics",
+   "shader",
+   "size",
+   "spd",
+   "speed",
+   "stopMode",
+   "stops",
+   "strokeWidth",
+   "style",
+   "t0",
+   "target",
+   "text",
+   "textLookup",
+   "textSize",
+   "top",
+   "touchExpression",
+   "translate",
+   "type",
+   "until",
+   "up",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalWeight",
+   "weight",
+   "whole",
+   "width",
+   "widthIn",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2",
+   "z"
+  ],
+  "evidence": {
+   "3d.scene": [
+    "camera3D",
+    "lights3D"
+   ],
+   "3d.mesh": [
+    "meshPrimitive3D",
+    "drawMesh3D"
+   ],
+   "time.clock": [
+    "continuousSec"
+   ],
+   "input.drag": [
+    "touchExpression"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "time.animation": [
+    "animationTime()",
+    "animationTime",
+    "continuousSec"
+   ],
+   "time.date": [
+    "year",
+    "dayOfYear"
+   ],
+   "anim.value": [
+    "anim"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet",
+    "addDataList"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "expr.trig": [
+    "sin(",
+    "cos("
+   ],
+   "draw.gradient": [
+    "radialGradient"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textLookup"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:46:58.004Z"
+ }
+}

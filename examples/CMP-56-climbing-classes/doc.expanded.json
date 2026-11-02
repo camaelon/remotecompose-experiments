@@ -1,0 +1,4744 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Climbing wall class timetable for the current month: the weekly classes on every day of the month, today marked, and the selected day's classes with times, level and places left, with a button to book"
+ },
+ "resources": {
+  "variables": {
+   "sel": {
+    "value": 0,
+    "export": true
+   },
+   "calendarmonth1_cm": "calendarMonth()",
+   "calendarmonth1_cy": "year()",
+   "calendarmonth1_fw": "(weekDay() - dayOfMonth() + 35) % 7",
+   "calendarmonth1_lead": "min(1, @calendarmonth1_fw)",
+   "calendarmonth1_leap": "1 - min(1, @calendarmonth1_cy % 4) - (1 - min(1, @calendarmonth1_cy % 100)) + (1 - min(1, @calendarmonth1_cy % 400))",
+   "calendarmonth1_nd": "30 + (@calendarmonth1_cm + floor(@calendarmonth1_cm / 8)) % 2 - (1 - min(1, abs(@calendarmonth1_cm - 2))) * (2 - @calendarmonth1_leap)",
+   "calendarmonth1_v29": "step(@calendarmonth1_nd, 28.5)",
+   "calendarmonth1_v30": "step(@calendarmonth1_nd, 29.5)",
+   "calendarmonth1_v31": "step(@calendarmonth1_nd, 30.5)",
+   "calendarmonth1_td": "dayOfMonth() * 1",
+   "calendarmonth1_sd": "ifElse(max(1, @calendarmonth1_td), clamp(1, @calendarmonth1_nd, @sel), step(@sel, 0.5))",
+   "calendarmonth1_wds": "(@calendarmonth1_fw + @calendarmonth1_sd - 1) % 7",
+   "calendarmonth1_isTd": "1 - min(1, abs(@calendarmonth1_sd - @calendarmonth1_td))",
+   "calendarmonth1_wks": "ceil((@calendarmonth1_fw + @calendarmonth1_nd) / 7)",
+   "calendarmonth1_side": "step((windowWidth()), 600 - 0.5) * step((windowWidth()), (windowHeight()))",
+   "calendarmonth1_stk": "1 - @calendarmonth1_side",
+   "calendarmonth1_ap": "@calendarmonth1_side * clamp(260, 360, floor((windowWidth()) * 0.28))",
+   "calendarmonth1_gw": "(windowWidth()) - @calendarmonth1_ap - @calendarmonth1_side",
+   "calendarmonth1_cw": "floor((@calendarmonth1_gw - 16) / 7)",
+   "calendarmonth1_rh": "ifElse(clamp(40, 112, floor(((windowHeight()) * 0.6 - 88) / @calendarmonth1_wks)), floor(((windowHeight()) - 88) / @calendarmonth1_wks), @calendarmonth1_side)",
+   "calendarmonth1_gh": "24 + @calendarmonth1_rh * @calendarmonth1_wks",
+   "calendarmonth1_gbh": "ifElse(80 + @calendarmonth1_rh * @calendarmonth1_wks, (windowHeight()), @calendarmonth1_side)",
+   "calendarmonth1_aw": "ifElse((windowWidth()), @calendarmonth1_ap, @calendarmonth1_side)",
+   "calendarmonth1_ah": "ifElse((windowHeight()) - 80 - @calendarmonth1_rh * @calendarmonth1_wks, (windowHeight()), @calendarmonth1_side)",
+   "calendarmonth1_chip": "step(@calendarmonth1_cw, 63.5) * step(@calendarmonth1_rh, 59.5)",
+   "calendarmonth1_dm": "1 - @calendarmonth1_chip",
+   "calendarmonth1_cr4": "@calendarmonth1_cw - 4",
+   "calendarmonth1_cr6": "@calendarmonth1_cw - 6",
+   "calendarmonth1_k": "max(0, floor((@calendarmonth1_rh - 30) / 20))",
+   "calendarmonth1_ay": 0
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "error": {
+    "light": "#FFC62828",
+    "dark": "#FFEF5350"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onPrimary": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF0B1A2E"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "outline": {
+    "light": "#FF878F9E",
+    "dark": "#FF3A4556"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   },
+   "secondary": {
+    "light": "#FF6B3FD9",
+    "dark": "#FF7C4DFF"
+   },
+   "success": {
+    "light": "#FF2E7D32",
+    "dark": "#FF66BB6A"
+   },
+   "surface": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF1C2433"
+   },
+   "surfaceHigh": {
+    "light": "#FFE8ECF2",
+    "dark": "#FF263042"
+   },
+   "warning": {
+    "light": "#FFA15C00",
+    "dark": "#FFFFB74D"
+   }
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    {
+     "width": "windowWidth()"
+    },
+    {
+     "height": "windowHeight()"
+    },
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         0,
+         0
+        ]
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "January  February March    April    May      June     July     August   SeptemberOctober  November December ",
+            "start": "(@calendarmonth1_cm - 1) * 9",
+            "len": 9,
+            "varName": "calendarmonth1_mn9"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@calendarmonth1_mn9",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "calendarmonth1_mName"
+           }
+          },
+          {
+           "variable": {
+            "name": "calendarmonth1_mSp",
+            "vtype": "string",
+            "value": {
+             "type": "textMerge",
+             "id1": " ",
+             "id2": "@calendarmonth1_mName"
+            }
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "Monday   Tuesday  WednesdayThursday Friday   Saturday Sunday   ",
+            "start": "@calendarmonth1_wds * 9",
+            "len": 9,
+            "varName": "calendarmonth1_dn9"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@calendarmonth1_dn9",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "calendarmonth1_dName"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "flow": {
+      "modifiers": [
+       {
+        "width": "windowWidth()"
+       }
+      ],
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          {
+           "width": "@calendarmonth1_gw"
+          },
+          {
+           "height": "@calendarmonth1_gbh"
+          },
+          {
+           "background": "@colors.surface"
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 56
+             },
+             {
+              "padding": {
+               "start": 16,
+               "end": 8
+              }
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "@calendarmonth1_mName",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " ",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "@calendarmonth1_cy",
+                  "whole": 4,
+                  "decimal": 0,
+                  "flags": 4
+                 }
+                }
+               },
+               "fontSize": 20,
+               "fontWeight": 700,
+               "color": "@colors.onSurface",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "Classes",
+               "fontSize": 12,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "overflow": "ellipsis",
+               "modifiers": [
+                {
+                 "padding": {
+                  "start": 8,
+                  "end": 8
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "padding": [
+               8,
+               0
+              ]
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "width": "@calendarmonth1_cw * 7"
+                },
+                {
+                 "height": "@calendarmonth1_gh"
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "textSize": 12
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "wd",
+                  "from": 0,
+                  "until": 7,
+                  "commands": [
+                   {
+                    "textSubtext": {
+                     "text": "MonTueWedThuFriSatSun",
+                     "start": "wd * 3",
+                     "len": 3,
+                     "varName": "calendarmonth1_wdn"
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "@calendarmonth1_wdn",
+                     "x": "@calendarmonth1_cw * (wd + 0.5)",
+                     "y": 12,
+                     "panX": 0,
+                     "panY": 0
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.surfaceHigh"
+                   },
+                   {
+                    "strokeWidth": 1
+                   },
+                   {
+                    "alpha": "@calendarmonth1_chip"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "gr",
+                  "from": 0,
+                  "until": "@calendarmonth1_wks + 1",
+                  "commands": [
+                   {
+                    "drawLine": {
+                     "x1": 0,
+                     "y1": "24 + gr * @calendarmonth1_rh",
+                     "x2": "@calendarmonth1_cw * 7",
+                     "y2": "24 + gr * @calendarmonth1_rh"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "gc",
+                  "from": 1,
+                  "until": 7,
+                  "commands": [
+                   {
+                    "drawLine": {
+                     "x1": "gc * @calendarmonth1_cw",
+                     "y1": 24,
+                     "x2": "gc * @calendarmonth1_cw",
+                     "y2": "24 + @calendarmonth1_wks * @calendarmonth1_rh"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "week",
+                  "from": 0,
+                  "until": "@calendarmonth1_wks",
+                  "commands": [
+                   {
+                    "loop": {
+                     "index": "wd",
+                     "from": 0,
+                     "until": 7,
+                     "commands": [
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_dn",
+                        "value": "week * 7 + wd + 1 - @calendarmonth1_fw"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_inM",
+                        "value": "step(@calendarmonth1_dn, 0.5) * step(@calendarmonth1_nd + 0.5, @calendarmonth1_dn)"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_isT",
+                        "value": "(1 - min(1, abs(@calendarmonth1_dn - @calendarmonth1_td))) * @calendarmonth1_inM"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_isS",
+                        "value": "(1 - min(1, abs(@calendarmonth1_dn - @calendarmonth1_sd))) * @calendarmonth1_inM"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_x0",
+                        "value": "wd * @calendarmonth1_cw"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_y0",
+                        "value": "24 + week * @calendarmonth1_rh"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_we",
+                        "value": "step(wd, 4.5)"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.surfaceHigh"
+                         },
+                         {
+                          "alpha": "@calendarmonth1_isS * @calendarmonth1_chip"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRect": {
+                        "left": "@calendarmonth1_x0 + 0.5",
+                        "top": "@calendarmonth1_y0 + 0.5",
+                        "right": "@calendarmonth1_x0 + @calendarmonth1_cw - 0.5",
+                        "bottom": "@calendarmonth1_y0 + @calendarmonth1_rh - 0.5"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.primary"
+                         },
+                         {
+                          "style": "stroke"
+                         },
+                         {
+                          "strokeWidth": 2
+                         },
+                         {
+                          "alpha": "@calendarmonth1_isS * @calendarmonth1_chip"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRect": {
+                        "left": "@calendarmonth1_x0 + 1.5",
+                        "top": "@calendarmonth1_y0 + 1.5",
+                        "right": "@calendarmonth1_x0 + @calendarmonth1_cw - 1.5",
+                        "bottom": "@calendarmonth1_y0 + @calendarmonth1_rh - 1.5"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_ccx",
+                        "value": "@calendarmonth1_x0 + @calendarmonth1_cw / 2"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_ccy",
+                        "value": "@calendarmonth1_y0 + @calendarmonth1_rh * 0.4"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_R",
+                        "value": "min(@calendarmonth1_cw * 0.4, @calendarmonth1_rh * 0.33)"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.primary"
+                         },
+                         {
+                          "strokeWidth": 1.5
+                         },
+                         {
+                          "alpha": "@calendarmonth1_isT * (1 - @calendarmonth1_isS) * @calendarmonth1_dm"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawCircle": {
+                        "cx": "@calendarmonth1_ccx",
+                        "cy": "@calendarmonth1_ccy",
+                        "radius": "@calendarmonth1_R - 1"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "color": "@colors.primary"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawCircle": {
+                        "cx": "ifElse(@calendarmonth1_ccx, @calendarmonth1_x0 + 16, @calendarmonth1_chip)",
+                        "cy": "ifElse(@calendarmonth1_ccy, @calendarmonth1_y0 + 16, @calendarmonth1_chip)",
+                        "radius": "ifElse(@calendarmonth1_R * @calendarmonth1_isS, 12 * @calendarmonth1_isT, @calendarmonth1_chip)"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_tx",
+                        "value": "ifElse(@calendarmonth1_ccx, @calendarmonth1_x0 + 16, @calendarmonth1_chip)"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_ty",
+                        "value": "ifElse(@calendarmonth1_ccy, @calendarmonth1_y0 + 16, @calendarmonth1_chip)"
+                       }
+                      },
+                      {
+                       "variable": {
+                        "name": "calendarmonth1_hi",
+                        "value": "ifElse(@calendarmonth1_isS, @calendarmonth1_isT, @calendarmonth1_chip)"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onSurface"
+                         },
+                         {
+                          "textSize": "ifElse(15, 13, @calendarmonth1_chip)"
+                         },
+                         {
+                          "alpha": "@calendarmonth1_inM * (1 - @calendarmonth1_hi) * (1 - @calendarmonth1_isT) * (1 - @calendarmonth1_we)"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": {
+                         "type": "textFromFloat",
+                         "value": "@calendarmonth1_dn",
+                         "whole": 2,
+                         "decimal": 0,
+                         "flags": 4
+                        },
+                        "x": "@calendarmonth1_tx",
+                        "y": "@calendarmonth1_ty",
+                        "panX": 0,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.muted"
+                         },
+                         {
+                          "alpha": "@calendarmonth1_inM * (1 - @calendarmonth1_hi) * (1 - @calendarmonth1_isT) * @calendarmonth1_we"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": {
+                         "type": "textFromFloat",
+                         "value": "@calendarmonth1_dn",
+                         "whole": 2,
+                         "decimal": 0,
+                         "flags": 4
+                        },
+                        "x": "@calendarmonth1_tx",
+                        "y": "@calendarmonth1_ty",
+                        "panX": 0,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.primary"
+                         },
+                         {
+                          "alpha": "@calendarmonth1_isT * (1 - @calendarmonth1_hi)"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": {
+                         "type": "textFromFloat",
+                         "value": "@calendarmonth1_dn",
+                         "whole": 2,
+                         "decimal": 0,
+                         "flags": 4
+                        },
+                        "x": "@calendarmonth1_tx",
+                        "y": "@calendarmonth1_ty",
+                        "panX": 0,
+                        "panY": 0
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onPrimary"
+                         },
+                         {
+                          "alpha": "@calendarmonth1_hi"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": {
+                         "type": "textFromFloat",
+                         "value": "@calendarmonth1_dn",
+                         "whole": 2,
+                         "decimal": 0,
+                         "flags": 4
+                        },
+                        "x": "@calendarmonth1_tx",
+                        "y": "@calendarmonth1_ty",
+                        "panX": 0,
+                        "panY": 0
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "wk",
+                  "from": 0,
+                  "until": "@calendarmonth1_wks",
+                  "commands": [
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_nnw_0",
+                     "value": 1
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_lmw_0",
+                     "value": "min(@calendarmonth1_nnw_0, @calendarmonth1_k - step(@calendarmonth1_nnw_0, @calendarmonth1_k + 0.5))"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_mkw_0",
+                     "value": "step(wk * 7 + 0 + 1 - @calendarmonth1_fw, 0.5) * step(@calendarmonth1_nd + 0.5 - 0 - 1 + @calendarmonth1_fw, wk * 7)"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": "0 * @calendarmonth1_cw",
+                     "dy": "24 + wk * @calendarmonth1_rh"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": 0,
+                     "dy": 28
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 0,
+                     "top": 0,
+                     "right": "@calendarmonth1_cw",
+                     "bottom": "18 * @calendarmonth1_chip * step(@calendarmonth1_lmw_0, 0 + 0.5) * @calendarmonth1_mkw_0"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.success"
+                      },
+                      {
+                       "alpha": 0.16
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr4",
+                     "bottom": 18,
+                     "rx": 4,
+                     "ry": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "style": "fill"
+                      },
+                      {
+                       "color": "@colors.success"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": 7,
+                     "bottom": 18,
+                     "rx": 1.5,
+                     "ry": 1.5
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 9,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr6",
+                     "bottom": 18
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onSurface"
+                      },
+                      {
+                       "textSize": 12
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "18:00  Intro to bouldering",
+                     "x": 11,
+                     "y": 9,
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "restore": {}
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.muted"
+                      },
+                      {
+                       "textSize": 11
+                      },
+                      {
+                       "alpha": "@calendarmonth1_chip * step(@calendarmonth1_k, 0.5) * step(@calendarmonth1_nnw_0, @calendarmonth1_lmw_0 + 0.5) * @calendarmonth1_mkw_0"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": {
+                      "type": "textMerge",
+                      "id1": "+",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@calendarmonth1_nnw_0 - @calendarmonth1_lmw_0",
+                        "whole": 2,
+                        "decimal": 0,
+                        "flags": 4
+                       },
+                       "id2": " more"
+                      }
+                     },
+                     "x": 11,
+                     "y": "37 + @calendarmonth1_lmw_0 * 20",
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "translate": {
+                     "dx": "@calendarmonth1_cw / 2",
+                     "dy": "@calendarmonth1_rh * 0.84"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.success"
+                      },
+                      {
+                       "alpha": "@calendarmonth1_dm * (1 - step(0, 2.5)) * @calendarmonth1_mkw_0"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": 0,
+                     "cy": 0,
+                     "radius": 2.5
+                    }
+                   },
+                   {
+                    "restore": {}
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "wk",
+                  "from": 0,
+                  "until": "@calendarmonth1_wks",
+                  "commands": [
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_nnw_1",
+                     "value": 2
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_lmw_1",
+                     "value": "min(@calendarmonth1_nnw_1, @calendarmonth1_k - step(@calendarmonth1_nnw_1, @calendarmonth1_k + 0.5))"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_mkw_1",
+                     "value": "step(wk * 7 + 1 + 1 - @calendarmonth1_fw, 0.5) * step(@calendarmonth1_nd + 0.5 - 1 - 1 + @calendarmonth1_fw, wk * 7)"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": "1 * @calendarmonth1_cw",
+                     "dy": "24 + wk * @calendarmonth1_rh"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": 0,
+                     "dy": 28
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 0,
+                     "top": 0,
+                     "right": "@calendarmonth1_cw",
+                     "bottom": "18 * @calendarmonth1_chip * step(@calendarmonth1_lmw_1, 0 + 0.5) * @calendarmonth1_mkw_1"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.secondary"
+                      },
+                      {
+                       "alpha": 0.16
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr4",
+                     "bottom": 18,
+                     "rx": 4,
+                     "ry": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "style": "fill"
+                      },
+                      {
+                       "color": "@colors.secondary"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": 7,
+                     "bottom": 18,
+                     "rx": 1.5,
+                     "ry": 1.5
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 9,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr6",
+                     "bottom": 18
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onSurface"
+                      },
+                      {
+                       "textSize": 12
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "17:00  Youth squad",
+                     "x": 11,
+                     "y": 9,
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "restore": {}
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": 0,
+                     "dy": 48
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 0,
+                     "top": 0,
+                     "right": "@calendarmonth1_cw",
+                     "bottom": "18 * @calendarmonth1_chip * step(@calendarmonth1_lmw_1, 1 + 0.5) * @calendarmonth1_mkw_1"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.error"
+                      },
+                      {
+                       "alpha": 0.16
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr4",
+                     "bottom": 18,
+                     "rx": 4,
+                     "ry": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "style": "fill"
+                      },
+                      {
+                       "color": "@colors.error"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": 7,
+                     "bottom": 18,
+                     "rx": 1.5,
+                     "ry": 1.5
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 9,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr6",
+                     "bottom": 18
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onSurface"
+                      },
+                      {
+                       "textSize": 12
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "19:00  Lead climbing course",
+                     "x": 11,
+                     "y": 9,
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "restore": {}
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.muted"
+                      },
+                      {
+                       "textSize": 11
+                      },
+                      {
+                       "alpha": "@calendarmonth1_chip * step(@calendarmonth1_k, 0.5) * step(@calendarmonth1_nnw_1, @calendarmonth1_lmw_1 + 0.5) * @calendarmonth1_mkw_1"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": {
+                      "type": "textMerge",
+                      "id1": "+",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@calendarmonth1_nnw_1 - @calendarmonth1_lmw_1",
+                        "whole": 2,
+                        "decimal": 0,
+                        "flags": 4
+                       },
+                       "id2": " more"
+                      }
+                     },
+                     "x": 11,
+                     "y": "37 + @calendarmonth1_lmw_1 * 20",
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "translate": {
+                     "dx": "@calendarmonth1_cw / 2",
+                     "dy": "@calendarmonth1_rh * 0.84"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.secondary"
+                      },
+                      {
+                       "alpha": "@calendarmonth1_dm * (1 - step(0, 2.5)) * @calendarmonth1_mkw_1"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": -3.5,
+                     "cy": 0,
+                     "radius": 2.5
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.error"
+                      },
+                      {
+                       "alpha": "@calendarmonth1_dm * (1 - step(1, 2.5)) * @calendarmonth1_mkw_1"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": 3.5,
+                     "cy": 0,
+                     "radius": 2.5
+                    }
+                   },
+                   {
+                    "restore": {}
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "wk",
+                  "from": 0,
+                  "until": "@calendarmonth1_wks",
+                  "commands": [
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_nnw_2",
+                     "value": 1
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_lmw_2",
+                     "value": "min(@calendarmonth1_nnw_2, @calendarmonth1_k - step(@calendarmonth1_nnw_2, @calendarmonth1_k + 0.5))"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_mkw_2",
+                     "value": "step(wk * 7 + 2 + 1 - @calendarmonth1_fw, 0.5) * step(@calendarmonth1_nd + 0.5 - 2 - 1 + @calendarmonth1_fw, wk * 7)"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": "2 * @calendarmonth1_cw",
+                     "dy": "24 + wk * @calendarmonth1_rh"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": 0,
+                     "dy": 28
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 0,
+                     "top": 0,
+                     "right": "@calendarmonth1_cw",
+                     "bottom": "18 * @calendarmonth1_chip * step(@calendarmonth1_lmw_2, 0 + 0.5) * @calendarmonth1_mkw_2"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.primary"
+                      },
+                      {
+                       "alpha": 0.16
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr4",
+                     "bottom": 18,
+                     "rx": 4,
+                     "ry": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "style": "fill"
+                      },
+                      {
+                       "color": "@colors.primary"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": 7,
+                     "bottom": 18,
+                     "rx": 1.5,
+                     "ry": 1.5
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 9,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr6",
+                     "bottom": 18
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onSurface"
+                      },
+                      {
+                       "textSize": 12
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "19:00  Technique clinic",
+                     "x": 11,
+                     "y": 9,
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "restore": {}
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.muted"
+                      },
+                      {
+                       "textSize": 11
+                      },
+                      {
+                       "alpha": "@calendarmonth1_chip * step(@calendarmonth1_k, 0.5) * step(@calendarmonth1_nnw_2, @calendarmonth1_lmw_2 + 0.5) * @calendarmonth1_mkw_2"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": {
+                      "type": "textMerge",
+                      "id1": "+",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@calendarmonth1_nnw_2 - @calendarmonth1_lmw_2",
+                        "whole": 2,
+                        "decimal": 0,
+                        "flags": 4
+                       },
+                       "id2": " more"
+                      }
+                     },
+                     "x": 11,
+                     "y": "37 + @calendarmonth1_lmw_2 * 20",
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "translate": {
+                     "dx": "@calendarmonth1_cw / 2",
+                     "dy": "@calendarmonth1_rh * 0.84"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.primary"
+                      },
+                      {
+                       "alpha": "@calendarmonth1_dm * (1 - step(0, 2.5)) * @calendarmonth1_mkw_2"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": 0,
+                     "cy": 0,
+                     "radius": 2.5
+                    }
+                   },
+                   {
+                    "restore": {}
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "wk",
+                  "from": 0,
+                  "until": "@calendarmonth1_wks",
+                  "commands": [
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_nnw_3",
+                     "value": 2
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_lmw_3",
+                     "value": "min(@calendarmonth1_nnw_3, @calendarmonth1_k - step(@calendarmonth1_nnw_3, @calendarmonth1_k + 0.5))"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_mkw_3",
+                     "value": "step(wk * 7 + 3 + 1 - @calendarmonth1_fw, 0.5) * step(@calendarmonth1_nd + 0.5 - 3 - 1 + @calendarmonth1_fw, wk * 7)"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": "3 * @calendarmonth1_cw",
+                     "dy": "24 + wk * @calendarmonth1_rh"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": 0,
+                     "dy": 28
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 0,
+                     "top": 0,
+                     "right": "@calendarmonth1_cw",
+                     "bottom": "18 * @calendarmonth1_chip * step(@calendarmonth1_lmw_3, 0 + 0.5) * @calendarmonth1_mkw_3"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.secondary"
+                      },
+                      {
+                       "alpha": 0.16
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr4",
+                     "bottom": 18,
+                     "rx": 4,
+                     "ry": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "style": "fill"
+                      },
+                      {
+                       "color": "@colors.secondary"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": 7,
+                     "bottom": 18,
+                     "rx": 1.5,
+                     "ry": 1.5
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 9,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr6",
+                     "bottom": 18
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onSurface"
+                      },
+                      {
+                       "textSize": 12
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "18:30  Women's climbing night",
+                     "x": 11,
+                     "y": 9,
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "restore": {}
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": 0,
+                     "dy": 48
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 0,
+                     "top": 0,
+                     "right": "@calendarmonth1_cw",
+                     "bottom": "18 * @calendarmonth1_chip * step(@calendarmonth1_lmw_3, 1 + 0.5) * @calendarmonth1_mkw_3"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.warning"
+                      },
+                      {
+                       "alpha": 0.16
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr4",
+                     "bottom": 18,
+                     "rx": 4,
+                     "ry": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "style": "fill"
+                      },
+                      {
+                       "color": "@colors.warning"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": 7,
+                     "bottom": 18,
+                     "rx": 1.5,
+                     "ry": 1.5
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 9,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr6",
+                     "bottom": 18
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onSurface"
+                      },
+                      {
+                       "textSize": 12
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "20:15  Yoga for climbers",
+                     "x": 11,
+                     "y": 9,
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "restore": {}
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.muted"
+                      },
+                      {
+                       "textSize": 11
+                      },
+                      {
+                       "alpha": "@calendarmonth1_chip * step(@calendarmonth1_k, 0.5) * step(@calendarmonth1_nnw_3, @calendarmonth1_lmw_3 + 0.5) * @calendarmonth1_mkw_3"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": {
+                      "type": "textMerge",
+                      "id1": "+",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@calendarmonth1_nnw_3 - @calendarmonth1_lmw_3",
+                        "whole": 2,
+                        "decimal": 0,
+                        "flags": 4
+                       },
+                       "id2": " more"
+                      }
+                     },
+                     "x": 11,
+                     "y": "37 + @calendarmonth1_lmw_3 * 20",
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "translate": {
+                     "dx": "@calendarmonth1_cw / 2",
+                     "dy": "@calendarmonth1_rh * 0.84"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.secondary"
+                      },
+                      {
+                       "alpha": "@calendarmonth1_dm * (1 - step(0, 2.5)) * @calendarmonth1_mkw_3"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": -3.5,
+                     "cy": 0,
+                     "radius": 2.5
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.warning"
+                      },
+                      {
+                       "alpha": "@calendarmonth1_dm * (1 - step(1, 2.5)) * @calendarmonth1_mkw_3"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": 3.5,
+                     "cy": 0,
+                     "radius": 2.5
+                    }
+                   },
+                   {
+                    "restore": {}
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "wk",
+                  "from": 0,
+                  "until": "@calendarmonth1_wks",
+                  "commands": [
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_nnw_4",
+                     "value": 2
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_lmw_4",
+                     "value": "min(@calendarmonth1_nnw_4, @calendarmonth1_k - step(@calendarmonth1_nnw_4, @calendarmonth1_k + 0.5))"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_mkw_4",
+                     "value": "step(wk * 7 + 5 + 1 - @calendarmonth1_fw, 0.5) * step(@calendarmonth1_nd + 0.5 - 5 - 1 + @calendarmonth1_fw, wk * 7)"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": "5 * @calendarmonth1_cw",
+                     "dy": "24 + wk * @calendarmonth1_rh"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": 0,
+                     "dy": 28
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 0,
+                     "top": 0,
+                     "right": "@calendarmonth1_cw",
+                     "bottom": "18 * @calendarmonth1_chip * step(@calendarmonth1_lmw_4, 0 + 0.5) * @calendarmonth1_mkw_4"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.secondary"
+                      },
+                      {
+                       "alpha": 0.16
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr4",
+                     "bottom": 18,
+                     "rx": 4,
+                     "ry": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "style": "fill"
+                      },
+                      {
+                       "color": "@colors.secondary"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": 7,
+                     "bottom": 18,
+                     "rx": 1.5,
+                     "ry": 1.5
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 9,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr6",
+                     "bottom": 18
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onSurface"
+                      },
+                      {
+                       "textSize": 12
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "10:00  Kids' club",
+                     "x": 11,
+                     "y": 9,
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "restore": {}
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": 0,
+                     "dy": 48
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 0,
+                     "top": 0,
+                     "right": "@calendarmonth1_cw",
+                     "bottom": "18 * @calendarmonth1_chip * step(@calendarmonth1_lmw_4, 1 + 0.5) * @calendarmonth1_mkw_4"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.success"
+                      },
+                      {
+                       "alpha": 0.16
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr4",
+                     "bottom": 18,
+                     "rx": 4,
+                     "ry": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "style": "fill"
+                      },
+                      {
+                       "color": "@colors.success"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": 7,
+                     "bottom": 18,
+                     "rx": 1.5,
+                     "ry": 1.5
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 9,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr6",
+                     "bottom": 18
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onSurface"
+                      },
+                      {
+                       "textSize": 12
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "14:00  Family session",
+                     "x": 11,
+                     "y": 9,
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "restore": {}
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.muted"
+                      },
+                      {
+                       "textSize": 11
+                      },
+                      {
+                       "alpha": "@calendarmonth1_chip * step(@calendarmonth1_k, 0.5) * step(@calendarmonth1_nnw_4, @calendarmonth1_lmw_4 + 0.5) * @calendarmonth1_mkw_4"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": {
+                      "type": "textMerge",
+                      "id1": "+",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@calendarmonth1_nnw_4 - @calendarmonth1_lmw_4",
+                        "whole": 2,
+                        "decimal": 0,
+                        "flags": 4
+                       },
+                       "id2": " more"
+                      }
+                     },
+                     "x": 11,
+                     "y": "37 + @calendarmonth1_lmw_4 * 20",
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "translate": {
+                     "dx": "@calendarmonth1_cw / 2",
+                     "dy": "@calendarmonth1_rh * 0.84"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.secondary"
+                      },
+                      {
+                       "alpha": "@calendarmonth1_dm * (1 - step(0, 2.5)) * @calendarmonth1_mkw_4"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": -3.5,
+                     "cy": 0,
+                     "radius": 2.5
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.success"
+                      },
+                      {
+                       "alpha": "@calendarmonth1_dm * (1 - step(1, 2.5)) * @calendarmonth1_mkw_4"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": 3.5,
+                     "cy": 0,
+                     "radius": 2.5
+                    }
+                   },
+                   {
+                    "restore": {}
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "wk",
+                  "from": 0,
+                  "until": "@calendarmonth1_wks",
+                  "commands": [
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_nnw_5",
+                     "value": 1
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_lmw_5",
+                     "value": "min(@calendarmonth1_nnw_5, @calendarmonth1_k - step(@calendarmonth1_nnw_5, @calendarmonth1_k + 0.5))"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_mkw_5",
+                     "value": "step(wk * 7 + 6 + 1 - @calendarmonth1_fw, 0.5) * step(@calendarmonth1_nd + 0.5 - 6 - 1 + @calendarmonth1_fw, wk * 7)"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": "6 * @calendarmonth1_cw",
+                     "dy": "24 + wk * @calendarmonth1_rh"
+                    }
+                   },
+                   {
+                    "save": {}
+                   },
+                   {
+                    "translate": {
+                     "dx": 0,
+                     "dy": 28
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 0,
+                     "top": 0,
+                     "right": "@calendarmonth1_cw",
+                     "bottom": "18 * @calendarmonth1_chip * step(@calendarmonth1_lmw_5, 0 + 0.5) * @calendarmonth1_mkw_5"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.error"
+                      },
+                      {
+                       "alpha": 0.16
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr4",
+                     "bottom": 18,
+                     "rx": 4,
+                     "ry": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "style": "fill"
+                      },
+                      {
+                       "color": "@colors.error"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 4,
+                     "top": 0,
+                     "right": 7,
+                     "bottom": 18,
+                     "rx": 1.5,
+                     "ry": 1.5
+                    }
+                   },
+                   {
+                    "clipRect": {
+                     "left": 9,
+                     "top": 0,
+                     "right": "@calendarmonth1_cr6",
+                     "bottom": 18
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onSurface"
+                      },
+                      {
+                       "textSize": 12
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "11:00  Top rope intro",
+                     "x": 11,
+                     "y": 9,
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "restore": {}
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.muted"
+                      },
+                      {
+                       "textSize": 11
+                      },
+                      {
+                       "alpha": "@calendarmonth1_chip * step(@calendarmonth1_k, 0.5) * step(@calendarmonth1_nnw_5, @calendarmonth1_lmw_5 + 0.5) * @calendarmonth1_mkw_5"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": {
+                      "type": "textMerge",
+                      "id1": "+",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@calendarmonth1_nnw_5 - @calendarmonth1_lmw_5",
+                        "whole": 2,
+                        "decimal": 0,
+                        "flags": 4
+                       },
+                       "id2": " more"
+                      }
+                     },
+                     "x": 11,
+                     "y": "37 + @calendarmonth1_lmw_5 * 20",
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   },
+                   {
+                    "translate": {
+                     "dx": "@calendarmonth1_cw / 2",
+                     "dy": "@calendarmonth1_rh * 0.84"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.error"
+                      },
+                      {
+                       "alpha": "@calendarmonth1_dm * (1 - step(0, 2.5)) * @calendarmonth1_mkw_5"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": 0,
+                     "cy": 0,
+                     "radius": 2.5
+                    }
+                   },
+                   {
+                    "restore": {}
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "column": {
+               "modifiers": [
+                {
+                 "width": "@calendarmonth1_cw * 7"
+                },
+                {
+                 "height": "@calendarmonth1_gh"
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "height": 24
+                   },
+                   {
+                    "width": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "flow": {
+                  "modifiers": [
+                   {
+                    "width": "@calendarmonth1_cw * 7 + 1"
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "@calendarmonth1_lead"
+                      },
+                      {
+                       "width": "@calendarmonth1_fw * @calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 1,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 1
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 2,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 2
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 3,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 3
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 4,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 4
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 5,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 5
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 6,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 6
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 7,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 7
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 8,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 8
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 9,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 9
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 10,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 10
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 11,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 11
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 12,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 12
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 13,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 13
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 14,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 14
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 15,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 15
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 16,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 16
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 17,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 17
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 18,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 18
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 19,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 19
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 20,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 20
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 21,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 21
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 22,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 22
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 23,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 23
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 24,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 24
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 25,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 25
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 26,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 26
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 27,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 27
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 28,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 28
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "@calendarmonth1_v29"
+                      },
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 29,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 29
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "@calendarmonth1_v30"
+                      },
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 30,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 30
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "@calendarmonth1_v31"
+                      },
+                      {
+                       "width": "@calendarmonth1_cw"
+                      },
+                      {
+                       "height": "@calendarmonth1_rh"
+                      },
+                      {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": 31,
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 4
+                         },
+                         "id2": "@calendarmonth1_mSp"
+                        }
+                       }
+                      },
+                      {
+                       "onClick": {
+                        "type": "valueFloatChange",
+                        "target": "@sel",
+                        "value": 31
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "@calendarmonth1_side"
+          },
+          {
+           "width": 1
+          },
+          {
+           "height": "windowHeight()"
+          },
+          {
+           "background": "@colors.outline"
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          {
+           "width": "@calendarmonth1_aw"
+          },
+          {
+           "height": "@calendarmonth1_ah"
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "visibility": "@calendarmonth1_stk"
+             },
+             "fillMaxWidth",
+             {
+              "height": 1
+             },
+             {
+              "background": "@colors.outline"
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 52
+             },
+             {
+              "padding": [
+               16,
+               0
+              ]
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "@calendarmonth1_dName",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@calendarmonth1_sd",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 4
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " ",
+                   "id2": "@calendarmonth1_mName"
+                  }
+                 }
+                }
+               },
+               "fontSize": 17,
+               "fontWeight": 700,
+               "color": "@colors.onSurface",
+               "maxLines": 1,
+               "overflow": "ellipsis",
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "Today",
+               "fontSize": 12,
+               "fontWeight": 600,
+               "color": "@colors.primary",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "visibility": "@calendarmonth1_isTd"
+                },
+                {
+                 "padding": {
+                  "start": 8
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": "@calendarmonth1_ah - 52 - (1 - @calendarmonth1_side)"
+             },
+             {
+              "verticalScroll": "@calendarmonth1_ay"
+             }
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth"
+               ],
+               "children": [
+                {
+                 "canvas": {
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "height": 48
+                   }
+                  ],
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.muted"
+                      },
+                      {
+                       "textSize": 15
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawTextAnchored": {
+                     "text": "No classes, open climbing",
+                     "x": 16,
+                     "y": 24,
+                     "panX": -1,
+                     "panY": 0
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "column": {
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "background": "@colors.background"
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "width": 1
+                      },
+                      {
+                       "height": 1
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_vw_0",
+                     "value": "1 - min(1, abs(@calendarmonth1_wds - 0))"
+                    }
+                   },
+                   {
+                    "column": {
+                     "modifiers": [
+                      {
+                       "visibility": "@calendarmonth1_vw_0"
+                      },
+                      "fillMaxWidth"
+                     ],
+                     "children": [
+                      {
+                       "row": {
+                        "modifiers": [
+                         "fillMaxWidth",
+                         {
+                          "padding": [
+                           16,
+                           10
+                          ]
+                         }
+                        ],
+                        "children": [
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "width": 56
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "18:00",
+                              "fontSize": 14,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 1
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "19:30",
+                              "fontSize": 12,
+                              "color": "@colors.muted",
+                              "maxLines": 1,
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "width": 4
+                            },
+                            {
+                             "height": 40
+                            },
+                            {
+                             "clip": {
+                              "roundedRect": 2
+                             }
+                            },
+                            {
+                             "background": "@colors.success"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "weight": 1
+                            },
+                            {
+                             "padding": {
+                              "start": 12
+                             }
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Intro to bouldering",
+                              "fontSize": 15,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 2,
+                              "overflow": "ellipsis"
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "Beginners, shoes included",
+                              "fontSize": 13,
+                              "color": "@colors.muted",
+                              "maxLines": 2,
+                              "overflow": "ellipsis",
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_vw_1",
+                     "value": "1 - min(1, abs(@calendarmonth1_wds - 1))"
+                    }
+                   },
+                   {
+                    "column": {
+                     "modifiers": [
+                      {
+                       "visibility": "@calendarmonth1_vw_1"
+                      },
+                      "fillMaxWidth"
+                     ],
+                     "children": [
+                      {
+                       "row": {
+                        "modifiers": [
+                         "fillMaxWidth",
+                         {
+                          "padding": [
+                           16,
+                           10
+                          ]
+                         }
+                        ],
+                        "children": [
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "width": 56
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "17:00",
+                              "fontSize": 14,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 1
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "18:30",
+                              "fontSize": 12,
+                              "color": "@colors.muted",
+                              "maxLines": 1,
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "width": 4
+                            },
+                            {
+                             "height": 40
+                            },
+                            {
+                             "clip": {
+                              "roundedRect": 2
+                             }
+                            },
+                            {
+                             "background": "@colors.secondary"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "weight": 1
+                            },
+                            {
+                             "padding": {
+                              "start": 12
+                             }
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Youth squad",
+                              "fontSize": 15,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 2,
+                              "overflow": "ellipsis"
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "Ages 11 to 16, coach Priya",
+                              "fontSize": 13,
+                              "color": "@colors.muted",
+                              "maxLines": 2,
+                              "overflow": "ellipsis",
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "row": {
+                        "modifiers": [
+                         "fillMaxWidth",
+                         {
+                          "padding": [
+                           16,
+                           10
+                          ]
+                         }
+                        ],
+                        "children": [
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "width": 56
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "19:00",
+                              "fontSize": 14,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 1
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "21:00",
+                              "fontSize": 12,
+                              "color": "@colors.muted",
+                              "maxLines": 1,
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "width": 4
+                            },
+                            {
+                             "height": 40
+                            },
+                            {
+                             "clip": {
+                              "roundedRect": 2
+                             }
+                            },
+                            {
+                             "background": "@colors.error"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "weight": 1
+                            },
+                            {
+                             "padding": {
+                              "start": 12
+                             }
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Lead climbing course",
+                              "fontSize": 15,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 2,
+                              "overflow": "ellipsis"
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "Week 2 of 4, belay test needed",
+                              "fontSize": 13,
+                              "color": "@colors.muted",
+                              "maxLines": 2,
+                              "overflow": "ellipsis",
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_vw_2",
+                     "value": "1 - min(1, abs(@calendarmonth1_wds - 2))"
+                    }
+                   },
+                   {
+                    "column": {
+                     "modifiers": [
+                      {
+                       "visibility": "@calendarmonth1_vw_2"
+                      },
+                      "fillMaxWidth"
+                     ],
+                     "children": [
+                      {
+                       "row": {
+                        "modifiers": [
+                         "fillMaxWidth",
+                         {
+                          "padding": [
+                           16,
+                           10
+                          ]
+                         }
+                        ],
+                        "children": [
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "width": 56
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "19:00",
+                              "fontSize": 14,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 1
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "20:30",
+                              "fontSize": 12,
+                              "color": "@colors.muted",
+                              "maxLines": 1,
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "width": 4
+                            },
+                            {
+                             "height": 40
+                            },
+                            {
+                             "clip": {
+                              "roundedRect": 2
+                             }
+                            },
+                            {
+                             "background": "@colors.primary"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "weight": 1
+                            },
+                            {
+                             "padding": {
+                              "start": 12
+                             }
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Technique clinic",
+                              "fontSize": 15,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 2,
+                              "overflow": "ellipsis"
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "Footwork and balance, all levels",
+                              "fontSize": 13,
+                              "color": "@colors.muted",
+                              "maxLines": 2,
+                              "overflow": "ellipsis",
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_vw_3",
+                     "value": "1 - min(1, abs(@calendarmonth1_wds - 3))"
+                    }
+                   },
+                   {
+                    "column": {
+                     "modifiers": [
+                      {
+                       "visibility": "@calendarmonth1_vw_3"
+                      },
+                      "fillMaxWidth"
+                     ],
+                     "children": [
+                      {
+                       "row": {
+                        "modifiers": [
+                         "fillMaxWidth",
+                         {
+                          "padding": [
+                           16,
+                           10
+                          ]
+                         }
+                        ],
+                        "children": [
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "width": 56
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "18:30",
+                              "fontSize": 14,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 1
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "20:00",
+                              "fontSize": 12,
+                              "color": "@colors.muted",
+                              "maxLines": 1,
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "width": 4
+                            },
+                            {
+                             "height": 40
+                            },
+                            {
+                             "clip": {
+                              "roundedRect": 2
+                             }
+                            },
+                            {
+                             "background": "@colors.secondary"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "weight": 1
+                            },
+                            {
+                             "padding": {
+                              "start": 12
+                             }
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Women's climbing night",
+                              "fontSize": 15,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 2,
+                              "overflow": "ellipsis"
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "All levels, coach Hannah",
+                              "fontSize": 13,
+                              "color": "@colors.muted",
+                              "maxLines": 2,
+                              "overflow": "ellipsis",
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "row": {
+                        "modifiers": [
+                         "fillMaxWidth",
+                         {
+                          "padding": [
+                           16,
+                           10
+                          ]
+                         }
+                        ],
+                        "children": [
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "width": 56
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "20:15",
+                              "fontSize": 14,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 1
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "21:15",
+                              "fontSize": 12,
+                              "color": "@colors.muted",
+                              "maxLines": 1,
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "width": 4
+                            },
+                            {
+                             "height": 40
+                            },
+                            {
+                             "clip": {
+                              "roundedRect": 2
+                             }
+                            },
+                            {
+                             "background": "@colors.warning"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "weight": 1
+                            },
+                            {
+                             "padding": {
+                              "start": 12
+                             }
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Yoga for climbers",
+                              "fontSize": 15,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 2,
+                              "overflow": "ellipsis"
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "Mats provided, studio 2",
+                              "fontSize": 13,
+                              "color": "@colors.muted",
+                              "maxLines": 2,
+                              "overflow": "ellipsis",
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_vw_4",
+                     "value": "1 - min(1, abs(@calendarmonth1_wds - 5))"
+                    }
+                   },
+                   {
+                    "column": {
+                     "modifiers": [
+                      {
+                       "visibility": "@calendarmonth1_vw_4"
+                      },
+                      "fillMaxWidth"
+                     ],
+                     "children": [
+                      {
+                       "row": {
+                        "modifiers": [
+                         "fillMaxWidth",
+                         {
+                          "padding": [
+                           16,
+                           10
+                          ]
+                         }
+                        ],
+                        "children": [
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "width": 56
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "10:00",
+                              "fontSize": 14,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 1
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "11:30",
+                              "fontSize": 12,
+                              "color": "@colors.muted",
+                              "maxLines": 1,
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "width": 4
+                            },
+                            {
+                             "height": 40
+                            },
+                            {
+                             "clip": {
+                              "roundedRect": 2
+                             }
+                            },
+                            {
+                             "background": "@colors.secondary"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "weight": 1
+                            },
+                            {
+                             "padding": {
+                              "start": 12
+                             }
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Kids' club",
+                              "fontSize": 15,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 2,
+                              "overflow": "ellipsis"
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "Ages 6 to 10, parent stays",
+                              "fontSize": 13,
+                              "color": "@colors.muted",
+                              "maxLines": 2,
+                              "overflow": "ellipsis",
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "row": {
+                        "modifiers": [
+                         "fillMaxWidth",
+                         {
+                          "padding": [
+                           16,
+                           10
+                          ]
+                         }
+                        ],
+                        "children": [
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "width": 56
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "14:00",
+                              "fontSize": 14,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 1
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "16:00",
+                              "fontSize": 12,
+                              "color": "@colors.muted",
+                              "maxLines": 1,
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "width": 4
+                            },
+                            {
+                             "height": 40
+                            },
+                            {
+                             "clip": {
+                              "roundedRect": 2
+                             }
+                            },
+                            {
+                             "background": "@colors.success"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "weight": 1
+                            },
+                            {
+                             "padding": {
+                              "start": 12
+                             }
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Family session",
+                              "fontSize": 15,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 2,
+                              "overflow": "ellipsis"
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "Up to 2 adults and 3 children",
+                              "fontSize": 13,
+                              "color": "@colors.muted",
+                              "maxLines": 2,
+                              "overflow": "ellipsis",
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "calendarmonth1_vw_5",
+                     "value": "1 - min(1, abs(@calendarmonth1_wds - 6))"
+                    }
+                   },
+                   {
+                    "column": {
+                     "modifiers": [
+                      {
+                       "visibility": "@calendarmonth1_vw_5"
+                      },
+                      "fillMaxWidth"
+                     ],
+                     "children": [
+                      {
+                       "row": {
+                        "modifiers": [
+                         "fillMaxWidth",
+                         {
+                          "padding": [
+                           16,
+                           10
+                          ]
+                         }
+                        ],
+                        "children": [
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "width": 56
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "11:00",
+                              "fontSize": 14,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 1
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "13:00",
+                              "fontSize": 12,
+                              "color": "@colors.muted",
+                              "maxLines": 1,
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "width": 4
+                            },
+                            {
+                             "height": 40
+                            },
+                            {
+                             "clip": {
+                              "roundedRect": 2
+                             }
+                            },
+                            {
+                             "background": "@colors.error"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "column": {
+                           "modifiers": [
+                            {
+                             "weight": 1
+                            },
+                            {
+                             "padding": {
+                              "start": 12
+                             }
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Top rope intro",
+                              "fontSize": 15,
+                              "fontWeight": 600,
+                              "color": "@colors.onSurface",
+                              "maxLines": 2,
+                              "overflow": "ellipsis"
+                             }
+                            },
+                            {
+                             "text": {
+                              "value": "Learn to belay, 6 places",
+                              "fontSize": 13,
+                              "color": "@colors.muted",
+                              "maxLines": 2,
+                              "overflow": "ellipsis",
+                              "modifiers": [
+                               {
+                                "padding": {
+                                 "top": 2
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "padding": [
+                  16,
+                  8,
+                  16,
+                  16
+                 ]
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "padding": [
+                     0,
+                     4
+                    ]
+                   },
+                   {
+                    "height": 40
+                   },
+                   {
+                    "clip": 14
+                   },
+                   {
+                    "background": "@colors.primary"
+                   },
+                   {
+                    "padding": 1.5
+                   },
+                   "ripple",
+                   {
+                    "semantics": {
+                     "contentDescription": "Book a class",
+                     "enabled": true,
+                     "clickable": true
+                    }
+                   },
+                   {
+                    "onClick": {
+                     "type": "hostNamedAction",
+                     "name": "bookClass",
+                     "value": "@sel",
+                     "valueType": "float",
+                     "actionType": 0
+                    }
+                   }
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "horizontalAlignment": "center",
+                     "verticalAlignment": "center",
+                     "modifiers": [
+                      "fillMaxHeight",
+                      {
+                       "clip": 12.5
+                      },
+                      {
+                       "background": "@colors.background"
+                      },
+                      {
+                       "padding": [
+                        14.5,
+                        0
+                       ]
+                      }
+                     ],
+                     "children": [
+                      {
+                       "text": {
+                        "value": "Book a class",
+                        "maxLines": 1,
+                        "overflow": "ellipsis",
+                        "fontSize": 15,
+                        "color": "@colors.primary"
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

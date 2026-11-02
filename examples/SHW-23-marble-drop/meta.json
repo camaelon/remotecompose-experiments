@@ -1,0 +1,452 @@
+{
+ "id": "SHW-23",
+ "name": "marble-drop",
+ "version": 1,
+ "title": "Marble drop: a physics toy with pegs, gravity and tilt",
+ "summary": "Thirty glowing marbles fall under gravity through a staggered field of pegs, bounce off them and the side walls and drop into bins whose floor flashes in the marble's colour. Tap anywhere to drop a marble right there; tilt the device and gravity follows the accelerometer. The physics is real: velocity, gravity, restitution, peg collisions with push-out, four sub-steps per frame, all integrated by the player in particle equations.",
+ "prompt": "A physics toy: colourful balls falling under gravity and bouncing off pegs and walls, tap to drop a new ball where I tap, tilt the phone to change gravity. Make it satisfying.",
+ "level": 5,
+ "family": "SHW",
+ "hand_built": "A physics simulation is the lesson: the state and the integrator are a particle system written by hand, and nothing in the component library simulates.",
+ "capabilities": {
+  "primary": [
+   "fx.physics",
+   "fx.particles",
+   "input.press",
+   "host.system"
+  ],
+  "secondary": [
+   "draw.gradient",
+   "data.loop",
+   "expr.select",
+   "expr.math",
+   "expr.random",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "game",
+  "generative-art"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "physics",
+  "physics toy",
+  "gravity",
+  "bounce",
+  "marbles",
+  "balls",
+  "pegs",
+  "pachinko",
+  "peg board",
+  "collision",
+  "tilt",
+  "accelerometer",
+  "drop",
+  "satisfying",
+  "simulation",
+  "particles",
+  "sub-steps"
+ ],
+ "teaches": [
+  "A particle system is a physics engine: each marble's state (x, y, vx, vy and helpers) is a particle variable, and the particlesLoop equations are one explicit-Euler step that the player runs for every marble on every frame",
+  "Sub-steps: four particlesLoop ops over the same system, each with dt = min(deltaTime(), 0.04) / 4, integrate four times per frame. Collisions stay tight because a marble moves about 1 px per step",
+  "Equations update simultaneously from the previous step's values, so a helper variable lags one step. The peg offsets fu, fw are computed from the position predicted 4 steps ahead (x + y + (vx + vy) * 4 * dt) so they line up with the position the collision impulse acts on",
+  "The nearest peg of a staggered lattice in two roundings: pegs sit where u = x + y and w = x − y are multiples of S, so fu = u − round(u / S) * S, fw = w − round(w / S) * S, the offset is ((fu + fw) / 2, (fu − fw) / 2) and the squared distance is (fu² + fw²) / 2",
+  "Collision response is an impulse J = (1 + e) / (4R²) * min(v · offset, 0), applied once (J resets on the step after it fires) plus a push-out P that removes the overlap; walls reflect vx with a guarded factor wl",
+  "Tap to drop: onTouchDown records @tx, @ty and counts @drops; each marble compares @drops with the count it last saw, and the one whose index equals @slot respawns at the touch. Fifteen marbles auto-rain from the top, fifteen are reserved for taps",
+  "Tilt: gravity is (−accelerationX(), accelerationY()) scaled to the screen, falling back to straight down when the sensor reads under 2 m/s² (no sensor, or the device lying flat)",
+  "Colour per marble without colour expressions: five particlesComparison passes over index ranges [0, 6), [6, 12)… each paint the marbles of one colour; the peg they last hit flashes as a fading ring in that colour"
+ ],
+ "pitfalls": [
+  "There are no marble-to-marble collisions. The format can express them (ParticlesCompare with two equation sets compares every pair, reading particle1/particle2 values through the CMD1/CMD2 tokens), but json2rc has no infix syntax for those tokens, so pairwise equations cannot be written in JSON today. Marbles pass through each other: visible when a tilt piles them against a wall",
+  "Every equation must fit in 32 RPN entries (Android): split long formulas into helper variables, and remember each helper adds a step of lag",
+  "createParticles initialValues are evaluated without the document's variables in the C++ player: use literals and the index u only; put spawns in the equations",
+  "ifElse is ifElse(else, then, cond): getting it backwards froze the exit timer and no marble ever spawned",
+  "rand() in the equations makes runs differ per player and per seed: compare players by behaviour, not pixels (render with seed for a repeatable image)",
+  "rc-inspect's audit reports dt as dead_code: it does not count reads from particle equations"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/41",
+   "shows": "fx.particles",
+   "note": "30 marbles, 18 state variables each"
+  },
+  {
+   "pointer": "/root/commands/42",
+   "shows": "fx.physics",
+   "note": "one sub-step: gravity, peg impulses, push-out, walls, spawning"
+  },
+  {
+   "pointer": "/root/commands/46",
+   "shows": "fx.particles",
+   "note": "one colour pass over marbles 0..5: halo, body, highlight, peg flash, bin flash"
+  },
+  {
+   "pointer": "/root/modifiers/1",
+   "shows": "input.press",
+   "note": "a press records the touch and counts the drop"
+  },
+  {
+   "pointer": "/root/commands/24",
+   "shows": "host.system",
+   "note": "gravity follows the accelerometer"
+  },
+  {
+   "pointer": "/root/commands/40",
+   "shows": "data.loop",
+   "note": "the peg lattice"
+  },
+  {
+   "pointer": "/root/modifiers/2",
+   "shows": "a11y.labels",
+   "note": "what it is and how to use it"
+  }
+ ],
+ "check": {
+  "describe": "A dark indigo board titled 'Marble drop' / 'Tap to drop a marble · tilt to tip', a staggered field of pale pegs and seven bins at the bottom. After a few seconds pink, amber, green, blue and violet marbles with soft halos are spread through the pegs, each with a fading ring on the peg it last hit, and a bin floor glows where one has just landed. Taps: five new marbles appear where tapped (120, 200 and 150 px down). Tilted (accelerationX −6, Y 7.5): the marbles slide right and pile along the right wall.",
+  "render": {
+   "duration": 6,
+   "seed": 3
+  },
+  "renders": [
+   {
+    "name": "early",
+    "duration": 2,
+    "seed": 3
+   },
+   {
+    "name": "taps",
+    "duration": 3.1,
+    "seed": 3,
+    "touch_events": [
+     {
+      "t": 2,
+      "type": "down",
+      "x": 180,
+      "y": 120
+     },
+     {
+      "t": 2.03,
+      "type": "up",
+      "x": 180,
+      "y": 120
+     },
+     {
+      "t": 2.3,
+      "type": "down",
+      "x": 60,
+      "y": 200
+     },
+     {
+      "t": 2.33,
+      "type": "up",
+      "x": 60,
+      "y": 200
+     },
+     {
+      "t": 2.6,
+      "type": "down",
+      "x": 300,
+      "y": 150
+     },
+     {
+      "t": 2.63,
+      "type": "up",
+      "x": 300,
+      "y": 150
+     },
+     {
+      "t": 2.8,
+      "type": "down",
+      "x": 120,
+      "y": 100
+     },
+     {
+      "t": 2.83,
+      "type": "up",
+      "x": 120,
+      "y": 100
+     },
+     {
+      "t": 2.9,
+      "type": "down",
+      "x": 240,
+      "y": 90
+     },
+     {
+      "t": 2.93,
+      "type": "up",
+      "x": 240,
+      "y": 90
+     }
+    ]
+   },
+   {
+    "name": "tilt",
+    "duration": 7,
+    "seed": 3,
+    "system_variables": {
+     "17": -6,
+     "18": 7.5
+    }
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360,
+    "duration": 5,
+    "seed": 3
+   },
+   {
+    "name": "small",
+    "width": 240,
+    "height": 400,
+    "duration": 5,
+    "seed": 3
+   },
+   {
+    "name": "tablet",
+    "width": 800,
+    "height": 1280,
+    "duration": 5,
+    "seed": 3
+   }
+  ]
+ },
+ "related": [
+  "SHW-10",
+  "HST-04",
+  "DX-06",
+  "TIM-06"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 10389,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 215,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 108,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_FLOAT": 3,
+   "DATA_TEXT": 6,
+   "DRAW_CIRCLE": 26,
+   "DRAW_LINE": 2,
+   "DRAW_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 2,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 3,
+   "MATRIX_RESTORE": 1,
+   "MATRIX_SAVE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_TOUCH_DOWN": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 37,
+   "ParticlesCompare": 5,
+   "ParticlesCreate": 1,
+   "ParticlesLoop": 4,
+   "ValueFloatExpressionChangeActionOperation": 3
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 5
+  },
+  "audit_findings": [
+   "warning: dead_code",
+   "info: repaint_continuous",
+   "info: repeated_subtree",
+   "info: repeated_subtree",
+   "info: hardcoded_colors",
+   "info: expression_entries"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "early": {
+    "render": "render-early.png",
+    "render_findings": []
+   },
+   "taps": {
+    "render": "render-taps.png",
+    "render_findings": []
+   },
+   "tilt": {
+    "render": "render-tilt.png",
+    "render_findings": []
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [],
+    "size": [
+     240,
+     400
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   },
+   "tablet": {
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1280
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: repaint_continuous",
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "apiLevel",
+   "bottom",
+   "color",
+   "colors",
+   "commands",
+   "condition",
+   "contentDescription",
+   "count",
+   "createParticles",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawLine",
+   "drawRect",
+   "drawTextAnchored",
+   "drops",
+   "dx",
+   "dy",
+   "equations",
+   "from",
+   "header",
+   "height",
+   "id",
+   "index",
+   "initialValues",
+   "left",
+   "linearGradient",
+   "loop",
+   "max",
+   "min",
+   "modifiers",
+   "name",
+   "onTouchDown",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "particlesComparison",
+   "particlesLoop",
+   "profiles",
+   "radius",
+   "resources",
+   "restore",
+   "right",
+   "root",
+   "save",
+   "semantics",
+   "shader",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "system",
+   "systemId",
+   "target",
+   "text",
+   "textSize",
+   "top",
+   "translate",
+   "tx",
+   "ty",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "variables",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "fx.physics": [
+    "particlesComparison"
+   ],
+   "fx.particles": [
+    "createParticles",
+    "particlesLoop"
+   ],
+   "input.press": [
+    "onTouchDown"
+   ],
+   "host.system": [
+    "accelerationX",
+    "accelerationY"
+   ],
+   "draw.gradient": [
+    "linearGradient"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "expr.select": [
+    "ifElse(",
+    "step("
+   ],
+   "expr.math": [
+    "floor(",
+    "round(",
+    "abs(",
+    "hypot(",
+    "min(",
+    "max("
+   ],
+   "expr.random": [
+    "rand("
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T18:48:42.952Z"
+ }
+}

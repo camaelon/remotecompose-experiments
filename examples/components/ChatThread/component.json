@@ -1,0 +1,2024 @@
+{
+ "component": "ChatThread",
+ "version": 1,
+ "summary": "A whole chat conversation from data: a header (avatar, name, status), the messages as bubbles (yours on the end side in the primary colour, theirs on the start side, with day separators, sender names, avatars, times, read status, reactions and attachments), the thread anchored to the bottom so the latest message shows and a drag scrolls back, and a composer row (a field that asks the app for input, a send button). From 720 dp a conversation list can show beside it.",
+ "params": {
+  "messages": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One object per message, oldest first: {\"text\", \"me\", \"name\", \"lead\", \"time\", \"day\", \"status\", \"react\", \"reactCount\", \"attachment\", \"label\"}, all but text optional. me: true puts it on the end side in the primary colour (yours), else on the start side on surfaceHigh (theirs). name: the sender's name above the bubble (give it on the first message of a run in a group). lead: a node (an Avatar of 32 dp) beside the bubble, given on the LAST message of a run of theirs (needs avatars: true). time: the small time inside the bubble. day: a separator label shown above this message (\"Today\", \"Mon 3 Nov\"). status: a short line under your bubble (\"Read 09:42\", \"Delivered\"). react: a Material Symbols icon name (favorite, thumb_up) shown in a pill under the bubble, reactCount the number beside it. attachment: any node shown in the bubble above the text (a file or link card). label replaces the bubble's spoken text"
+  },
+  "title": {
+   "type": "string",
+   "required": true,
+   "doc": "The conversation's name in the header (a person, a group, \"Support\")"
+  },
+  "subtitle": {
+   "type": "string",
+   "doc": "Under the title: \"online\", \"3 members\", \"Replies in a few minutes\". Omitted: the title alone"
+  },
+  "placeholder": {
+   "type": "string",
+   "default": "Message",
+   "doc": "The composer field's hint, shown while draft is empty"
+  },
+  "draft": {
+   "type": "string",
+   "doc": "Text shown in the composer field instead of the hint: the app's draft, usually a host text variable (\"@draft\") the app fills from its own keyboard. Omitted: the hint"
+  },
+  "avatars": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "true (a group): theirs are indented by 40 dp and a message's lead is drawn in that space. false (two people): theirs start at the edge"
+  },
+  "replies": {
+   "type": "list",
+   "static": true,
+   "doc": "Quick replies, short strings shown as outlined chips above the composer (a bot's suggestions). A tap sends hostNamedAction replyAction with the chip's index (0-based) as a float"
+  },
+  "replyAction": {
+   "type": "string",
+   "default": "reply",
+   "static": true,
+   "doc": "The host action name the quick replies send"
+  },
+  "onCompose": {
+   "type": "action",
+   "doc": "Run when the composer field is tapped. The format has no text input: the app opens its own keyboard or input sheet and puts the text back through draft. Omitted: hostNamedAction \"compose\""
+  },
+  "onSend": {
+   "type": "action",
+   "doc": "Run by the send button. Omitted: hostNamedAction \"send\""
+  },
+  "typing": {
+   "type": "string",
+   "doc": "A typing line after the last message (\"Mei is typing\"), with three dots in a bubble on their side. Omitted: none"
+  },
+  "conversations": {
+   "type": "list",
+   "static": true,
+   "doc": "Optional, wide windows only: the conversation list shown at the start from listAt, one object per conversation {\"title\", \"preview\", \"meta\", \"lead\", \"unread\"}. A tap sets selected (the app reads it and serves that thread). Omitted: the thread alone at every width"
+  },
+  "listTitle": {
+   "type": "string",
+   "default": "Chats",
+   "doc": "The conversation list's heading"
+  },
+  "selected": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The highlighted conversation, from 0 (the thread shown). Bind an exported resources variable to read the taps. Do not name it step"
+  },
+  "listAt": {
+   "type": "float",
+   "default": 720,
+   "static": true,
+   "doc": "Width in dp from which the conversation list shows beside the thread (with conversations)"
+  },
+  "listWidth": {
+   "type": "float",
+   "default": 320,
+   "static": true,
+   "doc": "The conversation list's width when shown"
+  },
+  "bubbleShare": {
+   "type": "float",
+   "default": 0.78,
+   "static": true,
+   "doc": "A bubble's widest, as a share of the thread's width"
+  },
+  "maxBubble": {
+   "type": "float",
+   "default": 520,
+   "static": true,
+   "doc": "A bubble's widest in dp, on wide windows"
+  },
+  "maxThread": {
+   "type": "float",
+   "default": 920,
+   "static": true,
+   "doc": "The thread's widest in dp: on a wider pane it is centred, so yours and theirs do not drift to the far edges"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Your bubbles' colour"
+  },
+  "onColor": {
+   "type": "color",
+   "default": "@colors.onPrimary",
+   "doc": "Text on your bubbles"
+  },
+  "background": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "Behind the messages"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width it has, when it is not the whole window"
+  },
+  "height": {
+   "type": "float",
+   "default": "windowHeight()",
+   "doc": "The height it has"
+  }
+ },
+ "slots": {
+  "lead": {
+   "optional": true,
+   "doc": "Before the title in the header: an Avatar (40 dp) of the person, group or bot"
+  },
+  "headerEnd": {
+   "optional": true,
+   "doc": "At the end of the header: IconButtons (call, video, more)"
+  },
+  "composerStart": {
+   "optional": true,
+   "doc": "Before the composer field: an IconButton (attach, add)"
+  }
+ },
+ "locals": {
+  "tw": {
+   "$if": "conversations",
+   "then": "@width - (@listWidth + 1) * step(@width, @listAt - 0.5)",
+   "else": "@width"
+  },
+  "cw": "min(@tw, @maxThread)",
+  "bw": "min(floor(@cw * @bubbleShare), @maxBubble)",
+  "th": {
+   "$if": "replies",
+   "then": "@height - 170",
+   "else": "@height - 122"
+  }
+ },
+ "capabilities": [
+  "layout.scroll",
+  "input.drag",
+  "input.tap",
+  "input.host",
+  "a11y.labels"
+ ],
+ "call": {
+  "ChatThread": {
+   "title": "Ana",
+   "messages": [
+    {
+     "text": "Are you coming tonight?",
+     "time": "18:02"
+    },
+    {
+     "text": "Yes, around 8",
+     "me": true,
+     "time": "18:04",
+     "status": "Read"
+    }
+   ]
+  }
+ },
+ "body": {
+  "row": {
+   "modifiers": [
+    {
+     "width": "@width"
+    },
+    {
+     "height": "@height"
+    },
+    {
+     "background": "@background"
+    }
+   ],
+   "children": [
+    {
+     "$if": "conversations",
+     "then": {
+      "variable": {
+       "name": "chat_wide",
+       "value": "step(@width, @listAt - 0.5)"
+      }
+     }
+    },
+    {
+     "$if": "conversations",
+     "then": {
+      "column": {
+       "modifiers": [
+        {
+         "visibility": "@chat_wide"
+        },
+        {
+         "width": "@listWidth"
+        },
+        {
+         "height": "@height"
+        },
+        {
+         "background": "@colors.surface"
+        }
+       ],
+       "children": [
+        {
+         "variable": {
+          "name": "chat_ly",
+          "value": 0
+         }
+        },
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": 64
+           },
+           {
+            "padding": [
+             16,
+             0
+            ]
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@listTitle",
+             "fontSize": "@theme.text_lg",
+             "color": "@colors.onSurface",
+             "fontWeight": 700,
+             "maxLines": 1
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": "@height - 64"
+           },
+           {
+            "verticalScroll": "@chat_ly"
+           }
+          ],
+          "children": [
+           {
+            "$each": "conversations",
+            "as": "c",
+            "index": "k",
+            "fields": [
+             "title",
+             "preview",
+             "meta",
+             "lead",
+             "unread"
+            ],
+            "do": {
+             "box": {
+              "modifiers": [
+               "fillMaxWidth",
+               {
+                "height": 72
+               },
+               {
+                "semantics": {
+                 "clickable": true,
+                 "contentDescription": "@c_title"
+                }
+               },
+               {
+                "onClick": {
+                 "type": "valueFloatChange",
+                 "target": "@selected",
+                 "value": "@k"
+                }
+               }
+              ],
+              "children": [
+               {
+                "box": {
+                 "modifiers": [
+                  {
+                   "visibility": "1 - min(1, abs(@selected - @k))"
+                  },
+                  "fillMaxSize",
+                  {
+                   "background": {
+                    "$if": "theme.mono",
+                    "then": "@colors.surface",
+                    "else": "@colors.surfaceHigh"
+                   }
+                  }
+                 ],
+                 "children": [
+                  {
+                   "box": {
+                    "modifiers": [
+                     {
+                      "width": 4
+                     },
+                     "fillMaxHeight",
+                     {
+                      "background": "@color"
+                     }
+                    ]
+                   }
+                  }
+                 ]
+                }
+               },
+               {
+                "row": {
+                 "verticalAlignment": "center",
+                 "modifiers": [
+                  "fillMaxSize",
+                  {
+                   "padding": [
+                    16,
+                    0
+                   ]
+                  }
+                 ],
+                 "children": [
+                  {
+                   "$if": "c_lead",
+                   "then": {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "padding": {
+                        "end": 12
+                       }
+                      }
+                     ],
+                     "children": [
+                      "@c_lead"
+                     ]
+                    }
+                   }
+                  },
+                  {
+                   "column": {
+                    "modifiers": [
+                     {
+                      "weight": 1
+                     }
+                    ],
+                    "children": [
+                     {
+                      "row": {
+                       "verticalAlignment": "center",
+                       "modifiers": [
+                        "fillMaxWidth"
+                       ],
+                       "children": [
+                        {
+                         "text": {
+                          "value": "@c_title",
+                          "fontSize": "@theme.text_md",
+                          "color": "@colors.onSurface",
+                          "fontWeight": {
+                           "$if": "c_unread",
+                           "then": 700,
+                           "else": 500
+                          },
+                          "maxLines": 1,
+                          "overflow": "ellipsis",
+                          "modifiers": [
+                           {
+                            "weight": 1
+                           }
+                          ]
+                         }
+                        },
+                        {
+                         "$if": "c_meta",
+                         "then": {
+                          "text": {
+                           "value": "@c_meta",
+                           "fontSize": 12,
+                           "color": {
+                            "$if": "c_unread",
+                            "then": "@color",
+                            "else": "@colors.muted"
+                           },
+                           "maxLines": 1,
+                           "modifiers": [
+                            {
+                             "padding": {
+                              "start": 8
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        }
+                       ]
+                      }
+                     },
+                     {
+                      "row": {
+                       "verticalAlignment": "center",
+                       "modifiers": [
+                        "fillMaxWidth",
+                        {
+                         "padding": {
+                          "top": 2
+                         }
+                        }
+                       ],
+                       "children": [
+                        {
+                         "$if": "c_preview",
+                         "then": {
+                          "text": {
+                           "value": "@c_preview",
+                           "fontSize": 13,
+                           "color": "@colors.muted",
+                           "maxLines": 1,
+                           "overflow": "ellipsis",
+                           "modifiers": [
+                            {
+                             "weight": 1
+                            }
+                           ]
+                          }
+                         }
+                        },
+                        {
+                         "$if": "c_unread",
+                         "then": {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "padding": {
+                              "start": 8
+                             }
+                            },
+                            {
+                             "size": 8
+                            },
+                            {
+                             "clip": 4
+                            },
+                            {
+                             "background": "@color"
+                            }
+                           ]
+                          }
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "$if": "conversations",
+     "then": {
+      "box": {
+       "modifiers": [
+        {
+         "visibility": "@chat_wide"
+        },
+        {
+         "width": 1
+        },
+        {
+         "height": "@height"
+        },
+        {
+         "background": "@colors.outline"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       {
+        "width": "@tw"
+       },
+       {
+        "height": "@height"
+       }
+      ],
+      "children": [
+       {
+        "box": {
+         "horizontalAlignment": "center",
+         "modifiers": [
+          {
+           "width": "@tw"
+          },
+          {
+           "height": 64
+          },
+          {
+           "background": "@colors.surface"
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": "@cw"
+             },
+             {
+              "height": 64
+             }
+            ],
+            "children": [
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "padding": [
+                  16,
+                  0,
+                  8,
+                  0
+                 ]
+                }
+               ],
+               "children": [
+                {
+                 "$if": "lead",
+                 "then": {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "padding": {
+                      "end": 12
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "$slot": "lead"
+                    }
+                   ]
+                  }
+                 }
+                },
+                {
+                 "column": {
+                  "modifiers": [
+                   {
+                    "weight": 1
+                   }
+                  ],
+                  "children": [
+                   {
+                    "text": {
+                     "value": "@title",
+                     "fontSize": "@theme.text_lg",
+                     "color": "@colors.onSurface",
+                     "fontWeight": 700,
+                     "maxLines": 1,
+                     "overflow": "ellipsis"
+                    }
+                   },
+                   {
+                    "$if": "subtitle",
+                    "then": {
+                     "text": {
+                      "value": "@subtitle",
+                      "fontSize": 13,
+                      "color": "@colors.muted",
+                      "maxLines": 1,
+                      "overflow": "ellipsis"
+                     }
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "$slot": "headerEnd"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": "@tw"
+          },
+          {
+           "height": 1
+          },
+          {
+           "background": "@colors.outline"
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": "@tw"
+          },
+          {
+           "height": "@th"
+          },
+          {
+           "clip": {
+            "rect": {}
+           }
+          },
+          {
+           "background": "@background"
+          }
+         ],
+         "children": [
+          {
+           "variable": {
+            "name": "chat_sy",
+            "value": 0
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "verticalScroll": "@chat_sy"
+             }
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth"
+               ],
+               "children": [
+                {
+                 "variable": {
+                  "name": "chat_ch",
+                  "value": "componentHeight()"
+                 }
+                },
+                {
+                 "canvas": {
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "height": "@chat_ch"
+                   }
+                  ],
+                  "commands": [
+                   {
+                    "touchExpression": {
+                     "name": "chat_up",
+                     "defaultValue": 0,
+                     "min": 0,
+                     "max": "max(0, @chat_ch - @th)",
+                     "expression": [
+                      "touchY()"
+                     ],
+                     "touchMode": 0
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "column": {
+                  "horizontalAlignment": "center",
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "graphicsLayer": {
+                     "translationY": "@th - @chat_ch + @chat_up + @chat_sy"
+                    }
+                   }
+                  ],
+                  "children": [
+                   {
+                    "column": {
+                     "modifiers": [
+                      {
+                       "width": "@cw"
+                      },
+                      {
+                       "padding": [
+                        12,
+                        8,
+                        12,
+                        12
+                       ]
+                      }
+                     ],
+                     "children": [
+                      {
+                       "$each": "messages",
+                       "as": "m",
+                       "index": "i",
+                       "fields": [
+                        "text",
+                        "me",
+                        "name",
+                        "lead",
+                        "time",
+                        "day",
+                        "status",
+                        "react",
+                        "reactCount",
+                        "attachment",
+                        "label"
+                       ],
+                       "do": {
+                        "column": {
+                         "modifiers": [
+                          "fillMaxWidth",
+                          {
+                           "padding": {
+                            "top": 4
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "$if": "m_day",
+                           "then": {
+                            "box": {
+                             "horizontalAlignment": "center",
+                             "modifiers": [
+                              "fillMaxWidth",
+                              {
+                               "padding": [
+                                0,
+                                10,
+                                0,
+                                6
+                               ]
+                              }
+                             ],
+                             "children": [
+                              {
+                               "text": {
+                                "value": "@m_day",
+                                "fontSize": 12,
+                                "color": "@colors.muted",
+                                "maxLines": 1,
+                                "fontWeight": 500,
+                                "modifiers": [
+                                 {
+                                  "clip": 10
+                                 },
+                                 {
+                                  "background": {
+                                   "$if": "theme.mono",
+                                   "then": "@colors.background",
+                                   "else": "@colors.surfaceHigh"
+                                  }
+                                 },
+                                 {
+                                  "padding": [
+                                   10,
+                                   3
+                                  ]
+                                 }
+                                ]
+                               }
+                              }
+                             ]
+                            }
+                           }
+                          },
+                          {
+                           "$if": "m_name",
+                           "then": {
+                            "$if": "!m_me",
+                            "then": {
+                             "text": {
+                              "value": "@m_name",
+                              "fontSize": 12,
+                              "color": "@colors.muted",
+                              "maxLines": 1,
+                              "fontWeight": 600,
+                              "modifiers": [
+                               {
+                                "$if": "avatars",
+                                "then": {
+                                 "padding": {
+                                  "start": 52,
+                                  "top": 8,
+                                  "bottom": 2
+                                 }
+                                },
+                                "else": {
+                                 "padding": {
+                                  "start": 12,
+                                  "top": 8,
+                                  "bottom": 2
+                                 }
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           }
+                          },
+                          {
+                           "row": {
+                            "verticalAlignment": "bottom",
+                            "horizontalArrangement": {
+                             "$if": "m_me",
+                             "then": "end",
+                             "else": "start"
+                            },
+                            "modifiers": [
+                             "fillMaxWidth"
+                            ],
+                            "children": [
+                             {
+                              "$if": "avatars",
+                              "then": {
+                               "$if": "!m_me",
+                               "then": {
+                                "box": {
+                                 "verticalAlignment": "bottom",
+                                 "modifiers": [
+                                  {
+                                   "width": 40
+                                  }
+                                 ],
+                                 "children": [
+                                  {
+                                   "$if": "m_lead",
+                                   "then": "@m_lead"
+                                  }
+                                 ]
+                                }
+                               }
+                              }
+                             },
+                             {
+                              "$if": "theme.mono",
+                              "then": {
+                               "$if": "m_me",
+                               "then": {
+                                "column": {
+                                 "horizontalAlignment": "end",
+                                 "modifiers": [
+                                  {
+                                   "widthIn": [
+                                    0,
+                                    "@bw"
+                                   ]
+                                  },
+                                  {
+                                   "clip": {
+                                    "$if": "m_me",
+                                    "then": {
+                                     "roundedRect": {
+                                      "topStart": 18,
+                                      "topEnd": 18,
+                                      "bottomStart": 18,
+                                      "bottomEnd": 4
+                                     }
+                                    },
+                                    "else": {
+                                     "roundedRect": {
+                                      "topStart": 18,
+                                      "topEnd": 18,
+                                      "bottomStart": 4,
+                                      "bottomEnd": 18
+                                     }
+                                    }
+                                   }
+                                  },
+                                  {
+                                   "background": {
+                                    "$if": "m_me",
+                                    "then": "@color",
+                                    "else": "@colors.surfaceHigh"
+                                   }
+                                  },
+                                  {
+                                   "padding": [
+                                    12,
+                                    8,
+                                    12,
+                                    6
+                                   ]
+                                  },
+                                  {
+                                   "semantics": {
+                                    "contentDescription": {
+                                     "$if": "m_label",
+                                     "then": "@m_label",
+                                     "else": {
+                                      "$if": "m_me",
+                                      "then": {
+                                       "type": "textMerge",
+                                       "id1": "You: ",
+                                       "id2": "@m_text"
+                                      },
+                                      "else": {
+                                       "$if": "m_name",
+                                       "then": {
+                                        "type": "textMerge",
+                                        "id1": "@m_name",
+                                        "id2": {
+                                         "type": "textMerge",
+                                         "id1": ": ",
+                                         "id2": "@m_text"
+                                        }
+                                       },
+                                       "else": "@m_text"
+                                      }
+                                     }
+                                    }
+                                   }
+                                  }
+                                 ],
+                                 "children": [
+                                  {
+                                   "$if": "m_attachment",
+                                   "then": {
+                                    "box": {
+                                     "modifiers": [
+                                      "fillMaxWidth",
+                                      {
+                                       "padding": {
+                                        "bottom": 6
+                                       }
+                                      }
+                                     ],
+                                     "children": [
+                                      "@m_attachment"
+                                     ]
+                                    }
+                                   }
+                                  },
+                                  {
+                                   "text": {
+                                    "value": "@m_text",
+                                    "fontSize": "@theme.text_md",
+                                    "color": {
+                                     "$if": "m_me",
+                                     "then": "@onColor",
+                                     "else": "@colors.onSurface"
+                                    },
+                                    "modifiers": [
+                                     {
+                                      "$if": "m_attachment",
+                                      "then": "fillMaxWidth"
+                                     }
+                                    ]
+                                   }
+                                  },
+                                  {
+                                   "$if": "m_time",
+                                   "then": {
+                                    "text": {
+                                     "value": "@m_time",
+                                     "fontSize": 11,
+                                     "color": {
+                                      "$if": "m_me",
+                                      "then": "@onColor",
+                                      "else": "@colors.muted"
+                                     },
+                                     "maxLines": 1,
+                                     "modifiers": [
+                                      {
+                                       "padding": {
+                                        "top": 2
+                                       }
+                                      },
+                                      {
+                                       "graphicsLayer": {
+                                        "alpha": 0.8
+                                       }
+                                      }
+                                     ]
+                                    }
+                                   }
+                                  }
+                                 ]
+                                }
+                               },
+                               "else": {
+                                "box": {
+                                 "modifiers": [
+                                  {
+                                   "widthIn": [
+                                    0,
+                                    "@bw"
+                                   ]
+                                  },
+                                  {
+                                   "clip": {
+                                    "$if": "m_me",
+                                    "then": {
+                                     "roundedRect": {
+                                      "topStart": 18,
+                                      "topEnd": 18,
+                                      "bottomStart": 18,
+                                      "bottomEnd": 4
+                                     }
+                                    },
+                                    "else": {
+                                     "roundedRect": {
+                                      "topStart": 18,
+                                      "topEnd": 18,
+                                      "bottomStart": 4,
+                                      "bottomEnd": 18
+                                     }
+                                    }
+                                   }
+                                  },
+                                  {
+                                   "background": "@colors.outline"
+                                  },
+                                  {
+                                   "padding": 1
+                                  },
+                                  {
+                                   "semantics": {
+                                    "contentDescription": {
+                                     "$if": "m_label",
+                                     "then": "@m_label",
+                                     "else": {
+                                      "$if": "m_me",
+                                      "then": {
+                                       "type": "textMerge",
+                                       "id1": "You: ",
+                                       "id2": "@m_text"
+                                      },
+                                      "else": {
+                                       "$if": "m_name",
+                                       "then": {
+                                        "type": "textMerge",
+                                        "id1": "@m_name",
+                                        "id2": {
+                                         "type": "textMerge",
+                                         "id1": ": ",
+                                         "id2": "@m_text"
+                                        }
+                                       },
+                                       "else": "@m_text"
+                                      }
+                                     }
+                                    }
+                                   }
+                                  }
+                                 ],
+                                 "children": [
+                                  {
+                                   "column": {
+                                    "horizontalAlignment": "end",
+                                    "modifiers": [
+                                     {
+                                      "clip": {
+                                       "$if": "m_me",
+                                       "then": {
+                                        "roundedRect": {
+                                         "topStart": 17,
+                                         "topEnd": 17,
+                                         "bottomStart": 17,
+                                         "bottomEnd": 3
+                                        }
+                                       },
+                                       "else": {
+                                        "roundedRect": {
+                                         "topStart": 17,
+                                         "topEnd": 17,
+                                         "bottomStart": 3,
+                                         "bottomEnd": 17
+                                        }
+                                       }
+                                      }
+                                     },
+                                     {
+                                      "background": "@colors.background"
+                                     },
+                                     {
+                                      "padding": [
+                                       11,
+                                       7,
+                                       11,
+                                       5
+                                      ]
+                                     }
+                                    ],
+                                    "children": [
+                                     {
+                                      "$if": "m_attachment",
+                                      "then": {
+                                       "box": {
+                                        "modifiers": [
+                                         "fillMaxWidth",
+                                         {
+                                          "padding": {
+                                           "bottom": 6
+                                          }
+                                         }
+                                        ],
+                                        "children": [
+                                         "@m_attachment"
+                                        ]
+                                       }
+                                      }
+                                     },
+                                     {
+                                      "text": {
+                                       "value": "@m_text",
+                                       "fontSize": "@theme.text_md",
+                                       "color": {
+                                        "$if": "m_me",
+                                        "then": "@onColor",
+                                        "else": "@colors.onSurface"
+                                       },
+                                       "modifiers": [
+                                        {
+                                         "$if": "m_attachment",
+                                         "then": "fillMaxWidth"
+                                        }
+                                       ]
+                                      }
+                                     },
+                                     {
+                                      "$if": "m_time",
+                                      "then": {
+                                       "text": {
+                                        "value": "@m_time",
+                                        "fontSize": 11,
+                                        "color": {
+                                         "$if": "m_me",
+                                         "then": "@onColor",
+                                         "else": "@colors.muted"
+                                        },
+                                        "maxLines": 1,
+                                        "modifiers": [
+                                         {
+                                          "padding": {
+                                           "top": 2
+                                          }
+                                         },
+                                         {
+                                          "graphicsLayer": {
+                                           "alpha": 0.8
+                                          }
+                                         }
+                                        ]
+                                       }
+                                      }
+                                     }
+                                    ]
+                                   }
+                                  }
+                                 ]
+                                }
+                               }
+                              },
+                              "else": {
+                               "column": {
+                                "horizontalAlignment": "end",
+                                "modifiers": [
+                                 {
+                                  "widthIn": [
+                                   0,
+                                   "@bw"
+                                  ]
+                                 },
+                                 {
+                                  "clip": {
+                                   "$if": "m_me",
+                                   "then": {
+                                    "roundedRect": {
+                                     "topStart": 18,
+                                     "topEnd": 18,
+                                     "bottomStart": 18,
+                                     "bottomEnd": 4
+                                    }
+                                   },
+                                   "else": {
+                                    "roundedRect": {
+                                     "topStart": 18,
+                                     "topEnd": 18,
+                                     "bottomStart": 4,
+                                     "bottomEnd": 18
+                                    }
+                                   }
+                                  }
+                                 },
+                                 {
+                                  "background": {
+                                   "$if": "m_me",
+                                   "then": "@color",
+                                   "else": "@colors.surfaceHigh"
+                                  }
+                                 },
+                                 {
+                                  "padding": [
+                                   12,
+                                   8,
+                                   12,
+                                   6
+                                  ]
+                                 },
+                                 {
+                                  "semantics": {
+                                   "contentDescription": {
+                                    "$if": "m_label",
+                                    "then": "@m_label",
+                                    "else": {
+                                     "$if": "m_me",
+                                     "then": {
+                                      "type": "textMerge",
+                                      "id1": "You: ",
+                                      "id2": "@m_text"
+                                     },
+                                     "else": {
+                                      "$if": "m_name",
+                                      "then": {
+                                       "type": "textMerge",
+                                       "id1": "@m_name",
+                                       "id2": {
+                                        "type": "textMerge",
+                                        "id1": ": ",
+                                        "id2": "@m_text"
+                                       }
+                                      },
+                                      "else": "@m_text"
+                                     }
+                                    }
+                                   }
+                                  }
+                                 }
+                                ],
+                                "children": [
+                                 {
+                                  "$if": "m_attachment",
+                                  "then": {
+                                   "box": {
+                                    "modifiers": [
+                                     "fillMaxWidth",
+                                     {
+                                      "padding": {
+                                       "bottom": 6
+                                      }
+                                     }
+                                    ],
+                                    "children": [
+                                     "@m_attachment"
+                                    ]
+                                   }
+                                  }
+                                 },
+                                 {
+                                  "text": {
+                                   "value": "@m_text",
+                                   "fontSize": "@theme.text_md",
+                                   "color": {
+                                    "$if": "m_me",
+                                    "then": "@onColor",
+                                    "else": "@colors.onSurface"
+                                   },
+                                   "modifiers": [
+                                    {
+                                     "$if": "m_attachment",
+                                     "then": "fillMaxWidth"
+                                    }
+                                   ]
+                                  }
+                                 },
+                                 {
+                                  "$if": "m_time",
+                                  "then": {
+                                   "text": {
+                                    "value": "@m_time",
+                                    "fontSize": 11,
+                                    "color": {
+                                     "$if": "m_me",
+                                     "then": "@onColor",
+                                     "else": "@colors.muted"
+                                    },
+                                    "maxLines": 1,
+                                    "modifiers": [
+                                     {
+                                      "padding": {
+                                       "top": 2
+                                      }
+                                     },
+                                     {
+                                      "graphicsLayer": {
+                                       "alpha": 0.8
+                                      }
+                                     }
+                                    ]
+                                   }
+                                  }
+                                 }
+                                ]
+                               }
+                              }
+                             }
+                            ]
+                           }
+                          },
+                          {
+                           "$if": "m_react",
+                           "then": {
+                            "row": {
+                             "horizontalArrangement": {
+                              "$if": "m_me",
+                              "then": "end",
+                              "else": "start"
+                             },
+                             "modifiers": [
+                              "fillMaxWidth",
+                              {
+                               "$if": "avatars",
+                               "then": {
+                                "$if": "m_me",
+                                "then": {
+                                 "padding": {
+                                  "end": 4
+                                 }
+                                },
+                                "else": {
+                                 "padding": {
+                                  "start": 44
+                                 }
+                                }
+                               },
+                               "else": {
+                                "$if": "m_me",
+                                "then": {
+                                 "padding": {
+                                  "end": 4
+                                 }
+                                },
+                                "else": {
+                                 "padding": {
+                                  "start": 4
+                                 }
+                                }
+                               }
+                              },
+                              {
+                               "padding": {
+                                "top": 2
+                               }
+                              }
+                             ],
+                             "children": [
+                              {
+                               "row": {
+                                "verticalAlignment": "center",
+                                "modifiers": [
+                                 {
+                                  "clip": 11
+                                 },
+                                 {
+                                  "background": "@colors.outline"
+                                 },
+                                 {
+                                  "padding": 1
+                                 },
+                                 {
+                                  "clip": 10
+                                 },
+                                 {
+                                  "background": {
+                                   "$if": "theme.mono",
+                                   "then": "@colors.background",
+                                   "else": "@colors.surface"
+                                  }
+                                 },
+                                 {
+                                  "padding": [
+                                   6,
+                                   2,
+                                   7,
+                                   2
+                                  ]
+                                 }
+                                ],
+                                "children": [
+                                 {
+                                  "Icon": {
+                                   "name": "@m_react",
+                                   "filled": true,
+                                   "size": 14,
+                                   "color": {
+                                    "$if": "theme.mono",
+                                    "then": "@colors.onSurface",
+                                    "else": "@colors.error"
+                                   }
+                                  }
+                                 },
+                                 {
+                                  "$if": "m_reactCount",
+                                  "then": {
+                                   "text": {
+                                    "value": "@m_reactCount",
+                                    "fontSize": 12,
+                                    "color": "@colors.onSurface",
+                                    "modifiers": [
+                                     {
+                                      "padding": {
+                                       "start": 3
+                                      }
+                                     }
+                                    ]
+                                   }
+                                  }
+                                 }
+                                ]
+                               }
+                              }
+                             ]
+                            }
+                           }
+                          },
+                          {
+                           "$if": "m_status",
+                           "then": {
+                            "row": {
+                             "horizontalArrangement": {
+                              "$if": "m_me",
+                              "then": "end",
+                              "else": "start"
+                             },
+                             "modifiers": [
+                              "fillMaxWidth",
+                              {
+                               "$if": "avatars",
+                               "then": {
+                                "$if": "m_me",
+                                "then": {
+                                 "padding": {
+                                  "end": 4
+                                 }
+                                },
+                                "else": {
+                                 "padding": {
+                                  "start": 44
+                                 }
+                                }
+                               },
+                               "else": {
+                                "$if": "m_me",
+                                "then": {
+                                 "padding": {
+                                  "end": 4
+                                 }
+                                },
+                                "else": {
+                                 "padding": {
+                                  "start": 4
+                                 }
+                                }
+                               }
+                              },
+                              {
+                               "padding": {
+                                "top": 3
+                               }
+                              }
+                             ],
+                             "children": [
+                              {
+                               "text": {
+                                "value": "@m_status",
+                                "fontSize": 11,
+                                "color": "@colors.muted",
+                                "maxLines": 1
+                               }
+                              }
+                             ]
+                            }
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      },
+                      {
+                       "$if": "typing",
+                       "then": {
+                        "row": {
+                         "verticalAlignment": "center",
+                         "modifiers": [
+                          "fillMaxWidth",
+                          {
+                           "$if": "avatars",
+                           "then": {
+                            "padding": [
+                             40,
+                             8,
+                             0,
+                             0
+                            ]
+                           },
+                           "else": {
+                            "padding": [
+                             0,
+                             8,
+                             0,
+                             0
+                            ]
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "row": {
+                            "verticalAlignment": "center",
+                            "modifiers": [
+                             {
+                              "clip": 14
+                             },
+                             {
+                              "background": {
+                               "$if": "theme.mono",
+                               "then": "@colors.outline",
+                               "else": "@colors.surfaceHigh"
+                              }
+                             },
+                             {
+                              "padding": [
+                               12,
+                               10
+                              ]
+                             }
+                            ],
+                            "children": [
+                             {
+                              "box": {
+                               "modifiers": [
+                                {
+                                 "size": 7
+                                },
+                                {
+                                 "clip": 3.5
+                                },
+                                {
+                                 "background": "@colors.muted"
+                                }
+                               ]
+                              }
+                             },
+                             {
+                              "box": {
+                               "modifiers": [
+                                {
+                                 "width": 4
+                                },
+                                {
+                                 "height": 7
+                                }
+                               ]
+                              }
+                             },
+                             {
+                              "box": {
+                               "modifiers": [
+                                {
+                                 "size": 7
+                                },
+                                {
+                                 "clip": 3.5
+                                },
+                                {
+                                 "background": "@colors.muted"
+                                }
+                               ]
+                              }
+                             },
+                             {
+                              "box": {
+                               "modifiers": [
+                                {
+                                 "width": 4
+                                },
+                                {
+                                 "height": 7
+                                }
+                               ]
+                              }
+                             },
+                             {
+                              "box": {
+                               "modifiers": [
+                                {
+                                 "size": 7
+                                },
+                                {
+                                 "clip": 3.5
+                                },
+                                {
+                                 "background": "@colors.muted"
+                                }
+                               ]
+                              }
+                             }
+                            ]
+                           }
+                          },
+                          {
+                           "text": {
+                            "value": "@typing",
+                            "fontSize": 12,
+                            "color": "@colors.muted",
+                            "maxLines": 1,
+                            "overflow": "ellipsis",
+                            "modifiers": [
+                             {
+                              "padding": {
+                               "start": 8
+                              }
+                             }
+                            ]
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "$if": "replies",
+        "then": {
+         "box": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "width": "@tw"
+           },
+           {
+            "height": 48
+           },
+           {
+            "background": "@background"
+           }
+          ],
+          "children": [
+           {
+            "variable": {
+             "name": "chat_rx",
+             "value": 0
+            }
+           },
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              {
+               "width": "@cw"
+              },
+              {
+               "height": 48
+              },
+              {
+               "horizontalScroll": "@chat_rx"
+              },
+              {
+               "padding": [
+                12,
+                0
+               ]
+              }
+             ],
+             "children": [
+              {
+               "$each": "replies",
+               "as": "q",
+               "index": "j",
+               "do": {
+                "box": {
+                 "modifiers": [
+                  {
+                   "padding": {
+                    "end": 8
+                   }
+                  }
+                 ],
+                 "children": [
+                  {
+                   "box": {
+                    "verticalAlignment": "center",
+                    "modifiers": [
+                     {
+                      "height": 36
+                     },
+                     {
+                      "clip": 18
+                     },
+                     {
+                      "background": "@color"
+                     },
+                     {
+                      "padding": 1
+                     },
+                     {
+                      "clip": 17
+                     },
+                     {
+                      "background": {
+                       "$if": "theme.mono",
+                       "then": "@colors.background",
+                       "else": "@colors.surface"
+                      }
+                     },
+                     {
+                      "semantics": {
+                       "contentDescription": "@q",
+                       "clickable": true
+                      }
+                     },
+                     {
+                      "onClick": {
+                       "type": "hostNamedAction",
+                       "name": "@replyAction",
+                       "value": "@j",
+                       "valueType": "float",
+                       "actionType": 0
+                      }
+                     },
+                     {
+                      "padding": [
+                       14,
+                       0
+                      ]
+                     }
+                    ],
+                    "children": [
+                     {
+                      "text": {
+                       "value": "@q",
+                       "fontSize": 14,
+                       "color": {
+                        "$if": "theme.mono",
+                        "then": "@colors.onSurface",
+                        "else": "@color"
+                       },
+                       "fontWeight": 500,
+                       "maxLines": 1
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 ]
+                }
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": "@tw"
+          },
+          {
+           "height": 1
+          },
+          {
+           "background": "@colors.outline"
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "horizontalAlignment": "center",
+         "modifiers": [
+          {
+           "width": "@tw"
+          },
+          {
+           "height": 56
+          },
+          {
+           "background": "@colors.surface"
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": "@cw"
+             },
+             {
+              "height": 56
+             }
+            ],
+            "children": [
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "padding": [
+                  8,
+                  0,
+                  4,
+                  0
+                 ]
+                }
+               ],
+               "children": [
+                {
+                 "$slot": "composerStart"
+                },
+                {
+                 "box": {
+                  "verticalAlignment": "center",
+                  "modifiers": [
+                   {
+                    "weight": 1
+                   },
+                   {
+                    "height": 40
+                   },
+                   {
+                    "clip": 20
+                   },
+                   {
+                    "background": {
+                     "$if": "theme.mono",
+                     "then": "@colors.outline",
+                     "else": "@colors.surfaceHigh"
+                    }
+                   },
+                   {
+                    "$if": "theme.mono",
+                    "then": {
+                     "padding": 1
+                    }
+                   },
+                   {
+                    "$if": "theme.mono",
+                    "then": {
+                     "clip": 19
+                    }
+                   },
+                   {
+                    "$if": "theme.mono",
+                    "then": {
+                     "background": "@colors.background"
+                    }
+                   },
+                   {
+                    "semantics": {
+                     "contentDescription": "@placeholder",
+                     "clickable": true
+                    }
+                   },
+                   {
+                    "onClick": {
+                     "$if": "onCompose",
+                     "then": "@onCompose",
+                     "else": {
+                      "type": "hostNamedAction",
+                      "name": "compose"
+                     }
+                    }
+                   },
+                   {
+                    "padding": [
+                     16,
+                     0
+                    ]
+                   }
+                  ],
+                  "children": [
+                   {
+                    "$if": "draft",
+                    "then": {
+                     "text": {
+                      "value": "@draft",
+                      "fontSize": "@theme.text_md",
+                      "color": "@colors.onSurface",
+                      "maxLines": 1,
+                      "overflow": "ellipsis"
+                     }
+                    },
+                    "else": {
+                     "text": {
+                      "value": "@placeholder",
+                      "fontSize": "@theme.text_md",
+                      "color": "@colors.muted",
+                      "maxLines": 1,
+                      "overflow": "ellipsis"
+                     }
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "IconButton": {
+                  "label": "Send",
+                  "style": "filled",
+                  "color": "@color",
+                  "onClick": {
+                   "$if": "onSend",
+                   "then": "@onSend",
+                   "else": {
+                    "type": "hostNamedAction",
+                    "name": "send"
+                   }
+                  },
+                  "slots": {
+                   "icon": [
+                    {
+                     "Icon": {
+                      "name": "send",
+                      "color": "@onColor",
+                      "size": 20
+                     }
+                    }
+                   ]
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Give messages as data, oldest first, and let it lay out: yours (me: true) on the end side in color, theirs on the start side on surfaceHigh, each bubble wrapping at bubbleShare of the thread (0.78) and at most maxBubble (520 dp); from listAt (720 dp) with conversations the chat list takes listWidth (320 dp) at the start; the thread is centred at most maxThread (920 dp) wide. Decided by the window width, never by content",
+  "The thread is anchored to the bottom: the latest message sits right above the composer, a short thread sits at the bottom with empty space above (as in every messenger), and a drag down scrolls back to the oldest. The scroll is the component's own (a touchExpression and a translation by the measured thread height), not verticalScroll, whose position always starts at the top",
+  "Render or record with a few frames (render_rc duration 0.5, or any touch): the C++ player computes the thread's height-based translation from the previous layout, so a single-frame C++ render shows the thread pushed out of view. The TypeScript player and a running C++ player are right from the second frame",
+  "Nothing inside the thread is tappable: the bubbles are moved at paint time, so a click target in an attachment would not be under the finger. Put actions in the header (headerEnd), before the field (composerStart) or in replies",
+  "There is no text input in RemoteCompose: the field is a tap target that runs onCompose (default hostNamedAction compose) so the app can open its own keyboard, and shows draft (a host text variable, \"@draft\") or the placeholder. The send button runs onSend (default hostNamedAction send). The app appends the sent message and serves the new document",
+  "Group chats: avatars: true indents theirs by 40 dp; give name on the FIRST message of a run of one sender and lead (an Avatar of size 32) on the LAST, as messengers do. Without avatars, lead is ignored",
+  "attachment is any node, drawn full bubble width above the text (a file or invoice card on @colors.surface); the bubble then takes its widest. react is a Material Symbols name (favorite, thumb_up) in a pill under the bubble, reactCount the number; status is the muted line under it (Read 09:42, Seen by ...)",
+  "replies are chips in a horizontally scrolling row above the composer; every chip sends the same hostNamedAction (replyAction, default reply) with its index, so json2rc and the Java parser write different bytes (json2rc declares the shared name once on purpose): record it as meta.java_difference",
+  "selected is the highlighted conversation (0-based, only with conversations): bind an exported resources variable (\"@chat\") to read taps; the document holds one thread, the app serves the chosen one. Do not name a variable step",
+  "Text never cuts: bubbles wrap, titles and the field ellipsize on one line. Keep time and status short; a long subtitle (\"Assistant, a person replies within 2 hours\") ellipsizes on a phone"
+ ]
+}

@@ -1,0 +1,240 @@
+{
+ "component": "Chart3D",
+ "version": 1,
+ "summary": "A 3D chart from data, not geometry: a scatter of points ([x, y, z], sized and coloured by value), bars (categories by series) or a surface z = f(x, y) from a formula. The server picks the axis ranges and ticks, draws a floor and back walls with gridlines, labels the axes from projected points, frames the camera for any aspect and lets the viewer drag to orbit.",
+ "capabilities": [
+  "3d.scene",
+  "3d.mesh",
+  "3d.surface",
+  "input.drag",
+  "data.array",
+  "data.loop",
+  "a11y.labels"
+ ],
+ "params": {
+  "type": {
+   "type": "enum",
+   "values": [
+    "auto",
+    "scatter",
+    "bars",
+    "surface"
+   ],
+   "default": "auto",
+   "static": true,
+   "doc": "scatter, bars or surface; auto picks surface for fn, bars for values, else scatter"
+  },
+  "points": {
+   "type": "list",
+   "static": true,
+   "doc": "scatter: one entry per point, [x, y, z] or [x, y, z, size] or [x, y, z, size, colour value], or {\"x\": .., \"y\": .., \"z\": .., \"size\": .., \"color\": .., \"label\": \"La Paz\"}. x runs across, y into the screen, z up. size scales the sphere's area; a label names the point when it is among the highest (annotate)"
+  },
+  "categories": {
+   "type": "list",
+   "static": true,
+   "doc": "bars: the labels across (x), e.g. [\"Jan\", \"Feb\", \"Mar\"]"
+  },
+  "series": {
+   "type": "list",
+   "static": true,
+   "doc": "bars: the rows into the screen (y), e.g. [\"London\", \"Seattle\"]; each gets a theme colour in a fixed order and a legend entry. Omit for one row"
+  },
+  "values": {
+   "type": "list",
+   "static": true,
+   "doc": "bars: one row per series, each with one value per category ([[55, 41, 41], [140, 89, 94]]); one row may be given flat. Bars stand on zero; negative values hang below it"
+  },
+  "fn": {
+   "type": "string",
+   "static": true,
+   "doc": "surface: z as a formula in x and y, e.g. \"exp(-(x^2 + y^2) / (2 * s^2))\" or \"x^2 - y^2\". ^ is a power, 2x is 2*x; functions sin cos tan asin acos atan atan2 sqrt abs exp ln (natural) log (base 10) min max pow hypot floor ceil sign sinh cosh tanh; constants pi, e; names from vars"
+  },
+  "x": {
+   "type": "list",
+   "static": true,
+   "doc": "surface: the x domain [from, to] (default [-3, 3]); ticks fall inside it"
+  },
+  "y": {
+   "type": "list",
+   "static": true,
+   "doc": "surface: the y domain [from, to] (default: x's)"
+  },
+  "z": {
+   "type": "list",
+   "static": true,
+   "doc": "surface: the z range [low, high]; default: the surface's own range over the domain and over every value vars can take, rounded out to ticks (with zero when near). The surface is clamped to it"
+  },
+  "vars": {
+   "type": "list",
+   "static": true,
+   "doc": "surface: names the formula uses that the document sets at run time, [{\"name\": \"s\", \"value\": \"@sigma\", \"min\": 0.4, \"max\": 2}] (a slider's variable, a host value); min and max let the server size the z axis for every value. A plain number works too: {\"name\": \"s\", \"value\": 1}"
+  },
+  "xLabel": {
+   "type": "string",
+   "static": true,
+   "doc": "Title of the x axis, with its unit: \"Area (km²)\""
+  },
+  "yLabel": {
+   "type": "string",
+   "static": true,
+   "doc": "Title of the y axis (into the screen). With bars and several series the legend names them instead"
+  },
+  "zLabel": {
+   "type": "string",
+   "static": true,
+   "doc": "Title of the vertical axis: \"Elevation (m)\"; also the colour legend's title when colour shows z"
+  },
+  "sizeLabel": {
+   "type": "string",
+   "static": true,
+   "doc": "What a scatter point's size shows (for the description): \"Population\""
+  },
+  "colorLabel": {
+   "type": "string",
+   "static": true,
+   "doc": "What a scatter point's colour value (its fifth value) shows; the legend's title"
+  },
+  "colorBy": {
+   "type": "enum",
+   "values": [
+    "auto",
+    "z",
+    "size",
+    "color",
+    "value",
+    "series",
+    "none"
+   ],
+   "default": "auto",
+   "static": true,
+   "doc": "scatter: z (default; a fifth value wins when the points carry one), size, or none (one colour). bars: series (default with several series) or value (one row is always by value)"
+  },
+  "annotate": {
+   "type": "float",
+   "default": 3,
+   "static": true,
+   "doc": "scatter: name this many of the highest labelled points beside them (0 for none)"
+  },
+  "stems": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "scatter: a thin line from each point down to the floor, which shows where it stands and how high"
+  },
+  "spin": {
+   "type": "float",
+   "default": 35,
+   "static": true,
+   "doc": "Start view: degrees turned about the vertical (0 looks straight along y; 35 is a three-quarter view)"
+  },
+  "tilt": {
+   "type": "float",
+   "default": 26,
+   "static": true,
+   "doc": "Start view: degrees looking down (6 to 66); dragging up and down tilts within that range"
+  },
+  "autorotate": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Degrees per second the chart turns by itself (0: only by drag). It repaints every frame while shown; mono never turns"
+  },
+  "resolution": {
+   "type": "float",
+   "static": true,
+   "doc": "surface: grid cells per side (8 to 64; default 44, mono 24)"
+  },
+  "legend": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "The colour legend below the chart (the ramp with its low and high values, or the series)"
+  },
+  "height": {
+   "type": "float",
+   "default": 320,
+   "static": true,
+   "doc": "Chart height in dp, legend not included; ignored with fill"
+  },
+  "fill": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Take the height the parent gives (a weight or a sized box) instead of height"
+  },
+  "label": {
+   "type": "string",
+   "doc": "Accessibility description; default: what is plotted, the ranges and the highest point"
+  }
+ },
+ "body": {
+  "$gen": {
+   "kind": "chart3d",
+   "type": "@type",
+   "points": "@points",
+   "categories": "@categories",
+   "series": "@series",
+   "values": "@values",
+   "fn": "@fn",
+   "x": "@x",
+   "y": "@y",
+   "z": "@z",
+   "vars": "@vars",
+   "xLabel": "@xLabel",
+   "yLabel": "@yLabel",
+   "zLabel": "@zLabel",
+   "sizeLabel": "@sizeLabel",
+   "colorLabel": "@colorLabel",
+   "colorBy": "@colorBy",
+   "annotate": "@annotate",
+   "stems": "@stems",
+   "spin": "@spin",
+   "tilt": "@tilt",
+   "autorotate": "@autorotate",
+   "resolution": "@resolution",
+   "legend": "@legend",
+   "height": "@height",
+   "fill": "@fill",
+   "label": "@label"
+  }
+ },
+ "call": {
+  "Chart3D": {
+   "points": [
+    [
+     1,
+     2,
+     3
+    ],
+    [
+     2,
+     1,
+     1
+    ],
+    [
+     3,
+     3,
+     2
+    ],
+    [
+     0.5,
+     2.5,
+     4
+    ]
+   ],
+   "xLabel": "x",
+   "yLabel": "y",
+   "zLabel": "z"
+  }
+ },
+ "pitfalls": [
+  "3D support has not landed in androidx yet (coming): Chart3D plays in the C++ and TypeScript players (rc2image, the web player, the MCP renders) only. Don't use it for a screen that must play on Android today",
+  "Give the data, not geometry: points, or categories + values, or a formula. Never compute positions, ticks or camera angles yourself; the server maps the data into the box and picks round ranges",
+  "Colour by value is five steps of one blue (light = low, dark = high), not a continuous gradient: each mesh takes one paint colour. Values in one step look the same; the legend shows the steps' range",
+  "A surface's colour bands follow its grid cells, so their edges are stepped at the grid's size; raise resolution for smoother bands (each step costs render time: five copies of the mesh are evaluated every frame)",
+  "A variable in a surface formula (vars) must be read after whatever writes it: put a Slider above the chart in the document, since a slider's live value is its own variable only from the slider on",
+  "Every mesh draw composites a window-sized buffer in the players, so render time grows with the number of draws: a scatter of 50 points is about 60 draws. Keep scatters under about 100 points",
+  "Labels are 2D text placed from projected points: tick values on the floor edges nearest the viewer and up a back corner, titles beyond them. At very small sizes (under about 180 dp) they crowd: give the chart room or drop the titles",
+  "Mono draws points and bars in the text colour with shading (bars as boxes with drawn edges) and the surface as a hidden-line wireframe; size and position carry the data, colour does not"
+ ]
+}
