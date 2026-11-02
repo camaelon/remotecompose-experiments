@@ -3,7 +3,7 @@
  "name": "flow-diagram",
  "version": 1,
  "title": "FlowDiagram",
- "prompt": "Show an article's publishing workflow: draft, editor review (current), legal check, publish, with a 'changes' loop back to draft.",
+ "prompt": "Show an article's publishing workflow: draft, editor review, legal check, publish, with a 'changes' loop back to draft; the app says which step the article is at.",
  "level": 2,
  "use_cases": [
   "onboarding"
@@ -27,6 +27,7 @@
  ],
  "teaches": [
   "Call {\"FlowDiagram\": {\"nodes\": [...], \"edges\": [\"a > b\", [\"b\", \"a\", \"changes\"]]}}: the server places the steps in layers and routes the arrows",
+  "current: \"@currentStep\" (a host variable, never named step) makes the statuses follow the app: steps it can be reached from show done, it shows active, the rest pending",
   "status ok/active/failed/pending marks each step by shape and colour; an arrow back up is a loop",
   "It runs top to bottom when tall, left to right when wide, and shows a step summary when tiny"
  ],
@@ -45,10 +46,15 @@
    "pointer": "/root/column/children/0",
    "shows": "a11y.labels",
    "note": "each step's label and status is read"
+  },
+  {
+   "pointer": "/root/column/children/0",
+   "shows": "host.variables",
+   "note": "current: @currentStep"
   }
  ],
  "check": {
-  "describe": "Four steps down the screen: Draft ticked, Editor review filled, Legal check and Publish plain; approved beside the arrow to Legal check, a changes arrow back up to Draft. Wide: left to right. 160: Step 2 of 4.",
+  "describe": "Four steps down the screen: Draft ticked (done), Editor review filled (current 1), Legal check and Publish pending; approved beside the arrow to Legal check, a changes arrow back up to Draft. legal: Draft and Editor review ticked, Legal check filled. Wide: left to right. 160: Step 2 of 4.",
   "render": {},
   "renders": [
    {
@@ -76,6 +82,13 @@
     "name": "w2x2",
     "width": 160,
     "height": 160
+   },
+   {
+    "name": "legal",
+    "theme": "light",
+    "variables": {
+     "currentStep": 2
+    }
    }
   ]
  },
@@ -89,62 +102,95 @@
    "FlowDiagram",
    "Icon"
   ],
-  "component_instances": 2,
+  "component_instances": 5,
   "component_modes": {
    "FlowDiagram": "expand",
    "Icon": "expand"
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 5484,
+  "bytes": 11172,
   "header": {
    "width": 360,
    "height": 420
   },
-  "op_count": 297,
+  "op_count": 579,
   "operations": {
-   "ACCESSIBILITY_SEMANTICS": 2,
-   "ANIMATED_FLOAT": 63,
+   "ACCESSIBILITY_SEMANTICS": 12,
+   "ANIMATED_FLOAT": 102,
+   "ANIMATION_SPEC": 19,
    "COLOR_CONSTANT": 16,
    "COLOR_EXPRESSIONS": 16,
-   "COMPONENT_VALUE": 3,
-   "CanvasContent": 3,
-   "CoreText": 6,
-   "DATA_TEXT": 9,
-   "DRAW_CIRCLE": 4,
+   "COMPONENT_VALUE": 9,
+   "CanvasContent": 6,
+   "CoreText": 17,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 20,
+   "DRAW_CIRCLE": 12,
    "DRAW_LINE": 4,
-   "DRAW_PATH": 5,
+   "DRAW_PATH": 8,
+   "DRAW_RECT": 2,
    "DRAW_TEXT_ANCHOR": 2,
+   "DataListFloat": 1,
    "HEADER": 1,
-   "LAYOUT_BOX": 7,
-   "LAYOUT_CANVAS": 3,
+   "LAYOUT_BOX": 19,
+   "LAYOUT_CANVAS": 6,
    "LAYOUT_COLUMN": 2,
    "LAYOUT_ROOT": 1,
-   "LAYOUT_ROW": 1,
-   "LayoutComponentContent": 18,
+   "LAYOUT_ROW": 4,
+   "LayoutComponentContent": 47,
    "LoopOperation": 16,
-   "MATRIX_RESTORE": 6,
+   "MATRIX_RESTORE": 9,
    "MATRIX_ROTATE": 1,
-   "MATRIX_SAVE": 6,
-   "MATRIX_SCALE": 2,
+   "MATRIX_SAVE": 9,
+   "MATRIX_SCALE": 5,
    "MATRIX_TRANSLATE": 4,
-   "MODIFIER_BACKGROUND": 8,
-   "MODIFIER_HEIGHT": 12,
+   "MODIFIER_BACKGROUND": 22,
+   "MODIFIER_HEIGHT": 27,
    "MODIFIER_OFFSET": 4,
-   "MODIFIER_PADDING": 8,
-   "MODIFIER_VISIBILITY": 2,
-   "MODIFIER_WIDTH": 13,
-   "NAMED_VARIABLE": 8,
-   "PAINT_VALUES": 7,
+   "MODIFIER_PADDING": 21,
+   "MODIFIER_VISIBILITY": 18,
+   "MODIFIER_WIDTH": 34,
+   "NAMED_VARIABLE": 10,
+   "PAINT_VALUES": 22,
    "PATH_DATA": 3,
-   "RoundedClipRectModifierOperation": 7,
-   "THEME": 24
+   "RoundedClipRectModifierOperation": 20,
+   "THEME": 24,
+   "TextFromFloat": 1,
+   "TextMerge": 2
   },
   "host_variables": [
    {
     "name": "background",
     "type": "color",
     "value": "#FF101828"
+   },
+   {
+    "name": "currentStep",
+    "type": "float",
+    "value": 1
+   },
+   {
+    "name": "gen_flow_done_1",
+    "type": "float_array",
+    "value": [
+     0,
+     1,
+     1,
+     1,
+     0,
+     0,
+     1,
+     1,
+     0,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0
+    ]
    },
    {
     "name": "muted",
@@ -186,9 +232,11 @@
   "audit": {
    "error": 0,
    "warning": 0,
-   "info": 0
+   "info": 1
   },
-  "audit_findings": [],
+  "audit_findings": [
+   "info: deep_expressions"
+  ],
   "repaint": "idle",
   "interaction_targets": {
    "total": 0,
@@ -210,17 +258,44 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 4668,
+    "bytes": 10356,
     "component_modes": {
      "FlowDiagram": "expand",
      "Icon": "expand"
     },
-    "op_count": 233,
+    "op_count": 515,
     "host_variables": [
      {
       "name": "background",
       "type": "color",
       "value": "#FF000000"
+     },
+     {
+      "name": "currentStep",
+      "type": "float",
+      "value": 1
+     },
+     {
+      "name": "gen_flow_done_1",
+      "type": "float_array",
+      "value": [
+       0,
+       1,
+       1,
+       1,
+       0,
+       0,
+       1,
+       1,
+       0,
+       0,
+       0,
+       1,
+       0,
+       0,
+       0,
+       0
+      ]
      },
      {
       "name": "muted",
@@ -265,17 +340,44 @@
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 4668,
+    "bytes": 10356,
     "component_modes": {
      "FlowDiagram": "expand",
      "Icon": "expand"
     },
-    "op_count": 233,
+    "op_count": 515,
     "host_variables": [
      {
       "name": "background",
       "type": "color",
       "value": "#FFFFFFFF"
+     },
+     {
+      "name": "currentStep",
+      "type": "float",
+      "value": 1
+     },
+     {
+      "name": "gen_flow_done_1",
+      "type": "float_array",
+      "value": [
+       0,
+       1,
+       1,
+       1,
+       0,
+       0,
+       1,
+       1,
+       0,
+       0,
+       0,
+       1,
+       0,
+       0,
+       0,
+       0
+      ]
      },
      {
       "name": "muted",
@@ -325,7 +427,9 @@
      640,
      360
     ],
-    "audit_findings": []
+    "audit_findings": [
+     "info: deep_expressions"
+    ]
    },
    "w2x2": {
     "render": "render-w2x2.png",
@@ -334,15 +438,25 @@
      160,
      160
     ],
-    "audit_findings": []
+    "audit_findings": [
+     "info: deep_expressions"
+    ]
+   },
+   "legal": {
+    "theme": "light",
+    "render": "render-legal.png",
+    "render_findings": []
    }
   },
   "json_keys": [
    "FlowDiagram",
    "alpha",
    "angle",
+   "animationId",
+   "animationSpec",
    "apiLevel",
    "background",
+   "bottom",
    "box",
    "canvas",
    "children",
@@ -352,26 +466,37 @@
    "column",
    "commands",
    "contentDescription",
+   "current",
+   "currentStep",
    "cx",
    "cy",
    "dark",
+   "decimal",
    "drawCircle",
    "drawLine",
    "drawPath",
+   "drawRect",
    "drawTextAnchored",
    "dx",
    "dy",
    "edges",
+   "export",
+   "flags",
+   "floatArrays",
    "fontSize",
    "fontWeight",
    "gen_arrow_down_1",
    "gen_arrow_up_1",
+   "gen_flow_done_1",
    "header",
    "height",
    "horizontalAlignment",
    "icon_check_outlined",
    "id",
+   "id1",
+   "id2",
    "label",
+   "left",
    "light",
    "maxLines",
    "modifiers",
@@ -394,6 +519,7 @@
    "profiles",
    "radius",
    "resources",
+   "right",
    "root",
    "rotate",
    "roundedRect",
@@ -402,7 +528,6 @@
    "scale",
    "semantics",
    "size",
-   "status",
    "strokeCap",
    "strokeWidth",
    "style",
@@ -413,13 +538,16 @@
    "text",
    "textAlign",
    "textSize",
+   "top",
    "translate",
    "type",
    "value",
    "variable",
+   "variables",
    "verticalAlignment",
    "visibility",
    "weight",
+   "whole",
    "width",
    "x",
    "x1",
@@ -430,6 +558,7 @@
   ],
   "evidence": {
    "draw.shapes": [
+    "drawRect",
     "drawCircle",
     "drawLine"
    ],
@@ -438,12 +567,25 @@
    ],
    "a11y.labels": [
     "semantics"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
    ]
   },
-  "built_at": "2026-11-02T08:33:59.349Z"
+  "built_at": "2026-11-02T09:16:26.932Z"
  },
  "components": [
   "FlowDiagram",
   "Icon"
- ]
+ ],
+ "inputs": {
+  "variables": {
+   "currentStep": {
+    "min": -1,
+    "max": 4,
+    "meaning": "0-based index of the current step in nodes; -1 not started, 4 all done"
+   }
+  }
+ }
 }

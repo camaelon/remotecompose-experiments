@@ -82,3 +82,25 @@ test("the generated document converts, in colour and mono, 3 to 12 nodes", () =>
         }
     }
 });
+
+test("current: reached-from steps are done, the branch not taken stays pending", async () => {
+    const { currentOf } = await import("./graph.mjs");
+    const spec = { nodes: ["open", "triage", "simple", "eng", "closed"], edges: ["open > triage", "triage > simple", "triage > eng", "simple > closed", "eng > closed"] };
+    const g = parseGraph(spec);
+    const idx = new Map(g.nodes.map((n, i) => [n.id, i]));
+    const lay = layoutGraph(g.nodes.length, g.edges.map((e) => [idx.get(e.from), idx.get(e.to)]));
+    const st = currentOf({ current: "eng" }, g.nodes, lay, {}, () => "@x");
+    assert.deepEqual(st.status, ["ok", "ok", "pending", "active", "pending"]);
+    // a run-time index: three visibility variables per step and one N x N table
+    let table;
+    const vars = [];
+    const dyn = currentOf({ current: "@currentStep" }, g.nodes, lay, { floatArray: (h, t) => { table = t; return "@t"; } }, (n, v) => { vars.push([n, v]); return `@${n}`; });
+    assert.equal(table.length, 25);
+    assert.equal(table[1 * 5 + 3], 1);   // triage reaches eng
+    assert.equal(table[2 * 5 + 3], 0);   // simple does not
+    assert.ok(dyn.vis.every((v) => v && v.done && v.act && v.pend));
+    // a failed step keeps its status
+    const g2 = parseGraph({ nodes: ["a", { id: "b", status: "failed" }, "c"], edges: ["a > b > c"] });
+    const lay2 = layoutGraph(3, [[0, 1], [1, 2]]);
+    assert.deepEqual(currentOf({ current: 2 }, g2.nodes, lay2, {}, () => "@x").status, ["ok", "failed", "active"]);
+});

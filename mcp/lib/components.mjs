@@ -672,7 +672,9 @@ function stripMotion(doc) {
                 const x = node[i];
                 const spec = x === "animationSpec" || (x && typeof x === "object" && !Array.isArray(x)
                     && ("animationSpec" in x || String(x.type ?? "").toLowerCase() === "animationspec") && Object.keys(x).length <= 2);
-                if (spec) { node.splice(i, 1); n++; } else visit(x);
+                // ({"animationId": 0} turns layout motion off: that one stays, or mono would animate.)
+                const off = x && typeof x === "object" && Number(x.animationSpec?.animationId) === 0;
+                if (spec && !off) { node.splice(i, 1); n++; } else if (!spec) visit(x);
             }
         } else if (node && typeof node === "object") {
             for (const [k, v] of Object.entries(node)) {
@@ -700,7 +702,23 @@ function defaultMeasure(doc) {
  * One compilation of the document: the variants in `patterns` (keys) become definePattern
  * templates and calls, every other call is expanded.
  */
-function compileDoc(src, { library, traps, docMode, theme }, patterns) {
+function compileDoc(src, opts, patterns, live = null) {
+    const first = compileDocOnce(src, opts, patterns, live ?? new Set());
+    if (live) return first;
+    // A variable a touch writes (a Slider's value) changes while the finger moves, but resources
+    // are evaluated before the tree: a component's computed local that reads it, hoisted to
+    // resources, would stay at its first value (a LineChart's marker that never follows the
+    // drag). Compile again with those names kept out of resources.
+    const touched = new Set();
+    walk(first.doc, (n) => { const te = n.touchExpression ?? (String(n.type ?? "").toLowerCase() === "touchexpression" ? n : null); if (te && typeof te.name === "string") touched.add(te.name.replace(/^[@$]/, "")); });
+    if (!touched.size) return first;
+    const vars = first.doc.resources?.variables;
+    const reads = (v) => typeof v === "string" && [...v.matchAll(/[@$]([A-Za-z_]\w*)/g)].some((m) => touched.has(m[1]));
+    const stale = vars && !Array.isArray(vars) && Object.entries(vars).some(([k, v]) => !touched.has(k) && reads(typeof v === "object" && v ? v.value : v));
+    return stale ? compileDocOnce(src, opts, patterns, touched) : first;
+}
+
+function compileDocOnce(src, { library, traps, docMode, theme }, patterns, live) {
     const out = structuredClone(src);
     const existing = new Set();
     walk(out, (n) => {
@@ -715,11 +733,12 @@ function compileDoc(src, { library, traps, docMode, theme }, patterns) {
         ? docVars.map((v) => v?.name ?? Object.keys(v ?? {})[0])
         : Object.keys(docVars ?? {}));
     if (theme.runtimeMono) resourceNames.add(MONO_VAR);
+    for (const n of live) resourceNames.delete(n);   // (touch-written: see compileDoc)
     // Every name the document refers to, so a pattern parameter never shadows one.
     const reserved = new Set(resourceNames);
     walk(out, (n) => { for (const v of Object.values(n)) if (typeof v === "string") for (const m of v.matchAll(/[@$]([A-Za-z_]\w*)/g)) reserved.add(m[1]); });
     const state = { library, theme, patterns: existing, counters: new Map(), used: new Set(), locals: {}, colors: new Set(), instances: 0, resourceNames,
-        reserved, traps, docMode, chosen: patterns, variants: new Map(), fallbacks: new Map(), defs: new Map(), names: new Map(), hoisted: new Map(), paths: new Map() };
+        header: src.header, reserved, traps, docMode, chosen: patterns, variants: new Map(), fallbacks: new Map(), defs: new Map(), names: new Map(), hoisted: new Map(), paths: new Map() };
     // A {"$if": "theme.mono"} in the document's own tree (outside any component): the look being
     // expanded picks its side, as it does in a body. ("all" keeps both sides only in components.)
     const resolveDocIfs = (x) => {

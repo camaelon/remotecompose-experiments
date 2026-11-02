@@ -20,6 +20,13 @@ export const doc = "A layered process diagram (Sugiyama): nodes with labels and 
 
 const STATUS = new Set(["ok", "active", "failed", "pending"]);
 const dim = (v, d) => (v === undefined || v === null || v === "" ? d : typeof v === "number" || /^-?\d+(\.\d+)?$/.test(String(v)) ? Number(v) : String(v));
+const sizeExpr = (v, win) => { const d = dim(v, win); return typeof d === "number" ? `min(${fmt(d)}, ${win})` : d; };
+// Players animate a component's bounds when layout moves it, while a canvas redraws at once:
+// on a resize the node boxes would slide away from their arrows. animationId 0 turns that off
+// (AnimationSpec.isAnimationEnabled is id != 0 in Java and TS). Each is a modifier of
+// its own: the Java parser reads one key per modifier object. Generator output keeps it in
+// mono (checked: the mono expansions carry every one).
+const still = () => ({ animationSpec: { animationId: 0 } });
 const fmt = (n) => { const r = Math.round(n * 1000) / 1000; return String(Object.is(r, -0) ? 0 : r); };
 
 // ---------------------------------------------------------------------------------------------
@@ -271,6 +278,10 @@ function statusStyle(status, mono) {
 const EDGE_COLOR = { ok: "@colors.success", failed: "@colors.error", active: "@colors.primary", pending: "@colors.outline" };
 
 export function generate(spec, ctx) {
+    // A literal width or height equal to the document's own size means "the window": a client that
+    // copies the header size into the call should still get a diagram that adapts.
+    spec = { ...spec };
+    for (const k of ["width", "height"]) if (typeof spec[k] === "number" && ctx.header && spec[k] === ctx.header[k]) delete spec[k];
     const { nodes, edges } = parseGraph(spec);
     if (nodes.length > 40) throw new Error(`${nodes.length} nodes: up to 40 fit a screen`);
     const index = new Map(nodes.map((nd, i) => [nd.id, i]));
@@ -293,14 +304,19 @@ export function generate(spec, ctx) {
     const pad = Number(spec.padding ?? 8);
     const hasLabels = edges.some((e) => e.label);
     const gapA = 14;                       // between nodes in a layer
-    const gapL = hasLabels ? 48 : 32;       // between layers, left to right (labels sit there)
+    // Between layers, left to right: edge labels sit there, above their line, so the gap
+    // grows with the longest one.
+    const longestEdge = Math.max(0, ...edges.map((e) => (e.label ?? "").length));
+    const gapL = hasLabels ? Math.round(Math.min(150, Math.max(48, longestEdge * (fs - 2) * 0.6 + 16))) : 32;
     const minGapT = hasLabels ? 32 : 24;    // between layers, top to bottom, at its tightest
     const U = extent;
     const dir = String(spec.direction ?? "auto");
 
     // The size comes from the caller (default: the window). componentWidth() read by a tree
     // variable is 0 in a sibling's modifiers in the C++ player, so offsets can't use it.
-    const W = decl("W", dim(spec.width, "windowWidth()")), H = decl("H", dim(spec.height, "windowHeight()"));
+    // A number is the most it takes: it never asks for more than the window, so a call written
+    // for one screen still adapts to a smaller one.
+    const W = decl("W", sizeExpr(spec.width, "windowWidth()")), H = decl("H", sizeExpr(spec.height, "windowHeight()"));
     // Each orientation's node width and layer pitch.
     const nwT = decl("nwT", `min(${maxW}, (${W} - ${2 * pad}) / ${fmt(U)} - ${gapA})`);
     const pitT = decl("pitT", `min(${fmt(nh + 76)}, (${H} - ${2 * pad}) / ${L})`);
@@ -309,7 +325,10 @@ export function generate(spec, ctx) {
     // How comfortable each orientation is: node width against 120, the gap against what it
     // needs (1 = at ease). Text and nodes shrink to 77% when it is tight; under 0.4 the
     // diagram gives way to a one-line summary.
-    const pinned = dir === "right" || dir === "lr" || dir === "horizontal" ? 1 : dir === "down" || dir === "tb" || dir === "vertical" ? 0 : null;
+    // "right" and "down" are preferences: kept while they are comfortable (score 0.85) or no
+    // worse than the other; "right!" and "down!" pin the orientation whatever the screen.
+    const prefer = /^(right|lr|horizontal)/.test(dir) ? 1 : /^(down|tb|vertical)/.test(dir) ? 0 : null;
+    const pinned = prefer !== null && dir.endsWith("!") ? prefer : null;
     // Top to bottom, nodes are wide: when the longest label fits on one line they are one
     // line tall, which is what lets a deep process fit a landscape screen.
     const hasIcon = nodes.some((nd) => nd.status === "ok" || nd.status === "failed");
@@ -318,7 +337,8 @@ export function generate(spec, ctx) {
     const nhT = pinned === 1 || spec.nodeHeight !== undefined || lines === 1 ? fmt(nh) : decl("nhT", `ifElse(${fmt(nh)}, ${fmt(nh1)}, step(${nwT}, ${est1}))`);
     const sT = pinned === 1 ? null : decl("sT", `min(${nwT} / 120, (${pitT} - 0.8 * ${nhT}) / ${minGapT})`);
     const sL = pinned === 0 ? null : decl("sL", `min(${nwL} / 120, (${pitL} - ${fmt(nh * 0.8)}) / 8)`);
-    const lr = pinned ?? decl("lr", `step(${sL}, ${sT} + 0.02)`);
+    const lr = pinned ?? decl("lr", prefer === 1 ? `max(step(${sL}, 0.849), step(${sL}, ${sT}))`
+        : prefer === 0 ? `(1 - step(${sT}, 0.849)) * step(${sL}, ${sT})` : `step(${sL}, ${sT} + 0.02)`);
     const best = pinned === 1 ? sL : pinned === 0 ? sT : decl("s", `max(${sT}, ${sL})`);
     const k = decl("k", `clamp(0.77, 1.2, ${best})`);
     const compact = !(spec.compact === false || spec.compact === 0);
@@ -398,9 +418,17 @@ export function generate(spec, ctx) {
         const T = Math.max(1, ends.length);
         for (const r of runs) r.T = T;
     });
+    // The turns between layers run in the part of the gap past the edge labels, which sit
+    // just after the node they leave (at most 60% of the gap).
+    let G = null, gOff = null;
     const midOf = (l, t, T) => {
         const key = `${l}:${t}:${T}`;
-        if (!trackVar.has(key)) trackVar.set(key, decl(`m${l}_${t}`, `${B[l]} + 0.5 * ${ub} + ${fmt((t + 1) / (T + 1) - 0.5)} * (${ub} - 2 * ${hB})`));
+        if (!G) {
+            G = decl("G", `${ub} - 2 * ${hB}`);
+            gOff = hasLabels ? decl("gO", `min(0.6 * ${G}, ${pick(fmt(Math.ceil(longestEdge * (fs - 2) * 0.6 + 10)), fmt(fs + 4))})`) : null;
+        }
+        const f = fmt((t + 1) / (T + 1));
+        if (!trackVar.has(key)) trackVar.set(key, decl(`m${l}_${t}`, gOff ? `${B[l]} + ${hB} + ${gOff} + ${f} * (${G} - ${gOff})` : `${B[l]} + ${hB} + ${f} * ${G}`));
         return trackVar.get(key);
     };
     const top = [], bot = [];
@@ -460,33 +488,48 @@ export function generate(spec, ctx) {
     }
     const cmds = [];
     if (canvasCmds.length) cmds.push({ save: canvasCmds });
+    const bgColor = spec.background === undefined || spec.background === null ? "@colors.background" : String(spec.background);
+    const plate = bgColor === "none" || bgColor === "" ? null : bgColor;
     if (labels.length) {
         const lfs = Math.max(9, fs - 2);
         let cur = null;
         for (const lb of labels) {
-            if (lb.color !== cur) { cmds.push({ paint: { ops: [{ color: lb.color === "@colors.muted" ? "@colors.muted" : lb.color }, { alpha: 1 }, { style: "fill" }, { textSize: `${fsk} - 2` }] } }); cur = lb.color; }
             // On the outer side of its own line (so two labels from one node part), just past
             // the node: top to bottom beside the line, left to right above or below it.
             const sb = lb.up ? "-" : "+", sa = lb.side < 0 ? "-" : "+";
             const tb = { x: `${lb.a} ${sa} 5`, y: `${lb.b} ${sb} 3`, panX: lb.side < 0 ? 1 : -1, panY: lb.up ? -1 : 1 };
             const rl = { x: `${lb.b} ${sb} 4`, y: `${lb.a} ${sa} 3`, panX: lb.up ? 1 : -1, panY: lb.side < 0 ? -1 : 1 };
             const mix = (k) => (lr === 1 ? rl[k] : lr === 0 ? tb[k] : typeof rl[k] === "number" && rl[k] === tb[k] ? rl[k] : `ifElse(${tb[k]}, ${rl[k]}, ${lr})`);
-            cmds.push({ drawTextAnchored: { text: lb.text, x: mix("x"), y: mix("y"), panX: mix("panX"), panY: mix("panY") } });
+            // A plate of the background under the text, so a line crossing a tight gap
+            // doesn't run through the words.
+            const li = labels.indexOf(lb);
+            const cv = (name, value) => { cmds.push({ variable: { name: `${p}${name}${li}`, value } }); return `@${p}${name}${li}`; };
+            const lx = cv("lx", mix("x")), ly = cv("ly", mix("y"));
+            if (plate) {
+                const w = cv("lw", `${fmt(lb.text.length * 0.58)} * (${fsk} - 2) + 4`);
+                const px = mix("panX"), py = mix("panY");
+                const left = cv("ll", `${lx} - (${px} + 1) / 2 * ${w}`), top = cv("lt", `${ly} - (${py} + 1) / 2 * (${fsk} + 1)`);
+                cmds.push({ paint: { ops: [{ color: plate }, { alpha: 1 }, { style: "fill" }] } });
+                cmds.push({ drawRect: { left, top, right: `${left} + ${w}`, bottom: `${top} + ${fsk} + 1` } });
+                cur = null;
+            }
+            if (lb.color !== cur) { cmds.push({ paint: { ops: [{ color: lb.color }, { alpha: 1 }, { style: "fill" }, { textSize: `${fsk} - 2` }] } }); cur = lb.color; }
+            cmds.push({ drawTextAnchored: { text: lb.text, x: lx, y: ly, panX: mix("panX"), panY: mix("panY") } });
         }
     }
 
-    // Nodes
+    // Nodes. With `current`, the steps that follow it (ok before it, active at it, pending
+    // after it: "before" meaning it can be reached from them) switch faces at run time; a
+    // step given failed or a theme colour keeps that.
+    const dyn = currentOf(spec, nodes, lay, ctx, decl);
     const hx = decl("hx", `${nw} / 2`), hy = decl("hy", `${nhk} / 2`);
-    const nodeBoxes = nodes.map((nd, v) => {
-        const st = statusStyle(nd.status, mono);
-        const aE = A(across[v]), bE = B[layer[v]];
-        const ox = lr === 1 ? `${bE} - ${hx}` : lr === 0 ? `${aE} - ${hx}` : `ifElse(${aE}, ${bE}, ${lr}) - ${hx}`;
-        const oy = lr === 1 ? `${aE} - ${hy}` : lr === 0 ? `${bE} - ${hy}` : `ifElse(${bE}, ${aE}, ${lr}) - ${hy}`;
-        const r = Number(spec.radius ?? 10);
-        const mods = [{ offset: [ox, oy] }, { width: nw }, { height: nhk }, { clip: { roundedRect: r } }];
+    const r = Number(spec.radius ?? 10);
+    const face = (nd, status, extra) => {
+        const st = statusStyle(status, mono);
+        const mods = [...extra, { clip: { roundedRect: r } }];
         if (st.ring) mods.push({ background: st.ring }, { padding: st.ringW }, { clip: { roundedRect: r - st.ringW } });
         mods.push({ background: st.fill }, { padding: [6, 2] });
-        const sayStatus = nd.status && STATUS.has(nd.status) ? `, ${nd.status}` : "";
+        const sayStatus = status && STATUS.has(status) ? `, ${status === "ok" ? "done" : status}` : "";
         if (sayStatus) mods.push({ semantics: { contentDescription: `${nd.label}${sayStatus}` } });
         const text = { text: { value: nd.label, fontSize: fsk, color: st.text, maxLines: lines, overflow: "ellipsis", textAlign: "center", ...(st.weight ? { fontWeight: st.weight } : {}) } };
         let child = text;
@@ -495,17 +538,35 @@ export function generate(spec, ctx) {
             child = { row: { verticalAlignment: "center", modifiers: ["fillMaxWidth"], children: [{ Icon: { name: st.icon, size: 16, color: st.iconColor } }, text] } };
         }
         return { box: { horizontalAlignment: "center", verticalAlignment: "center", modifiers: mods, children: [child] } };
+    };
+    const nodeBoxes = nodes.map((nd, v) => {
+        const aE = A(across[v]), bE = B[layer[v]];
+        const ox = lr === 1 ? `${bE} - ${hx}` : lr === 0 ? `${aE} - ${hx}` : `ifElse(${aE}, ${bE}, ${lr}) - ${hx}`;
+        const oy = lr === 1 ? `${aE} - ${hy}` : lr === 0 ? `${bE} - ${hy}` : `ifElse(${bE}, ${aE}, ${lr}) - ${hy}`;
+        const place = [{ offset: [ox, oy] }, still(), { width: nw }, { height: nhk }];
+        if (dyn?.vis[v]) {
+            const vis = dyn.vis[v];
+            return { box: { modifiers: place, children: [
+                face(nd, "ok", [{ visibility: vis.done }, still(), { width: nw }, { height: nhk }]),
+                face(nd, "active", [{ visibility: vis.act }, still(), { width: nw }, { height: nhk }]),
+                face(nd, "pending", [{ visibility: vis.pend }, still(), { width: nw }, { height: nhk }]),
+            ] } };
+        }
+        return face(nd, dyn?.status[v] ?? nd.status, place);
     });
 
-    const diagram = [{ canvas: { modifiers: ["fillMaxSize"], commands: cmds } }, ...nodeBoxes];
+    const diagram = [{ canvas: { modifiers: [{ width: W }, still(), { height: H }], commands: cmds } }, ...nodeBoxes];
     const children = [...vars];
     if (show) {
         const hide = decl("hide", `1 - ${show}`);
         children.push(...vars.slice(children.length));
-        children.push({ box: { modifiers: [{ visibility: show }, "fillMaxSize"], children: diagram } });
-        children.push(compactView(nodes, lay, hide, mono));
+        children.push({ box: { modifiers: [{ visibility: show }, still(), { width: W }, { height: H }], children: diagram } });
+        children.push(compactView(nodes, lay, hide, mono, dyn));
     } else children.push(...diagram);
-    const top_ = { box: { modifiers: [{ width: dim(spec.width, "windowWidth()") }, { height: dim(spec.height, "windowHeight()") }], children } };
+    // Its own background (the page's colour by default), so it reads in every look when it
+    // is the whole document; "none" leaves the parent's.
+    const bg = spec.background === undefined || spec.background === null ? "@colors.background" : String(spec.background);
+    const top_ = { box: { modifiers: [{ width: sizeExpr(spec.width, "windowWidth()") }, still(), { height: sizeExpr(spec.height, "windowHeight()") }, ...(bg === "none" || bg === "" ? [] : [{ background: bg }])], children } };
     if (spec.description) top_.box.modifiers.push({ semantics: { contentDescription: String(spec.description) } });
     return top_;
 }
@@ -513,9 +574,49 @@ export function generate(spec, ctx) {
 // The summary shown when the box is too small for the diagram: which step the process is at
 // (the first active node, else the first failed, else the first pending), and one dot per step
 // in reading order, its look saying its status.
-function compactView(nodes, lay, visible, mono) {
+/**
+ * `current` (a step index, a node id, or an expression such as "@step"): a static one becomes
+ * statuses; a run-time one becomes, per step that follows it, three visibility variables
+ * (done, active, pending). "Done" is "current can be reached from it" (a table of N x N
+ * floats, one arrayGet per step), so a branch not taken stays pending.
+ */
+export function currentOf(spec, nodes, lay, ctx, decl) {
+    const cur = spec.current;
+    if (cur === undefined || cur === null || cur === "") return null;
+    const n = nodes.length;
+    const follows = (nd) => nd.status === undefined || ["ok", "active", "pending"].includes(nd.status);
+    // Reachability over the DAG (back edges reversed, as laid out).
+    const reach = Array.from({ length: n }, () => new Set());
+    const succ = Array.from({ length: lay.layer.length }, () => []);
+    for (const [u, v] of lay.segs) succ[u].push(v);
+    for (let v = 0; v < n; v++) {
+        const stack = [...succ[v]];
+        while (stack.length) { const w = stack.pop(); if (w < n && reach[v].has(w)) continue; if (w < n) reach[v].add(w); stack.push(...succ[w]); }
+    }
+    const byId = nodes.findIndex((nd) => nd.id === String(cur));
+    const lit = byId >= 0 ? byId : typeof cur === "number" || /^-?\d+$/.test(String(cur)) ? Number(cur) : null;
+    if (lit !== null) {
+        const status = nodes.map((nd, v) => (!follows(nd) ? nd.status : v === lit ? "active" : reach[v].has(lit) ? "ok" : lit >= n ? "ok" : "pending"));
+        return { status, vis: [], static: lit };
+    }
+    const c = decl("cur", `clamp(-1, ${n}, round(${cur}))`);
+    const table = [];
+    for (let v = 0; v < n; v++) for (let w = 0; w < n; w++) table.push(reach[v].has(w) ? 1 : 0);
+    const m = ctx.floatArray("flow_done", table);
+    const vis = nodes.map((nd, v) => {
+        if (!follows(nd)) return null;
+        // past the last step every step is done; before the first, none is
+        const done = decl(`dn${v}`, `ifElse(arrayGet(${m}, ${v * n} + clamp(0, ${n - 1}, ${c})) * step(${c}, -0.5), 1, step(${c}, ${n - 0.5}))`);
+        const act = decl(`ac${v}`, `1 - min(1, abs(${c} - ${v}))`);
+        return { done, act, pend: decl(`pn${v}`, `1 - ${done} - ${act}`) };
+    });
+    return { status: nodes.map((nd) => nd.status), vis, cur: c };
+}
+
+function compactView(nodes, lay, visible, mono, dyn) {
     const seq = nodes.map((_, i) => i).sort((a, b) => lay.layer[a] - lay.layer[b] || lay.across[a] - lay.across[b]);
-    const find = (st) => seq.find((i) => nodes[i].status === st);
+    const statusOf = (i) => dyn?.status?.[i] ?? nodes[i].status;
+    const find = (st) => seq.find((i) => statusOf(i) === st);
     const focus = find("active") ?? find("failed") ?? find("pending");
     const n = seq.length;
     const head = focus === undefined ? `${n} steps` : `Step ${seq.indexOf(focus) + 1} of ${n}`;
@@ -523,11 +624,23 @@ function compactView(nodes, lay, visible, mono) {
     const dots = [];
     const groups = new Map();
     seq.forEach((v, j) => {
-        const st = nodes[v].status ?? "none";
+        const st = dyn?.vis?.[v] ? "dyn" : statusOf(v) ?? "none";
         (groups.get(st) ?? groups.set(st, []).get(st)).push(j);
     });
     const cx = (j) => `(componentWidth() - ${fmt((n - 1) * 14)}) / 2 + ${j * 14}`;
+    const dotOf = (st, j) => (st === "failed" ? { drawRect: { left: `${cx(j)} - 4`, top: 2, right: `${cx(j)} + 4`, bottom: 10 } }
+        : { drawCircle: { cx: cx(j), cy: 6, radius: st === "active" ? 5.5 : st === "pending" || st === "none" ? 3.5 : 4 } });
     for (const [st, js] of groups) {
+        if (st === "dyn") {
+            for (const j of js) {
+                const vis = dyn.vis[seq[j]];
+                for (const [s2, color, a] of [["ok", "@colors.success", vis.done], ["active", "@colors.primary", vis.act], ["pending", "@colors.outline", vis.pend]]) {
+                    dots.push({ paint: { ops: [{ color }, { alpha: a }, { style: s2 === "pending" ? "stroke" : "fill" }, { strokeWidth: 1.5 }] } });
+                    dots.push(dotOf(s2, j));
+                }
+            }
+            continue;
+        }
         const color = { ok: "@colors.success", active: "@colors.primary", failed: "@colors.error", pending: "@colors.outline", none: "@colors.outline" }[st] ?? `@colors.${st}`;
         const ring = st === "pending" || st === "none";
         dots.push({ paint: { ops: [{ color }, { alpha: 1 }, { style: ring ? "stroke" : "fill" }, { strokeWidth: 1.5 }] } });
@@ -536,9 +649,17 @@ function compactView(nodes, lay, visible, mono) {
             else dots.push({ drawCircle: { cx: cx(j), cy: 6, radius: st === "active" ? 5.5 : ring ? 3.5 : 4 } });
         }
     }
+    // At run time: "Step k of n" from the current index, and the current step's label (one
+    // text per step, each shown when it is current).
+    const live = dyn?.cur;
+    const headNode = live
+        ? { text: { value: { type: "textMerge", id1: "Step ", id2: { type: "textMerge", id1: { type: "textFromFloat", value: `clamp(1, ${n}, ${live} + 1)`, whole: String(n).length, decimal: 0, flags: 5 }, id2: ` of ${n}` } }, fontSize: 12, color: "@colors.muted", maxLines: 1 } }
+        : { text: { value: head, fontSize: 12, color: "@colors.muted", maxLines: 1 } };
+    const labelText = (value, mods) => ({ text: { value, fontSize: 15, fontWeight: 700, color: "@colors.onSurface", maxLines: 2, overflow: "ellipsis", textAlign: "center", ...(mods ? { modifiers: mods } : {}) } });
+    const labelNodes = live ? nodes.map((nd, v) => (dyn.vis[v] ? labelText(nd.label, [{ visibility: dyn.vis[v].act }]) : null)).filter(Boolean) : [labelText(label)];
     return { column: { horizontalAlignment: "center", verticalAlignment: "center", modifiers: [{ visibility: visible }, "fillMaxSize", { padding: 8 }], children: [
-        { text: { value: head, fontSize: 12, color: "@colors.muted", maxLines: 1 } },
-        { text: { value: label, fontSize: 15, fontWeight: 700, color: "@colors.onSurface", maxLines: 2, overflow: "ellipsis", textAlign: "center" } },
+        headNode,
+        ...labelNodes,
         { box: { modifiers: [{ height: 8 }] } },
         { canvas: { modifiers: ["fillMaxWidth", { height: 12 }], commands: dots } },
     ] } };

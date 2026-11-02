@@ -6,6 +6,7 @@
 //                              once per document and returns "$paths.<id>"
 //   ctx.floatArray(hint, nums) declares a float array and returns "@<id>"
 //   ctx.unique(prefix)         a name prefix unique in this document ("callouts1", "callouts2")
+//   ctx.header                 the document's header (its width and height), or null
 //   ctx.mono                   true when the document is expanded for a mono look
 //   ctx.name                   the calling component, for error messages
 // The result may hold component calls and expressions: it is expanded like any other node.
@@ -47,6 +48,7 @@ export function runGenerator(spec, state, name) {
             state.genIds.set(p, n);
             return `${p}${n}`;
         },
+        header: state.header ?? null,
         mono: Boolean(state.theme?.mode && /mono/.test(String(state.theme.mode))),
         path(hint, ops) {
             const key = JSON.stringify(ops);

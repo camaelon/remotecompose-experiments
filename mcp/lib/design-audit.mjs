@@ -1069,6 +1069,24 @@ function uncoloredTextFindings(doc) {
     }];
 }
 
+// An SVG path string ("M10 20 L30 40 Q..."): json2rc writes it compactly, but the Java parser
+// pads every one to 1024 floats, about 4 KB, so the document an Android host builds is far larger.
+function svgPathFindings(doc) {
+    let n = 0;
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        for (const [k, v] of Object.entries(x)) {
+            if (k === "path" && typeof v === "string" && /^\s*[Mm]\s*-?\d/.test(v)) n++;
+            else visit(v);
+        }
+    };
+    visit(doc?.root); visit(doc?.resources?.paths);
+    return n ? [{ severity: "warning", code: "svg_path_string",
+        title: `${n} path(s) written as SVG strings: about 4 KB each when the Java parser builds the document`,
+        message: "Write each path as an op list: [{\"type\": \"moveTo\", \"x\": 65, \"y\": 29}, {\"type\": \"lineTo\", ...}, {\"type\": \"quadTo\", ...}, {\"type\": \"close\"}] (resources.paths or drawPath), or use drawLine, drawCircle and drawRoundRect for simple shapes.", count: n }] : [];
+}
+
 export function designAudit(json) {
     const doc = typeof json === "string" ? JSON.parse(json) : json;
     if (!isObj(doc)) return [];
@@ -1081,6 +1099,7 @@ export function designAudit(json) {
         ...layoutFindings(doc),
         ...visibilityFindings(doc),
         ...wrongKeyFindings(doc),
+        ...svgPathFindings(doc),
         ...rootVariableFindings(doc),
         ...sharedActionNameFindings(doc),
         ...sharedStringFindings(doc),

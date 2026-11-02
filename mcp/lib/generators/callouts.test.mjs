@@ -189,3 +189,19 @@ test("two identical Callouts calls in one document get their own variables and c
     assert.deepEqual(names, ["callouts1", "callouts2"]);
     assert.ok(jsonToRc(doc, ".").length > 1000);
 });
+
+test("every placed node opts out of the bounds animation, so labels and leaders move together", () => {
+    const visual = { canvas: { modifiers: ["fillMaxSize"], commands: [] } };
+    const out = generate({ ...COFFEE, visual }, { mono: false });
+    const missing = [];
+    const walk = (n, path) => {
+        const key = n && typeof n === "object" && ["box", "row", "column", "flow", "canvas", "text"].find((k) => k in n);
+        if (!key) return;
+        const v = n[key];
+        const spacer = key === "box" && !v.children;
+        if (!spacer && !(v.modifiers ?? []).some((m) => m?.animationSpec?.animationId === 0)) missing.push(path + "/" + key);
+        (v.children ?? []).forEach((c, i) => walk(c, `${path}/${key}/${i}`));
+    };
+    walk(out, "");
+    assert.deepEqual(missing, []);
+});

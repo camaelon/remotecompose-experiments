@@ -125,6 +125,7 @@ export function relax(ts, hs, lo, hi, gap, X, tag = "r", pre = null) {
 // --- the static plan: sides, text sizes, order -------------------------------------------
 
 const DEFAULTS = { fontSize: 14, gap: 8, pad: 12, maxGutter: 160, minGutter: 48, maxLines: 3, legendLines: 2, mode: "auto" };
+const MIN_FONT = 11;
 const DISC = 18, DISC_GAP = 6, LZ = 24, LZN = 16, SHELF = 10, SHELF_N = 6, MIN_DRAW = 64, MIN_LEGEND_DRAW = 56;
 
 /** Checks and normalises a spec into the static plan. */
@@ -180,43 +181,66 @@ export function layout(P, W, H, X, order) {
     const pad = o.pad;
     const has = { left: sides.left.items.length > 0, right: sides.right.items.length > 0 };
     const seq = [...order.left, ...order.right]; // reading order: left top to bottom, then right
+    // Label size: fontSize is the size at full scale. Labels shrink with the window (k), down to
+    // MIN_FONT sp; every label measure (gutter width, line height) scales with k, so a label
+    // wraps the same at any k. Beside takes the largest k that fits, legend the size's own.
+    const fs = o.fontSize, kmin = Math.min(1, MIN_FONT / fs);
+    const sumTW = (has.left ? sides.left.tw : 0) + (has.right ? sides.right.tw : 0);
+    const LZs = (has.left ? LZ : 0) + (has.right ? LZ : 0);
+    const ks = X.v("ks", X.div(X.min(W, H), 25 * fs));
+    let kB = X.min(ks, X.div(X.sub(W, 2 * pad + LZs + MIN_DRAW), sumTW));
+    for (const sd of ["left", "right"]) {
+        const its = sides[sd].items;
+        if (!its.length) continue;
+        const sumH = its.reduce((a, it) => a + it.h, 0);
+        kB = X.min(kB, X.div(X.sub(H, 2 * pad + (its.length - 1) * o.gap), sumH));
+    }
+    kB = X.v("kB", X.min(1, kB));
+    const fitB = X.step(kB, kmin - 0.001);
+    const k = X.v("k", X.max(kB, kmin));
+    const kN = X.v("kN", X.max(kmin, X.min(1, ks)));
     // beside: the drawing between the two gutters of text
-    const GL = has.left ? sides.left.tw + LZ : 0, GR = has.right ? sides.right.tw + LZ : 0;
-    const awB = X.v("awB", X.sub(W, 2 * pad + GL + GR));
+    const twL = has.left ? X.v("twL", X.mul(k, sides.left.tw)) : 0, twR = has.right ? X.v("twR", X.mul(k, sides.right.tw)) : 0;
+    const GL = has.left ? X.add(twL, LZ) : 0, GR = has.right ? X.add(twR, LZ) : 0;
+    const awB = X.v("awB", X.sub(X.sub(W, 2 * pad), X.add(GL, GR)));
     const ahB = X.v("ahB", X.sub(H, 2 * pad));
     const dhB = X.v("dhB", X.max(0, X.min(ahB, X.div(awB, A))));
     // legend: the drawing between thin gutters of discs, the legend rows below
     const GLn = has.left ? DISC + LZN : 0, GRn = has.right ? DISC + LZN : 0;
+    const lhN = X.v("lhN", X.mul(kN, lh));
+    const rowH = X.v("rowH", X.add(X.max(DISC, lhN), 4));
     // Legend rows: two columns when every label fits one line in half the width
     const legTw = X.v("legT1", X.sub(W, 2 * pad + DISC + 16));
     const maxW2 = Math.max(...seq.map((it) => it.w2));
-    const cols2 = seq.length > 1 ? X.v("cols2", X.step(X.sub(X.mul(X.sub(W, 2 * pad), 0.5), DISC + 16), maxW2 - 0.5)) : 0;
+    const cols2 = seq.length > 1 ? X.v("cols2", X.step(X.sub(X.mul(X.sub(W, 2 * pad), 0.5), DISC + 16), X.mul(kN, maxW2 - 0.5))) : 0;
     const colW = X.v("colW", X.mul(X.sub(W, 2 * pad), X.sub(1, X.mul(cols2, 0.5))));
     // Each legend row is one line, or two when its label is wider than the legend: the sum of
     // step()s, in chunks (an expression holds at most 32 entries).
     let wraps = 0;
     if (o.legendLines > 1) {
-        const steps = seq.map((it) => X.step(it.w2, legTw));
-        for (let k = 0; k < steps.length; k += 6) wraps = X.v(`legS${k / 6}`, X.add(wraps, X.sum(steps.slice(k, k + 6))));
+        const steps = seq.map((it) => X.step(X.mul(kN, it.w2), legTw));
+        for (let j = 0; j < steps.length; j += 4) wraps = X.v(`legS${j / 4}`, X.add(wraps, X.sum(steps.slice(j, j + 4))));
     }
-    const legH1 = X.add(8 + seq.length * 4, X.mul(lh, X.add(seq.length, wraps)));
-    const legH = X.v("legH", X.pick(cols2, 8 + Math.ceil(seq.length / 2) * (lh + 4), legH1));
+    const legH1 = X.add(8 + seq.length * 0, X.add(X.mul(rowH, seq.length), X.mul(lhN, wraps)));
+    const legH = X.v("legH", X.pick(cols2, X.add(8, X.mul(rowH, Math.ceil(seq.length / 2))), legH1));
     const awN = X.v("awN", X.sub(W, 2 * pad + GLn + GRn));
     const ahN = X.v("ahN", X.sub(X.sub(H, 2 * pad), legH));
     const dhN = X.v("dhN", X.max(0, X.min(ahN, X.div(awN, A))));
-    // which look: beside when the labels fit and its drawing is at least 0.6 of the legend's
-    const fitB = X.mul(X.step(W, 2 * pad + GL + GR + MIN_DRAW - 0.5), X.step(H, 2 * pad + Math.max(sides.left.stack, sides.right.stack) - 0.5));
-    // ... and a side's labels need at most twice the drawing's height (more is a fan of long
-    // leaders that can cross)
-    const roomy = X.step(X.mul(dhB, 2), Math.max(sides.left.stack, sides.right.stack) - 0.5);
-    const side = o.mode === "beside" ? 1 : o.mode === "legend" ? 0 : X.v("side", X.mul(X.mul(fitB, roomy), X.step(X.sub(dhB, X.mul(dhN, 0.6)), -0.01)));
+    // which look: beside when the labels fit at MIN_FONT or more, a side's labels need at most
+    // twice the drawing's height (more is a fan of long leaders that can cross), and its drawing
+    // is at least 0.6 of the legend's. "beside" pins it while the labels fit, "legend" always.
+    const maxStack = Math.max(...["left", "right"].map((sd) => sides[sd].items.reduce((a, it) => a + it.h, 0)));
+    const maxGaps = Math.max(...["left", "right"].map((sd) => Math.max(0, sides[sd].items.length - 1) * o.gap));
+    const roomy = X.step(X.mul(dhB, 2), X.add(X.mul(k, maxStack), maxGaps - 0.5));
+    const side = o.mode === "legend" ? 0 : X.v("side", o.mode === "beside" ? fitB
+        : X.mul(X.mul(fitB, roomy), X.step(X.sub(dhB, X.mul(dhN, 0.6)), -0.01)));
     const pick = (b, n) => X.pick(side, b, n);
     // from here on one geometry, which the look picks
     // A legend drawing under MIN_LEGEND_DRAW dp is a stamp, and one whose discs on a side need
     // more than 1.6 times its height is buried under them: it and its markers hide, the legend
     // stays.
     const discStack = Math.max(sides.left.discStack, sides.right.discStack);
-    const big = o.mode === "beside" ? 1 : X.v("big", X.max(side, X.mul(X.step(dhN, MIN_LEGEND_DRAW - 0.5), X.step(X.mul(dhN, 1.6), discStack - 0.5))));
+    const big = X.v("big", X.max(side, X.mul(X.step(dhN, MIN_LEGEND_DRAW - 0.5), X.step(X.mul(dhN, 1.6), discStack - 0.5))));
     const dh = X.v("dh", pick(dhB, X.mul(dhN, big)));
     const dw = X.v("dw", X.mul(dh, A));
     const x0 = X.v("x0", X.add(pad, X.mul(X.sub(pick(awB, awN), dw), 0.5)));
@@ -231,7 +255,7 @@ export function layout(P, W, H, X, order) {
         return names.get(key);
     };
     const hi = X.v("hi", pick(X.sub(H, pad), X.add(dy, X.add(dh, 4))));
-    const look = { side, big, dx, dy, dw, dh, x0, rowTop, colW, cols2, legH, left: [], right: [] };
+    const look = { side, big, k, kN, lhN, twL, twR, dx, dy, dw, dh, x0, rowTop, colW, cols2, legH, left: [], right: [] };
     let num = 0;
     for (const s of ["left", "right"]) {
         const its = order[s];
@@ -239,10 +263,10 @@ export function layout(P, W, H, X, order) {
         const t = s[0];
         const ts = its.map((it, k) => X.v(`${t}t${k}`, X.add(dy, X.mul(dh, it.py))));
         // heights are the label's (beside) or a disc's (legend); one name per distinct height
-        const hs = its.map((it) => hName(it.h, "h", X.add(DISC, X.mul(side, it.h - DISC))));
+        const hs = its.map((it) => hName(it.h, "h", X.add(DISC, X.mul(side, X.sub(X.mul(k, it.h), DISC)))));
         const pre = { half: its.map((it, k) => hName(it.h, "hh", X.mul(hs[k], 0.5))), step: its.map((it, k) => hName(it.h, "hg", X.add(hs[k], gap))) };
         const ys = relax(ts, hs, pad, hi, gap, X, t, pre);
-        const sx = X.v(`${t}sx`, s === "left" ? X.add(x0, pick(sides.left.tw + 4, DISC + 2)) : X.add(X.add(dx, dw), pick(LZ - 4, LZN - 2)));
+        const sx = X.v(`${t}sx`, s === "left" ? X.add(x0, pick(X.add(twL, 4), DISC + 2)) : X.add(X.add(dx, dw), pick(LZ - 4, LZN - 2)));
         const ex = X.v(`${t}ex`, s === "left" ? X.add(sx, pick(SHELF, SHELF_N)) : X.sub(sx, pick(SHELF, SHELF_N)));
         const ax = its.map((it, k) => X.v(`${t}x${k}`, X.add(dx, X.mul(dw, it.px))));
         // A pair of neighbours whose leaders would cross trades places at run time: how far
@@ -408,15 +432,18 @@ export function generate(spec, ctx) {
 
     // A gutter of labels (beside only): each label is a column of its own, a spacer down to its
     // top (dp from the row top) and the label, all stacked in one box, so a pair can trade places.
+    const fsB = X.v("fsB", X.mul(L0.k, o.fontSize)), fsN = X.v("fsN", X.mul(L0.kN, o.fontSize));
+    const rowIn = X.v("rowIn", X.max(DISC, L0.lhN)), rowMid = X.v("rowMid", X.mul(rowIn, 0.5));
     const gutter = (s) => {
         if (!L0[s].length) return [];
+        const tw = s === "left" ? L0.twL : L0.twR;
         const kids = L0[s].map((L) => ({ column: { children: [
             hsp(X.sub(L.y, o.pad)),
-            box([{ width: P.sides[s].tw }, { height: L.it.h }], [{ text: { value: L.it.label, fontSize: o.fontSize, color: c.text,
+            box([{ width: tw }, { height: X.v(`hb${L.it.h}`, X.mul(L0.k, L.it.h)) }], [{ text: { value: L.it.label, fontSize: fsB, color: c.text,
                 textAlign: s === "left" ? "end" : "start", maxLines: o.maxLines, overflow: "ellipsis" } }],
             { horizontalAlignment: s === "left" ? "end" : "start", verticalAlignment: "center" }),
         ] } }));
-        return [box([{ visibility: showB }, { width: P.sides[s].tw }], kids)];
+        return [box([{ visibility: showB }, { width: tw }], kids)];
     };
     const drawingMods = [{ width: L0.dw }, { height: L0.dh }];
     if (spec.label) drawingMods.push({ semantics: { contentDescription: String(spec.label) } });
@@ -434,9 +461,9 @@ export function generate(spec, ctx) {
     const numbered = [...L0.left, ...L0.right];
     const textW = X.v("legTw", X.sub(L0.colW, DISC + 16));
     const legendRows = numbered.map((L) => ({ row: { modifiers: [{ width: L0.colW }, { padding: [0, 2] }], children: [
-        { canvas: { modifiers: [{ width: DISC }, { height: lh }], commands: discCommands(DISC / 2, lh / 2, L.n, c, mono) } },
+        { canvas: { modifiers: [{ width: DISC }, { height: rowIn }], commands: discCommands(DISC / 2, rowMid, L.n, c, mono) } },
         wsp(8),
-        { text: { value: L.it.label, fontSize: o.fontSize, color: c.text, maxLines: o.legendLines, overflow: "ellipsis", modifiers: [{ width: textW }] } },
+        { text: { value: L.it.label, fontSize: fsN, color: c.text, maxLines: o.legendLines, overflow: "ellipsis", modifiers: [{ width: textW }] } },
     ] } }));
     const legend = { flow: { modifiers: [{ visibility: showN }, { padding: [o.pad, 8, o.pad, 0] }], children: legendRows } };
 
@@ -459,7 +486,28 @@ export function generate(spec, ctx) {
         { canvas: { modifiers: [{ visibility: showL }, "fillMaxSize"], commands: fold(leaderCmds) } },
         { canvas: { modifiers: [{ visibility: showD }, "fillMaxSize"], commands: fold(discsCommands(numbered.map((L) => [L.cx, L.yc, L.n]), c, mono)) } },
     ];
-    return { box: { modifiers: ["fillMaxSize", { background: c.bg }], children: kids } };
+    const out = { box: { modifiers: ["fillMaxSize", { background: c.bg }], children: kids } };
+    still(out, new Set(visual));
+    return out;
+}
+
+// Players animate a component's bounds when layout moves it (300 ms by default). Leaders are
+// drawn at their new place at once, so every box this generator places opts out
+// (animationId 0: AnimationSpec.isAnimationEnabled is false), and labels, discs and lines move
+// together. The caller's drawing nodes get it too, at their top level.
+const LAYOUT = new Set(["box", "row", "column", "flow", "canvas", "text"]);
+const STILL = { animationSpec: { animationId: 0 } };
+function still(node, visual, inVisual = false) {
+    if (Array.isArray(node)) { for (const x of node) still(x, visual, inVisual); return; }
+    if (!node || typeof node !== "object") return;
+    const key = Object.keys(node).find((k) => LAYOUT.has(k));
+    if (!key) return;
+    const n = node[key];
+    // An empty spacer paints nothing, and its siblings are placed from its target size, not
+    // its animated one: it can animate unseen, which saves the modifier (about 40 B each).
+    const spacer = key === "box" && !n.children && (n.modifiers ?? []).every((m) => typeof m === "object" && ("width" in m || "height" in m));
+    if ((!inVisual || visual.has(node)) && !spacer) n.modifiers = [...(n.modifiers ?? []), STILL];
+    if (n.children) for (const ch of n.children) still(ch, visual, inVisual || visual.has(ch));
 }
 
 function discsCommands(discs, c, mono) {

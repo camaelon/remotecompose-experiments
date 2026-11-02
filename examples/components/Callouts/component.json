@@ -34,7 +34,7 @@
    ],
    "default": "auto",
    "static": true,
-   "doc": "auto: labels beside the drawing when they fit, a side's labels need at most twice the drawing's height, and the drawing keeps at least 0.6 of the size the legend look would give it; else numbered markers and a legend. beside / legend force one look"
+   "doc": "auto: labels beside the drawing when they fit at 11 sp or more, a side's labels need at most twice the drawing's height, and the drawing keeps at least 0.6 of the size the legend look would give it; else numbered markers and a legend. beside: beside whenever the labels fit at 11 sp or more, however small that leaves the drawing (a narrow portrait screen gets a small drawing between two columns of text); it still falls back to the legend when they do not fit. legend: always the legend. Leave it out unless you have a reason: auto is what adapts"
   },
   "label": {
    "type": "string",
@@ -44,7 +44,7 @@
    "type": "float",
    "default": 14,
    "static": true,
-   "doc": "Label text size. Label boxes and line counts are measured from it when the document is built"
+   "doc": "Label text size at full scale. Labels shrink with the window (to about min(width, height) / 25 dp per sp, and in beside to what fits) down to 11 sp; below that beside gives way to the legend. Label boxes and line counts are measured from it when the document is built, so a label wraps the same at every size"
   },
   "width": {
    "type": "float",
@@ -69,7 +69,7 @@
  },
  "slots": {
   "visual": {
-   "doc": "The drawing. It gets a box of exact size (aspect kept): draw it in a canvas with fillMaxSize, scaled from componentWidth() (a unit box 100 wide and 100 / aspect tall: scale componentWidth() / 100). Anchor fractions are of that box"
+   "doc": "The drawing. It gets a box of exact size (aspect kept): draw it in a canvas with fillMaxSize, scaled from componentWidth() (a unit box 100 wide and 100 / aspect tall: {\"scale\": {\"sx\": \"componentWidth() / 100\", \"sy\": \"componentWidth() / 100\"}}). Paint it with theme colours (@colors.onSurface, @colors.primary, @colors.outline, @colors.surfaceHigh, @colors.muted) so it reads in light, dark and mono. Anchor fractions are of that box"
   }
  },
  "body": {
@@ -131,6 +131,9 @@
   "Labels are measured when the document is built: a label the host changes at run time is not supported. A gutter is at most 160 dp wide; a longer label wraps (3 lines at most), and in the legend 2 lines",
   "Leaders do not cross while a side's labels need at most about twice the drawing's height, which auto keeps to: each side's order is chosen for it at phone, tablet, desktop and widget sizes, and a neighbouring pair whose leaders would still cross trades places at run time. A crowd of anchors on one side of a small drawing, with a forced mode, can still cross; spread the anchors over both halves, or give a part an explicit side",
   "Narrow windows show numbered discs and a legend (two columns when every label fits half the width). When the drawing would be under 56 dp, or its discs would stack past 1.6 times its height, the drawing hides and the legend stands alone; a legend of many parts in a very small window (8 parts under about 200 dp tall) is cut at the bottom",
-  "The whole frame is expanded, never a pattern (texts and canvas). About 2.2 KB plus about 0.85 KB per part in .rc (both looks are in the document), before the drawing"
+  "Draw the visual with theme colours, never hex literals: a navy lamp drawn in #1E3A5F vanishes on the dark background and a pale ground line glares. Use @colors.onSurface for outlines and dark parts, @colors.surfaceHigh or @colors.outline for bodies, @colors.primary for one accent, and {\"$if\": \"theme.mono\"} (in an inline component) for an outline-only mono look, as CMP-30's CoffeeMachine does",
+  "Curves in the drawing: use drawPath with an op-list path ([{\"type\": \"moveTo\", \"x\": 65, \"y\": 29}, {\"type\": \"quadTo\", \"x1\": 81, \"y1\": 25, \"x2\": 88, \"y2\": 40}, {\"type\": \"close\"}] under resources.paths, or inline), not an SVG string (\"M65 29 L81 25 Q...\"): the Java parser pads an SVG string to about 4 KB per path. Rounded rects, circles, lines and arcs cover most parts",
+  "Everything it places (labels, discs, legend rows, the drawing's box and your drawing's top node) opts out of the players' 300 ms bounds animation (animationSpec 0), so on a resize labels and leader lines move together, at once. Nodes deeper in your drawing are not touched",
+  "The whole frame is expanded, never a pattern (texts and canvas). About 2.9 KB plus about 1.1 KB per part in .rc (both looks are in the document), before the drawing"
  ]
 }

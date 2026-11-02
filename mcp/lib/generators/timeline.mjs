@@ -18,6 +18,9 @@
 export const kind = "timeline";
 export const doc = "A schedule: intervals with start, end, label, lane and category packed into rows, a time axis with ticks, and a now marker that may follow the clock";
 
+// Bars are placed by layout, which players animate on a resize while the axis canvas redraws
+// at once; animationId 0 keeps them together (its own modifier object: Java reads one key per object).
+const still = () => ({ animationSpec: { animationId: 0 } });
 const fmt = (n) => { const r = Math.round(n * 1000) / 1000; return String(Object.is(r, -0) ? 0 : r); };
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -250,7 +253,7 @@ export function generate(spec, ctx) {
         return { box: { verticalAlignment: "center", horizontalAlignment: "center", modifiers: mods, children } };
     };
     const onBar = mono ? "@colors.onSurface" : "@colors.onPrimary";
-    const spacer = (w, child) => ({ box: { verticalAlignment: "center", ...(child?.end ? { horizontalAlignment: "end" } : {}), modifiers: [{ weight: fmt(w) }, "fillMaxHeight"], children: child ? [child.node] : [] } });
+    const spacer = (w, child) => ({ box: { verticalAlignment: "center", ...(child?.end ? { horizontalAlignment: "end" } : {}), modifiers: child ? [{ weight: fmt(w) }, still(), { height: barH }] : [{ weight: fmt(w) }, "fillMaxHeight"], children: child ? [child.node] : [] } });
 
     const gpx = hasLanes ? decl("gp", `${fmt(g)} * (${String(spec.width ?? "windowWidth()")} - ${2 * pad}) - 6`) : null;
     const fullBy = new Map();
@@ -278,7 +281,7 @@ export function generate(spec, ctx) {
                     texts.push({ text: { value: o.label, fontSize: fs, fontWeight: 600, color: onBar, maxLines: 1, modifiers: [{ visibility: c.full }] } });
                     texts.push({ text: { value: o.label.trim().charAt(0).toUpperCase(), fontSize: fs, fontWeight: 700, color: onBar, maxLines: 1, modifiers: [{ visibility: c.ini }] } });
                 }
-                kids.push(barFace(colorOf(o), texts, [{ weight: fmt(o.e - o.s) }, "fillMaxHeight"]));
+                kids.push(barFace(colorOf(o), texts, [{ weight: fmt(o.e - o.s) }, still(), { height: barH }]));
                 if (beside && side > 0) pending.push(beside);
                 t = o.e;
             });
@@ -347,7 +350,7 @@ export function generate(spec, ctx) {
         const nowT = decl("now", `${nowExpr} - ${fmt(t0)}`);
         const inRange = decl("nowIn", `step(${nowT}, -0.001) * step(${fmt(T)}, ${nowT})`);
         const nx = `@${p}nx`;
-        front = { canvas: { modifiers: ["fillMaxSize"], commands: [
+        front = { canvas: { modifiers: [still(), "fillMaxSize"], commands: [
             { variable: { name: `${p}nx`, value: `${pad} + ${fmt(g)} * (componentWidth() - ${2 * pad}) + ${nowT} * ${fmt(1 - g)} * (componentWidth() - ${2 * pad}) / ${fmt(T)}` } },
             { paint: { ops: [{ color: "@colors.error" }, { alpha: inRange }, { style: "stroke" }, { strokeWidth: 2 }] } },
             { drawLine: { x1: nx, y1: axisH - 3, x2: nx, y2: fmt(contentH) } },
@@ -367,7 +370,7 @@ export function generate(spec, ctx) {
     }
 
     const col = { column: { modifiers: ["fillMaxWidth", { padding: [pad, 0, pad, 0] }], children: [{ box: { modifiers: [{ height: axisH }] } }, ...laneNodes.flatMap((ln, i) => (i ? [{ box: { modifiers: [{ height: laneGap }] } }, ln] : [ln]))] } };
-    const stack = { box: { modifiers: ["fillMaxWidth", { height: fmt(contentH + 4) }], children: [...vars, { canvas: { modifiers: ["fillMaxSize"], commands: back } }, col, ...(front ? [front] : [])] } };
+    const stack = { box: { modifiers: ["fillMaxWidth", { height: fmt(contentH + 4) }], children: [...vars, { canvas: { modifiers: [still(), "fillMaxSize"], commands: back } }, col, ...(front ? [front] : [])] } };
     const out = legend ? { column: { modifiers: ["fillMaxWidth"], children: [stack, legend] } } : stack;
     if (spec.description) (out.column ?? out.box).modifiers.push({ semantics: { contentDescription: String(spec.description) } });
     return out;

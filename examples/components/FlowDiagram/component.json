@@ -20,10 +20,12 @@
    "values": [
     "auto",
     "down",
-    "right"
+    "right",
+    "down!",
+    "right!"
    ],
    "default": "auto",
-   "doc": "auto picks top-to-bottom or left-to-right from the space at run time; down or right pins it"
+   "doc": "Leave it auto: it picks top-to-bottom or left-to-right from the space at run time. down / right are preferences, kept while they fit (they flip when the other way fits much better); down! / right! pin it whatever the screen"
   },
   "edgeStyle": {
    "type": "enum",
@@ -37,12 +39,12 @@
   "width": {
    "type": "float",
    "default": "windowWidth()",
-   "doc": "The width it has, when it is not the whole window (e.g. \"windowWidth() - 32\")"
+   "doc": "Leave it out: it fills the window's width and adapts. An expression (\"windowWidth() - 32\") when it shares the width with something. A number is a most, not a size: it never asks for more than the window"
   },
   "height": {
    "type": "float",
    "default": "windowHeight()",
-   "doc": "The height it has, when it is not the whole window (e.g. \"windowHeight() - 56\" under a title)"
+   "doc": "Leave it out: it fills the window's height and adapts. Under a title pass what is left (\"windowHeight() - 64\"). A number is a most, not a size"
   },
   "fontSize": {
    "type": "float",
@@ -59,25 +61,33 @@
   "description": {
    "type": "string",
    "doc": "Spoken summary of the whole diagram (each step's label is read anyway, with its status)"
+  },
+  "current": {
+   "type": "string",
+   "doc": "The current step, so statuses follow the app: \"@step\" (a host variable holding the 0-based index in nodes), an expression, a number or a node id. Steps the current one can be reached from show done, the current one active, the rest pending (a branch not taken stays pending); -1 is before the first, the count is all done. Steps given failed or a theme colour keep it. Leave out to use the static statuses"
+  },
+  "background": {
+   "type": "string",
+   "default": "@colors.background",
+   "doc": "Its own background, so it reads in every look as the whole document; \"@colors.surface\" inside a card, \"none\" for the parent's"
   }
  },
  "capabilities": [
   "draw.shapes",
   "layout.state",
-  "a11y.labels"
+  "a11y.labels",
+  "host.variables"
  ],
  "call": {
   "FlowDiagram": {
    "nodes": [
     {
      "id": "a",
-     "label": "Submit",
-     "status": "ok"
+     "label": "Submit"
     },
     {
      "id": "b",
-     "label": "Review",
-     "status": "active"
+     "label": "Review"
     },
     {
      "id": "c",
@@ -92,15 +102,17 @@
      "changes"
     ]
    ],
-   "height": 300
+   "current": 1
   }
  },
  "pitfalls": [
-  "It sizes itself from width and height (default: the whole window), not from its parent: under a title or inside padding, pass what is left, e.g. \"height\": \"windowHeight() - 64\". Positions are computed from these at run time, so a wrong size draws arrows that miss their boxes",
+  "Leave width and height out: it fills the window and adapts (orientation, scale, summary). Under a title or inside padding pass what is left as an expression (\"windowHeight() - 64\"); numbers are only upper bounds, so a size written for one screen still fits a smaller one",
+  "Leave direction auto unless the shape of the screen is known; right and down are only preferences, right! and down! pin it and can leave too little room",
   "Labels wrap to two lines (three when every label is long and the flow is short) and then end in an ellipsis: keep step names under about 30 characters",
   "Edge labels sit beside the arrow just after its start: one or two words. Two labelled arrows leaving one step go out of separate ports so their labels part",
   "A process deeper than about 7 steps does not fit a landscape phone: it shows the summary there. Pin direction only if you know the shape of the screen",
-  "Each node is a text box (measured, checked), arrows are one canvas: about 200 B per step and 100 B per arrow"
+  "Each node is a text box (measured, checked), arrows are one canvas: about 200 B per step and 100 B per arrow",
+  "current reads an index into nodes: a host variable declared in resources (e.g. {\"variables\": {\"currentStep\": {\"value\": 1, \"export\": true}}}) and passed as \"@currentStep\" (never name it step: that hides the step() function). Each step that follows it costs three faces, about 3x a static step"
  ],
  "body": {
   "$gen": {
@@ -113,7 +125,9 @@
    "height": "@height",
    "fontSize": "@fontSize",
    "compact": "@summary",
-   "description": "@description"
+   "description": "@description",
+   "current": "@current",
+   "background": "@background"
   }
  }
 }
