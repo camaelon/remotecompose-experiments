@@ -148,6 +148,7 @@ export class PathExpression extends Operation {
 
     private evalRPN(expr: Int32Array, x: number, ca: any): number {
         const s: number[] = [];
+        const reg = [0, 0, 0, 0];
         let sp = -1;
         const OFF = PathExpression.OFFSET;
         // Decode an array id popped from the eval stack (finite sentinel).
@@ -208,6 +209,26 @@ export class PathExpression extends Operation {
                         case 47: sp--; s[sp] = Math.hypot(s[sp], s[sp + 1]); break;
                         case 48: { const tmp = s[sp]; s[sp] = s[sp - 1]; s[sp - 1] = tmp; break; }
                         case 49: { const t = s[sp]; sp -= 2; s[sp] = s[sp] + (s[sp + 1] - s[sp]) * t; break; }
+                        // (The ops below were missing: a path using one left the stack as it
+                        // was and drew spikes. Same semantics as AnimatedFloatExpression.)
+                        case 41: { let v = Math.trunc(s[sp]); v = (v << 13) ^ v; s[sp] = 1.0 - ((v * (v * v * 15731 + 789221) + 1376312589) & 0x7fffffff) / 1.0737418e9; break; }
+                        case 43: sp--; s[sp] = s[sp] * s[sp] + s[sp + 1] * s[sp + 1]; break;
+                        case 50: { const val = s[sp - 2], hi = s[sp - 1], lo = s[sp]; sp -= 2;
+                            if (val < lo) s[sp] = 0; else if (val > hi) s[sp] = 1;
+                            else { const v = (val - lo) / (hi - lo); s[sp] = v * v * (3 - 2 * v); } break; }
+                        case 51: s[sp] = Math.log(s[sp]) / Math.log(2); break;
+                        case 54: { const m2 = s[sp] * 2; const t = s[sp - 1] % m2; sp--; s[sp] = t < s[sp + 1] ? t : m2 - t; break; }
+                        case 55: break;
+                        case 56: case 57: case 58: case 59: reg[op - 56] = s[sp]; sp--; break;
+                        case 60: case 61: case 62: case 63: s[++sp] = reg[op - 60]; break;
+                        case 74: { sp -= 4; s[sp] = FloatExpression.cubicEasing(s[sp], s[sp + 1], s[sp + 2], s[sp + 3], s[sp + 4]); break; }
+                        case 75: { const aId = arrId(s[sp - 1]); const f = s[sp] - Math.floor(s[sp]); const fl = ca?.getFloats(aId); sp--; s[sp] = fl ? FloatExpression.splineInterp(fl, f < 0 ? f + 1 : f) : 0; break; }
+                        case 76: { const aId = arrId(s[sp - 1]); const last = Math.trunc(s[sp]); let sm = 0; if (ca) for (let j = 0; j <= last; j++) sm += ca.getFloatValue(aId, j); sp--; s[sp] = sm; break; }
+                        case 77: { const ax = ca?.getFloats(arrId(s[sp - 1])), ay = ca?.getFloats(arrId(s[sp])); let sm = 0; if (ax && ay) for (let j = 0; j < ax.length; j++) sm += ax[j] * ay[j]; sp--; s[sp] = sm; break; }
+                        case 78: { const fl = ca?.getFloats(arrId(s[sp])); let sm = 0; if (fl) for (let j = 0; j < fl.length; j++) sm += fl[j] * fl[j]; s[sp] = sm; break; }
+                        case 79: { const fl = ca?.getFloats(arrId(s[sp - 1])); const pos = s[sp]; sp--;
+                            if (fl && fl.length) { const p = pos * (fl.length - 1), k = Math.trunc(p);
+                                s[sp] = k < 0 ? fl[0] : k >= fl.length - 1 ? fl[fl.length - 1] : fl[k] + (p - k) * (fl[k + 1] - fl[k]); } else s[sp] = 0; break; }
                         case 52: s[sp] = 1 / s[sp]; break;
                         case 53: s[sp] = s[sp] - Math.floor(s[sp]); break;
                         case 73: s[sp] = -s[sp]; break;
