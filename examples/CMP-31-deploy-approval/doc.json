@@ -1,0 +1,129 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Deployment approval for release 2.14: built, tested and staged; security review in progress; then release manager approval and production. A rejection at either review goes to Fix findings and back to CI"
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "padding": [
+         16,
+         12,
+         16,
+         4
+        ]
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Release 2.14 to production",
+         "fontSize": 18,
+         "fontWeight": 700,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "overflow": "ellipsis"
+        }
+       },
+       {
+        "text": {
+         "value": "Waiting on security review",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "overflow": "ellipsis"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "FlowDiagram": {
+      "nodes": [
+       {
+        "id": "mr",
+        "label": "Merge request",
+        "status": "ok"
+       },
+       {
+        "id": "ci",
+        "label": "CI build and tests",
+        "status": "ok"
+       },
+       {
+        "id": "stg",
+        "label": "Deploy to staging",
+        "status": "ok"
+       },
+       {
+        "id": "sec",
+        "label": "Security review",
+        "status": "active"
+       },
+       {
+        "id": "rm",
+        "label": "Release manager approval",
+        "status": "pending"
+       },
+       {
+        "id": "prod",
+        "label": "Deploy to production",
+        "status": "pending"
+       },
+       {
+        "id": "fix",
+        "label": "Fix findings",
+        "status": "pending"
+       }
+      ],
+      "edges": [
+       "mr > ci > stg > sec",
+       {
+        "from": "sec",
+        "to": "rm",
+        "label": "approved"
+       },
+       {
+        "from": "sec",
+        "to": "fix",
+        "label": "rejected",
+        "status": "failed"
+       },
+       {
+        "from": "rm",
+        "to": "prod",
+        "label": "approved"
+       },
+       {
+        "from": "rm",
+        "to": "fix",
+        "label": "rejected",
+        "status": "failed"
+       },
+       {
+        "from": "fix",
+        "to": "ci",
+        "label": "resubmit"
+       }
+      ],
+      "height": "windowHeight() - 60"
+     }
+    }
+   ]
+  }
+ }
+}

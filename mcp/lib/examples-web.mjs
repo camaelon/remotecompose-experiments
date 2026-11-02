@@ -216,6 +216,11 @@ main { max-width:1280px; margin:0 auto; padding:8px 16px 48px; display:grid; gap
 .tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
 .bar label.gen { display:flex; align-items:center; gap:4px; font-size:13px; color:var(--muted); }
 .tags span { background:var(--chip); border-radius:6px; padding:1px 6px; font-size:11px; color:var(--muted); }
+[hidden] { display:none !important; }
+.tags span.lib { background:color-mix(in srgb, var(--accent) 16%, transparent); color:var(--accent); }
+.tags span.own { border:1px dashed var(--muted); background:none; }
+.kind { font-size:11px; font-weight:600; letter-spacing:.02em; text-transform:uppercase; color:var(--muted); }
+.kind.library, .kind.mixed { color:var(--accent); }
 .links { display:flex; gap:12px; font-size:12px; margin-top:6px; }
 .links a { color:var(--accent); text-decoration:none; }
 .modes { display:flex; gap:4px; padding:4px; background:var(--thumb); border-top:1px solid var(--line); }
@@ -236,12 +241,14 @@ function apply() {
   const words = q.value.toLowerCase().split(/\\s+/).filter(Boolean); let n = 0;
   for (const c of cards) {
     const gen = c.dataset.family === "GEN";
-    const show = (!gen || genOn.checked) && (!fam || c.dataset.family === fam) && words.every((w) => c.dataset.text.includes(w));
+    const kind = document.getElementById("kind");
+    const show = (!gen || genOn.checked) && (!fam || c.dataset.family === fam) && (!kind || !kind.value || (c.dataset.kind || "").split(" ").includes(kind.value)) && words.every((w) => c.dataset.text.includes(w));
     c.hidden = !show; if (show) n++;
   }
   document.getElementById("none").hidden = n > 0;
 }
 q.addEventListener("input", apply);
+const kindSel = document.getElementById("kind"); if (kindSel) kindSel.addEventListener("change", apply);
 apply();
 // The light / dark / mono strip under a thumbnail: show that render in the card, and open the
 // playground in that mode. The page-wide toggle does it for every card.
@@ -270,7 +277,7 @@ for (const b of chips) b.addEventListener("click", () => {
 });
 `;
 
-function page({ title, sub, current, families, cards, modes = false, generated = 0 }) {
+function page({ title, sub, current, families, cards, modes = false, generated = 0, kinds = false }) {
     return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title><style>${CSS}</style></head>
@@ -281,6 +288,7 @@ function page({ title, sub, current, families, cards, modes = false, generated =
 <p class="sub">${sub}</p>
 <div class="bar"><input id="q" type="search" placeholder="Filter by name, tag or keyword" aria-label="Filter">
 ${families.map((f) => `<button type="button" data-family="${esc(f)}" aria-pressed="false">${esc(f)}</button>`).join("")}
+${kinds ? `<select id="kind" aria-label="How it is built"><option value="">Any build</option><option value="library">Uses library components</option><option value="own">Defines its own components</option><option value="plain">Plain JSON, no components</option></select>` : ""}
 ${generated ? `<label class="gen"><input id="gen" type="checkbox"> ${generated} generated (eval runs)</label>` : ""}
 ${modes ? `<select id="mode" aria-label="Render"><option value="">Default render</option><option value="light">Light</option><option value="dark">Dark</option><option value="mono-dark">Mono dark (always-on, OLED)</option><option value="mono-light">Mono light (e-ink)</option></select>` : ""}</div>
 </header>
@@ -289,7 +297,7 @@ ${modes ? `<select id="mode" aria-label="Render"><option value="">Default render
 </body></html>`;
 }
 
-function card({ e, base, text, desc, tags, links }) {
+function card({ e, base, text, desc, tags, links, build }) {
     const id = encodeURIComponent(e.id);
     const main = `${base}img/${id}.png`, play = `${base}play/${id}/`;
     const img = existsSync(path.join(EXAMPLES_DIR, e.folder, "render.png"))
@@ -300,25 +308,43 @@ function card({ e, base, text, desc, tags, links }) {
         const href = m.own ? `${play}${encodeURIComponent(m.name)}/` : m.theme ? `${play}#t=${m.theme}` : play;
         return `<button type="button" data-mode="${esc(m.name)}" data-src="${src}" data-play="${href}" aria-pressed="false" title="Show the ${esc(m.name)} render"><img src="${src}" alt="" loading="lazy">${esc(m.name)}</button>`;
     }).join("")}</div>` : "";
-    return `<a class="card" href="${play}" data-play="${play}" data-family="${esc(e.family ?? "")}" data-text="${esc(text.toLowerCase())}">
+    const tag = (t) => typeof t === "object" ? `<span class="${t.cls}" title="${esc(t.title)}">${esc(t.text)}</span>` : `<span>${esc(t)}</span>`;
+    return `<a class="card" href="${play}" data-play="${play}" data-family="${esc(e.family ?? "")}" data-kind="${esc(build?.kinds ?? "")}" data-text="${esc(text.toLowerCase())}">
 <div class="thumb">${img}</div>${strip}
-<div class="body"><span class="id">${esc(e.id)}</span><span class="title">${esc(e.title ?? e.id)}</span>
+<div class="body"><span class="id">${esc(e.id)}</span>${build ? `<span class="kind ${build.cls}" title="${esc(build.title)}">${esc(build.label)}</span>` : ""}<span class="title">${esc(e.title ?? e.id)}</span>
 <span class="desc">${esc(desc ?? "")}</span>
-<span class="tags">${tags.map((t) => `<span>${esc(t)}</span>`).join("")}</span>
+<span class="tags">${tags.map(tag).join("")}</span>
 <span class="links">${links}</span></div></a>`;
+}
+
+/** How an example is built: calls to library components, components it defines itself, or plain JSON. */
+function buildKind(e, lib) {
+    const used = e.derived?.components ?? [];
+    let own = [];
+    try { own = Object.keys(JSON.parse(readFileSync(path.join(EXAMPLES_DIR, e.folder, "doc.json"), "utf8")).components ?? {}); } catch {}
+    const fromLib = used.filter((n) => lib.has(n));
+    if (fromLib.length && own.length) return { kinds: "library own", cls: "mixed", label: "Library + own", title: `Calls library components (${fromLib.join(", ")}) and defines its own (${own.join(", ")})` };
+    if (fromLib.length) return { kinds: "library", cls: "library", label: "Library", title: `Built from library components: ${fromLib.join(", ")}` };
+    if (own.length) return { kinds: "own", cls: "own", label: "Own components", title: `Defines its own components: ${own.join(", ")}` };
+    // (meta.hand_built: why it is written by hand when a library component exists.)
+    if (e.hand_built) return { kinds: "plain", cls: "plain", label: "Hand-built on purpose", title: e.hand_built };
+    return { kinds: "plain", cls: "plain", label: "Plain JSON", title: "Written directly in RemoteCompose JSON: no components, even where it looks like one" };
 }
 
 function examplesPage() {
     const C = loadCatalog();
     const list = [...C.examples].sort((a, b) => a.id.localeCompare(b.id, "en", { numeric: true }));
     const families = [...new Set(list.map((e) => e.family))].sort();
-    const cards = list.map((e) => card({
-        e, base: "",
+    const lib = new Set(C.library.components.keys());
+    const cards = list.map((e) => { const b = buildKind(e, lib); return card({
+        e, base: "", build: b,
         text: [e.id, e.title, e.summary, e.prompt, ...(e.keywords ?? []), ...(e.capabilities?.primary ?? []), ...(e.capabilities?.secondary ?? []), ...(e.derived?.components ?? [])].join(" "),
         desc: e.summary,
-        tags: [...(e.capabilities?.primary ?? []), ...(e.derived?.components ?? [])],
+        tags: [...(e.capabilities?.primary ?? []), ...(e.derived?.components ?? []).map((n) => lib.has(n)
+            ? { text: n, cls: "lib", title: `${n}: a library component` }
+            : { text: n, cls: "own", title: `${n}: defined in this document` })],
         links: `<span>${formatBytes(e.derived?.bytes ?? 0)}</span>`,
-    }));
+    }); });
     // The generated corpus, behind its toggle: one document per eval prompt, built with the tools.
     const gen = loadGenerated().filter((g) => existsSync(path.join(EXAMPLES_DIR, g.folder, "doc.json")));
     for (const g of gen) cards.push(card({
@@ -330,7 +356,7 @@ function examplesPage() {
     }));
     if (gen.length && !families.includes("GEN")) families.push("GEN");
     return page({
-        title: "RemoteCompose examples", current: "examples", families, cards, modes: list.some((e) => e.derived?.renders), generated: gen.length,
+        title: "RemoteCompose examples", current: "examples", families, cards, modes: list.some((e) => e.derived?.renders), generated: gen.length, kinds: true,
         sub: `${list.length} verified examples, each byte-identical to the Java parser's output. Click one to open it in the playground.`,
     });
 }

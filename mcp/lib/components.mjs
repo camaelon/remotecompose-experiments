@@ -122,6 +122,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { mapPoint, mapRings, mapRoute, projection, ringsToPath } from "./maps.mjs";
+import { runGenerator } from "./generators/index.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const LIBRARY_DIR = process.env.RC_COMPONENTS_DIR
@@ -243,7 +244,10 @@ export const VERTICAL_EXAMPLES = ["CMP-19", "CMP-20", "CMP-21", "CMP-22", "CMP-2
 // RC_HIDE_BATCH=1 does the same for the step explainer, form and panel sets.
 export const BATCH_COMPONENTS = ["StepExplainer", "CellRow", "ChoiceChips", "InputsResult", "ScaledAmount", "NumberedList", "TwoColumns"];
 export const BATCH_EXAMPLES = ["CMP-25", "CMP-26", "CMP-27", "CMP-28", "CMP-29"];
-const HIDDEN_VERTICALS = new Set([...(process.env.RC_HIDE_VERTICALS ? VERTICAL_COMPONENTS : []), ...(process.env.RC_HIDE_BATCH ? BATCH_COMPONENTS : [])]);
+// RC_HIDE_BATCH2=1: the generator-backed sets (callouts, diagrams, timelines, plots, music).
+export const BATCH2_COMPONENTS = ["Callouts", "FlowDiagram", "TimelineTrack", "MathPlot", "PianoKeys", "Fretboard"];
+export const BATCH2_EXAMPLES = ["CMP-30", "CMP-31", "CMP-32", "CMP-33", "CMP-34", "MAP-06"];
+const HIDDEN_VERTICALS = new Set([...(process.env.RC_HIDE_VERTICALS ? VERTICAL_COMPONENTS : []), ...(process.env.RC_HIDE_BATCH ? BATCH_COMPONENTS : []), ...(process.env.RC_HIDE_BATCH2 ? BATCH2_COMPONENTS : [])]);
 export function loadLibrary(dir = LIBRARY_DIR) {
     if (cached && cached.dir === dir) return cached;
     const components = new Map();
@@ -854,6 +858,7 @@ function expandNode(node, state, stack) {
         }
         const mk = mapKeyOf(node);
         if (mk) return mapValue(mk, node[mk], state, null);
+        if ("$gen" in node) return expandNode(runGenerator(node.$gen, state, null), state, stack);
         const out = {};
         for (const [k, v] of Object.entries(node)) out[k] = expandNode(v, state, stack);
         return out;
@@ -1500,6 +1505,10 @@ function substitute(node, env, state, name) {
         if (mk) {
             if (env.inPattern) throw new PatternUnfit("a map ({\"$map\": ...}) is drawn when the document is built, not per call");
             return mapValue(mk, substitute(structuredClone(node[mk]), env, state, name), state, name);
+        }
+        if ("$gen" in node) {
+            if (env.inPattern) throw new PatternUnfit("a generator ({\"$gen\": ...}) runs when the document is built, not per call");
+            return runGenerator(substitute(structuredClone(node.$gen), env, state, name), state, name);
         }
         if ("$icon" in node) {
             if (env.inPattern) throw new PatternUnfit("an icon ({\"$icon\": ...}) is chosen when the document is built, not per call");

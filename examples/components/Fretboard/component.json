@@ -1,0 +1,29 @@
+{
+ "component": "Fretboard",
+ "version": 1,
+ "summary": "A guitar chord diagram: strings, frets, finger dots with numbers, open and muted strings, a barre, the position (5fr) and the notes under the strings, from a chord name (\"Dm\": the server finds a playable shape) or a fingering (\"xx0231\").",
+ "capabilities": ["draw.shapes", "draw.transform", "a11y.labels"],
+ "params": {
+  "chord": {"type": "string", "static": true, "doc": "A chord name (Dm, C7, F#m7b5, G/B): the server finds the lowest playable shape with every chord tone, the root (or slash bass) lowest and at most four fingers; also names a fingering"},
+  "frets": {"type": "string", "static": true, "doc": "A fingering, low string first: \"xx0231\" (x muted, 0 open); frets over 9 need separators: \"x-x-12-14-15-14\". The chord is identified from the notes when chord isn't given"},
+  "fingers": {"type": "string", "static": true, "doc": "Finger numbers in the same form (\"xx0231\" for Dm: 0 or x for none); default: worked out, with a barre when the lowest fret spans several strings"},
+  "barre": {"type": "float", "static": true, "doc": "Draw a barre at this fret across the strings that hold it (default: found from the fingers)"},
+  "labels": {"type": "enum", "values": ["names", "intervals", "none"], "default": "names", "static": true, "doc": "Under each sounding string: the note (spelled for the chord), its interval (R, ♭3, 5), or nothing"},
+  "title": {"type": "string", "doc": "Text above the diagram; default: the chord symbol"},
+  "tuning": {"type": "list", "doc": "Open strings, low first; default [\"E2\", \"A2\", \"D3\", \"G3\", \"B3\", \"E4\"] (4 for a ukulele: [\"G4\", \"C4\", \"E4\", \"A4\"])"},
+  "position": {"type": "float", "static": true, "doc": "First fret shown (default: the nut, or the lowest fret used when the shape is higher up)"},
+  "size": {"type": "float", "default": 180, "static": true, "doc": "Diagram height in dp (the width follows); it shrinks, centred, when the box is smaller"},
+  "color": {"type": "color", "default": "@colors.primary", "doc": "Dot colour (onSurface in mono)"},
+  "label": {"type": "string", "doc": "Accessibility description; default: the chord and every string"}
+ },
+ "locals": {"id": 0},
+ "body": {"$gen": {"kind": "music", "view": "fretboard", "chord": "@chord", "frets": "@frets", "fingers": "@fingers", "barre": "@barre", "labels": "@labels",
+   "title": "@title", "tuning": "@tuning", "position": "@position", "size": "@size", "color": "@color", "label": "@label", "scope": {"$name": "id"}}},
+ "call": {"Fretboard": {"chord": "A7"}},
+ "pitfalls": [
+  "Give the chord name or the fingering, never draw dots yourself; the fingering is low string first (the way chord charts read left to right)",
+  "From a name the server picks one shape (open position first, then the lowest barre shape): give frets for a particular voicing",
+  "Fingers are worked out when not given: one finger per fret from the lowest, a barre with finger 1 when the lowest fret holds several strings and five or more notes need fingers; give fingers to show your own",
+  "The diagram keeps its proportions: inside a smaller box it shrinks, centred, with every label"
+ ]
+}

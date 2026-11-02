@@ -6,7 +6,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadLibrary, loadIconCatalog, VERTICAL_EXAMPLES, BATCH_EXAMPLES } from "./components.mjs";
+import { loadLibrary, loadIconCatalog, VERTICAL_EXAMPLES, BATCH_EXAMPLES, BATCH2_EXAMPLES } from "./components.mjs";
 import { designAudit } from "./design-audit.mjs";
 import { loadMaps } from "./maps.mjs";
 import { STRUCTURES, classifyStructure, structureMenu, HIDE_TEMPLATES } from "./structures.mjs";
@@ -75,6 +75,7 @@ export function loadCatalog() {
     const catalog = existsSync(catPath) ? JSON.parse(readFileSync(catPath, "utf8")) : { examples: [] };
     if (process.env.RC_HIDE_VERTICALS) catalog.examples = catalog.examples.filter((e) => !VERTICAL_EXAMPLES.includes(e.id));
     if (process.env.RC_HIDE_BATCH) catalog.examples = catalog.examples.filter((e) => !BATCH_EXAMPLES.includes(e.id));
+    if (process.env.RC_HIDE_BATCH2) catalog.examples = catalog.examples.filter((e) => !BATCH2_EXAMPLES.includes(e.id));
     const library = loadLibrary();
     // phrase (normalised words joined by a space) -> [{kind, id}]
     const phrases = new Map();

@@ -1,0 +1,136 @@
+{
+ "component": "Callouts",
+ "version": 1,
+ "summary": "Labels the parts of a drawing for you: give the drawing (a slot), its aspect and each part's anchor as 0..1 fractions with its label; the server places the labels in side gutters with leader lines that do not cross (wide), or numbered markers on the drawing and a numbered legend below (narrow), and switches between them as the window changes.",
+ "capabilities": [
+  "layout.state",
+  "draw.shapes",
+  "a11y.labels"
+ ],
+ "params": {
+  "aspect": {
+   "type": "float",
+   "required": true,
+   "static": true,
+   "doc": "The drawing's width / height (0.8 for a drawing 100 wide and 125 tall). The visual gets a box of exactly this shape"
+  },
+  "parts": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One entry per part: {\"at\": [x, y], \"label\": \"Water tank\"}. at is fractions of the drawing (0..1 across from the left, 0..1 down from the top), or the name of one of `points`. Optional \"side\": \"left\" | \"right\" (default: the anchor's half). The screen reader reads the labels in reading order: the left column top to bottom, then the right; the legend numbers follow the same order"
+  },
+  "points": {
+   "type": "list",
+   "static": true,
+   "doc": "Named anchors, [{\"name\": \"spout\", \"at\": [0.42, 0.55]}], so parts can say \"at\": \"spout\" and the drawing and the labels share one set of numbers"
+  },
+  "mode": {
+   "type": "enum",
+   "values": [
+    "auto",
+    "beside",
+    "legend"
+   ],
+   "default": "auto",
+   "static": true,
+   "doc": "auto: labels beside the drawing when they fit, a side's labels need at most twice the drawing's height, and the drawing keeps at least 0.6 of the size the legend look would give it; else numbered markers and a legend. beside / legend force one look"
+  },
+  "label": {
+   "type": "string",
+   "doc": "What the drawing shows, for a screen reader (on the drawing's box): \"An espresso machine, front view\""
+  },
+  "fontSize": {
+   "type": "float",
+   "default": 14,
+   "static": true,
+   "doc": "Label text size. Label boxes and line counts are measured from it when the document is built"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width it has, when it is not the whole window"
+  },
+  "height": {
+   "type": "float",
+   "default": "windowHeight()",
+   "doc": "The height it has"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Anchor dots and number discs"
+  },
+  "background": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "Its own background; also the halo under the leader lines"
+  }
+ },
+ "slots": {
+  "visual": {
+   "doc": "The drawing. It gets a box of exact size (aspect kept): draw it in a canvas with fillMaxSize, scaled from componentWidth() (a unit box 100 wide and 100 / aspect tall: scale componentWidth() / 100). Anchor fractions are of that box"
+  }
+ },
+ "body": {
+  "$gen": {
+   "kind": "callouts",
+   "aspect": "@aspect",
+   "parts": "@parts",
+   "points": "@points",
+   "mode": "@mode",
+   "label": "@label",
+   "fontSize": "@fontSize",
+   "width": "@width",
+   "height": "@height",
+   "color": "@color",
+   "background": "@background",
+   "visual": {
+    "$slot": "visual"
+   }
+  }
+ },
+ "call": {
+  "Callouts": {
+   "aspect": 1,
+   "parts": [
+    {
+     "at": [
+      0.3,
+      0.3
+     ],
+     "label": "Top"
+    },
+    {
+     "at": [
+      0.7,
+      0.7
+     ],
+     "label": "Bottom"
+    }
+   ],
+   "slots": {
+    "visual": [
+     {
+      "box": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "background": "@colors.track"
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ },
+ "pitfalls": [
+  "Anchors are fractions of the drawing's box, not dp and not of the window: draw the visual in a unit box scaled from componentWidth() and divide its coordinates by the box size (x / 100, y / (100 / aspect)), or name them once in `points`",
+  "Whole window by default: inside your own padding or beside other content, pass width and height, or the drawing and labels come out too large",
+  "Labels are measured when the document is built: a label the host changes at run time is not supported. A gutter is at most 160 dp wide; a longer label wraps (3 lines at most), and in the legend 2 lines",
+  "Leaders do not cross while a side's labels need at most about twice the drawing's height, which auto keeps to: each side's order is chosen for it at phone, tablet, desktop and widget sizes, and a neighbouring pair whose leaders would still cross trades places at run time. A crowd of anchors on one side of a small drawing, with a forced mode, can still cross; spread the anchors over both halves, or give a part an explicit side",
+  "Narrow windows show numbered discs and a legend (two columns when every label fits half the width). When the drawing would be under 56 dp, or its discs would stack past 1.6 times its height, the drawing hides and the legend stands alone; a legend of many parts in a very small window (8 parts under about 200 dp tall) is cut at the bottom",
+  "The whole frame is expanded, never a pattern (texts and canvas). About 2.2 KB plus about 0.85 KB per part in .rc (both looks are in the document), before the drawing"
+ ]
+}

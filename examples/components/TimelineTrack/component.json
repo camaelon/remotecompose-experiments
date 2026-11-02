@@ -1,0 +1,108 @@
+{
+ "component": "TimelineTrack",
+ "version": 1,
+ "summary": "A schedule or timeline laid out by the server: name intervals (start, end, label, optional lane such as a person or room, optional category for the colour) and it packs overlapping ones into rows, draws a time axis with ticks, a legend for the categories, and a red now line that can follow the device clock. Labels show in full, as an initial, beside a short bar, or not at all, by the space each bar gets.",
+ "params": {
+  "items": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "[{\"start\": \"Mon 09:00\", \"end\": \"Mon 17:00\", \"label\": \"Day\", \"lane\": \"Alice\", \"category\": \"Day\"}] or [start, end, label, lane]. Times: numbers, \"HH:MM\", \"Mon 09:00\" (a week from Monday) or \"2026-11-02[T09:00]\", all the same form. An end before its start runs past midnight; what falls outside the axis is cut"
+  },
+  "lanes": {
+   "type": "list",
+   "static": true,
+   "doc": "Lane names in display order (default: order of first use); a lane with no items still gets a row"
+  },
+  "start": {
+   "type": "string",
+   "doc": "Axis start, same form as the items (default: the earliest start, rounded down to a tick)"
+  },
+  "end": {
+   "type": "string",
+   "doc": "Axis end (default: the latest end, rounded up). \"Sun 24:00\" ends a week"
+  },
+  "now": {
+   "type": "string",
+   "doc": "The now line: a time, \"clock\" (follows the device clock: for HH:MM, week and date axes), or an expression in hours from the axis origin. Left out: no line"
+  },
+  "colors": {
+   "type": "list",
+   "static": true,
+   "doc": "Not a list: an object mapping a category to a theme colour name, e.g. {\"Night\": \"secondary\"}. Default: categories take primary, secondary, success, warning, error in order"
+  },
+  "legend": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "A row naming the categories under the axis (each swatch shows the initial a narrow bar shows)"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width it has, when it is not the whole window: only used to choose labels, the bars follow the layout"
+  },
+  "fontSize": {
+   "type": "float",
+   "default": 12,
+   "static": true,
+   "doc": "Label size; bars are 1.9 times as tall"
+  },
+  "description": {
+   "type": "string",
+   "doc": "Spoken summary (lane names and bar labels are read anyway)"
+  }
+ },
+ "capabilities": [
+  "layout.weight",
+  "time.clock",
+  "layout.state"
+ ],
+ "call": {
+  "TimelineTrack": {
+   "items": [
+    [
+     "09:00",
+     "10:30",
+     "Standup and planning",
+     "Room A"
+    ],
+    [
+     "10:00",
+     "12:00",
+     "Design review",
+     "Room A"
+    ],
+    [
+     "13:00",
+     "14:00",
+     "Lunch talk",
+     "Room B"
+    ]
+   ],
+   "now": "clock"
+  }
+ },
+ "pitfalls": [
+  "Write every time in one form: \"Mon 09:00\" and \"09:00\" can't mix",
+  "Its height is its content (axis, rows, legend): put it in a scrolling column if there are many lanes",
+  "In a week view on a phone, an 8-hour bar is about 12 dp wide: labels give way to the category initial or nothing, so use category (and the legend) for what matters",
+  "now: \"clock\" uses weekDay() and timeInMin(): a week axis must start on Monday 00:00 for the line to land right",
+  "About 120 to 250 B per interval (two texts: the full label and its initial) plus the axis"
+ ],
+ "body": {
+  "$gen": {
+   "kind": "timeline",
+   "items": "@items",
+   "lanes": "@lanes",
+   "start": "@start",
+   "end": "@end",
+   "now": "@now",
+   "colors": "@colors",
+   "legend": "@legend",
+   "width": "@width",
+   "fontSize": "@fontSize",
+   "description": "@description"
+  }
+ }
+}

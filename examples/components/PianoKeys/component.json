@@ -1,0 +1,29 @@
+{
+ "component": "PianoKeys",
+ "version": 1,
+ "summary": "A piano keyboard with notes highlighted and labelled, from a chord name (\"Dm\", \"Cmaj7\", \"Bb/D\": the server spells and voices it) or a note list (\"D4 F4 A4\"); the range fits the notes unless given, and it fills its width.",
+ "capabilities": ["draw.shapes", "draw.transform", "a11y.labels"],
+ "params": {
+  "chord": {"type": "string", "static": true, "doc": "A chord name: root (C, F#, Bb), quality (m, dim, aug, sus2, sus4, 5, 6, m6, 7, maj7, m7, m7b5, dim7, mMaj7, 7sus4, add9, 9, maj9, m9, 7b9, 7#9, 11, 13, 6/9...) and an optional slash bass (G7/B). Voiced close from the root at `octave`, the slash bass just below it. With notes, it only names the notes (for intervals)"},
+  "notes": {"type": "string", "static": true, "doc": "The notes to highlight instead, low to high: \"D4 F4 A4\" (no octave: rising from octave 4, \"A C E\" is A4 C5 E5). The chord is identified from them when not given"},
+  "labels": {"type": "list", "doc": "What the highlighted keys say: \"names\" (default, spelled for the chord: B♭ not A♯), \"intervals\" (R, ♭3, 5), \"octaves\" (D4), \"none\", or a list of texts, one per note"},
+  "sub": {"type": "list", "doc": "A second line under the keys, below each highlighted note: \"intervals\", \"names\" or a list"},
+  "range": {"type": "list", "doc": "The keys to draw, [\"C3\", \"B4\"]; default: from the C below the lowest note to the B above the highest, two octaves at least"},
+  "octave": {"type": "float", "default": 4, "static": true, "doc": "The chord's root octave (4: middle C's octave)"},
+  "inversion": {"type": "float", "default": 0, "static": true, "doc": "1 or 2: the chord's first or second inversion (the lowest notes go up an octave)"},
+  "height": {"type": "float", "default": 120, "static": true, "doc": "Key height in dp; the keys share the width"},
+  "color": {"type": "color", "default": "@colors.primary", "doc": "Highlight colour (onSurface in mono)"},
+  "label": {"type": "string", "doc": "Accessibility description; default: the chord's name and the keys"}
+ },
+ "locals": {"id": 0},
+ "body": {"$gen": {"kind": "music", "view": "piano", "chord": "@chord", "notes": "@notes", "labels": "@labels", "sub": "@sub", "range": "@range",
+   "octave": "@octave", "inversion": "@inversion", "height": "@height", "color": "@color", "label": "@label", "scope": {"$name": "id"}}},
+ "call": {"PianoKeys": {"chord": "Cmaj7"}},
+ "pitfalls": [
+  "Write the chord or the notes; never colour keys yourself. The server spells the chord from its intervals, so Bbmaj7 reads B♭ D F A, F#7 reads F♯ A♯ C♯ E and E7#9 has an F𝄪",
+  "notes with octaves are taken as written (a voicing you choose); without octaves they rise from octave 4",
+  "White and black keys are ivory and ebony in every colour theme (they are a piano, not surfaces); the highlight follows the theme. Mono draws white keys as outlines, black keys grey, and highlighted keys solid",
+  "Labels need about 7 dp a character per key: on a narrow keyboard they fade out rather than overflow; give fewer keys (range) or a wider box",
+  "One canvas, every key a literal rectangle in a box one key wide per white key, scaled to the canvas: about 30 B a key"
+ ]
+}

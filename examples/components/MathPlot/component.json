@@ -1,0 +1,34 @@
+{
+ "component": "MathPlot",
+ "version": 1,
+ "summary": "A function graph from formulas in x (\"x^2 - 2x - 3\", \"exp(-x/4)*cos(x)\"): the server finds the roots, maxima, minima and intersections you ask to mark and picks the axes and ticks (multiples of π when the domain is written with π); the curve is a runtime expression, exact at every size; optional legend and a draggable x that reads the value off the curve.",
+ "capabilities": ["draw.plot", "draw.path", "data.expression", "input.drag", "a11y.labels"],
+ "params": {
+  "fn": {"type": "list", "required": true, "doc": "The formula in x, or a list of them: \"x^2 - 2x - 3\", \"sin(x)\", \"exp(-x/4)*cos(x)\" (also e^(-x/4), 2x, |x|, π, sin x). Functions: sin cos tan asin acos atan sinh cosh tanh sec csc cot sqrt cbrt abs exp ln (natural) log (base 10) log2 floor ceil round sign min max pow atan2 hypot. A list item may be {\"f\": \"exp(-x/4)\", \"label\": \"envelope\", \"dashed\": true}"},
+  "x": {"type": "list", "default": [-10, 10], "doc": "The domain [from, to]; a value may be a formula: [0, \"4pi\"], [\"-pi\", \"pi\"]. Written with π, the x axis is ticked in multiples of π"},
+  "y": {"type": "list", "doc": "The y range [low, high]; default: the curves' own range (with marked points, zero when near, poles cut off), rounded out to ticks"},
+  "mark": {"type": "list", "doc": "Points to mark on the curve, found by the server: \"roots\", \"max\", \"min\", \"extrema\", \"yIntercept\", \"intersections\" (with the second function), or an x value (2, \"pi/2\"). An item may be {\"at\": \"max\", \"of\": 1, \"label\": \"peak {y}\"} ({x} and {y} are filled in; false hides the text). Each gets a dot and its coordinates; labels that would overlap at the current size fade out"},
+  "markLabels": {"type": "enum", "values": ["coords", "x", "none"], "default": "coords", "static": true, "doc": "What a mark's text says: \"(6.04, 0.22)\", \"x = 6.04\" or nothing"},
+  "ticks": {"type": "enum", "values": ["auto", "pi", "decimal"], "default": "auto", "static": true, "doc": "x ticks: auto (π multiples when the domain is written with π), pi, or decimal"},
+  "scrub": {"type": "bool", "default": false, "static": true, "doc": "Let the user drag across the plot: a guide line and a dot ride each curve and the top line reads x and y = f(x) (the first function), with exact decimals"},
+  "scrubAt": {"type": "list", "doc": "Where the scrub starts, an x value as a one-item list ([3] or [\"pi\"]); default: the first marked maximum, else the first mark, else the middle"},
+  "legend": {"type": "bool", "default": false, "static": true, "doc": "Show the legend for one function too (it shows by itself for several, or when a function has a label)"},
+  "height": {"type": "float", "default": 220, "static": true, "doc": "Plot height in dp (labels included, legend not); ignored with fill"},
+  "fill": {"type": "bool", "default": false, "static": true, "doc": "Take the height the parent gives (a weight or a sized box) instead of height"},
+  "label": {"type": "string", "doc": "Accessibility description; default: the formulas, the domain and every marked point with its coordinates"}
+ },
+ "locals": {"t": 0, "x0": 0},
+ "body": {"$gen": {"kind": "mathplot", "fn": "@fn", "x": "@x", "y": "@y", "mark": "@mark", "markLabels": "@markLabels", "ticks": "@ticks",
+   "scrub": "@scrub", "scrubAt": "@scrubAt", "legend": "@legend", "height": "@height", "fill": "@fill", "label": "@label",
+   "t": {"$name": "t"}, "x0": {"$name": "x0"}}},
+ "call": {"MathPlot": {"fn": "x^3 - 3x", "x": [-2.5, 2.5], "mark": ["roots", "extrema"]}},
+ "pitfalls": [
+  "Write the formula, not numbers: never sample a curve yourself or type in where its roots or peaks are; mark: [\"roots\", \"max\"] makes the server find them (to 1e-9), and the labels print what it found",
+  "x is the variable (2x, x^2, sin x all work); ^ is a power and e^(...) is exp(...); log is base 10, ln is natural. A formula that leaves the format's limits (over about 28 operations, Android's 32-entry path expression) is sampled into a 161-point float array instead, which costs about 650 B",
+  "Write a domain with π ([0, \"4pi\"]) to get π ticks (0, π, 2π, ...) and marks printed as π/2 when they are; ticks: \"decimal\" turns that off",
+  "Poles (tan x, 1/x) are split out: the curve stops short of each and no line joins the two sides; give y to choose how much of the spike shows",
+  "Marks label the first function; {\"at\": \"max\", \"of\": 1} marks another. intersections are where the first meets the second",
+  "scrub is a drag on the whole plot: inside a scrolling column the scroll may take vertical drags first",
+  "Mono draws every curve in one colour, the second and later ones dashed (the legend shows which is which), and no grid"
+ ]
+}
