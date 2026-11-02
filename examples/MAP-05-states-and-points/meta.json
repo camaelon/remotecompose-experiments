@@ -35,7 +35,8 @@
  "teaches": [
   "region a country (ISO A3) frames its main landmass with nearby islands (Tasmania)",
   "states: [\"AUS\"] draws state/province borders (map_info says which countries have them)",
-  "pointsLon/pointsLat are float arrays the app sets: any number of dots, drawn by a canvas loop over arrayLength"
+  "pointsLon/pointsLat are float arrays the app sets: any number of dots, drawn by a canvas loop over arrayLength",
+  "\"fill\": true makes the map take the height left in the column and rescale with the window; text, dots and lines grow with it (0.8x to 1.8x)"
  ],
  "inputs": {
   "variables": {
@@ -52,7 +53,7 @@
   "touch": false
  },
  "check": {
-  "describe": "Australia with Tasmania and the state borders; eight dots on the state capitals; the header reads 8 stores; in mono the land is an outline.",
+  "describe": "Australia with Tasmania and the state borders; eight dots on the state capitals; the header reads 8 stores; in mono the land is an outline. The map fills the space under the header at every size; the store dots grow with it.",
   "render": {},
   "renders": [
    {
@@ -87,7 +88,17 @@
    {
     "name": "small",
     "width": 240,
-    "height": 280
+    "height": 220
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360
+   },
+   {
+    "name": "large",
+    "width": 1000,
+    "height": 700
    }
   ]
  },
@@ -100,12 +111,12 @@
  ],
  "snippets": [
   {
-   "pointer": "/root/column/children/1",
+   "pointer": "/root/column/children/2",
    "shows": "map.marker",
    "note": "dots from the host arrays @storeLon/@storeLat"
   },
   {
-   "pointer": "/root/column/children/1",
+   "pointer": "/root/column/children/2",
    "shows": "map.region",
    "note": "a country region with its state borders"
   }
@@ -120,16 +131,16 @@
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 19401,
+  "bytes": 25063,
   "header": {
    "width": 360,
    "height": 380
   },
-  "op_count": 121,
+  "op_count": 126,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
-   "ANIMATED_FLOAT": 10,
-   "CLIP_RECT": 1,
+   "ANIMATED_FLOAT": 12,
+   "CLIP_RECT": 2,
    "COLOR_CONSTANT": 12,
    "COLOR_EXPRESSIONS": 12,
    "COMPONENT_VALUE": 2,
@@ -140,6 +151,7 @@
    "DRAW_PATH": 2,
    "DataListFloat": 2,
    "HEADER": 1,
+   "LAYOUT_BOX": 1,
    "LAYOUT_CANVAS": 1,
    "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
@@ -151,7 +163,7 @@
    "MATRIX_SCALE": 1,
    "MATRIX_TRANSLATE": 1,
    "MODIFIER_BACKGROUND": 1,
-   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_HEIGHT": 3,
    "MODIFIER_PADDING": 1,
    "MODIFIER_WIDTH": 4,
    "NAMED_VARIABLE": 8,
@@ -225,9 +237,12 @@
   "audit": {
    "error": 0,
    "warning": 0,
-   "info": 0
+   "info": 2
   },
-  "audit_findings": [],
+  "audit_findings": [
+   "info: size_dominated",
+   "info: size_single_op"
+  ],
   "repaint": "idle",
   "interaction_targets": {
    "total": 0,
@@ -249,11 +264,11 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 18762,
+    "bytes": 24432,
     "component_modes": {
      "WorldMap": "expand"
     },
-    "op_count": 70,
+    "op_count": 75,
     "host_variables": [
      {
       "name": "background",
@@ -311,11 +326,11 @@
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 18762,
+    "bytes": 24432,
     "component_modes": {
      "WorldMap": "expand"
     },
-    "op_count": 70,
+    "op_count": 75,
     "host_variables": [
      {
       "name": "background",
@@ -380,9 +395,36 @@
     "render_findings": [],
     "size": [
      240,
-     280
+     220
     ],
-    "audit_findings": []
+    "audit_findings": [
+     "info: size_dominated",
+     "info: size_single_op"
+    ]
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "info: size_dominated",
+     "info: size_single_op"
+    ]
+   },
+   "large": {
+    "render": "render-large.png",
+    "render_findings": [],
+    "size": [
+     1000,
+     700
+    ],
+    "audit_findings": [
+     "info: size_dominated",
+     "info: size_single_op"
+    ]
    }
   },
   "json_keys": [
@@ -390,6 +432,7 @@
    "apiLevel",
    "background",
    "bottom",
+   "box",
    "canvas",
    "children",
    "clipRect",
@@ -408,6 +451,7 @@
    "dx",
    "dy",
    "export",
+   "fill",
    "flags",
    "floatArrays",
    "fontSize",
@@ -422,8 +466,8 @@
    "left",
    "light",
    "loop",
-   "map_aus_land_medium",
-   "map_aus_states_medium_1",
+   "map_box_land_medium",
+   "map_box_states_medium_1",
    "markerColor",
    "markerSize",
    "modifiers",
@@ -448,7 +492,6 @@
    "save",
    "scale",
    "semantics",
-   "spacedBy",
    "states",
    "storeLat",
    "storeLon",
@@ -467,6 +510,7 @@
    "value",
    "variable",
    "verticalAlignment",
+   "verticalWeight",
    "weight",
    "whole",
    "width",
@@ -490,6 +534,6 @@
     "textMerge"
    ]
   },
-  "built_at": "2026-11-01T22:49:30.341Z"
+  "built_at": "2026-11-02T08:52:56.618Z"
  }
 }

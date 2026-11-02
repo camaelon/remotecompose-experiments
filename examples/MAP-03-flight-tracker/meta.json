@@ -44,7 +44,8 @@
   "{\"$mapRoute\": {region, from, to}} is the great-circle path between two places; with \"axis\": \"x\" | \"y\" | \"angle\" it is the route's samples as a float array the document declares, and \"wrap\": \"arraySpline({}, @progress)\" the point at that fraction of the distance",
   "The flown part is a pathExpression over the same samples (arraySpline(..., a[0])) whose end is the host progress",
   "{\"$map\"} with a [lonMin, latMin, lonMax, latMax] region is a box 1000 wide and {\"$mapHeight\"} tall: scale it by ONE factor, min(componentWidth() / 1000, componentHeight() / height), centre it and clipRect it, or it stretches",
-  "{\"$mapPoint\"} in resources.variables gives a city's x and y as numbers when the document is built"
+  "{\"$mapPoint\"} in resources.variables gives a city's x and y as numbers when the document is built",
+  "A canvas with {\"verticalWeight\": 1} takes the height left in the column; the map scaled by min(componentWidth() / 1000, componentHeight() / height) follows the window"
  ],
  "inputs": {
   "variables": {
@@ -69,7 +70,7 @@
   "touch": false
  },
  "check": {
-  "describe": "The North Atlantic from 100°W to 20°E, not stretched; London and New York marked, the great-circle route arching north between them, the part flown in the primary colour up to the plane 42 % of the way; variables {progress: 0.9} puts it near New York; the header reads 03 h 58 left.",
+  "describe": "The North Atlantic from 100°W to 20°E, not stretched; London and New York marked, the great-circle route arching north between them, the part flown in the primary colour up to the plane 42 % of the way; variables {progress: 0.9} puts it near New York; the header reads 03 h 58 left. The map canvas takes the height under the header (a vertical weight) and scales the North Atlantic box to fit.",
   "render": {},
   "renders": [
    {
@@ -96,9 +97,19 @@
     }
    },
    {
-    "name": "wide",
-    "width": 520,
-    "height": 240
+    "name": "small",
+    "width": 240,
+    "height": 220
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360
+   },
+   {
+    "name": "large",
+    "width": 1000,
+    "height": 700
    }
   ]
  },
@@ -112,12 +123,12 @@
   "component_modes": {},
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 14726,
+  "bytes": 14753,
   "header": {
    "width": 360,
    "height": 240
   },
-  "op_count": 123,
+  "op_count": 125,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
    "ANIMATED_FLOAT": 9,
@@ -133,6 +144,7 @@
    "DRAW_PATH": 3,
    "DataListFloat": 2,
    "HEADER": 1,
+   "LAYOUT_BOX": 1,
    "LAYOUT_CANVAS": 1,
    "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
@@ -144,7 +156,7 @@
    "MATRIX_SCALE": 1,
    "MATRIX_TRANSLATE": 1,
    "MODIFIER_BACKGROUND": 1,
-   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_HEIGHT": 3,
    "MODIFIER_PADDING": 1,
    "MODIFIER_WIDTH": 4,
    "NAMED_VARIABLE": 9,
@@ -330,9 +342,9 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 14216,
+    "bytes": 14243,
     "component_modes": {},
-    "op_count": 83,
+    "op_count": 85,
     "host_variables": [
      {
       "name": "background",
@@ -487,9 +499,9 @@
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 14216,
+    "bytes": 14243,
     "component_modes": {},
-    "op_count": 83,
+    "op_count": 85,
     "host_variables": [
      {
       "name": "background",
@@ -646,12 +658,30 @@
     "render": "render-arrival.png",
     "render_findings": []
    },
-   "wide": {
-    "render": "render-wide.png",
+   "small": {
+    "render": "render-small.png",
     "render_findings": [],
     "size": [
-     520,
-     240
+     240,
+     220
+    ],
+    "audit_findings": []
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": []
+   },
+   "large": {
+    "render": "render-large.png",
+    "render_findings": [],
+    "size": [
+     1000,
+     700
     ],
     "audit_findings": []
    }
@@ -666,6 +696,7 @@
    "axis",
    "background",
    "bottom",
+   "box",
    "canvas",
    "children",
    "clipRect",
@@ -732,7 +763,6 @@
    "save",
    "scale",
    "semantics",
-   "spacedBy",
    "start",
    "strokeCap",
    "strokeWidth",
@@ -748,6 +778,7 @@
    "value",
    "variables",
    "verticalAlignment",
+   "verticalWeight",
    "weight",
    "whole",
    "width",
@@ -785,7 +816,7 @@
     "<arithmetic>"
    ]
   },
-  "built_at": "2026-11-01T22:49:26.788Z"
+  "built_at": "2026-11-02T08:52:50.887Z"
  },
  "snippets": [
   {
@@ -794,7 +825,7 @@
    "note": "a city's x from {\"$mapPoint\"}, a number fixed when the document is built"
   },
   {
-   "pointer": "/root/column/children/1/canvas/commands/0/save/2",
+   "pointer": "/root/column/children/2/canvas/commands/0/save/2",
    "shows": "map.region",
    "note": "the North Atlantic from a lon/lat box with {\"$map\"}"
   },

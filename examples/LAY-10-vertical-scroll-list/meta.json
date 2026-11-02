@@ -3,10 +3,14 @@
  "name": "vertical-scroll-list",
  "version": 2,
  "title": "Vertical scrolling list",
- "summary": "A 360×400 contact list of 12 rows (avatar, name, preview line) in a column that scrolls when dragged.",
+ "summary": "A 360×400 contact list of 12 ListItem rows (Avatar, name, preview line) in a column that scrolls when dragged.",
  "prompt": "A scrollable contact list with a round avatar, a name and a message preview on each row.",
  "level": 3,
  "family": "LAY",
+ "components": [
+  "ListItem",
+  "Avatar"
+ ],
  "capabilities": {
   "primary": [
    "layout.scroll"
@@ -37,7 +41,7 @@
  "teaches": [
   "Make a column taller than the document scroll with the verticalScroll modifier",
   "Bind the scroll position to a variable (resources.variables scroll: 0, verticalScroll \"@scroll\") so the player can drive and read it",
-  "Build a list row from a round avatar box and a two-line text column, spaced with spacedBy 12"
+  "Fill the scrolling column with library ListItem rows, an Avatar in each one's leading slot: the column only scrolls, the rows bring their own 64 dp height, padding and text styles"
  ],
  "snippets": [
   {
@@ -53,7 +57,7 @@
   {
    "pointer": "/root/1/children/0",
    "shows": "layout.stack",
-   "note": "one 64 dp row: avatar, name and preview, spacedBy 12"
+   "note": "one row: a ListItem with title, subtitle and an Avatar in its leading slot"
   }
  ],
  "inputs": {
@@ -113,6 +117,22 @@
   ],
   "renders": [
    {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
     "name": "tall",
     "width": 300,
     "height": 560
@@ -125,7 +145,6 @@
   ]
  },
  "pitfalls": [
-  "clip {\"circle\": ...} writes nothing (the Java writer has no circle clip, upstream U9), leaving a square avatar; a roundedRect of half the size gives the round one",
   "A list only scrolls if its content is taller than the viewport: here 12 × 64 dp rows in a 400 dp document"
  ],
  "prerequisites": [
@@ -136,44 +155,102 @@
   "INT-05"
  ],
  "derived": {
+  "components": [
+   "Avatar",
+   "ListItem"
+  ],
+  "component_instances": 24,
+  "component_modes": {
+   "ListItem": "expand",
+   "Avatar": "expand"
+  },
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 4049,
+  "bytes": 6109,
   "header": {
    "width": 360,
    "height": 400
   },
-  "op_count": 264,
+  "op_count": 402,
   "operations": {
+   "ACCESSIBILITY_SEMANTICS": 12,
+   "COLOR_CONSTANT": 18,
+   "COLOR_EXPRESSIONS": 18,
    "ClipRectModifierOperation": 1,
    "CoreText": 36,
    "DATA_FLOAT": 1,
    "DATA_TEXT": 25,
    "HEADER": 1,
-   "LAYOUT_BOX": 12,
+   "LAYOUT_BOX": 24,
    "LAYOUT_COLUMN": 13,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 12,
    "LayoutComponentContent": 73,
+   "LoopOperation": 18,
    "MODIFIER_BACKGROUND": 13,
    "MODIFIER_HEIGHT": 25,
    "MODIFIER_PADDING": 12,
-   "MODIFIER_WIDTH": 25,
+   "MODIFIER_WIDTH": 49,
+   "NAMED_VARIABLE": 9,
    "RoundedClipRectModifierOperation": 12,
    "ScrollModifierOperation": 1,
+   "THEME": 27,
    "TouchExpression": 1
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
    "warning": 0,
-   "info": 3
+   "info": 0
   },
-  "audit_findings": [
-   "info: repeated_subtree",
-   "info: hardcoded_colors",
-   "info: text_only"
-  ],
+  "audit_findings": [],
   "repaint": "idle",
   "interaction_targets": {
    "total": 1,
@@ -183,6 +260,126 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 6012,
+    "component_modes": {
+     "ListItem": "expand",
+     "Avatar": "expand"
+    },
+    "op_count": 364,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 6012,
+    "component_modes": {
+     "ListItem": "expand",
+     "Avatar": "expand"
+    },
+    "op_count": 364,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "tall": {
     "render": "render-tall.png",
     "render_findings": [],
@@ -203,32 +400,54 @@
    }
   },
   "json_keys": [
+   "Avatar",
+   "ListItem",
    "apiLevel",
    "background",
+   "box",
    "children",
    "clip",
    "color",
+   "colors",
    "column",
    "contentDescription",
+   "dark",
+   "error",
    "fontSize",
    "header",
    "height",
    "horizontalAlignment",
+   "initials",
+   "leading",
+   "light",
+   "maxLines",
    "modifiers",
+   "muted",
+   "onPrimary",
+   "onSurface",
+   "overflow",
    "padding",
+   "primary",
    "profiles",
    "resources",
    "root",
-   "roundedRect",
+   "row",
    "scroll",
+   "secondary",
+   "semantics",
    "size",
-   "spacedBy",
+   "slots",
+   "subtitle",
+   "success",
    "text",
+   "title",
    "type",
    "value",
    "variables",
    "verticalAlignment",
    "verticalScroll",
+   "warning",
+   "weight",
    "width"
   ],
   "evidence": {
@@ -242,8 +461,7 @@
    ],
    "layout.align": [
     "horizontalAlignment",
-    "verticalAlignment",
-    "spacedBy"
+    "verticalAlignment"
    ],
    "layout.size": [
     "width",
@@ -253,8 +471,7 @@
     "fillMaxWidth"
    ],
    "layout.spacing": [
-    "padding",
-    "spacedBy"
+    "padding"
    ],
    "layout.decoration": [
     "background",
@@ -262,12 +479,13 @@
    ],
    "data.tokens": [
     "resources",
-    "variables"
+    "variables",
+    "colors"
    ],
    "text.basic": [
     "text"
    ]
   },
-  "built_at": "2026-11-01T22:49:14.915Z"
+  "built_at": "2026-11-02T08:52:32.170Z"
  }
 }

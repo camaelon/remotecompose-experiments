@@ -7,6 +7,10 @@
  "prompt": "A water tracker widget: a row of glasses for a daily goal of 8, the 5 already drunk filled blue and the rest as outlines, \"5 of 8 glasses\", a progress bar and \"3 to go\".",
  "level": 2,
  "family": "STR",
+ "components": [
+  "ProgressBar"
+ ],
+ "hand_built": "The glasses are drawn in a canvas loop because variable loop bounds are the lesson; the progress bar under them is a library ProgressBar.",
  "capabilities": {
   "primary": [
    "struct.loop"
@@ -42,7 +46,8 @@
  "teaches": [
   "Repeat a drawing a variable number of times: loop until \"min(@drunk, @goal)\" (an expression bound is re-read whenever the variable changes)",
   "Start a second loop where the first stopped (from \"@drunk\" until \"@goal\") to draw the remainder in another style",
-  "Rely on empty ranges instead of if: when from >= until the loop body never runs (0 drunk: no filled glasses; goal reached: no outlines)"
+  "Rely on empty ranges instead of if: when from >= until the loop body never runs (0 drunk: no filled glasses; goal reached: no outlines)",
+  "Show the same ratio with a library ProgressBar under the canvas (\"progress\": \"@drunk / @goal\"): it clamps a value past the goal to a full bar and eases its fill when the variable changes"
  ],
  "pitfalls": [
   "Clamp a bound that can exceed the space you drew for: min(@drunk, @goal) keeps a ninth glass off the row",
@@ -52,12 +57,12 @@
  ],
  "snippets": [
   {
-   "pointer": "/root/commands/6",
+   "pointer": "/root/column/children/0/canvas/commands/6",
    "shows": "struct.loop",
    "note": "filled glasses: loop i from 0 until min(@drunk, @goal)"
   },
   {
-   "pointer": "/root/commands/8",
+   "pointer": "/root/column/children/0/canvas/commands/8",
    "shows": "struct.loop",
    "note": "outlines: loop i from @drunk until @goal"
   }
@@ -89,6 +94,22 @@
   "render": {},
   "renders": [
    {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
     "name": "narrow",
     "width": 240,
     "height": 170
@@ -109,35 +130,54 @@
   "VAR-02"
  ],
  "derived": {
+  "components": [
+   "ProgressBar"
+  ],
+  "component_instances": 1,
+  "component_modes": {
+   "ProgressBar": "expand"
+  },
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 1198,
+  "bytes": 2249,
   "header": {
    "width": 360,
    "height": 170
   },
-  "op_count": 56,
+  "op_count": 140,
   "operations": {
    "ANIMATED_FLOAT": 13,
-   "COMPONENT_VALUE": 1,
-   "CanvasContent": 1,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 2,
+   "CoreText": 1,
    "DATA_FLOAT": 2,
    "DATA_TEXT": 5,
    "DRAW_ROUND_RECT": 5,
-   "DRAW_TEXT_ANCHOR": 3,
+   "DRAW_TEXT_ANCHOR": 2,
    "HEADER": 1,
-   "LAYOUT_CANVAS": 1,
+   "LAYOUT_CANVAS": 2,
+   "LAYOUT_COLUMN": 2,
    "LAYOUT_ROOT": 1,
-   "LayoutComponentContent": 1,
-   "LoopOperation": 2,
+   "LayoutComponentContent": 5,
+   "LoopOperation": 16,
    "MODIFIER_BACKGROUND": 1,
-   "MODIFIER_HEIGHT": 1,
-   "MODIFIER_WIDTH": 1,
-   "NAMED_VARIABLE": 2,
-   "PAINT_VALUES": 8,
+   "MODIFIER_HEIGHT": 3,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 4,
+   "NAMED_VARIABLE": 9,
+   "PAINT_VALUES": 7,
+   "THEME": 21,
    "TextFromFloat": 3,
    "TextMerge": 4
   },
   "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
    {
     "name": "drunk",
     "type": "float",
@@ -147,6 +187,36 @@
     "name": "goal",
     "type": "float",
     "value": 8
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surfaceHigh",
+    "type": "color",
+    "value": "#FF263042"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
    }
   ],
   "render_findings": [],
@@ -165,6 +235,134 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 1569,
+    "component_modes": {
+     "ProgressBar": "expand"
+    },
+    "op_count": 86,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "drunk",
+      "type": "float",
+      "value": 5
+     },
+     {
+      "name": "goal",
+      "type": "float",
+      "value": 8
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surfaceHigh",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 1569,
+    "component_modes": {
+     "ProgressBar": "expand"
+    },
+    "op_count": 86,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "drunk",
+      "type": "float",
+      "value": 5
+     },
+     {
+      "name": "goal",
+      "type": "float",
+      "value": 8
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surfaceHigh",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "narrow": {
     "render": "render-narrow.png",
     "render_findings": [],
@@ -185,18 +383,26 @@
    }
   },
   "json_keys": [
+   "ProgressBar",
+   "anim",
    "apiLevel",
    "background",
    "bottom",
+   "canvas",
+   "children",
    "color",
+   "colors",
+   "column",
    "commands",
    "contentDescription",
+   "dark",
    "decimal",
    "drawRoundRect",
    "drawTextAnchored",
    "drunk",
    "export",
    "flags",
+   "fontSize",
    "from",
    "goal",
    "header",
@@ -205,24 +411,34 @@
    "id2",
    "index",
    "left",
+   "light",
    "loop",
    "modifiers",
+   "muted",
    "name",
+   "onSurface",
    "ops",
+   "outline",
+   "padding",
    "paint",
    "panX",
    "panY",
+   "primary",
    "profiles",
+   "progress",
    "resources",
    "right",
    "root",
    "rx",
    "ry",
+   "spacedBy",
    "strokeWidth",
    "style",
+   "surfaceHigh",
    "text",
    "textSize",
    "top",
+   "track",
    "type",
    "until",
    "value",
@@ -257,9 +473,10 @@
     "strokeWidth"
    ],
    "host.variables": [
-    "export"
+    "export",
+    "colors"
    ]
   },
-  "built_at": "2026-11-01T22:49:34.317Z"
+  "built_at": "2026-11-02T08:53:05.204Z"
  }
 }

@@ -1,0 +1,314 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 170,
+  "profiles": 513,
+  "contentDescription": "Water intake: 5 of 8 glasses drunk, 3 to go"
+ },
+ "resources": {
+  "variables": {
+   "drunk": {
+    "value": 5,
+    "export": true
+   },
+   "goal": {
+    "value": 8,
+    "export": true
+   },
+   "progressbar1_pa": "@drunk / @goal"
+  },
+  "colors": {
+   "background": "#FF000000",
+   "muted": "#FF9E9E9E",
+   "onSurface": "#FFFFFFFF",
+   "outline": "#FF9E9E9E",
+   "primary": "#FFFFFFFF",
+   "surfaceHigh": "#FF000000",
+   "track": "#FF9E9E9E"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 114
+       }
+      ],
+      "commands": [
+       {
+        "variable": {
+         "name": "g",
+         "value": "(componentWidth() - 40) / @goal"
+        }
+       },
+       {
+        "variable": {
+         "name": "gw",
+         "value": "min(28, 0.7 * @g)"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "textSize": 15
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "Water",
+         "x": 20,
+         "y": 26,
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "textSize": 12
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@drunk",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": " of ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@goal",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " glasses"
+           }
+          }
+         },
+         "x": "componentWidth() - 20",
+         "y": 26,
+         "panX": 1,
+         "panY": 0
+        }
+       },
+       {
+        "loop": {
+         "index": "i",
+         "from": 0,
+         "until": "min(@drunk, @goal)",
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "20 + i * @g",
+            "top": 56,
+            "right": "20 + i * @g + @gw",
+            "bottom": 104,
+            "rx": 5,
+            "ry": 5
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "22 + i * @g",
+            "top": 66,
+            "right": "18 + i * @g + @gw",
+            "bottom": 102,
+            "rx": 4,
+            "ry": 4
+           }
+          }
+         ]
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.outline"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 2
+          }
+         ]
+        }
+       },
+       {
+        "loop": {
+         "index": "i",
+         "from": "@drunk",
+         "until": "@goal",
+         "commands": [
+          {
+           "drawRoundRect": {
+            "left": "21 + i * @g",
+            "top": 57,
+            "right": "19 + i * @g + @gw",
+            "bottom": 103,
+            "rx": 5,
+            "ry": 5
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "padding": [
+         20,
+         0
+        ]
+       },
+       {
+        "spacedBy": 10
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 8
+          }
+         ],
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.track"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 0.75,
+            "top": 0.75,
+            "right": "componentWidth() - 0.75",
+            "bottom": 7.25,
+            "rx": 3.25,
+            "ry": 3.25
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 0,
+            "top": 0,
+            "right": "max(8, componentWidth() * clamp(0, 1, @progressbar1_pa))",
+            "bottom": 8,
+            "rx": 4,
+            "ry": 4
+           }
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "max(0, @goal - @drunk)",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": " to go"
+         },
+         "fontSize": 11,
+         "color": "@colors.muted"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

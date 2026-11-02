@@ -1,0 +1,420 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 180,
+  "profiles": 513,
+  "contentDescription": "Screen brightness: a level bar that glides to Low, Medium or High when one is tapped"
+ },
+ "resources": {
+  "floatArrays": {
+   "levels": [
+    0.25,
+    0.6,
+    1
+   ]
+  },
+  "variables": {
+   "sel": 0
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "onPrimary": "#FFFFFFFF",
+   "onSurface": "#FF000000",
+   "outline": "#FF616161",
+   "primary": "#FF000000",
+   "surface": "#FFFFFFFF",
+   "surfaceHigh": "#FFFFFFFF",
+   "track": "#FF616161"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 20
+    },
+    {
+     "spacedBy": 16
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "Brightness",
+      "fontSize": 18,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 28
+       }
+      ],
+      "commands": [
+       {
+        "variable": {
+         "name": "fill",
+         "value": "8 + arrayGet(@levels, @sel) * (componentWidth() - 8)"
+        }
+       },
+       {
+        "paint": {
+         "color": "@colors.track"
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": 0,
+         "top": 4,
+         "right": "componentWidth()",
+         "bottom": 24,
+         "rx": 10,
+         "ry": 10
+        }
+       },
+       {
+        "paint": {
+         "color": "@colors.primary"
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": 0,
+         "top": 4,
+         "right": "@fill",
+         "bottom": 24,
+         "rx": 10,
+         "ry": 10
+        }
+       },
+       {
+        "paint": {
+         "color": "@colors.onSurface"
+        }
+       },
+       {
+        "drawCircle": {
+         "cx": "@fill - 10",
+         "cy": 14,
+         "radius": 14
+        }
+       },
+       {
+        "paint": {
+         "color": "@colors.surface"
+        }
+       },
+       {
+        "drawCircle": {
+         "cx": "@fill - 10",
+         "cy": 14,
+         "radius": 12
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "verticalAlignment": "bottom",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 48
+       },
+       {
+        "clip": 24
+       },
+       {
+        "background": "@colors.outline"
+       },
+       {
+        "padding": 1
+       },
+       {
+        "clip": 23
+       },
+       {
+        "background": "@colors.surfaceHigh"
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            0,
+            0
+           ]
+          }
+         ],
+         "commands": [
+          {
+           "global": {
+            "commands": [
+             {
+              "textSubtext": {
+               "text": "Not selectedSelected    ",
+               "start": "(1 - min(1, abs(@sel - 0))) * 12",
+               "len": 12,
+               "varName": "tabs1_tbState12_0"
+              }
+             },
+             {
+              "textTransform": {
+               "text": "@tabs1_tbState12_0",
+               "start": 0,
+               "len": -1,
+               "operation": 3,
+               "varName": "tabs1_tbState_0"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "Not selectedSelected    ",
+               "start": "(1 - min(1, abs(@sel - 1))) * 12",
+               "len": 12,
+               "varName": "tabs1_tbState12_1"
+              }
+             },
+             {
+              "textTransform": {
+               "text": "@tabs1_tbState12_1",
+               "start": 0,
+               "len": -1,
+               "operation": 3,
+               "varName": "tabs1_tbState_1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "Not selectedSelected    ",
+               "start": "(1 - min(1, abs(@sel - 2))) * 12",
+               "len": 12,
+               "varName": "tabs1_tbState12_2"
+              }
+             },
+             {
+              "textTransform": {
+               "text": "@tabs1_tbState12_2",
+               "start": 0,
+               "len": -1,
+               "operation": 3,
+               "varName": "tabs1_tbState_2"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@sel * componentWidth() / 3 + 4",
+            "top": 4,
+            "right": "(@sel + 1) * componentWidth() / 3 - 4",
+            "bottom": "componentHeight() - 4",
+            "rx": "componentHeight() / 2 - 4",
+            "ry": "componentHeight() / 2 - 4"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "children": [
+          {
+           "box": {
+            "horizontalAlignment": "center",
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "weight": 1
+             },
+             "fillMaxHeight",
+             {
+              "semantics": {
+               "contentDescription": "Low",
+               "stateDescription": "@tabs1_tbState_0",
+               "clickable": true
+              }
+             },
+             {
+              "onClick": [
+               {
+                "type": "valueFloatChange",
+                "target": "@sel",
+                "value": 0
+               }
+              ]
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "Low",
+               "fontSize": 15,
+               "color": "@colors.onSurface",
+               "modifiers": []
+              }
+             },
+             {
+              "text": {
+               "value": "Low",
+               "fontSize": 15,
+               "color": "@colors.onPrimary",
+               "modifiers": [
+                {
+                 "graphicsLayer": {
+                  "alpha": "1 - min(1, abs(@sel - 0))"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "horizontalAlignment": "center",
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "weight": 1
+             },
+             "fillMaxHeight",
+             {
+              "semantics": {
+               "contentDescription": "Medium",
+               "stateDescription": "@tabs1_tbState_1",
+               "clickable": true
+              }
+             },
+             {
+              "onClick": [
+               {
+                "type": "valueFloatChange",
+                "target": "@sel",
+                "value": 1
+               }
+              ]
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "Medium",
+               "fontSize": 15,
+               "color": "@colors.onSurface",
+               "modifiers": []
+              }
+             },
+             {
+              "text": {
+               "value": "Medium",
+               "fontSize": 15,
+               "color": "@colors.onPrimary",
+               "modifiers": [
+                {
+                 "graphicsLayer": {
+                  "alpha": "1 - min(1, abs(@sel - 1))"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "horizontalAlignment": "center",
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "weight": 1
+             },
+             "fillMaxHeight",
+             {
+              "semantics": {
+               "contentDescription": "High",
+               "stateDescription": "@tabs1_tbState_2",
+               "clickable": true
+              }
+             },
+             {
+              "onClick": [
+               {
+                "type": "valueFloatChange",
+                "target": "@sel",
+                "value": 2
+               }
+              ]
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "High",
+               "fontSize": 15,
+               "color": "@colors.onSurface",
+               "modifiers": []
+              }
+             },
+             {
+              "text": {
+               "value": "High",
+               "fontSize": 15,
+               "color": "@colors.onPrimary",
+               "modifiers": [
+                {
+                 "graphicsLayer": {
+                  "alpha": "1 - min(1, abs(@sel - 2))"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

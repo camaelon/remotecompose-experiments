@@ -7,6 +7,10 @@
  "prompt": "A run summary card with three stats (distance 8.42 km, time 42:10 min, pace 5′01″ /km), each a big number followed by a small unit that sits on the number's baseline, with a label below. Show the same card with default centring above it for comparison.",
  "level": 2,
  "family": "LAY",
+ "components": [
+  "Card"
+ ],
+ "hand_built": "Each stat is a hand-built row of number and unit because baseline alignment is the lesson; the cards around them are library Cards, and a KPI without this lesson is a StatTile or BigNumber.",
  "capabilities": {
   "primary": [
    "layout.baseline"
@@ -39,7 +43,8 @@
  ],
  "teaches": [
   "Put alignByBaseline on every text of a row to line their first baselines up, whatever their font sizes",
-  "Keep a unit next to its number in its own small row, and lay the stats out in a collapsibleRow with spaceBetween so a narrow card drops the last stat instead of cutting it"
+  "Keep a unit next to its number in its own small row, and lay the stats out in a collapsibleRow with spaceBetween so a narrow card drops the last stat instead of cutting it",
+  "Put the stats row in a library Card's content: the Card brings the rounded surface and its 16 dp padding, so the row only needs fillMaxWidth"
  ],
  "pitfalls": [
   "Put alignByBaseline on every child of the row: once one child has it, a child without it is placed with its top on the shared baseline (Java RowLayout gives it an align offset of 0), so a unit without it drops below the number",
@@ -49,17 +54,17 @@
  ],
  "snippets": [
   {
-   "pointer": "/root/column/children/3/collapsibleRow/children/0/column/children/0/row",
+   "pointer": "/root/column/children/3/Card/children/0/collapsibleRow/children/0/column/children/0/row",
    "shows": "layout.baseline",
    "note": "8.42 (26 sp) and km (13 sp), both with alignByBaseline"
   },
   {
-   "pointer": "/root/column/children/3/collapsibleRow/children/0/column/children/0/row/children/1/text/modifiers/0",
+   "pointer": "/root/column/children/3/Card/children/0/collapsibleRow/children/0/column/children/0/row/children/1/text/modifiers/0",
    "shows": "layout.baseline",
    "note": "the unit's alignByBaseline, before its 3 dp left padding"
   },
   {
-   "pointer": "/root/column/children/1/collapsibleRow/children/0/column/children/0/row",
+   "pointer": "/root/column/children/1/Card/children/0/collapsibleRow/children/0/column/children/0/row",
    "shows": "layout.align",
    "note": "the same pair with verticalAlignment center, for comparison"
   }
@@ -73,6 +78,22 @@
   "describe": "Top card: km, min and /km float at mid-height of the big numbers. Bottom card: their bottoms sit on the numbers' baseline (C++: the 13 sp unit 15.1 dp below the row top instead of 8.8). Resized: at 540 wide the three stats spread to the card's edges; at 240 (and already at 300) the collapsibleRow drops Pace rather than overlapping or cutting the numbers, and the captions end in an ellipsis.",
   "render": {},
   "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
    {
     "name": "narrow",
     "width": 240,
@@ -93,30 +114,71 @@
   "LAY-03"
  ],
  "derived": {
+  "components": [
+   "Card"
+  ],
+  "component_instances": 2,
+  "component_modes": {
+   "Card": "pattern"
+  },
+  "component_patterns": [
+   "Card__content x2"
+  ],
   "converter": "json2rc",
-  "bytes": 1950,
+  "bytes": 2671,
   "header": {
    "width": 360,
    "height": 232
   },
-  "op_count": 108,
+  "op_count": 165,
   "operations": {
+   "COLOR_CONSTANT": 10,
+   "COLOR_EXPRESSIONS": 10,
    "CollapsibleRowLayout": 2,
    "CoreText": 20,
-   "DATA_TEXT": 11,
+   "DATA_TEXT": 12,
    "HEADER": 1,
-   "LAYOUT_COLUMN": 7,
+   "LAYOUT_COLUMN": 9,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 6,
-   "LayoutComponentContent": 35,
+   "LayoutComponentContent": 37,
+   "LoopOperation": 10,
    "MODIFIER_ALIGN_BY": 6,
    "MODIFIER_BACKGROUND": 3,
    "MODIFIER_HEIGHT": 1,
    "MODIFIER_PADDING": 10,
-   "MODIFIER_WIDTH": 3,
-   "RoundedClipRectModifierOperation": 2
+   "MODIFIER_WIDTH": 5,
+   "NAMED_VARIABLE": 5,
+   "RoundedClipRectModifierOperation": 2,
+   "THEME": 15
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
@@ -135,6 +197,104 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 2261,
+    "component_modes": {
+     "Card": "pattern"
+    },
+    "op_count": 133,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 2261,
+    "component_modes": {
+     "Card": "pattern"
+    },
+    "op_count": 133,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "narrow": {
     "render": "render-narrow.png",
     "render_findings": [
@@ -158,28 +318,46 @@
    }
   },
   "json_keys": [
+   "Card",
+   "Card__content",
    "alignByBaseline",
    "apiLevel",
+   "arguments",
    "background",
    "children",
    "clip",
    "collapsibleRow",
    "color",
+   "colors",
    "column",
    "contentDescription",
+   "dark",
+   "definePattern",
    "fontSize",
    "fontWeight",
    "header",
    "height",
    "horizontalArrangement",
+   "light",
    "maxLines",
    "modifiers",
+   "muted",
+   "name",
+   "onSurface",
    "overflow",
    "padding",
+   "parameterIndex",
+   "parameters",
+   "patternArgument",
+   "patternBlock",
+   "primary",
    "profiles",
+   "resources",
    "root",
+   "roundedRect",
    "row",
    "spacedBy",
+   "surface",
    "text",
    "value",
    "verticalAlignment",
@@ -216,6 +394,6 @@
     "collapsibleRow"
    ]
   },
-  "built_at": "2026-11-01T22:49:21.450Z"
+  "built_at": "2026-11-02T08:52:42.531Z"
  }
 }

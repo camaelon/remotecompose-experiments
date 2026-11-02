@@ -3,7 +3,7 @@
  "name": "animated-value",
  "version": 2,
  "title": "Animated value change",
- "summary": "A brightness bar that glides to Low, Medium or High when a button is tapped: the bar's right edge is one animated expression {\"value\": \"8 + @level * (componentWidth() - 8)\", \"anim\": 0.6}.",
+ "summary": "A brightness bar that glides to Low, Medium or High when a segment is tapped: the bar's right edge is one animated expression {\"value\": \"8 + arrayGet(@levels, @sel) * (componentWidth() - 8)\", \"anim\": 0.6}, read from the index the library Tabs sets.",
  "prompt": "A brightness control: a horizontal bar with a round knob and three buttons (Low, Medium, High); tapping a button makes the bar glide smoothly to that level instead of jumping.",
  "level": 2,
  "family": "ANM",
@@ -36,7 +36,8 @@
  "teaches": [
   "Animate any float by writing it as {\"value\": \"<expr>\", \"anim\": seconds}: the variable eases to each new result of the expression instead of jumping",
   "Keep the animated value in a canvas `variable` command and let every shape read it (here the bar's right edge and the knob's centre)",
-  "Drive the target with plain valueFloatChange actions; the animation lives in the reader, not in the click"
+  "Let a control set a plain value (Tabs writes the index @sel) and look the level up in the reader (arrayGet over a float array): the animation lives in the reader, not in the click",
+  "Three presets are a segmented Tabs call: equal-width, labelled, the selected one shown, and it fits 240 dp where three Buttons would not"
  ],
  "pitfalls": [
   "`anim` is ignored inside resources.variables (EXAMPLES_FINDINGS U19): put the {value, anim} object where a float is parsed, such as a `variable` command",
@@ -46,14 +47,14 @@
  ],
  "snippets": [
   {
-   "pointer": "/root/1/column/children/1/canvas/commands/0",
+   "pointer": "/root/column/children/1/canvas/commands/0",
    "shows": "anim.value",
-   "note": "fill = {value: 8 + @level * (componentWidth() - 8), anim: 0.6}: the bar's right edge eases over 0.6 s, in whatever width the canvas gets"
+   "note": "fill = {value: 8 + arrayGet(@levels, @sel) * (componentWidth() - 8), anim: 0.6}: the bar's right edge eases over 0.6 s, in whatever width the canvas gets"
   },
   {
-   "pointer": "/root/1/column/children/2/row/children/2/box/modifiers/5",
+   "pointer": "/root/column/children/2",
    "shows": "input.tap",
-   "note": "High: valueFloatChange level = 1"
+   "note": "Tabs segmented: a tap sets @sel to 0, 1 or 2"
   }
  ],
  "inputs": {
@@ -62,7 +63,7 @@
   "touch": true
  },
  "check": {
-  "describe": "Starts at Low (a quarter of the bar). A tap on High at 0.1 s, captured 0.25 s later, shows the bar mid-glide at about 70 %; it settles full width by 0.7 s. Resized (narrow 240, wide 540) the track spans the width and the three buttons share it by weight, so the same High tap glides to the same fraction.",
+  "describe": "Starts at Low (a quarter of the bar, the Low segment selected). A tap on High at 0.1 s, captured 0.25 s later, shows the bar mid-glide at about 70 %; it settles full width by 0.7 s. Resized (narrow 240, wide 540) the track spans the width and the three segments share it, so the same High tap glides to the same fraction. Mono looks have no motion: the bar is already full.",
   "render": {
    "touch_events": [
     {
@@ -75,6 +76,22 @@
    "duration": 0.35
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
    {
     "name": "narrow",
     "width": 240,
@@ -114,52 +131,109 @@
   "INT-01"
  ],
  "derived": {
+  "components": [
+   "Tabs"
+  ],
+  "component_instances": 1,
+  "component_modes": {
+   "Tabs": "expand"
+  },
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 1142,
+  "bytes": 2913,
   "header": {
    "width": 360,
    "height": 180
   },
-  "op_count": 68,
+  "op_count": 183,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 3,
-   "ANIMATED_FLOAT": 2,
-   "COMPONENT_VALUE": 1,
-   "CanvasContent": 1,
-   "CoreText": 4,
+   "ANIMATED_FLOAT": 15,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "COMPONENT_VALUE": 3,
+   "CanvasContent": 3,
+   "CoreText": 7,
    "DATA_FLOAT": 1,
-   "DATA_TEXT": 7,
-   "DRAW_CIRCLE": 1,
-   "DRAW_ROUND_RECT": 2,
+   "DATA_TEXT": 5,
+   "DRAW_CIRCLE": 2,
+   "DRAW_ROUND_RECT": 3,
+   "DataListFloat": 1,
+   "GraphicsLayerModifier": 3,
    "HEADER": 1,
-   "LAYOUT_BOX": 3,
-   "LAYOUT_CANVAS": 1,
+   "LAYOUT_BOX": 4,
+   "LAYOUT_CANVAS": 3,
    "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 1,
-   "LayoutComponentContent": 10,
-   "MODIFIER_BACKGROUND": 4,
+   "LayoutComponentContent": 16,
+   "LoopOperation": 14,
+   "MODIFIER_BACKGROUND": 2,
    "MODIFIER_CLICK": 3,
-   "MODIFIER_HEIGHT": 5,
+   "MODIFIER_HEIGHT": 9,
    "MODIFIER_PADDING": 1,
-   "MODIFIER_WIDTH": 6,
-   "PAINT_VALUES": 3,
-   "RoundedClipRectModifierOperation": 3,
+   "MODIFIER_WIDTH": 9,
+   "NAMED_VARIABLE": 8,
+   "PAINT_VALUES": 5,
+   "RoundedClipRectModifierOperation": 1,
+   "THEME": 21,
+   "TextSubtext": 3,
+   "TextTransform": 3,
    "ValueFloatExpressionChangeActionOperation": 3
   },
-  "host_variables": [],
-  "render_findings": [
-   "warning: component_overflow"
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "levels",
+    "type": "float_array",
+    "value": [
+     0.25,
+     0.600000024,
+     1
+    ]
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "surfaceHigh",
+    "type": "color",
+    "value": "#FF263042"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   }
   ],
+  "render_findings": [],
   "audit": {
    "error": 0,
    "warning": 0,
-   "info": 2
+   "info": 0
   },
-  "audit_findings": [
-   "info: layout_touch_target",
-   "info: spaced_by_with_weight"
-  ],
+  "audit_findings": [],
   "repaint": "idle",
   "interaction_targets": {
    "total": 3,
@@ -169,18 +243,152 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 2278,
+    "component_modes": {
+     "Tabs": "expand"
+    },
+    "motion_removed": 1,
+    "op_count": 131,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "levels",
+      "type": "float_array",
+      "value": [
+       0.25,
+       0.600000024,
+       1
+      ]
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surfaceHigh",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 2278,
+    "component_modes": {
+     "Tabs": "expand"
+    },
+    "motion_removed": 1,
+    "op_count": 131,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "levels",
+      "type": "float_array",
+      "value": [
+       0.25,
+       0.600000024,
+       1
+      ]
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surfaceHigh",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "narrow": {
     "render": "render-narrow.png",
-    "render_findings": [
-     "warning: component_overflow"
-    ],
+    "render_findings": [],
     "size": [
      240,
      180
     ],
-    "audit_findings": [
-     "info: layout_touch_target"
-    ]
+    "audit_findings": []
    },
    "wide": {
     "render": "render-wide.png",
@@ -189,12 +397,12 @@
      540,
      200
     ],
-    "audit_findings": [
-     "info: layout_touch_target"
-    ]
+    "audit_findings": []
    }
   },
   "json_keys": [
+   "Tabs",
+   "alpha",
    "anim",
    "apiLevel",
    "background",
@@ -205,38 +413,66 @@
    "clickable",
    "clip",
    "color",
+   "colors",
    "column",
    "commands",
    "contentDescription",
    "cx",
    "cy",
+   "dark",
    "drawCircle",
    "drawRoundRect",
+   "floatArrays",
    "fontSize",
+   "global",
+   "graphicsLayer",
    "header",
    "height",
    "horizontalAlignment",
+   "labels",
    "left",
+   "len",
+   "levels",
+   "light",
    "modifiers",
    "name",
    "onClick",
+   "onPrimary",
+   "onSurface",
+   "operation",
+   "ops",
    "padding",
    "paint",
+   "primary",
    "profiles",
    "radius",
+   "resources",
    "right",
    "root",
    "row",
    "rx",
    "ry",
+   "sel",
+   "selected",
    "semantics",
+   "size",
    "spacedBy",
+   "start",
+   "stateDescription",
+   "style",
+   "surface",
+   "surfaceHigh",
    "target",
    "text",
+   "textSubtext",
+   "textTransform",
    "top",
+   "track",
    "type",
    "value",
+   "varName",
    "variable",
+   "variables",
    "verticalAlignment",
    "weight",
    "width"
@@ -264,6 +500,9 @@
     "<arithmetic>"
    ]
   },
-  "built_at": "2026-11-01T22:47:23.097Z"
- }
+  "built_at": "2026-11-02T08:48:43.523Z"
+ },
+ "components": [
+  "Tabs"
+ ]
 }

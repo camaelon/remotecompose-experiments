@@ -75,8 +75,24 @@ export function findCountry(id, detail = "50") {
 /** [lonMin, latMin, lonMax, latMax] in degrees, and a label, for a region spec. */
 export function regionBox(region = "world") {
     if (Array.isArray(region)) {
-        if (region.length !== 4 || !region.every(Number.isFinite)) throw new Error("map region box is [lonMin, latMin, lonMax, latMax]");
-        return { box: region.map(Number), label: "box" };
+        if (region.length === 4 && region.every(Number.isFinite)) return { box: region.map(Number), label: "box" };
+        // [{"fit": [...]}]: WorldMap's fit, the frame (core) inside more geography (box).
+        if (region.length === 1 && region[0] && typeof region[0] === "object" && !Array.isArray(region[0]) && Array.isArray(region[0].fit)) {
+            const r0 = region[0];
+            if (r0.frame) {
+                // WorldMap fill: the region itself is the frame, with geography grown around it
+                // (not for a world, which has none to add, nor under the night shade, drawn for
+                // the world box).
+                const inner = regionBox(r0.fit[0] ?? "world");
+                const night = [true, 1, "true", "1"].includes(r0.night);
+                if (night || inner.box[2] - inner.box[0] >= 300) return { ...inner, core: inner.box };
+                return { box: fixBox(grownFrame(inner.box)), core: inner.box, label: inner.label, country: inner.country };
+            }
+            const f = fitBox(r0.fit, "fill");
+            return { box: f.box, core: f.core, label: "fit" };
+        }
+        if (region.length && region.some((x) => typeof x !== "number")) return { box: fitBox(region).box, label: "fit" };
+        throw new Error("map region box is [lonMin, latMin, lonMax, latMax], or a list of places to fit (countries, cities, [lon, lat], [from, to] routes)");
     }
     const s = String(region).trim().toLowerCase();
     if (s === "world") return { box: [-180, -58, 180, 84], label: "world" };
@@ -100,6 +116,73 @@ export function regionBox(region = "world") {
     if (c) return { box: pad(c.main.map((v) => v / 100), 0.06), label: c.name, country: c };
     throw new Error(`no map region '${region}': use world, a continent (${Object.values(CONTINENT_ALIASES).filter((v, i, a) => a.indexOf(v) === i).join(", ")}), a country (ISO code or name) or [lonMin, latMin, lonMax, latMax]`);
 }
+/**
+ * A box framing a list of places tightly: countries (their main landmass), continents or
+ * subregions, cities, [lon, lat] points or "lon,lat", and [from, to] pairs of places (the great
+ * circle between them, which bows towards the pole). Padded by 15% of the span on each side (at
+ * least 1.5°, room for a marker and its label), then widened or heightened to between 1.25:1 and
+ * 2.4:1 on the map, the shape of a card, so the frame shows more land rather than blank bands.
+ */
+const fitCache = new Map();
+function fitBox(list, mode = "card") {
+    const key = JSON.stringify([list, mode]);
+    if (fitCache.has(key)) return structuredClone(fitCache.get(key));
+    const pts = [];
+    const one = (p) => {
+        if (Array.isArray(p) && p.length === 2 && p.every((v) => typeof v === "string" || (v && typeof v === "object" && !Array.isArray(v)))) {
+            const r = greatCircle(place(p[0], "fit"), place(p[1], "fit"), 24);
+            r.forEach((q) => pts.push(q));
+            return;
+        }
+        if (typeof p === "string" && !/^\s*-?[\d.]+\s*,\s*-?[\d.]+\s*$/.test(p)) {
+            // A country, continent or subregion first ("Singapore" the country is the city), then a city.
+            let b = null;
+            try { const c = findCountry(p); if (c) b = c.main.map((v) => v / 100); else if (!findCity(p)) b = regionBox(p).box; } catch { b = null; }
+            if (b) { pts.push([b[0], b[1]], [b[2], b[3]]); return; }
+        }
+        pts.push(place(p, "fit"));
+    };
+    for (const p of list) one(p);
+    if (!pts.length) throw new Error("map fit: an empty list");
+    // Longitudes continuous with the first place (a fit across the antimeridian: Tokyo and LA).
+    const ref = pts[0][0];
+    for (const q of pts) { while (q[0] - ref > 180) q[0] -= 360; while (q[0] - ref < -180) q[0] += 360; }
+    let [a, b, c, d] = [Math.min(...pts.map((q) => q[0])), Math.min(...pts.map((q) => q[1])), Math.max(...pts.map((q) => q[0])), Math.max(...pts.map((q) => q[1]))];
+    const kx = () => Math.cos(((b + d) / 2) * Math.PI / 180);
+    // At least 3° each way (a lone city is a few hundred km across), then 15% padding.
+    if (c - a < 3 / kx()) { const m = (a + c) / 2; a = m - 1.5 / kx(); c = m + 1.5 / kx(); }
+    if (d - b < 3) { const m = (b + d) / 2; b = m - 1.5; d = m + 1.5; }
+    const px = Math.max((c - a) * 0.15, 1.5 / kx()), py = Math.max((d - b) * 0.15, 1.5);
+    a -= px; c += px; b -= py; d += py;
+    const core = [a, b, c, d];
+    const ratio = () => ((c - a) * kx()) / (d - b);
+    if (mode === "card") {
+        if (ratio() < 1.25) { const w = (1.25 * (d - b)) / kx(), m = (a + c) / 2; a = m - w / 2; c = m + w / 2; }
+        else if (ratio() > 2.4) { const h = ((c - a) * kx()) / 2.4, m = (b + d) / 2; b = m - h / 2; d = m + h / 2; }
+    } else [a, b, c, d] = grownFrame(core);
+    const out = { box: fixBox([a, b, c, d]), core: fixBox(core) };
+    fitCache.set(key, out);
+    return structuredClone(out);
+}
+/**
+ * Geography around a frame for any box from 0.9:1 to 2.6:1: the map fills the box it gets and
+ * the frame stays the part that always shows (and some room under it for a legend).
+ */
+function grownFrame([a, b, c, d]) {
+    const kx = Math.cos(((b + d) / 2) * Math.PI / 180);
+    const w = (c - a) * kx, h = d - b;
+    const W = Math.max(w, 2.6 * h) * 1.04, H = Math.max(h, w / 0.9) * 1.04 + h * 0.3;
+    const mx = (a + c) / 2, my = (b + d) / 2;
+    return [mx - W / kx / 2, my - H / 2, mx + W / kx / 2, my + H / 2];
+}
+// Inside the world: shifted, not cut, at the poles; the antimeridian is not crossed (a box past
+// 180° is moved back; the outlines are not wrapped).
+function fixBox([a, b, c, d]) {
+    if (d > 85) { b -= d - 85; d = 85; } if (b < -85) { d += -85 - b; b = -85; }
+    if (c > 180 && a > -180) { const s = Math.min(c - 180, a + 180); a -= s; c -= s; }
+    if (a < -180 && c < 180) { const s = Math.min(-180 - a, 180 - c); a += s; c += s; }
+    return [Math.max(-180, a), Math.max(-85, b), Math.min(180, c), Math.min(85, d)].map((v) => Math.round(v * 100) / 100);
+}
 function pad([a, b, c, d], f) {
     const w = c - a, h = d - b;
     return [Math.max(-180, a - w * f), Math.max(-90, b - h * f), Math.min(180, c + w * f), Math.min(90, d + h * f)];
@@ -109,14 +192,14 @@ function pad([a, b, c, d], f) {
 
 /** The projection of a region: lon/lat (degrees) to units in a MAP_WIDTH-wide box. */
 export function projection(region = "world") {
-    const { box, label, country } = regionBox(region);
+    const { box, label, country, core } = regionBox(region);
     const [lon0, lat0, lon1, lat1] = box;
     const world = lon1 - lon0 >= 300;
     const kx = world ? 1 : Math.cos(((lat0 + lat1) / 2) * Math.PI / 180);
     const k = MAP_WIDTH / ((lon1 - lon0) * kx);
     const height = Math.round((lat1 - lat0) * k * 10) / 10;
     return {
-        box, label, country, width: MAP_WIDTH, height, kx, k,
+        box, label, country, core, width: MAP_WIDTH, height, kx, k,
         x: (lon) => (lon - lon0) * kx * k,
         y: (lat) => (lat1 - lat) * k,
         /** The same, as expression strings over host values ("@lon"). */
@@ -255,8 +338,12 @@ export function mapRings(region = "world", { layer = "land", detail = "medium", 
         });
     }
     const m = loadMaps();
-    const wide = P.box[2] - P.box[0] >= 90;
-    const tol = MAP_WIDTH * (DETAIL[detail] ?? DETAIL.medium);
+    // A frame inside more geography (WorldMap fit or fill) is drawn at the frame's detail: its
+    // data set and tolerance follow the frame's width, not the whole box's.
+    const span = P.core ? P.core[2] - P.core[0] : P.box[2] - P.box[0];
+    const wide = span >= 90;
+    const tolBox = MAP_WIDTH * (DETAIL[detail] ?? DETAIL.medium);
+    const tolCore = tolBox * (P.core ? Math.min(1, span / (P.box[2] - P.box[0])) : 1);
     // Outlines are cut well outside the box: the cut edges must not show as coastline (the
     // component clips its canvas to the box).
     const mx = P.width * 0.08, my = P.height * 0.08;
@@ -264,6 +351,15 @@ export function mapRings(region = "world", { layer = "land", detail = "medium", 
     const project = (r) => r.map(([lon, lat]) => [P.x(lon / 100), P.y(lat / 100)]);
     let rings;
     if (layer === "graticule") return graticule(P);
+    if (layer === "hatch" || layer === "hatch-cross") {
+        // Only where it is drawn: over the listed countries (their projected box), or the box.
+        let rects = [[0, 0, P.width, P.height]];
+        if (countries?.length) {
+            const rs = mapRings(region, { layer: "countries", detail, countries, dot: dot || 5 });
+            if (rs.length) { const b = boxOf(rs); rects = [[Math.max(0, b[0]), Math.max(0, b[1]), Math.min(P.width, b[2]), Math.min(P.height, b[3])]]; }
+        }
+        return hatch(rects, layer === "hatch-cross");
+    }
     if (layer === "states") {
         // States and provinces (16 countries: the largest from 1:50m, more from 1:10m), the ones
         // in the box; `countries` limits them to those countries (ISO A3), or to named states.
@@ -286,12 +382,15 @@ export function mapRings(region = "world", { layer = "land", detail = "medium", 
         }
         if (not.length) set = set.filter((c) => !match(c, not));
         rings = set.flatMap((c) => c.rings);
-    } else throw new Error(`map layer '${layer}': land, countries, states, lakes or graticule`);
+    } else throw new Error(`map layer '${layer}': land, countries, states, lakes, graticule, hatch or hatch-cross`);
     const out = [];
     for (const r of rings) {
         // Skip rings wholly outside before projecting the whole of them.
         const bb = boxOf([r]);
         if (bb[2] / 100 < P.box[0] || bb[0] / 100 > P.box[2] || bb[3] / 100 < P.box[1] || bb[1] / 100 > P.box[3]) continue;
+        // The frame's detail for what reaches into the frame, the box's for the land around it.
+        const c = P.core;
+        const tol = c && (bb[2] / 100 < c[0] || bb[0] / 100 > c[2] || bb[3] / 100 < c[1] || bb[1] / 100 > c[3]) ? tolBox : tolCore;
         if (outline) {
             // For a stroke: the coast only, as open lines where the ring leaves the box (a
             // clipped ring's straight cut edges would draw as stray lines).
@@ -319,6 +418,30 @@ function graticule(P) {
     return lines.map((l) => Object.assign(l, { open: true }));
 }
 
+/**
+ * Hatching for a 1-bit fill: parallel lines 18 units apart at 45° ("/", or "\\" for the cross),
+ * cut to each rectangle, to draw through a clipPath. WorldMap's mono legend draws the same
+ * 18-unit grid with loops.
+ */
+function hatch(rects, cross) {
+    const gap = 18, lines = [];
+    for (const [x0, y0, x1, y1] of rects) {
+        // "/": x + y = c; "\\": x - y = c.
+        const lo = cross ? x0 - y1 : x0 + y0, hi = cross ? x1 - y0 : x1 + y1;
+        for (let c = Math.ceil(lo / gap) * gap + gap / 2; c < hi; c += gap) {
+            // The segment of the line inside the rectangle.
+            const at = (y) => (cross ? c + y : c - y);
+            let ya = y0, yb = y1;
+            const xa = at(ya), xb = at(yb);
+            const clampY = (x) => (cross ? x - c : c - x);
+            if (xa < x0 || xa > x1) ya = clampY(xa < x0 ? x0 : x1);
+            if (xb < x0 || xb > x1) yb = clampY(xb < x0 ? x0 : x1);
+            if (yb - ya > 0.5) lines.push([[at(ya), ya], [at(yb), yb]]);
+        }
+    }
+    return lines.map((l) => Object.assign(l, { open: true }));
+}
+
 /** Rings as a RemoteCompose path op list (moveTo/lineTo/close), coordinates to 0.1 unit. */
 export function ringsToPath(rings) {
     const r1 = (v) => Math.round(v * 10) / 10;
@@ -343,6 +466,17 @@ export function findCity(name) {
  * for host values ({"lon": "@lon", "lat": "@lat"}).
  */
 export function mapPoint(region, at) {
+    if (at && typeof at === "object" && !Array.isArray(at)) {
+        if (at.core !== undefined) return fitFrame(region, at.core);
+        if (at.labels !== undefined) return fitLabel(region, at);
+        if (at.legs !== undefined) return legLabel(region, at);
+        if (at.from !== undefined && at.to !== undefined) {
+            // A point a fraction t (default 0.5) of the way along the great circle.
+            const t = Math.max(0, Math.min(1, Number(at.t ?? 0.5)));
+            const gc = greatCircle(place(at.from, "from"), place(at.to, "to"), 100);
+            at = gc[Math.round(t * 100)];
+        }
+    }
     const P = projection(region);
     let lon, lat;
     if (typeof at === "string" && /^\s*-?[\d.]+\s*,\s*-?[\d.]+\s*$/.test(at)) [lon, lat] = at.split(",").map(Number);
@@ -366,20 +500,13 @@ const place = (p, what) => {
     return c;
 };
 
-/**
- * A great-circle route from one place to another (a city name or [lon, lat]), sampled at n + 1
- * points evenly spaced by distance and projected into the region's box: {x, y, angle (degrees,
- * the heading on the map, 0 = east, 90 = down), km}. arraySpline(x, t) is the point at the
- * fraction t of the distance.
- */
-export function mapRoute(region, from, to, n = 48) {
-    const P = projection(region);
-    const [lon1, lat1] = place(from, "from"), [lon2, lat2] = place(to, "to");
+/** n + 1 [lon, lat] points along the great circle from A to B, evenly spaced by distance, lon continuous. */
+function greatCircle([lon1, lat1], [lon2, lat2], n) {
     const r = Math.PI / 180;
     const v = (lon, lat) => [Math.cos(lat * r) * Math.cos(lon * r), Math.cos(lat * r) * Math.sin(lon * r), Math.sin(lat * r)];
     const A = v(lon1, lat1), B = v(lon2, lat2);
     const d = Math.acos(Math.max(-1, Math.min(1, A[0] * B[0] + A[1] * B[1] + A[2] * B[2])));
-    const xs = [], ys = [];
+    const out = [];
     let prevLon = lon1;
     for (let i = 0; i <= n; i++) {
         const t = i / n;
@@ -391,15 +518,30 @@ export function mapRoute(region, from, to, n = 48) {
         while (lon - prevLon > 180) lon -= 360;
         while (lon - prevLon < -180) lon += 360;
         prevLon = lon;
-        xs.push(Math.round(P.x(lon) * 10) / 10); ys.push(Math.round(P.y(lat) * 10) / 10);
+        out.push([lon, lat]);
     }
+    out.km = Math.round(d * 6371);
+    return out;
+}
+
+/**
+ * A great-circle route from one place to another (a city name or [lon, lat]), sampled at n + 1
+ * points evenly spaced by distance and projected into the region's box: {x, y, angle (degrees,
+ * the heading on the map, 0 = east, 90 = down), km}. arraySpline(x, t) is the point at the
+ * fraction t of the distance.
+ */
+export function mapRoute(region, from, to, n = 48) {
+    const P = projection(region);
+    const r = Math.PI / 180;
+    const gc = greatCircle(place(from, "from"), place(to, "to"), n);
+    const xs = gc.map(([lon]) => Math.round(P.x(lon) * 10) / 10), ys = gc.map(([, lat]) => Math.round(P.y(lat) * 10) / 10);
     const angle = xs.map((_, i) => {
         const a = Math.max(0, i - 1), b = Math.min(n, i + 1);
         return Math.round(Math.atan2(ys[b] - ys[a], xs[b] - xs[a]) / r * 10) / 10;
     });
     // Unwrapped, so a spline between two samples never swings the long way round.
     for (let i = 1; i < angle.length; i++) { while (angle[i] - angle[i - 1] > 180) angle[i] -= 360; while (angle[i] - angle[i - 1] < -180) angle[i] += 360; }
-    return { x: xs, y: ys, angle, km: Math.round(d * 6371) };
+    return { x: xs, y: ys, angle, km: gc.km };
 }
 
 /**
@@ -445,4 +587,231 @@ export function mapInfo(region = "world", { detail = "low" } = {}) {
         stateCapitals: inBox.filter((c) => c.stateCapital).map((c) => c.name).slice(0, 60),
         largestCities: inBox.filter((c) => !c.capital).map((c) => c.name).slice(0, 25),
     };
+}
+
+// ---- route labels --------------------------------------------------------------------------
+
+const legParts = (leg, i) => {
+    const [from, to, label] = Array.isArray(leg) ? leg : [leg?.from, leg?.to, leg?.label];
+    if (from === undefined || to === undefined) throw new Error(`map legs[${i}]: give {from, to, label?} or [from, to, label?]`);
+    return { from, to, label };
+};
+const groupKm = (km) => String(km).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+/**
+ * Where each leg's label goes, all legs at once so they keep apart: a point on its arc (at a
+ * fraction 0.18..0.82 of the way, the middle preferred) or just beside it, chosen so the label
+ * box misses the other labels, the leg ends (their dots and a city name to the right, or the
+ * left past x 800, as WorldMap labels draws them) and the other arcs, and stays in the box.
+ * Label boxes are estimated from the text (the label, or "5,493 km" with distance) at size dp
+ * and a map width of `width` dp (300, a phone card) in a canvas `height` dp tall; a larger map
+ * only spreads them further. at: {legs, leg (index), size, height, width, distance}.
+ */
+const labelCache = new Map();
+function legLabel(region, at) {
+    const legs = [].concat(at.legs ?? []).map(legParts);
+    const size = Number(at.size ?? 11), height = Number(at.height ?? 160), width = Number(at.width ?? 300);
+    const distance = [true, 1, "true", "1"].includes(at.distance);
+    const key = JSON.stringify([region, legs, size, height, width, distance]);
+    let placed = labelCache.get(key);
+    if (!placed) { placed = placeLegLabels(region, legs, { size, height, width, distance }); labelCache.set(key, placed); }
+    const i = Math.round(Number(at.leg ?? 0));
+    if (!placed[i]) throw new Error(`map legs: no leg ${i} (${legs.length} legs)`);
+    return placed[i];
+}
+
+function placeLegLabels(region, legs, { size, height, width, distance }) {
+    const P = projection(region);
+    const s = Math.min(width / 1000, height / P.height);
+    const cw = size * 0.56 / s, lh = size * 1.25 / s;   // a character's width, a line's height (map units)
+    const routes = legs.map((l) => mapRoute(region, l.from, l.to, 48));
+    const texts = legs.map((l, i) => (l.label !== undefined && l.label !== null && l.label !== "" ? String(l.label) : distance ? `${groupKm(routes[i].km)} km` : ""));
+    const boxOfText = (x, y, n) => [x - (n * cw) / 2 - 3 / s, y - lh / 2, x + (n * cw) / 2 + 3 / s, y + lh / 2];
+    const inter = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+    const areaOf = (b) => (b[2] - b[0]) * (b[3] - b[1]);
+    // Obstacles: the ends' dots and city names.
+    const ends = [], names = [];
+    const seen = new Set();
+    for (const l of legs) for (const p of [l.from, l.to]) {
+        const k = JSON.stringify(p); if (seen.has(k)) continue; seen.add(k);
+        const [x, y] = mapPoint(region, p);
+        ends.push([x - 5 / s, y - 5 / s, x + 5 / s, y + 5 / s]);
+        if (typeof p === "string") {
+            const w = p.length * cw, x0 = x > 800 ? x - w - 5 / s : x + 5 / s;
+            names.push([x0, y - lh / 2, x0 + w, y + lh / 2]);
+        }
+    }
+    const cands = (i) => {
+        const r = routes[i], out = [];
+        for (let t = 0.15; t < 0.86; t += 0.05) {
+            const k = Math.round(t * 48), a = Math.max(0, k - 1), b = Math.min(48, k + 1);
+            const dx = r.x[b] - r.x[a], dy = r.y[b] - r.y[a], L = Math.hypot(dx, dy) || 1;
+            for (const nOff of [0, -0.75, 0.75, -1.5, 1.5]) {
+                // Beside the arc: a line's height off it, on the normal.
+                const off = nOff * lh * 0.95;
+                out.push({ x: r.x[k] + (-dy / L) * off, y: r.y[k] + (dx / L) * off, t, nOff });
+            }
+        }
+        return out;
+    };
+    const pos = legs.map(() => null);
+    const score = (i, c) => {
+        if (!texts[i]) return 0;
+        const bx = boxOfText(c.x, c.y, texts[i].length), A = areaOf(bx);
+        let sc = Math.abs(c.t - 0.5) * 4 + Math.abs(c.nOff) * 1.2;
+        pos.forEach((p, j) => { if (p && j !== i && texts[j]) sc += 60 * inter(bx, boxOfText(p.x, p.y, texts[j].length)) / A; });
+        for (const e of ends) sc += 30 * inter(bx, e) / A;
+        for (const n of names) sc += 20 * inter(bx, n) / A;
+        // Another leg's arc through the label (its samples are ~1/48 of the leg apart).
+        routes.forEach((r, j) => { if (j === i) return; for (let k = 0; k < r.x.length; k++) if (r.x[k] > bx[0] && r.x[k] < bx[2] && r.y[k] > bx[1] && r.y[k] < bx[3]) sc += 1.5; });
+        const inside = inter(bx, [0, 0, P.width, P.height]) / A;
+        sc += (1 - inside) * 40;
+        return sc;
+    };
+    for (let pass = 0; pass < 3; pass++) {
+        legs.forEach((_, i) => {
+            let best = null, bs = Infinity;
+            for (const c of cands(i)) { const sc = score(i, c); if (sc < bs - 1e-9) { bs = sc; best = c; } }
+            pos[i] = best;
+        });
+    }
+    return pos.map((p) => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]);
+}
+
+// ---- labels of a fitted map (WorldMap fit) --------------------------------------------------
+
+// The frame is shown at least this big at the design size: its text is placed for that, and
+// scales with the map between TEXT_MIN and TEXT_MAX of the label size.
+const REF_W = 300, REF_H = 190, TEXT_MIN = 0.8, TEXT_MAX = 1.8;
+
+/** The fit frame in map units: core 0 its top-left [x, y], 1 its bottom-right, "ref" [s, s] the design scale. */
+function fitFrame(region, which) {
+    const P = projection(region);
+    const c = P.core ?? [P.box[0], P.box[1], P.box[2], P.box[3]];
+    const x0 = P.x(c[0]), x1 = P.x(c[2]), y0 = P.y(c[3]), y1 = P.y(c[1]);
+    const r = (v) => Math.round(v * 10) / 10;
+    if (which === "ref") { const sr = Math.min(REF_W / (x1 - x0), REF_H / (y1 - y0)); return [+sr.toPrecision(4), +sr.toPrecision(4)]; }
+    return Number(which) === 1 ? [r(x1), r(y1)] : [r(x0), r(y0)];
+}
+
+/**
+ * One label of a fitted map: at {labels: {cities, legs, size, distance, marker}, city | leg: i,
+ * part}. part: none [x, y] the anchor, "pan" [panX, panY], "min" [s, s] the map scale at or below
+ * which it is hidden (0: always shown).
+ */
+const fitCache2 = new Map();
+function fitLabel(region, at) {
+    const L = at.labels ?? {};
+    const key = JSON.stringify([region, L]);
+    let lay = fitCache2.get(key);
+    if (!lay) { lay = layoutFit(region, L); fitCache2.set(key, lay); }
+    const list = at.city !== undefined ? lay.cities : lay.legs;
+    const i = Math.round(Number(at.city ?? at.leg ?? 0));
+    const e = list[i];
+    if (!e) throw new Error(`map labels: no ${at.city !== undefined ? "city" : "leg"} ${i}`);
+    if (at.part === "pan") return [e.panX, e.panY];
+    if (at.part === "min") return [e.min, e.min];
+    // k: the text's size in map units over its size at the design scale (an expression): the
+    // offset from the dot or the arc grows and shrinks with the text.
+    if (at.k !== undefined && (e.ox || e.oy)) {
+        const k = typeof at.k === "number" ? at.k : `(${at.k})`;
+        return [e.ox ? `${e.bx} + ${e.ox} * ${k}` : e.bx, e.oy ? `${e.by} + ${e.oy} * ${k}` : e.by];
+    }
+    return [e.x, e.y];
+}
+
+/**
+ * City names and leg labels laid out together at the design scale (the frame REF_W x REF_H dp),
+ * in priority order: the cities as listed, then the legs. A city name goes right, left, above or
+ * below its dot; a leg label on its arc or beside it, 0.15..0.85 of the way. Text is a fixed size
+ * in map units from TEXT_MIN to TEXT_MAX of the design scale, so the layout holds there; below,
+ * text is larger than the map and each label gets the scale under which it would touch a label
+ * of higher priority (or a dot): it is hidden there, not drawn over.
+ */
+function layoutFit(region, L) {
+    const P = projection(region);
+    const [cx0, cy0] = fitFrame(region, 0), [cx1, cy1] = fitFrame(region, 1);
+    const sref = fitFrame(region, "ref")[0];
+    const size = Number(L.size ?? 11), marker = Number(L.marker ?? 3);
+    const distance = [true, 1, "true", "1"].includes(L.distance);
+    const cities = [].concat(L.cities ?? []);
+    const legs = [].concat(L.legs ?? []).map(legParts);
+    const routes = legs.map((l) => mapRoute(region, l.from, l.to, 48));
+    const legText = legs.map((l, i) => (l.label !== undefined && l.label !== null && l.label !== "" ? String(l.label) : distance ? `${groupKm(routes[i].km)} km` : ""));
+    // Text height in map units at scale s.
+    const tmap = (s) => Math.min(size * TEXT_MAX, Math.max(size * TEXT_MIN, size * s / sref)) / s;
+    const dotR = (s) => (marker + 1.5) / s;
+    const W = (n, s) => n * 0.56 * tmap(s) + 4 / s;   // a text's width with its halo
+    const H = (s) => tmap(s) * 1.2;
+    // A label's box from its anchor and pan at scale s: the anchor is a base point (the dot, a
+    // point of the arc) and an offset that scales with the text.
+    const box = (l, s) => {
+        const w = W(l.n, s), h = H(s), f = tmap(s) / tmap(sref);
+        const x = l.bx + l.ox * f, y = l.by + l.oy * f;
+        const left = l.panX < 0 ? x : l.panX > 0 ? x - w : x - w / 2;
+        const top = l.panY < 0 ? y - h : l.panY > 0 ? y : y - h / 2;
+        return [left, top, left + w, top + h];
+    };
+    const inter = (a, b) => Math.max(0, Math.min(a[2], b[2]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[3], b[3]) - Math.max(a[1], b[1]));
+    const areaOf = (b) => (b[2] - b[0]) * (b[3] - b[1]);
+    const dots = [];
+    const addDot = (p) => { const [x, y] = mapPoint(region, p); if (!dots.some((d) => Math.abs(d[0] - x) < 0.5 && Math.abs(d[1] - y) < 0.5)) dots.push([x, y]); };
+    cities.forEach(addDot); legs.forEach((l) => { addDot(l.from); addDot(l.to); });
+    const dotBox = (d, s) => [d[0] - dotR(s), d[1] - dotR(s), d[0] + dotR(s), d[1] + dotR(s)];
+    const placed = [];
+    const conflict = (b, s, self, upTo) => {
+        let c = 0; const A = areaOf(b);
+        for (const q of placed.slice(0, upTo)) if (q !== self && q.n && (q.min ?? 0) < s) c += inter(b, box(q, s)) / A;
+        for (const d of dots) if (!self.dot || Math.abs(d[0] - self.dot[0]) > 0.5 || Math.abs(d[1] - self.dot[1]) > 0.5) c += inter(b, dotBox(d, s)) / A;
+        return c;
+    };
+    const frame = [cx0, cy0, cx1, cy1];
+    const score = (l, extra) => {
+        const b = box(l, sref), A = areaOf(b);
+        let sc = extra + 50 * conflict(b, sref, l, placed.length);
+        sc += 30 * (1 - inter(b, frame) / A);
+        routes.forEach((r, j) => { if (j === l.leg) return; for (let k = 0; k < r.x.length; k++) if (r.x[k] > b[0] && r.x[k] < b[2] && r.y[k] > b[1] && r.y[k] < b[3]) sc += 1.5; });
+        return sc;
+    };
+    const s0 = sref, g = dotR(s0) + 1 / s0;
+    for (const c of cities) {
+        const [x, y] = mapPoint(region, c), n = L.names === false ? 0 : String(c).length;
+        const cands = [
+            { ox: g, oy: 0, panX: -1, panY: 0, pen: 0 }, { ox: -g, oy: 0, panX: 1, panY: 0, pen: 0.6 },
+            { ox: 0, oy: -g, panX: 0, panY: -1, pen: 0.9 }, { ox: 0, oy: g, panX: 0, panY: 1, pen: 1 },
+        ].map((k) => ({ ...k, bx: x, by: y }));
+        let best = null, bs = Infinity;
+        for (const k of cands) { const l = { ...k, n, dot: [x, y] }; const sc = score(l, k.pen); if (sc < bs) { bs = sc; best = l; } }
+        best.kind = "city"; placed.push(best);
+    }
+    legs.forEach((_, i) => {
+        const r = routes[i], n = legText[i].length;
+        if (!n) { placed.push({ kind: "leg", leg: i, bx: r.x[24], by: r.y[24], ox: 0, oy: 0, panX: 0, panY: 0, n: 0 }); return; }
+        let best = null, bs = Infinity;
+        for (let t = 0.15; t < 0.86; t += 0.05) {
+            const k = Math.round(t * 48), a = Math.max(0, k - 1), b = Math.min(48, k + 1);
+            const dx = r.x[b] - r.x[a], dy = r.y[b] - r.y[a], Ln = Math.hypot(dx, dy) || 1;
+            for (const nOff of [0, -0.75, 0.75, -1.5, 1.5]) {
+                const off = nOff * H(s0) * 0.95;
+                const l = { kind: "leg", leg: i, bx: r.x[k], by: r.y[k], ox: (-dy / Ln) * off, oy: (dx / Ln) * off, panX: 0, panY: 0, n };
+                const sc = score(l, Math.abs(t - 0.5) * 4 + Math.abs(nOff) * 1.2);
+                if (sc < bs) { bs = sc; best = l; }
+            }
+        }
+        placed.push(best);
+    });
+    // Thresholds, in priority order: the largest scale on a fine grid where the label touches a
+    // shown label of higher priority or a dot.
+    const grid = []; for (let s = sref * 4; s > sref * 0.1; s /= 1.03) grid.push(s);
+    placed.forEach((l, i) => {
+        l.min = 0;
+        if (!l.n) return;
+        for (const s of grid) {
+            const b = box(l, s);
+            if (conflict(b, s, l, i) > 0.06) { l.min = +s.toPrecision(4); break; }
+        }
+    });
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const out = (l) => ({ x: r1(l.bx + l.ox), y: r1(l.by + l.oy), bx: r1(l.bx), by: r1(l.by), ox: r1(l.ox), oy: r1(l.oy), panX: l.panX, panY: l.panY, min: l.min });
+    return { cities: placed.filter((l) => l.kind === "city").map(out), legs: placed.filter((l) => l.kind === "leg").map(out) };
 }

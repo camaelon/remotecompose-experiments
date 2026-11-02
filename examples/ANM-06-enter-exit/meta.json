@@ -40,30 +40,32 @@
  "teaches": [
   "Animate a component in and out of visibility with animationSpec enterAnimation / exitAnimation (FADE_IN, FADE_OUT, SLIDE_LEFT/RIGHT/TOP/BOTTOM, ROTATE) and visibilityDuration",
   "Order the exit against the layout with exitSequence BEFORE (play the exit, then let siblings close the gap) and enterSequence AFTER (open the gap, then play the entrance)",
-  "Hide with an int variable read by visibility (1 visible, 0 gone) and valueIntegerChange; restoring sets all of them back to 1"
+  "Hide with an int variable read by visibility (1 visible, 0 gone) and valueIntegerChange; restoring sets all of them back to 1",
+  "Put visibility and animationSpec on a box around a library row (ListItem): the component call takes no modifiers, and the box is the node that comes and goes"
  ],
  "pitfalls": [
   "visibility reads an integer variable: declare it with vtype int and change it with valueIntegerChange",
-  "Every list item needs its own animationSpec, including the ones that only move: the motion of the survivors comes from their specs"
+  "Every list item needs its own animationSpec, including the ones that only move: the motion of the survivors comes from their specs",
+  "A component call takes params only: to hide or animate a ListItem, wrap it in a box carrying visibility, animationSpec, the surface and the clip"
  ],
  "snippets": [
   {
-   "pointer": "/root/3/column/children/2/row/modifiers/1",
+   "pointer": "/root/3/column/children/2/box/modifiers/1",
    "shows": "anim.visibility",
-   "note": "animationSpec: enter FADE_IN after the gap opens, exit SLIDE_RIGHT before the gap closes, 350 ms"
+   "note": "animationSpec on the row's own box: enter FADE_IN after the gap opens, exit SLIDE_RIGHT before the gap closes, 350 ms"
   },
   {
-   "pointer": "/root/3/column/children/2/row/modifiers/0",
+   "pointer": "/root/3/column/children/2/box/modifiers/0",
    "shows": "layout.state",
    "note": "visibility @n2 (int)"
   },
   {
-   "pointer": "/root/3/column/children/2/row/modifiers/8",
+   "pointer": "/root/3/column/children/2/box/children/0/ListItem/onClick",
    "shows": "input.tap",
-   "note": "dismiss: n2 = 0"
+   "note": "dismiss: n2 = 0, on the ListItem the box holds"
   },
   {
-   "pointer": "/root/3/column/children/0/row/children/1/box/modifiers/4",
+   "pointer": "/root/3/column/children/0/row/children/1/Button/onClick",
    "shows": "input.tap",
    "note": "Restore: n1 = n2 = n3 = 1"
   }
@@ -74,19 +76,35 @@
   "touch": true
  },
  "check": {
-  "describe": "A tap on 'Your ride is here' at 0.1 s, captured 0.15 s later. The row is about halfway off to the right and Battery has not moved yet (BEFORE); after the 350 ms exit, Battery moves up into the gap (Java, C++ and TS alike). Resized (narrow 240, wide 540) the rows fill the width, Restore stays at the right, and the dismissed row slides out by its own width.",
+  "describe": "A tap on 'Your ride is here' at 0.1 s, captured 0.15 s later. The row is about halfway off to the right and Battery has not moved yet (BEFORE); after the 350 ms exit, Battery moves up into the gap (Java, C++ and TS alike). Resized (narrow 240, wide 540) the rows fill the width, the Restore button stays at the right, and the dismissed row slides out by its own width. Mono looks have no motion: the tapped row is already gone and Battery has moved up.",
   "render": {
    "touch_events": [
     {
      "t": 0.1,
      "type": "tap",
      "x": 180,
-     "y": 120
+     "y": 176
     }
    ],
    "duration": 0.25
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
    {
     "name": "narrow",
     "width": 240,
@@ -96,7 +114,7 @@
       "t": 0.1,
       "type": "tap",
       "x": 120,
-      "y": 120
+      "y": 176
      }
     ],
     "duration": 0.25
@@ -110,7 +128,7 @@
       "t": 0.1,
       "type": "tap",
       "x": 270,
-      "y": 120
+      "y": 176
      }
     ],
     "duration": 0.25
@@ -126,45 +144,107 @@
   "LAY-12"
  ],
  "derived": {
+  "components": [
+   "Button",
+   "Icon",
+   "ListItem"
+  ],
+  "component_instances": 7,
+  "component_modes": {
+   "Button": "expand",
+   "ListItem": "expand",
+   "Icon": "expand"
+  },
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 2200,
+  "bytes": 3779,
   "header": {
    "width": 360,
    "height": 300
   },
-  "op_count": 131,
+  "op_count": 248,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 4,
+   "ANIMATED_FLOAT": 6,
    "ANIMATION_SPEC": 3,
-   "CoreText": 11,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "COMPONENT_VALUE": 6,
+   "CanvasContent": 3,
+   "CoreText": 8,
    "DATA_INT": 3,
-   "DATA_TEXT": 13,
+   "DATA_TEXT": 8,
+   "DRAW_PATH": 3,
    "HEADER": 1,
-   "LAYOUT_BOX": 7,
+   "LAYOUT_BOX": 13,
+   "LAYOUT_CANVAS": 3,
    "LAYOUT_COLUMN": 4,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 4,
    "LayoutComponentContent": 23,
-   "MODIFIER_BACKGROUND": 8,
+   "LoopOperation": 14,
+   "MATRIX_RESTORE": 3,
+   "MATRIX_SAVE": 3,
+   "MATRIX_SCALE": 3,
+   "MODIFIER_BACKGROUND": 7,
    "MODIFIER_CLICK": 4,
-   "MODIFIER_HEIGHT": 9,
-   "MODIFIER_PADDING": 4,
+   "MODIFIER_HEIGHT": 11,
+   "MODIFIER_PADDING": 6,
+   "MODIFIER_RIPPLE": 4,
    "MODIFIER_VISIBILITY": 3,
-   "MODIFIER_WIDTH": 16,
+   "MODIFIER_WIDTH": 24,
+   "NAMED_VARIABLE": 7,
+   "PAINT_VALUES": 3,
+   "PATH_DATA": 1,
    "RoundedClipRectModifierOperation": 7,
+   "THEME": 21,
    "VALUE_INTEGER_CHANGE_ACTION": 6
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
-   "warning": 0,
-   "info": 3
+   "warning": 1,
+   "info": 0
   },
   "audit_findings": [
-   "info: layout_touch_target",
-   "info: hardcoded_colors",
-   "info: text_only"
+   "warning: root_number_variable"
   ],
   "repaint": "idle",
   "interaction_targets": {
@@ -175,16 +255,134 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 2978,
+    "component_modes": {
+     "Button": "expand",
+     "ListItem": "expand",
+     "Icon": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 189,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 2978,
+    "component_modes": {
+     "Button": "expand",
+     "ListItem": "expand",
+     "Icon": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 189,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
    "narrow": {
     "render": "render-narrow.png",
-    "render_findings": [],
+    "render_findings": [
+     "info: text_ellipsized"
+    ],
     "size": [
      240,
      300
     ],
-    "audit_findings": [
-     "info: layout_touch_target"
-    ]
+    "audit_findings": []
    },
    "wide": {
     "render": "render-wide.png",
@@ -193,22 +391,29 @@
      540,
      320
     ],
-    "audit_findings": [
-     "info: layout_touch_target"
-    ]
+    "audit_findings": []
    }
   },
   "json_keys": [
+   "Button",
+   "Icon",
+   "ListItem",
    "animationSpec",
    "apiLevel",
    "background",
    "box",
+   "canvas",
    "children",
    "clickable",
    "clip",
    "color",
+   "colors",
    "column",
+   "commands",
    "contentDescription",
+   "dark",
+   "drawPath",
+   "enabled",
    "enterAnimation",
    "enterSequence",
    "exitAnimation",
@@ -217,20 +422,43 @@
    "header",
    "height",
    "horizontalAlignment",
+   "icon_close_outlined",
+   "label",
+   "leading",
+   "light",
+   "maxLines",
    "modifiers",
    "motionDuration",
+   "muted",
    "name",
    "onClick",
+   "onSurface",
+   "overflow",
    "padding",
+   "paint",
+   "path",
+   "paths",
+   "primary",
    "profiles",
+   "resources",
    "root",
    "row",
+   "save",
+   "scale",
    "semantics",
    "size",
+   "slots",
    "spacedBy",
-   "spacer",
+   "style",
+   "subtitle",
+   "success",
+   "surface",
+   "sx",
+   "sy",
    "target",
    "text",
+   "title",
+   "trailing",
    "type",
    "value",
    "variable",
@@ -238,8 +466,11 @@
    "visibility",
    "visibilityDuration",
    "vtype",
+   "warning",
    "weight",
-   "width"
+   "width",
+   "x",
+   "y"
   ],
   "evidence": {
    "anim.visibility": [
@@ -270,6 +501,11 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-01T22:47:28.031Z"
- }
+  "built_at": "2026-11-02T08:48:50.402Z"
+ },
+ "components": [
+  "ListItem",
+  "Icon",
+  "Button"
+ ]
 }

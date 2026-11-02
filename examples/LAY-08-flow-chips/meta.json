@@ -3,10 +3,13 @@
  "name": "flow-chips",
  "version": 3,
  "title": "Wrapping tag chips",
- "summary": "Twelve rounded tag chips of different lengths in a flow that wraps them onto as many lines as the width needs.",
+ "summary": "Twelve library Chips of different lengths (three preselected) in a flow that wraps them onto new lines and scrolls when they outgrow the box.",
  "prompt": "A wrapping row of rounded tag chips of different lengths that flows onto new lines.",
  "level": 2,
  "family": "LAY",
+ "components": [
+  "Chip"
+ ],
  "capabilities": {
   "primary": [
    "layout.flow"
@@ -34,8 +37,8 @@
  ],
  "teaches": [
   "Wrap children onto new lines when the row is full with a flow",
-  "Make a pill chip from one text: clip roundedRect, a background and inner padding [12, 6]",
-  "Space flow items with padding on a wrapper box (end and bottom 8 dp), since a flow ignores spacedBy"
+  "Fill the flow with library Chip calls: each is a tappable pill (a 0/1 selected state, preset with \"selected\": 1) in a 48 dp tall touch target",
+  "Space flow items with padding on a wrapper box (8 dp at the end only: the chip's 48 dp target already spaces the lines), since a flow ignores spacedBy"
  ],
  "snippets": [
   {
@@ -46,7 +49,7 @@
   {
    "pointer": "/root/children/0/children/0",
    "shows": "layout.decoration",
-   "note": "one chip: a padding [0, 0, 8, 8] gap box around a clipped, padded text pill"
+   "note": "one item: a wrapper box with end padding around a Chip"
   }
  ],
  "inputs": {
@@ -55,9 +58,25 @@
   "touch": false
  },
  "check": {
-  "describe": "Three lines of four chips at width 360; six lines at width 200 (C++ and TypeScript layouts agree). Resized: at 540 wide the chips fill two lines; at 240 wide they need five, more than 140 dp holds, so the root scrolls vertically (verticalScroll) instead of overflowing.",
+  "describe": "Three lines of chips at width 360, Kotlin, Compose and Canvas filled (selected); the twelfth chip, Accessibility, wraps to a fourth line below the fold and scrolls into view. Resized: at 540 wide the chips fill two lines; at 240 wide they need more lines than than 140 dp holds, so the root scrolls vertically (verticalScroll) instead of overflowing.",
   "render": {},
   "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
    {
     "name": "narrow",
     "width": 240,
@@ -72,6 +91,7 @@
  },
  "pitfalls": [
   "A flow ignores the spacedBy modifier (the Java reference and the C++ player both lay the chips edge to edge); give each item its own gap with padding on a wrapper",
+  "A Chip is 48 dp tall (its 32 dp pill plus 8 dp above and below), so lines of chips need no bottom gap; add one and the lines drift apart",
   "Do not fold the gap into the chip as a leading padding ([padding, clip, background, padding]): the Java player treats that first padding as a margin, but the C++ player paints the background over it, so keep the separate wrapper box",
   "The Java layout reference measures text with a stub (100×10), so check line counts with the C++ or TypeScript layout, not java-layout.sh",
   "A flow grows taller as its box narrows: in a fixed-height widget give the container a verticalScroll (or fewer items) or the last lines overflow the document"
@@ -85,51 +105,198 @@
   "TXT-01"
  ],
  "derived": {
+  "components": [
+   "Chip"
+  ],
+  "component_instances": 12,
+  "component_modes": {
+   "Chip": "expand"
+  },
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 2252,
+  "bytes": 8063,
   "header": {
    "width": 360,
    "height": 140
   },
-  "op_count": 123,
+  "op_count": 534,
   "operations": {
+   "ACCESSIBILITY_SEMANTICS": 12,
+   "ANIMATED_FLOAT": 36,
+   "COLOR_CONSTANT": 10,
+   "COLOR_EXPRESSIONS": 10,
+   "CanvasContent": 12,
    "ClipRectModifierOperation": 1,
-   "CoreText": 12,
-   "DATA_FLOAT": 1,
-   "DATA_TEXT": 12,
+   "CoreText": 24,
+   "DATA_FLOAT": 13,
+   "DATA_TEXT": 13,
+   "GraphicsLayerModifier": 12,
    "HEADER": 1,
-   "LAYOUT_BOX": 13,
+   "LAYOUT_BOX": 61,
+   "LAYOUT_CANVAS": 12,
    "LAYOUT_FLOW": 1,
    "LAYOUT_ROOT": 1,
-   "LayoutComponentContent": 26,
-   "MODIFIER_BACKGROUND": 13,
-   "MODIFIER_HEIGHT": 1,
-   "MODIFIER_PADDING": 25,
-   "MODIFIER_WIDTH": 2,
+   "LayoutComponentContent": 98,
+   "LoopOperation": 10,
+   "MODIFIER_BACKGROUND": 25,
+   "MODIFIER_CLICK": 12,
+   "MODIFIER_HEIGHT": 37,
+   "MODIFIER_PADDING": 49,
+   "MODIFIER_WIDTH": 14,
+   "NAMED_VARIABLE": 5,
    "RoundedClipRectModifierOperation": 12,
    "ScrollModifierOperation": 1,
-   "TouchExpression": 1
+   "THEME": 15,
+   "TextSubtext": 12,
+   "TextTransform": 12,
+   "TouchExpression": 1,
+   "ValueFloatExpressionChangeActionOperation": 12
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surfaceHigh",
+    "type": "color",
+    "value": "#FF263042"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
    "warning": 0,
-   "info": 2
+   "info": 1
   },
   "audit_findings": [
-   "info: hardcoded_colors",
-   "info: text_only"
+   "info: layout_touch_target"
   ],
   "repaint": "idle",
   "interaction_targets": {
-   "total": 1,
-   "click": 0,
+   "total": 13,
+   "click": 12,
    "area": 0,
    "touch": 1
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 8230,
+    "component_modes": {
+     "Chip": "expand"
+    },
+    "motion_removed": 12,
+    "op_count": 520,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surfaceHigh",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 8230,
+    "component_modes": {
+     "Chip": "expand"
+    },
+    "motion_removed": 12,
+    "op_count": 520,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surfaceHigh",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "narrow": {
     "render": "render-narrow.png",
     "render_findings": [],
@@ -137,7 +304,9 @@
      240,
      140
     ],
-    "audit_findings": []
+    "audit_findings": [
+     "info: layout_touch_target"
+    ]
    },
    "wide": {
     "render": "render-wide.png",
@@ -146,30 +315,76 @@
      540,
      140
     ],
-    "audit_findings": []
+    "audit_findings": [
+     "info: layout_touch_target"
+    ]
    }
   },
   "json_keys": [
+   "Chip",
+   "alpha",
+   "anim",
    "apiLevel",
    "background",
+   "box",
+   "canvas",
    "children",
+   "chip10_selected",
+   "chip11_selected",
+   "chip12_selected",
+   "chip1_selected",
+   "chip2_selected",
+   "chip3_selected",
+   "chip4_selected",
+   "chip5_selected",
+   "chip6_selected",
+   "chip7_selected",
+   "chip8_selected",
+   "chip9_selected",
+   "clickable",
    "clip",
    "color",
+   "colors",
+   "commands",
    "contentDescription",
+   "dark",
    "fontSize",
+   "global",
+   "graphicsLayer",
    "header",
    "height",
+   "horizontalAlignment",
+   "label",
+   "len",
+   "light",
+   "maxLines",
    "modifiers",
+   "onClick",
+   "onPrimary",
+   "onSurface",
+   "operation",
+   "overflow",
    "padding",
+   "primary",
    "profiles",
    "resources",
    "root",
-   "roundedRect",
    "scroll",
+   "selected",
+   "semantics",
+   "size",
+   "start",
+   "stateDescription",
+   "surfaceHigh",
+   "target",
    "text",
+   "textSubtext",
+   "textTransform",
    "type",
    "value",
+   "varName",
    "variables",
+   "verticalAlignment",
    "verticalScroll",
    "width"
   ],
@@ -198,6 +413,6 @@
     "verticalScroll"
    ]
   },
-  "built_at": "2026-11-01T22:49:12.919Z"
+  "built_at": "2026-11-02T08:52:28.613Z"
  }
 }

@@ -3,10 +3,16 @@
  "name": "collapsible-row",
  "version": 2,
  "title": "Collapsible app bar (priorities)",
- "summary": "An Inbox app bar shown at five widths: a collapsibleRow drops its children by collapsiblePriority as space runs out (the unread chip first, then share, then search), keeps the unprioritized title and overflow menu longest, and a weighted spacer keeps the icons pushed to the end at every width.",
+ "summary": "An Inbox app bar shown at five widths: a collapsibleRow drops its children by collapsiblePriority as space runs out (the unread Badge first, then share, then search), keeps the unprioritized title and overflow menu longest, and a weighted spacer keeps the IconButtons pushed to the end at every width.",
  "prompt": "An app bar (title \"Inbox\", a \"12 new\" chip, search, share and an overflow menu) that drops its least important items as it narrows: the chip first, then share, then search; the title and the overflow menu stay. Show it at 328, 240, 200, 152 and 112 dp.",
  "level": 3,
  "family": "LAY",
+ "components": [
+  "IconButton",
+  "Icon",
+  "Badge"
+ ],
+ "hand_built": "The bar is a collapsibleRow written out, not a TopBar, because dropping actions by collapsiblePriority is the lesson and TopBar has no priorities; its actions are library IconButtons and the unread count a Badge.",
  "capabilities": {
   "primary": [
    "layout.responsive"
@@ -17,7 +23,6 @@
    "layout.size",
    "layout.spacing",
    "layout.decoration",
-   "draw.shapes",
    "text.basic"
   ]
  },
@@ -42,7 +47,8 @@
   "Let a collapsibleRow decide what fits: children are kept in priority order (highest first) and dropped from the lowest priority up once the next one no longer fits",
   "Rank children with collapsiblePriority {orientation: horizontal, priority: N}; leave the must-stay ones (title, overflow menu) without a priority, which counts as the highest",
   "Push the actions to the end with an unprioritized weighted spacer: it takes only the space left over and never causes a drop",
-  "Size the container, not the collapsibleRow, when its children include a weight: give the row fillMaxWidth inside a box of the width you want"
+  "Size the container, not the collapsibleRow, when its children include a weight: give the row fillMaxWidth inside a box of the width you want",
+  "Give a component call a priority by wrapping it in a box that carries the collapsiblePriority modifier: a call such as IconButton or Badge takes no modifiers of its own"
  ],
  "pitfalls": [
   "Unprioritized children all tie at the top and keep document order among themselves: at 112 dp the title (first) stays and the overflow menu (last) goes",
@@ -58,17 +64,17 @@
   {
    "pointer": "/root/column/children/1/box/children/0",
    "shows": "layout.responsive",
-   "note": "the whole bar: collapsibleRow with title, chip, spacer and three icons"
+   "note": "the whole bar: collapsibleRow with title, Badge, spacer and three IconButtons"
   },
   {
-   "pointer": "/root/column/children/1/box/children/0/collapsibleRow/children/1/box/modifiers/2",
+   "pointer": "/root/column/children/1/box/children/0/collapsibleRow/children/1/box/modifiers/1",
    "shows": "layout.responsive",
-   "note": "the chip's collapsiblePriority 1: the first to go"
+   "note": "the Badge's wrapper box, collapsiblePriority 1: the first to go"
   },
   {
-   "pointer": "/root/column/children/1/box/children/0/collapsibleRow/children/3/canvas/modifiers/2",
+   "pointer": "/root/column/children/1/box/children/0/collapsibleRow/children/3/box/modifiers/0",
    "shows": "layout.responsive",
-   "note": "search, priority 3: the last action to go"
+   "note": "the search IconButton's wrapper box, priority 3: the last action to go"
   },
   {
    "pointer": "/root/column/children/1/box/children/0/collapsibleRow/children/2",
@@ -82,9 +88,25 @@
   "touch": false
  },
  "check": {
-  "describe": "Five bars: the first is full width (328 dp at 360) and shows everything; 240 dp drops the \"12 new\" chip; 200 dp also drops share; 152 dp also drops search (title and overflow menu left); 112 dp keeps only the title. The icons stay right-aligned in every bar. Verified against Java (java-layout.sh 360 400): the same children are gone and the C++ and TS x/width match it. Resized: the full-width bar is the live one — at 300 wide (268 dp) it has already dropped the chip, at 540 it shows everything with the icons at the far end; the four fixed-width bars below are unchanged.",
+  "describe": "Five bars: the first is full width (328 dp at 360) and shows everything; 240 dp drops the \"12 new\" Badge; 200 dp also drops share; 152 dp also drops search (title and overflow menu left); 112 dp keeps only the title. The IconButtons (48 dp targets) stay right-aligned in every bar. In mono the bars are outlined so their widths stay visible. Resized: the full-width bar is the live one — at 300 wide (268 dp) it has already dropped the Badge, at 540 it shows everything with the icons at the far end; the four fixed-width bars below are unchanged.",
   "render": {},
   "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
    {
     "name": "narrow",
     "width": 300,
@@ -106,45 +128,105 @@
   "LAY-04"
  ],
  "derived": {
+  "components": [
+   "Badge",
+   "Icon",
+   "IconButton"
+  ],
+  "component_instances": 35,
+  "component_modes": {
+   "IconButton": "pattern",
+   "Badge": "expand",
+   "Icon": "expand"
+  },
+  "component_patterns": [
+   "IconButton__standard_icon x15"
+  ],
   "converter": "json2rc",
-  "bytes": 4639,
+  "bytes": 10475,
   "header": {
    "width": 360,
    "height": 420
   },
-  "op_count": 319,
+  "op_count": 608,
   "operations": {
+   "ACCESSIBILITY_SEMANTICS": 15,
+   "ANIMATED_FLOAT": 30,
+   "COLOR_CONSTANT": 13,
+   "COLOR_EXPRESSIONS": 12,
+   "COMPONENT_VALUE": 30,
    "CanvasContent": 15,
    "CollapsibleRowLayout": 5,
    "CoreText": 15,
-   "DATA_TEXT": 7,
-   "DRAW_CIRCLE": 35,
-   "DRAW_LINE": 15,
+   "DATA_TEXT": 11,
+   "DRAW_PATH": 15,
    "HEADER": 1,
-   "LAYOUT_BOX": 20,
+   "LAYOUT_BOX": 50,
    "LAYOUT_CANVAS": 15,
    "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
-   "LayoutComponentContent": 56,
-   "MODIFIER_BACKGROUND": 11,
+   "LayoutComponentContent": 86,
+   "LoopOperation": 12,
+   "MATRIX_RESTORE": 15,
+   "MATRIX_SAVE": 15,
+   "MATRIX_SCALE": 15,
+   "MODIFIER_BACKGROUND": 16,
    "MODIFIER_COLLAPSIBLE_PRIORITY": 15,
-   "MODIFIER_HEIGHT": 26,
-   "MODIFIER_PADDING": 10,
-   "MODIFIER_WIDTH": 41,
-   "PAINT_VALUES": 20,
-   "RoundedClipRectModifierOperation": 10
+   "MODIFIER_HEIGHT": 41,
+   "MODIFIER_PADDING": 35,
+   "MODIFIER_WIDTH": 56,
+   "NAMED_VARIABLE": 7,
+   "PAINT_VALUES": 15,
+   "PATH_DATA": 3,
+   "RoundedClipRectModifierOperation": 30,
+   "THEME": 18
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "monoOutline",
+    "type": "color",
+    "value": "#00000000"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   }
+  ],
   "render_findings": [
    "info: collapsed"
   ],
   "audit": {
    "error": 0,
-   "warning": 2,
+   "warning": 1,
    "info": 2
   },
   "audit_findings": [
-   "warning: hardcoded_colors",
    "warning: fixed_widths",
    "info: repeated_subtree",
    "info: repeated_subtree"
@@ -158,6 +240,126 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": [
+     "info: collapsed"
+    ]
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": [
+     "info: collapsed"
+    ]
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 9863,
+    "component_modes": {
+     "IconButton": "pattern",
+     "Badge": "expand",
+     "Icon": "expand"
+    },
+    "op_count": 560,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "monoOutline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": [
+     "info: collapsed"
+    ]
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 9863,
+    "component_modes": {
+     "IconButton": "pattern",
+     "Badge": "expand",
+     "Icon": "expand"
+    },
+    "op_count": 560,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "monoOutline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": [
+     "info: collapsed"
+    ]
+   },
    "narrow": {
     "render": "render-narrow.png",
     "render_findings": [
@@ -182,47 +384,84 @@
    }
   },
   "json_keys": [
+   "Badge",
+   "Icon",
+   "IconButton",
+   "IconButton__standard_icon",
    "apiLevel",
+   "arguments",
    "background",
    "box",
    "canvas",
    "children",
+   "clickable",
    "clip",
    "collapsiblePriority",
    "collapsibleRow",
    "color",
+   "colors",
    "column",
    "commands",
    "contentDescription",
-   "cx",
-   "cy",
-   "drawCircle",
-   "drawLine",
+   "dark",
+   "definePattern",
+   "drawPath",
+   "enabled",
+   "end",
    "fontSize",
    "fontWeight",
    "header",
    "height",
    "horizontalAlignment",
+   "icon",
+   "icon_more_vert_outlined",
+   "icon_search_outlined",
+   "icon_share_outlined",
+   "label",
+   "light",
    "modifiers",
+   "monoOutline",
+   "muted",
+   "name",
+   "onPrimary",
+   "onSurface",
    "orientation",
    "padding",
    "paint",
+   "parameterIndex",
+   "parameters",
+   "path",
+   "paths",
+   "patternArgument",
+   "patternBlock",
+   "primary",
    "priority",
    "profiles",
-   "radius",
+   "resources",
    "root",
+   "roundedRect",
+   "save",
+   "scale",
+   "semantics",
+   "size",
+   "slots",
    "spacedBy",
    "spacer",
-   "strokeCap",
-   "strokeWidth",
+   "start",
    "style",
+   "surface",
+   "sx",
+   "sy",
    "text",
+   "type",
    "value",
    "verticalAlignment",
    "weight",
    "width",
+   "x",
    "x1",
    "x2",
+   "y",
    "y1",
    "y2"
   ],
@@ -255,14 +494,10 @@
     "background",
     "clip"
    ],
-   "draw.shapes": [
-    "drawCircle",
-    "drawLine"
-   ],
    "text.basic": [
     "text"
    ]
   },
-  "built_at": "2026-11-01T22:49:17.873Z"
+  "built_at": "2026-11-02T08:52:37.123Z"
  }
 }

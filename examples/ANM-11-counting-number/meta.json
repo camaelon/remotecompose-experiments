@@ -3,7 +3,7 @@
  "name": "counting-number",
  "version": 2,
  "title": "Counting number",
- "summary": "A savings balance that counts up to its new total when + $250 is tapped: one animated variable {\"value\": \"@total\", \"anim\": 0.9} feeds both the textFromFloat label and the progress bar.",
+ "summary": "A savings balance that counts up to its new total when + $250 is tapped: one animated variable {\"value\": \"@total\", \"anim\": 0.9} feeds both the textFromFloat label and the library ProgressBar.",
  "prompt": "A savings goal card showing the balance in large digits and a progress bar; tapping '+ $250' adds a deposit and the number counts up to the new total while the bar grows.",
  "level": 2,
  "family": "ANM",
@@ -38,28 +38,33 @@
  "teaches": [
   "Count a displayed number up or down by animating a copy of it: shown = {\"value\": \"@total\", \"anim\": 0.9} and the label shows round(@shown)",
   "Keep the real value exact and animate only what's displayed: the click adds to @total, the text and bar read @shown",
-  "Declare the animated copy once, at the tree root, so every reader shares the same animation"
+  "Declare the animated copy once, at the tree root, so every reader shares the same animation (anim is ignored in resources.variables); the exact total lives in resources.variables"
  ],
  "pitfalls": [
   "Round the animated value (round(@shown)) or the label shows fractional dollars while it counts",
   "Size `whole` in textFromFloat for the largest total you expect: digits beyond it are lost",
-  "Scale the bar by componentWidth(), not the header's 320: min(1, @shown / 4000) * componentWidth() fills any width"
+  "Give ProgressBar the eased copy (@shown / 4000), so the bar and the number move together; it clamps at 1 and fills whatever width it gets. Its own 0.3 s easing then only smooths the last step"
  ],
  "snippets": [
   {
-   "pointer": "/root/1",
+   "pointer": "/root/0",
    "shows": "anim.value",
    "note": "shown = {value: @total, anim: 0.9}"
   },
   {
-   "pointer": "/root/2/column/children/1/row/children/1/text/value",
+   "pointer": "/root/1/column/children/1/row/children/1/text/value",
    "shows": "text.dynamic",
    "note": "textFromFloat(round(@shown)), 5 digits"
   },
   {
-   "pointer": "/root/2/column/children/3/row/children/1/box/modifiers/4",
+   "pointer": "/root/1/column/children/3/row/children/1/Button/onClick",
    "shows": "input.tap",
-   "note": "+ $250: total = total + 250"
+   "note": "+ $250 (Button): total = total + 250"
+  },
+  {
+   "pointer": "/root/1/column/children/2",
+   "shows": "anim.value",
+   "note": "ProgressBar progress = @shown / 4000: the bar reads the same eased copy as the label"
   }
  ],
  "inputs": {
@@ -68,7 +73,7 @@
   "touch": true
  },
  "check": {
-  "describe": "Starts at $1250. A tap on + $250 at 0.1 s, captured 0.3 s later, shows about $1364 and a slightly longer bar; it settles at $1500. Resized (narrow 240, wide 540) the bar spans the width (min(1, @shown / 4000) * componentWidth()) and the button stays at the right, so the same tap grows the bar by the same fraction.",
+  "describe": "Starts at $1250. A tap on + $250 at 0.1 s, captured 0.3 s later, shows about $1364 and a slightly longer bar; it settles at $1500. Resized (narrow 240, wide 540) the ProgressBar spans the width and the button stays at the right, so the same tap grows the bar by the same fraction. Mono looks have no motion: the balance is already $1500.",
   "render": {
    "touch_events": [
     {
@@ -81,6 +86,22 @@
    "duration": 0.4
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
    {
     "name": "narrow",
     "width": 240,
@@ -120,21 +141,33 @@
   "ANM-01"
  ],
  "derived": {
+  "components": [
+   "Button",
+   "ProgressBar"
+  ],
+  "component_instances": 2,
+  "component_modes": {
+   "ProgressBar": "expand",
+   "Button": "expand"
+  },
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 939,
+  "bytes": 1769,
   "header": {
    "width": 360,
    "height": 180
   },
-  "op_count": 54,
+  "op_count": 116,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
-   "ANIMATED_FLOAT": 4,
+   "ANIMATED_FLOAT": 5,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
    "COMPONENT_VALUE": 1,
    "CanvasContent": 1,
    "CoreText": 5,
    "DATA_FLOAT": 1,
-   "DATA_TEXT": 5,
+   "DATA_TEXT": 4,
    "DRAW_ROUND_RECT": 2,
    "HEADER": 1,
    "LAYOUT_BOX": 1,
@@ -143,25 +176,60 @@
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 2,
    "LayoutComponentContent": 10,
+   "LoopOperation": 12,
    "MODIFIER_BACKGROUND": 2,
    "MODIFIER_CLICK": 1,
    "MODIFIER_HEIGHT": 3,
-   "MODIFIER_PADDING": 1,
-   "MODIFIER_WIDTH": 5,
+   "MODIFIER_PADDING": 3,
+   "MODIFIER_RIPPLE": 1,
+   "MODIFIER_WIDTH": 4,
+   "NAMED_VARIABLE": 6,
    "PAINT_VALUES": 2,
    "RoundedClipRectModifierOperation": 1,
+   "THEME": 18,
    "TextFromFloat": 1,
    "ValueFloatExpressionChangeActionOperation": 1
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
-   "warning": 0,
-   "info": 1
+   "warning": 1,
+   "info": 0
   },
   "audit_findings": [
-   "info: layout_touch_target"
+   "warning: root_number_variable"
   ],
   "repaint": "idle",
   "interaction_targets": {
@@ -172,6 +240,108 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 1265,
+    "component_modes": {
+     "ProgressBar": "expand",
+     "Button": "expand"
+    },
+    "motion_removed": 1,
+    "op_count": 74,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 1265,
+    "component_modes": {
+     "ProgressBar": "expand",
+     "Button": "expand"
+    },
+    "motion_removed": 1,
+    "op_count": 74,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "narrow": {
     "render": "render-narrow.png",
     "render_findings": [],
@@ -179,9 +349,7 @@
      240,
      180
     ],
-    "audit_findings": [
-     "info: layout_touch_target"
-    ]
+    "audit_findings": []
    },
    "wide": {
     "render": "render-wide.png",
@@ -190,12 +358,12 @@
      540,
      200
     ],
-    "audit_findings": [
-     "info: layout_touch_target"
-    ]
+    "audit_findings": []
    }
   },
   "json_keys": [
+   "Button",
+   "ProgressBar",
    "anim",
    "apiLevel",
    "background",
@@ -206,37 +374,54 @@
    "clickable",
    "clip",
    "color",
+   "colors",
    "column",
    "commands",
    "contentDescription",
+   "dark",
    "decimal",
    "drawRoundRect",
+   "enabled",
    "flags",
    "fontSize",
    "header",
    "height",
    "horizontalAlignment",
+   "label",
    "left",
+   "light",
+   "maxLines",
    "modifiers",
+   "muted",
    "name",
    "onClick",
+   "onPrimary",
+   "onSurface",
+   "ops",
+   "overflow",
    "padding",
    "paint",
    "profiles",
+   "progress",
+   "resources",
    "right",
    "root",
    "row",
    "rx",
    "ry",
    "semantics",
-   "size",
    "spacedBy",
+   "style",
+   "success",
    "target",
    "text",
    "top",
+   "total",
+   "track",
    "type",
    "value",
    "variable",
+   "variables",
    "verticalAlignment",
    "weight",
    "whole",
@@ -266,6 +451,10 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-01T22:47:32.877Z"
- }
+  "built_at": "2026-11-02T08:48:59.041Z"
+ },
+ "components": [
+  "ProgressBar",
+  "Button"
+ ]
 }

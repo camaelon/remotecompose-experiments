@@ -959,7 +959,7 @@ const tools = [
                 set: { type: "object", description: "Starting values of the document's named variables, {\"stop\": \"Central\", \"d1Min\": 4}: its sample data, without text edits." },
                 ...tool(json2rc, "json2rc").inputSchema.properties,
                 ...tool(examples, "expand_components").inputSchema.properties,
-                check: { type: "boolean", description: "Also validate the result (parse, data pass, findings)." },
+                check: { type: "boolean", description: "Also check the result: with no looks given, renders light and dark at a phone (360x640), a landscape phone (640x360) and a small widget (240x240) besides the document's size, audits it and reports what looking would find." },
                 render: { type: "boolean", description: "With check: also render it (default true)." },
                 expanded: { type: "boolean", description: "Return the expanded JSON instead of converting." },
                 edits: { type: "array", items: { type: "object", properties: { old: { type: "string" }, new: { type: "string" }, all: { type: "boolean" } }, required: ["old", "new"] },
@@ -1039,6 +1039,10 @@ const tools = [
                 looks = saved.looks;
                 sizes = sizes ?? saved.sizes; samples = samples ?? saved.samples; every_look = every_look ?? saved.every_look;
             }
+            // check: true alone used to validate at the document's own size only, so a document pinned to
+            // one size passed while a phone showed half of it: it now runs the looks check at the sizes
+            // a document must survive.
+            if (check && !looks?.length && !saved?.looks && recheck !== true) { looks = ["light", "dark"]; sizes = sizes?.length ? sizes : [[360, 640], [640, 360], [240, 240]]; }
             const verify = kept && (looks?.length || recheck === true || (edits?.length && recheck !== false && saved?.looks));
             if (recheck === true && !looks?.length && !saved?.looks) throw new Error("convert: no saved check to repeat: give looks (and sizes, samples) once");
             if (verify) {

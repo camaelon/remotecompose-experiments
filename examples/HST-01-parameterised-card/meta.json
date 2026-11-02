@@ -44,12 +44,11 @@
  ],
  "components": [
   "Card",
-  "Avatar",
   "ProgressBar"
  ],
  "teaches": [
-  "Export a float to the host with resources.variables {\"progress\": {\"value\": 0.65, \"export\": true}}",
-  "Export a colour with resources.colors (named colours are exported by default) and use it as \"@colors.accent\" in backgrounds and paints",
+  "Export a float to the host with resources.variables {\"progress\": {\"value\": 0.65, \"export\": true}} and pass it to a ProgressBar as progress \"clamp(0, 1, @progress)\"",
+  "Export a colour with resources.colors (named colours are exported by default) and use it as \"@colors.accent\": in a background and as a component's color param",
   "Export a string with a root variable {\"vtype\": \"string\", \"export\": true} and show it with text value \"@name\"",
   "Give host-supplied strings maxLines 1 and an ellipsis: their length is unknown and the card can be narrower than the header"
  ],
@@ -65,9 +64,14 @@
    "note": "an exported string variable"
   },
   {
-   "pointer": "/root/2/row/children/2/column/children/2/canvas/commands/3",
+   "pointer": "/root/2/column/children/0/Card/children/0/row/children/2/column/children/2",
    "shows": "data.expression",
-   "note": "the progress fill: componentWidth() * clamp(0, 1, @progress), safe for any host value"
+   "note": "ProgressBar progress clamp(0, 1, @progress) in the host's accent colour, safe for any host value"
+  },
+  {
+   "pointer": "/root/2/column/children/0/Card/children/0/row/children/2/column/children/0",
+   "shows": "text.dynamic",
+   "note": "the host name, one line with an ellipsis"
   }
  ],
  "inputs": {
@@ -100,7 +104,7 @@
   "touch": false
  },
  "check": {
-  "describe": "Defaults show Ada Lovelace with a purple avatar and a 65% bar; variables {name: Grace Hopper, subtitle: COBOL committee, accent: #FF26A69A, progress: 0.3} change all four. Resized, the text column takes the remaining width (weight 1): the progress track stretches, and a name or subtitle too long for a narrow card ends in an ellipsis.",
+  "describe": "Defaults show Ada Lovelace with a purple avatar and a 65% bar; variables {name: Grace Hopper, subtitle: COBOL committee, accent: #FF26A69A, progress: 0.3} change all four. Resized, the card fills the width and the text column takes the remaining width (weight 1): the progress bar stretches, and a name or subtitle too long for a narrow card ends in an ellipsis.",
   "render": {
    "variables": {
     "name": "Grace Hopper",
@@ -134,20 +138,27 @@
   "A host string in a narrow card wraps word by word and pushes the rest of the column out of the card unless it is limited to one line"
  ],
  "derived": {
-  "components": [],
-  "component_instances": 0,
-  "component_modes": {},
+  "components": [
+   "Card",
+   "ProgressBar"
+  ],
+  "component_instances": 2,
+  "component_modes": {
+   "Card": "expand",
+   "ProgressBar": "expand"
+  },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 943,
+  "bytes": 1776,
   "header": {
    "width": 360,
    "height": 180
   },
-  "op_count": 50,
+  "op_count": 109,
   "operations": {
-   "ANIMATED_FLOAT": 2,
-   "COLOR_CONSTANT": 1,
+   "ANIMATED_FLOAT": 3,
+   "COLOR_CONSTANT": 11,
+   "COLOR_EXPRESSIONS": 10,
    "COMPONENT_VALUE": 1,
    "CanvasContent": 1,
    "CoreText": 4,
@@ -157,17 +168,19 @@
    "HEADER": 1,
    "LAYOUT_BOX": 2,
    "LAYOUT_CANVAS": 1,
-   "LAYOUT_COLUMN": 1,
+   "LAYOUT_COLUMN": 3,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 2,
-   "LayoutComponentContent": 8,
-   "MODIFIER_BACKGROUND": 2,
+   "LayoutComponentContent": 10,
+   "LoopOperation": 10,
+   "MODIFIER_BACKGROUND": 3,
    "MODIFIER_HEIGHT": 3,
-   "MODIFIER_PADDING": 1,
-   "MODIFIER_WIDTH": 5,
-   "NAMED_VARIABLE": 4,
+   "MODIFIER_PADDING": 2,
+   "MODIFIER_WIDTH": 6,
+   "NAMED_VARIABLE": 9,
    "PAINT_VALUES": 2,
-   "RoundedClipRectModifierOperation": 1,
+   "RoundedClipRectModifierOperation": 2,
+   "THEME": 15,
    "TextFromFloat": 1
   },
   "host_variables": [
@@ -177,9 +190,24 @@
     "value": "#FF7C4DFF"
    },
    {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
     "name": "name",
     "type": "string",
     "value": "Ada Lovelace"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
    },
    {
     "name": "progress",
@@ -190,6 +218,16 @@
     "name": "subtitle",
     "type": "string",
     "value": "Analytical Engine team"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
    }
   ],
   "render_findings": [],
@@ -230,7 +268,10 @@
    }
   },
   "json_keys": [
+   "Card",
+   "ProgressBar",
    "accent",
+   "anim",
    "apiLevel",
    "background",
    "bottom",
@@ -243,6 +284,7 @@
    "column",
    "commands",
    "contentDescription",
+   "dark",
    "decimal",
    "drawRoundRect",
    "export",
@@ -251,9 +293,12 @@
    "header",
    "height",
    "left",
+   "light",
    "maxLines",
    "modifiers",
+   "muted",
    "name",
+   "onSurface",
    "ops",
    "overflow",
    "padding",
@@ -269,13 +314,17 @@
    "ry",
    "size",
    "spacedBy",
+   "style",
+   "surface",
    "text",
    "top",
+   "track",
    "type",
    "value",
    "variable",
    "variables",
    "verticalAlignment",
+   "verticalArrangement",
    "vtype",
    "weight",
    "whole",
@@ -311,6 +360,6 @@
     "clip"
    ]
   },
-  "built_at": "2026-11-01T22:48:52.091Z"
+  "built_at": "2026-11-02T08:52:02.007Z"
  }
 }

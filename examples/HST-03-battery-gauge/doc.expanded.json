@@ -1,0 +1,246 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 200,
+  "height": 200,
+  "profiles": 513,
+  "contentDescription": "A battery icon filled to the battery level, red below 20 percent"
+ },
+ "resources": {
+  "variables": {
+   "battery": {
+    "value": 76,
+    "export": true
+   },
+   "batteryindicator1_lv": "clamp(0, 100, @battery)"
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "error": {
+    "light": "#FFC62828",
+    "dark": "#FFEF5350"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "success": {
+    "light": "#FF2E7D32",
+    "dark": "#FF66BB6A"
+   },
+   "warning": {
+    "light": "#FFA15C00",
+    "dark": "#FFFFB74D"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 12
+    },
+    {
+     "spacedBy": 12
+    }
+   ],
+   "horizontalAlignment": "center",
+   "verticalArrangement": "center",
+   "children": [
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "spacedBy": 6
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "width": 110
+          },
+          {
+           "height": 55
+          },
+          {
+           "semantics": {
+            "contentDescription": "Battery"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "batteryindicator1_k",
+            "value": "min(componentWidth() / 110, componentHeight() / (110 * 0.5))"
+           }
+          },
+          {
+           "translate": {
+            "dx": "(componentWidth() - 110 * @batteryindicator1_k) / 2",
+            "dy": "(componentHeight() - 110 * 0.5 * @batteryindicator1_k) / 2"
+           }
+          },
+          {
+           "scale": {
+            "sx": "@batteryindicator1_k",
+            "sy": "@batteryindicator1_k"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 2
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 1,
+            "top": 1,
+            "right": 95.8,
+            "bottom": 54,
+            "rx": 11,
+            "ry": 11
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 97.8,
+            "top": 17.6,
+            "right": 110,
+            "bottom": 37.4,
+            "rx": 4.4,
+            "ry": 4.4
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             }
+            ]
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "lt",
+            "v1": "@batteryindicator1_lv",
+            "v2": 20,
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.warning"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "lt",
+            "v1": "@batteryindicator1_lv",
+            "v2": 20,
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.error"
+                }
+               ]
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": 47.15,
+               "top": 13.2,
+               "right": 49.65,
+               "bottom": 31.9,
+               "rx": 1.25,
+               "ry": 1.25
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 48.4,
+               "cy": 39.6,
+               "radius": 1.4
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 4,
+            "top": 4,
+            "right": "4 + (110 * 0.88 - 8) * @batteryindicator1_lv / 100",
+            "bottom": 51,
+            "rx": 8,
+            "ry": 8
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "text": {
+      "value": {
+       "type": "textMerge",
+       "id1": {
+        "type": "textFromFloat",
+        "value": "clamp(0, 100, @battery)",
+        "whole": 3,
+        "decimal": 0,
+        "flags": 4
+       },
+       "id2": "%"
+      },
+      "fontSize": 24,
+      "color": "@colors.onSurface"
+     }
+    }
+   ]
+  }
+ }
+}

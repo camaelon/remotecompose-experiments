@@ -38,28 +38,28 @@
   "Button"
  ],
  "teaches": [
-  "Increment a variable on tap with onClick valueFloatExpressionChange (value \"@count + 1\")",
-  "Set a variable to a fixed value on tap with onClick valueFloatChange",
-  "Declare the state once with a root-level variable and show it with textFromFloat"
+  "Increment a variable on tap: a Button whose onClick is valueFloatExpressionChange (value \"@count + 1\")",
+  "Set a variable to a fixed value on tap: a second Button (style outlined) with onClick valueFloatChange",
+  "Declare the state once in resources.variables ({\"count\": 0}) and show it with textFromFloat"
  ],
  "snippets": [
   {
-   "pointer": "/root/0",
+   "pointer": "/resources/variables/count",
    "shows": "input.tap",
    "note": "the counter state: a float variable starting at 0"
   },
   {
-   "pointer": "/root/1/column/children/1/row/children/0/box/modifiers/6",
+   "pointer": "/root/column/children/1/row/children/0/box/children/0/Button/onClick",
    "shows": "input.tap",
-   "note": "onClick: count = count + 1"
+   "note": "the +1 Button's onClick: count = count + 1"
   },
   {
-   "pointer": "/root/1/column/children/1/row/children/2/box/modifiers/6",
+   "pointer": "/root/column/children/1/row/children/2/box/children/0/Button/onClick",
    "shows": "input.tap",
-   "note": "onClick: count = 0"
+   "note": "the Reset Button's onClick: count = 0"
   },
   {
-   "pointer": "/root/1/column/children/0",
+   "pointer": "/root/column/children/0",
    "shows": "text.dynamic",
    "note": "textFromFloat(@count, 3 digits, no decimals)"
   }
@@ -70,7 +70,7 @@
   "touch": true
  },
  "check": {
-  "describe": "Three taps on +1 show 3; a tap on Reset shows 0 again. Resized, the two buttons stay centred: at 234 wide they shrink to share the row (weight, capped at 120 by widthIn) instead of pushing Reset off the edge, and at 540 they keep 120.",
+  "describe": "Three taps on +1 show 3; a tap on Reset shows 0 again. Resized, the two buttons stay centred: at 234 wide they shrink to share the row (each Button fill: true in a box of weight 1, capped at 120 by widthIn) instead of pushing Reset off the edge, and at 540 they keep 120.",
   "render": {
    "touch_events": [
     {
@@ -170,40 +170,75 @@
  "pitfalls": [
   "valueFloatChange only sets a constant; incrementing needs valueFloatExpressionChange with an expression that reads the target (\"@count + 1\")",
   "textFromFloat `whole` is the number of integer digits kept (3 here, enough up to 999), and inside a text value `decimal` defaults to 3, so set \"decimal\": 0 for a whole number",
-  "Declare the state as a root-level variable before the components that read it; the onClick actions then target it by name (\"@count\")",
-  "Fixed-width buttons (size 120×48) overflow when the host is narrower than the header: give them weight 1 with widthIn [0, 120] so they shrink but never grow past 120, and separate them with a fixed spacer box, since weights ignore spacedBy"
+  "Declare the state in resources.variables, not as a root tree variable: the Buttons' onClick actions target it by name (\"@count\"), and a root variable passed into a component call is flagged (root_number_variable)",
+  "A Button wraps its label, and two side by side overflow a host narrower than the header: put each in a box with weight 1 and widthIn [0, 120] and give the Button fill: true, so they shrink but never grow past 120; separate them with a fixed spacer box, since weights ignore spacedBy"
  ],
  "derived": {
+  "components": [
+   "Button"
+  ],
+  "component_instances": 2,
+  "component_modes": {
+   "Button": "expand"
+  },
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 739,
+  "bytes": 1501,
   "header": {
    "width": 360,
    "height": 180
   },
-  "op_count": 45,
+  "op_count": 102,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 2,
    "ANIMATED_FLOAT": 1,
+   "COLOR_CONSTANT": 8,
+   "COLOR_EXPRESSIONS": 8,
    "CoreText": 3,
    "DATA_FLOAT": 1,
-   "DATA_TEXT": 4,
+   "DATA_TEXT": 2,
    "HEADER": 1,
-   "LAYOUT_BOX": 3,
+   "LAYOUT_BOX": 6,
    "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 1,
-   "LayoutComponentContent": 7,
-   "MODIFIER_BACKGROUND": 3,
+   "LayoutComponentContent": 10,
+   "LoopOperation": 8,
+   "MODIFIER_BACKGROUND": 4,
    "MODIFIER_CLICK": 2,
-   "MODIFIER_HEIGHT": 3,
-   "MODIFIER_PADDING": 1,
-   "MODIFIER_WIDTH": 4,
+   "MODIFIER_HEIGHT": 4,
+   "MODIFIER_PADDING": 6,
+   "MODIFIER_RIPPLE": 2,
+   "MODIFIER_WIDTH": 7,
    "MODIFIER_WIDTH_IN": 2,
-   "RoundedClipRectModifierOperation": 2,
+   "NAMED_VARIABLE": 4,
+   "RoundedClipRectModifierOperation": 3,
+   "THEME": 12,
    "TextFromFloat": 1,
    "ValueFloatExpressionChangeActionOperation": 2
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
@@ -240,6 +275,7 @@
    }
   },
   "json_keys": [
+   "Button",
    "apiLevel",
    "background",
    "box",
@@ -247,27 +283,40 @@
    "clickable",
    "clip",
    "color",
+   "colors",
    "column",
    "contentDescription",
+   "count",
+   "dark",
    "decimal",
+   "enabled",
+   "fill",
    "fontSize",
    "header",
    "height",
    "horizontalAlignment",
    "horizontalArrangement",
+   "label",
+   "light",
+   "maxLines",
    "modifiers",
-   "name",
    "onClick",
+   "onPrimary",
+   "onSurface",
+   "overflow",
    "padding",
+   "primary",
    "profiles",
+   "resources",
    "root",
    "row",
    "semantics",
+   "style",
    "target",
    "text",
    "type",
    "value",
-   "variable",
+   "variables",
    "verticalAlignment",
    "verticalArrangement",
    "weight",
@@ -300,6 +349,6 @@
     "<arithmetic>"
    ]
   },
-  "built_at": "2026-11-01T22:48:58.682Z"
+  "built_at": "2026-11-02T08:52:09.613Z"
  }
 }

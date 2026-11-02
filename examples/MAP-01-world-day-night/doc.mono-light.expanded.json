@@ -17,7 +17,7 @@
    "worldmap1_nEdge": "ifElse(0, 394.4, @worldmap1_decl)"
   },
   "paths": {
-   "map_world_land_low": [
+   "map_box_land_low": [
     {
      "type": "moveTo",
      "x": 980.6,
@@ -1530,7 +1530,8 @@
    "background": "#FFFFFFFF",
    "error": "#FF000000",
    "muted": "#FF616161",
-   "onSurface": "#FF000000"
+   "onSurface": "#FF000000",
+   "surface": "#FFFFFFFF"
   }
  },
  "root": {
@@ -1542,9 +1543,6 @@
     },
     {
      "padding": 16
-    },
-    {
-     "spacedBy": 8
     }
    ],
    "children": [
@@ -1603,11 +1601,20 @@
      }
     },
     {
+     "box": {
+      "modifiers": [
+       {
+        "height": 8
+       }
+      ]
+     }
+    },
+    {
      "canvas": {
       "modifiers": [
        "fillMaxWidth",
        {
-        "height": 150
+        "verticalWeight": 1
        },
        {
         "semantics": {
@@ -1619,15 +1626,41 @@
        {
         "variable": {
          "name": "worldmap1_s",
-         "value": "min(componentWidth() / 1000, componentHeight() / 394.4)"
+         "value": "min(componentWidth() / (1000 - 0), (componentHeight() - 0) / (394.4 - 0))"
+        }
+       },
+       {
+        "variable": {
+         "name": "worldmap1_ts",
+         "value": "clamp(11 * 0.8, 11 * 1.8, 11 * @worldmap1_s / 0.3) / @worldmap1_s"
+        }
+       },
+       {
+        "variable": {
+         "name": "worldmap1_tk",
+         "value": "@worldmap1_ts * 0.3 / 11"
+        }
+       },
+       {
+        "variable": {
+         "name": "worldmap1_dk",
+         "value": "@worldmap1_ts * @worldmap1_s / 11"
         }
        },
        {
         "save": [
          {
+          "clipRect": {
+           "left": 0,
+           "top": 0,
+           "right": "componentWidth()",
+           "bottom": "componentHeight()"
+          }
+         },
+         {
           "translate": {
-           "dx": "(componentWidth() - 1000 * @worldmap1_s) / 2",
-           "dy": "(componentHeight() - 394.4 * @worldmap1_s) / 2"
+           "dx": "componentWidth() / 2 - (0 + 1000) / 2 * @worldmap1_s",
+           "dy": "(componentHeight() - 0) / 2 - (0 + 394.4) / 2 * @worldmap1_s"
           }
          },
          {
@@ -1656,14 +1689,14 @@
                "style": "stroke"
               },
               {
-               "strokeWidth": "1.2 / @worldmap1_s"
+               "strokeWidth": "1.2 * @worldmap1_dk / @worldmap1_s"
               }
              ]
             }
            },
            {
             "drawPath": {
-             "path": "$paths.map_world_land_low"
+             "path": "$paths.map_box_land_low"
             }
            },
            {
@@ -1738,64 +1771,214 @@
           "drawCircle": {
            "cx": 499.7,
            "cy": 90.3,
-           "radius": "3 / @worldmap1_s"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "London",
-           "x": 499.7,
-           "y": 90.3,
-           "panX": "ifElse(-1.25, 1.25, step((499.7), 800))",
-           "panY": 0
+           "radius": "3 * @worldmap1_dk / @worldmap1_s"
           }
          },
          {
           "drawCircle": {
            "cx": 294.5,
            "cy": 120.2,
-           "radius": "3 / @worldmap1_s"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "New York",
-           "x": 294.5,
-           "y": 120.2,
-           "panX": "ifElse(-1.25, 1.25, step((294.5), 800))",
-           "panY": 0
+           "radius": "3 * @worldmap1_dk / @worldmap1_s"
           }
          },
          {
           "drawCircle": {
            "cx": 888.2,
            "cy": 134.2,
-           "radius": "3 / @worldmap1_s"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "Tokyo",
-           "x": 888.2,
-           "y": 134.2,
-           "panX": "ifElse(-1.25, 1.25, step((888.2), 800))",
-           "panY": 0
+           "radius": "3 * @worldmap1_dk / @worldmap1_s"
           }
          },
          {
           "drawCircle": {
            "cx": 920,
            "cy": 327.4,
-           "radius": "3 / @worldmap1_s"
+           "radius": "3 * @worldmap1_dk / @worldmap1_s"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.surface"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": "6 * @worldmap1_dk / @worldmap1_s"
+            },
+            {
+             "strokeJoin": "round"
+            },
+            {
+             "textSize": "@worldmap1_ts"
+            }
+           ]
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "alpha": "step(@worldmap1_s, (0.09728))"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": "London",
+           "x": "499.7 + 18.3 * (@worldmap1_tk)",
+           "y": 90.3,
+           "panX": -1,
+           "panY": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "alpha": "step(@worldmap1_s, (0.2098))"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": "New York",
+           "x": "294.5 + 18.3 * (@worldmap1_tk)",
+           "y": 120.2,
+           "panX": -1,
+           "panY": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "alpha": "step(@worldmap1_s, (0.1656))"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": "Tokyo",
+           "x": "888.2 + -18.3 * (@worldmap1_tk)",
+           "y": 134.2,
+           "panX": 1,
+           "panY": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "alpha": "step(@worldmap1_s, (0.03891))"
+            }
+           ]
           }
          },
          {
           "drawTextAnchored": {
            "text": "Sydney",
-           "x": 920,
+           "x": "920 + -18.3 * (@worldmap1_tk)",
            "y": 327.4,
-           "panX": "ifElse(-1.25, 1.25, step((920), 800))",
+           "panX": 1,
            "panY": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.error"
+            },
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "alpha": "step(@worldmap1_s, (0.09728))"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": "London",
+           "x": "499.7 + 18.3 * (@worldmap1_tk)",
+           "y": 90.3,
+           "panX": -1,
+           "panY": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "alpha": "step(@worldmap1_s, (0.2098))"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": "New York",
+           "x": "294.5 + 18.3 * (@worldmap1_tk)",
+           "y": 120.2,
+           "panX": -1,
+           "panY": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "alpha": "step(@worldmap1_s, (0.1656))"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": "Tokyo",
+           "x": "888.2 + -18.3 * (@worldmap1_tk)",
+           "y": 134.2,
+           "panX": 1,
+           "panY": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "alpha": "step(@worldmap1_s, (0.03891))"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": "Sydney",
+           "x": "920 + -18.3 * (@worldmap1_tk)",
+           "y": 327.4,
+           "panX": 1,
+           "panY": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "alpha": 1
+            }
+           ]
           }
          }
         ]

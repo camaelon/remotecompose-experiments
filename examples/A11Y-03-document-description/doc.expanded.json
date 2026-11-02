@@ -1,0 +1,261 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 180,
+  "profiles": 513,
+  "contentDescription": "Weekly steps bar chart: 3,000 on Monday, climbing unevenly to a peak of 9,000 on Saturday, then 8,000 on Sunday"
+ },
+ "resources": {
+  "floatArrays": {
+   "steps": [
+    3000,
+    5000,
+    4000,
+    7000,
+    6000,
+    9000,
+    8000
+   ]
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "outline": {
+    "light": "#FF878F9E",
+    "dark": "#FF3A4556"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": [
+      16,
+      8,
+      16,
+      8
+     ]
+    },
+    {
+     "spacedBy": 6
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "Steps this week",
+      "fontSize": 14,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "verticalWeight": 1
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "semantics": {
+            "contentDescription": "Steps per day this week"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "barchart1_n",
+            "value": "arrayLength(@steps)"
+           }
+          },
+          {
+           "variable": {
+            "name": "barchart1_max",
+            "value": "max(arrayMax(@steps), 0.001)"
+           }
+          },
+          {
+           "translate": {
+            "dx": 0,
+            "dy": "componentHeight() - 18"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             }
+            ]
+           }
+          },
+          {
+           "save": {
+            "commands": [
+             {
+              "clipRect": {
+               "left": 0,
+               "top": "-componentHeight()",
+               "right": "componentWidth()",
+               "bottom": 0
+              }
+             },
+             {
+              "loop": {
+               "index": "i",
+               "from": 0,
+               "until": "@barchart1_n",
+               "commands": [
+                {
+                 "drawRoundRect": {
+                  "left": "(i + 0.15) * componentWidth() / @barchart1_n",
+                  "top": "-arrayGet(@steps, i) * (componentHeight() - 18 - 4) / @barchart1_max",
+                  "right": "(i + 0.85) * componentWidth() / @barchart1_n",
+                  "bottom": 4,
+                  "rx": 4,
+                  "ry": 4
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.outline"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 0,
+            "y1": 0,
+            "x2": "componentWidth()",
+            "y2": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": 11
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "M",
+            "x": "(0 + 0.5) * componentWidth() / @barchart1_n",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "T",
+            "x": "(1 + 0.5) * componentWidth() / @barchart1_n",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "W",
+            "x": "(2 + 0.5) * componentWidth() / @barchart1_n",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "T",
+            "x": "(3 + 0.5) * componentWidth() / @barchart1_n",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "F",
+            "x": "(4 + 0.5) * componentWidth() / @barchart1_n",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "S",
+            "x": "(5 + 0.5) * componentWidth() / @barchart1_n",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "S",
+            "x": "(6 + 0.5) * componentWidth() / @barchart1_n",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

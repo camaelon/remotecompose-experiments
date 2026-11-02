@@ -1,0 +1,176 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 180,
+  "profiles": 513,
+  "contentDescription": "A sparkline of a host-provided series of values"
+ },
+ "resources": {
+  "floatArrays": {
+   "data": {
+    "value": [
+     12,
+     15,
+     14,
+     18,
+     17,
+     21,
+     19,
+     24,
+     23,
+     27,
+     26,
+     31
+    ],
+    "export": true
+   }
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 20
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "Weekly revenue",
+      "fontSize": 14,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       {
+        "height": 12
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       {
+        "weight": 1
+       },
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "semantics": {
+            "contentDescription": "Weekly revenue"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "sparkline1_last",
+            "value": "arrayLength(@data) - 1"
+           }
+          },
+          {
+           "variable": {
+            "name": "sparkline1_lo",
+            "value": "arrayMin(@data)"
+           }
+          },
+          {
+           "variable": {
+            "name": "sparkline1_span",
+            "value": "max(arrayMax(@data) - @sparkline1_lo, 0.001)"
+           }
+          },
+          {
+           "translate": {
+            "dx": 4,
+            "dy": "componentHeight() - 4"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 3
+             },
+             {
+              "strokeCap": "round"
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "@sparkline1_last",
+            "commands": [
+             {
+              "drawLine": {
+               "x1": "i * (componentWidth() - 8) / @sparkline1_last",
+               "y1": "(@sparkline1_lo - arrayGet(@data, i)) * (componentHeight() - 8) / @sparkline1_span",
+               "x2": "(i + 1) * (componentWidth() - 8) / @sparkline1_last",
+               "y2": "(@sparkline1_lo - arrayGet(@data, i + 1)) * (componentHeight() - 8) / @sparkline1_span"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "componentWidth() - 8",
+            "cy": "(@sparkline1_lo - arrayGet(@data, @sparkline1_last)) * (componentHeight() - 8) / @sparkline1_span",
+            "radius": 3
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

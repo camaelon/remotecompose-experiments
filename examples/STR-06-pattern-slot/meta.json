@@ -7,6 +7,10 @@
  "prompt": "Two dashboard panels in the same style: STORAGE with \"41.6 of 64 GB used\" and a usage bar, and RECENT DOWNLOADS with two files and their sizes; define the panel frame once and give each its own content.",
  "level": 3,
  "family": "STR",
+ "components": [
+  "ProgressBar"
+ ],
+ "hand_built": "The panel frame is a definePattern with a content slot because that is the lesson; the library Card is the same frame as a component, and the usage bar inside the slot is a library ProgressBar.",
  "capabilities": {
   "primary": [
    "struct.pattern_slot",
@@ -41,7 +45,8 @@
  "teaches": [
   "Leave a hole in a template with {\"patternArgument\": {\"parameterIndex\": 1}}: parameter 1 (content) is a slot, not a value",
   "Fill the slot at the call: the call's children hold {\"patternBlock\": {\"parameterIndex\": 1, \"children\": [...]}}, any components at all",
-  "Mix value parameters and slots: title is passed by name (\"title\": \"STORAGE\"), content as a block"
+  "Mix value parameters and slots: title is passed by name (\"title\": \"STORAGE\"), content as a block",
+  "Pass a library component in a slot: the ProgressBar call inside the patternBlock is expanded there like any other node, and the template still sees only a block"
  ],
  "pitfalls": [
   "parameterIndex counts the template's parameters from 0 (title is 0, content 1); the slot parameter still has to be declared in parameters",
@@ -71,9 +76,25 @@
   "touch": false
  },
  "check": {
-  "describe": "Two identical rounded panels: STORAGE with 41.6 large, \"of 64 GB used\" and a 65 % blue bar; RECENT DOWNLOADS with two file names and their muted details. Resized (narrow 240, wide 540) both panels fill the width and the storage bar is drawn from componentWidth(), so it stays at 65 % of its panel.",
+  "describe": "Two identical rounded panels (outlined in mono): STORAGE with 41.6 large, \"of 64 GB used\" and a 65 % blue bar; RECENT DOWNLOADS with two file names and their muted details. Resized (narrow 240, wide 540) both panels fill the width and the storage bar, a ProgressBar drawn from componentWidth(), stays at 65 % of its panel.",
   "render": {},
   "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
    {
     "name": "narrow",
     "width": 240,
@@ -95,15 +116,25 @@
   "STR-07"
  ],
  "derived": {
+  "components": [
+   "ProgressBar"
+  ],
+  "component_instances": 1,
+  "component_modes": {
+   "ProgressBar": "expand"
+  },
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 1174,
+  "bytes": 2089,
   "header": {
    "width": 360,
    "height": 256
   },
-  "op_count": 69,
+  "op_count": 137,
   "operations": {
    "ANIMATED_FLOAT": 1,
+   "COLOR_CONSTANT": 13,
+   "COLOR_EXPRESSIONS": 12,
    "COMPONENT_VALUE": 1,
    "CanvasContent": 1,
    "CoreText": 8,
@@ -116,14 +147,53 @@
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 1,
    "LayoutComponentContent": 13,
-   "MODIFIER_BACKGROUND": 3,
+   "LoopOperation": 12,
+   "MODIFIER_BACKGROUND": 5,
    "MODIFIER_HEIGHT": 6,
-   "MODIFIER_PADDING": 6,
+   "MODIFIER_PADDING": 8,
    "MODIFIER_WIDTH": 4,
+   "NAMED_VARIABLE": 7,
    "PAINT_VALUES": 2,
-   "RoundedClipRectModifierOperation": 2
+   "RoundedClipRectModifierOperation": 4,
+   "THEME": 18
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "monoOutline",
+    "type": "color",
+    "value": "#00000000"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
@@ -140,6 +210,114 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 1515,
+    "component_modes": {
+     "ProgressBar": "expand"
+    },
+    "op_count": 91,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "monoOutline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 1515,
+    "component_modes": {
+     "ProgressBar": "expand"
+    },
+    "op_count": 91,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "monoOutline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "narrow": {
     "render": "render-narrow.png",
     "render_findings": [],
@@ -161,6 +339,7 @@
   },
   "json_keys": [
    "Panel",
+   "ProgressBar",
    "apiLevel",
    "background",
    "bottom",
@@ -169,17 +348,23 @@
    "children",
    "clip",
    "color",
+   "colors",
    "column",
    "commands",
    "contentDescription",
+   "dark",
    "definePattern",
    "drawRoundRect",
    "fontSize",
    "header",
    "height",
    "left",
+   "light",
    "modifiers",
+   "monoOutline",
+   "muted",
    "name",
+   "onSurface",
    "ops",
    "padding",
    "paint",
@@ -187,16 +372,22 @@
    "parameters",
    "patternArgument",
    "patternBlock",
+   "primary",
    "profiles",
+   "progress",
+   "resources",
    "right",
    "root",
    "roundedRect",
    "row",
    "rx",
    "ry",
+   "style",
+   "surface",
    "text",
    "title",
    "top",
+   "track",
    "value",
    "verticalAlignment",
    "width"
@@ -231,6 +422,6 @@
     "drawRoundRect"
    ]
   },
-  "built_at": "2026-11-01T22:49:37.244Z"
+  "built_at": "2026-11-02T08:53:09.553Z"
  }
 }

@@ -876,13 +876,20 @@ function layoutTree(maxDepth) {
     // reported as such, with its subtree folded: its bounds are stale measures, not a layout.
     const hidden = hiddenComponentIds();
     const countAll = (c) => (kids.get(c.key) ?? []).reduce((n, k) => n + 1 + countAll(k), 0);
-    const node = (c) => {
+    // An offset modifier moves a component and its children when painted, not when laid out:
+    // the bounds report where it is drawn, so checks see a positioned diagram where it is.
+    const offsetOf = (c) => { try { return CW.modifiersOf(c.op).filter((m) => nameOf(m) === "OffsetModifier")
+        .reduce((o, m) => ({ x: o.x + (Number(m.mOutX) || 0), y: o.y + (Number(m.mOutY) || 0) }), { x: 0, y: 0 }); } catch { return { x: 0, y: 0 }; } };
+    const node = (c, at = { x: 0, y: 0 }) => {
         count++;
+        const own = offsetOf(c);
+        const shift = { x: at.x + own.x, y: at.y + own.y };
         const mods = (() => { try { return CW.modifiersOf(c.op).map(nameOf); } catch { return []; } })();
         const isHidden = typeof c.cid === "number" && hidden.has(c.cid);
         const n = {
             component: c.name, id: c.cid ?? c.id, depth: c.depth,
-            bounds: { x: round(c.globalX), y: round(c.globalY), w: round(c.width), h: round(c.height) },
+            bounds: { x: round(c.globalX + shift.x), y: round(c.globalY + shift.y), w: round(c.width), h: round(c.height) },
+            ...(shift.x || shift.y ? { offset: [round(shift.x), round(shift.y)] } : {}),
             ...(c.padding && (c.padding.top || c.padding.right || c.padding.bottom || c.padding.left) ? { padding: c.padding } : {}),
             ...(mods.length ? { modifiers: mods } : {}),
             ...(c.text !== undefined ? { text: c.text } : {}),
@@ -892,12 +899,12 @@ function layoutTree(maxDepth) {
         if (ch.length) {
             if (isHidden) n.children_not_laid_out = countAll(c);
             else if (maxDepth !== undefined && c.depth >= maxDepth) n.children_hidden = ch.length;
-            else n.children = ch.map(node);
+            else n.children = ch.map((k) => node(k, shift));
         }
         return n;
     };
     const roots = kids.get(null) ?? [];
-    return { components: comps.length, tree: roots.map(node) };
+    return { components: comps.length, tree: roots.map((c) => node(c)) };
 }
 
 function outline(nodes, indent = "") {

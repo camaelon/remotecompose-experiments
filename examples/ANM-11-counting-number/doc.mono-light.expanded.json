@@ -1,0 +1,242 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 180,
+  "profiles": 513,
+  "contentDescription": "A savings balance that counts up to its new total when a deposit is added"
+ },
+ "resources": {
+  "variables": {
+   "total": 1250
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "muted": "#FF616161",
+   "onPrimary": "#FFFFFFFF",
+   "onSurface": "#FF000000",
+   "success": "#FF000000",
+   "track": "#FF616161"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "shown",
+    "value": "@total"
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     },
+     {
+      "spacedBy": 6
+     }
+    ],
+    "children": [
+     {
+      "text": {
+       "value": "Holiday savings",
+       "fontSize": 15,
+       "color": "@colors.muted"
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "bottom",
+       "children": [
+        {
+         "text": {
+          "value": "$",
+          "fontSize": 28,
+          "color": "@colors.success"
+         }
+        },
+        {
+         "text": {
+          "value": {
+           "type": "textFromFloat",
+           "value": "round(@shown)",
+           "whole": 5,
+           "decimal": 0,
+           "flags": 5
+          },
+          "fontSize": 44,
+          "color": "@colors.onSurface"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "canvas": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": 8
+        }
+       ],
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.5
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 0.75,
+          "top": 0.75,
+          "right": "componentWidth() - 0.75",
+          "bottom": 7.25,
+          "rx": 3.25,
+          "ry": 3.25
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.success"
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 0,
+          "top": 0,
+          "right": "max(8, componentWidth() * clamp(0, 1, (@shown / 4000)))",
+          "bottom": 8,
+          "rx": 4,
+          "ry": 4
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "Goal $4000",
+          "fontSize": 13,
+          "color": "@colors.muted",
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "padding": [
+             0,
+             4
+            ]
+           },
+           {
+            "height": 40
+           },
+           {
+            "clip": 14
+           },
+           {
+            "background": "@colors.success"
+           },
+           {
+            "padding": 1.5
+           },
+           "ripple",
+           {
+            "semantics": {
+             "contentDescription": "+ $250",
+             "enabled": true,
+             "clickable": true
+            }
+           },
+           {
+            "onClick": {
+             "type": "valueFloatExpressionChange",
+             "target": "@total",
+             "value": "@total + 250"
+            }
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "horizontalAlignment": "center",
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxHeight",
+              {
+               "clip": 12.5
+              },
+              {
+               "background": "@colors.success"
+              },
+              {
+               "padding": [
+                14.5,
+                0
+               ]
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "+ $250",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "fontSize": 15,
+                "color": "@colors.onPrimary"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

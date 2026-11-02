@@ -16,8 +16,7 @@
    "data.expression",
    "draw.shapes",
    "draw.stroke",
-   "text.dynamic",
-   "text.anchor"
+   "text.dynamic"
   ]
  },
  "use_cases": [
@@ -39,11 +38,9 @@
   "BatteryIndicator"
  ],
  "teaches": [
-  "Take the level from an exported host float (resources.variables battery, default 76) and clamp it once into a local variable with clamp(0, 100, @battery)",
-  "Size the fill from it: right = 48 + 94 * @level / 100",
-  "Turn the fill red below 20% with conditionalOperations lt @level 20 around a paint change",
-  "Show \"76%\" as one centred text with textMerge of a textFromFloat and \"%\"",
-  "Fit a drawing authored at the header size to any box: a variable s = min(componentWidth() / W, componentHeight() / H), a translate by half the extra space and a scale by s about the design's centre; the background drawRect runs before it, to componentWidth() × componentHeight()"
+  "Take the level from an exported host float (resources.variables battery, default 76) and pass it to BatteryIndicator as level \"@battery\"",
+  "Turn the fill red below 20% with the component's lowAt (warnAt 20 too, so there is no amber step)",
+  "Show \"76%\" as one centred text under the icon with textMerge of a textFromFloat(clamp(0, 100, @battery), flags 4) and \"%\""
  ],
  "snippets": [
   {
@@ -52,24 +49,19 @@
    "note": "battery, set by the host"
   },
   {
-   "pointer": "/root/commands/5",
-   "shows": "data.expression",
-   "note": "level = clamp(0, 100, @battery): the value goes last"
-  },
-  {
-   "pointer": "/root/commands/11",
+   "pointer": "/root/column/children/0",
    "shows": "data.condition",
-   "note": "red paint when level < 20"
+   "note": "BatteryIndicator: level @battery, red below lowAt 20"
   },
   {
-   "pointer": "/root/commands/12",
-   "shows": "data.expression",
-   "note": "the fill width follows the level"
-  },
-  {
-   "pointer": "/root/commands/14",
+   "pointer": "/root/column/children/1",
    "shows": "text.dynamic",
-   "note": "textMerge(textFromFloat(@level, flags 4), \"%\"), centred"
+   "note": "textMerge(textFromFloat(clamp(0, 100, @battery), flags 4), \"%\"), centred"
+  },
+  {
+   "pointer": "/root/column/children/1/text/value/id1/value",
+   "shows": "data.expression",
+   "note": "clamp(0, 100, @battery): the value goes last"
   }
  ],
  "inputs": {
@@ -87,7 +79,7 @@
   "touch": false
  },
  "check": {
-  "describe": "Default: a green fill at 76% and \"76%\". variables {battery: 15}: a short red fill and \"15%\". Resized, the background fills the box and the battery scales to the shorter side, centred.",
+  "describe": "Default: a green fill at 76% and \"76%\". variables {battery: 15}: a short red fill with a ! and \"15%\". Resized, the background fills the box and the battery shrinks to the narrow width, centred over its percentage.",
   "render": {
    "variables": {
     "battery": 15
@@ -113,46 +105,92 @@
  "pitfalls": [
   "batteryLevel() (system variable 38) is an rcj/json2rc extension: the Java parser rejects it (\"Unknown token in expression\") and Android's RemoteContext defines no battery id, so a portable document takes the level from a host variable",
   "clamp takes the value last: clamp(0, 100, @battery). clamp(@battery, 0, 100) returns 0 for any level",
-  "A conditionalOperations that only changes the paint must sit between the default paint and the draw: the red paint replaces the green one for the next drawRoundRect only when the test holds",
   "textFromFloat pads to `whole` digits with a leading space (\" 15\"), which shifts centred text; flags 4 drops the padding",
-  "Canvas coordinates are pixels of the box the host gives the document, not of the header: a background drawRect to the literal header size leaves the rest of a bigger box unpainted, and literal positions get cut off in a smaller one"
+  "BatteryIndicator's own percentage sits beside the icon and is cut in a narrow box: pass showPercent false and put the number under it"
  ],
  "derived": {
+  "components": [
+   "BatteryIndicator"
+  ],
+  "component_instances": 1,
+  "component_modes": {
+   "BatteryIndicator": "expand"
+  },
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 659,
+  "bytes": 1700,
   "header": {
    "width": 200,
    "height": 200
   },
-  "op_count": 33,
+  "op_count": 106,
   "operations": {
-   "ANIMATED_FLOAT": 5,
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 6,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
-   "ConditionalOperations": 1,
+   "ConditionalOperations": 2,
+   "CoreText": 1,
    "DATA_FLOAT": 1,
-   "DATA_TEXT": 1,
-   "DRAW_RECT": 1,
-   "DRAW_ROUND_RECT": 3,
-   "DRAW_TEXT_ANCHOR": 1,
+   "DATA_TEXT": 2,
+   "DRAW_CIRCLE": 1,
+   "DRAW_ROUND_RECT": 4,
    "HEADER": 1,
    "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
-   "LayoutComponentContent": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 4,
+   "LoopOperation": 12,
    "MATRIX_SCALE": 1,
    "MATRIX_TRANSLATE": 1,
-   "MODIFIER_HEIGHT": 1,
-   "MODIFIER_WIDTH": 1,
-   "NAMED_VARIABLE": 1,
-   "PAINT_VALUES": 6,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 2,
+   "NAMED_VARIABLE": 7,
+   "PAINT_VALUES": 5,
+   "THEME": 18,
    "TextFromFloat": 1,
    "TextMerge": 1
   },
   "host_variables": [
    {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
     "name": "battery",
     "type": "float",
     "value": 76
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
    }
   ],
   "render_findings": [],
@@ -191,48 +229,68 @@
    }
   },
   "json_keys": [
+   "BatteryIndicator",
    "apiLevel",
+   "background",
    "battery",
+   "batteryindicator1_lv",
    "bottom",
+   "canvas",
+   "children",
    "color",
+   "colors",
+   "column",
    "commands",
    "condition",
    "conditionalOperations",
    "contentDescription",
+   "cx",
+   "cy",
+   "dark",
    "decimal",
-   "drawRect",
+   "drawCircle",
    "drawRoundRect",
-   "drawTextAnchored",
    "dx",
    "dy",
+   "error",
    "export",
    "flags",
+   "fontSize",
    "header",
    "height",
+   "horizontalAlignment",
    "id1",
    "id2",
    "left",
+   "level",
+   "light",
+   "lowAt",
    "modifiers",
+   "muted",
    "name",
+   "onSurface",
    "ops",
+   "padding",
    "paint",
-   "panX",
-   "panY",
-   "pivotX",
-   "pivotY",
    "profiles",
+   "radius",
    "resources",
    "right",
    "root",
+   "row",
    "rx",
    "ry",
    "scale",
+   "semantics",
+   "showPercent",
+   "size",
+   "spacedBy",
    "strokeWidth",
    "style",
+   "success",
    "sx",
    "sy",
    "text",
-   "textSize",
    "top",
    "translate",
    "type",
@@ -241,14 +299,17 @@
    "value",
    "variable",
    "variables",
+   "verticalAlignment",
+   "verticalArrangement",
+   "warnAt",
+   "warning",
    "whole",
-   "width",
-   "x",
-   "y"
+   "width"
   ],
   "evidence": {
    "host.variables": [
-    "export"
+    "export",
+    "colors"
    ],
    "data.condition": [
     "conditionalOperations"
@@ -258,8 +319,8 @@
     "<arithmetic>"
    ],
    "draw.shapes": [
-    "drawRect",
-    "drawRoundRect"
+    "drawRoundRect",
+    "drawCircle"
    ],
    "draw.stroke": [
     "strokeWidth"
@@ -267,11 +328,8 @@
    "text.dynamic": [
     "textFromFloat",
     "textMerge"
-   ],
-   "text.anchor": [
-    "drawTextAnchored"
    ]
   },
-  "built_at": "2026-11-01T22:48:53.993Z"
+  "built_at": "2026-11-02T08:52:04.248Z"
  }
 }

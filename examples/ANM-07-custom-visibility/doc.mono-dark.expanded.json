@@ -1,0 +1,233 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 220,
+  "profiles": 513,
+  "contentDescription": "A promo banner that rises and fades in when shown, and shrinks away when dismissed"
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "show",
+    "vtype": "int",
+    "value": 0
+   }
+  },
+  {
+   "defineVisibilityAnimation": {
+    "name": "riseIn",
+    "params": [
+     "progress",
+     "w",
+     "h",
+     "x",
+     "y"
+    ],
+    "commands": [
+     {
+      "save": [
+       {
+        "paint": {
+         "alpha": "@progress"
+        }
+       },
+       {
+        "translate": {
+         "dx": 0,
+         "dy": "(1 - @progress) * @h * 0.6"
+        }
+       },
+       {
+        "type": "drawComponentContent"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "defineVisibilityAnimation": {
+    "name": "shrinkOut",
+    "params": [
+     "progress",
+     "w",
+     "h",
+     "x",
+     "y"
+    ],
+    "commands": [
+     {
+      "save": [
+       {
+        "paint": {
+         "alpha": "1 - @progress"
+        }
+       },
+       {
+        "scale": {
+         "sx": "1 - 0.2 * @progress",
+         "sy": "1 - 0.2 * @progress",
+         "pivotX": "@x + @w / 2",
+         "pivotY": "@y + @h / 2"
+        }
+       },
+       {
+        "type": "drawComponentContent"
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     },
+     {
+      "spacedBy": 14
+     }
+    ],
+    "children": [
+     {
+      "box": {
+       "modifiers": [
+        {
+         "padding": [
+          0,
+          4
+         ]
+        },
+        {
+         "height": 40
+        },
+        {
+         "clip": 14
+        },
+        {
+         "background": "@colors.primary"
+        },
+        {
+         "padding": 1.5
+        },
+        "ripple",
+        {
+         "semantics": {
+          "contentDescription": "Show offer",
+          "enabled": true,
+          "clickable": true
+         }
+        },
+        {
+         "onClick": {
+          "type": "valueIntegerChange",
+          "target": "@show",
+          "value": 1
+         }
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxHeight",
+           {
+            "clip": 12.5
+           },
+           {
+            "background": "@colors.background"
+           },
+           {
+            "padding": [
+             14.5,
+             0
+            ]
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "Show offer",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "fontSize": 15,
+             "color": "@colors.primary"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "column": {
+       "modifiers": [
+        {
+         "visibility": "@show"
+        },
+        "fillMaxWidth",
+        {
+         "clip": 18
+        },
+        {
+         "background": "@colors.primary"
+        },
+        {
+         "padding": 18
+        },
+        {
+         "spacedBy": 4
+        },
+        {
+         "semantics": {
+          "contentDescription": "Offer: 30% off annual plans. Tap to dismiss",
+          "clickable": true
+         }
+        },
+        {
+         "onClick": {
+          "type": "valueIntegerChange",
+          "target": "@show",
+          "value": 0
+         }
+        }
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "30% off annual plans",
+          "fontSize": 20,
+          "color": "@colors.onPrimary"
+         }
+        },
+        {
+         "text": {
+          "value": "This week only. Tap to dismiss",
+          "fontSize": 14,
+          "color": "@colors.onPrimary"
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "resources": {
+  "colors": {
+   "background": "#FF000000",
+   "onPrimary": "#FF000000",
+   "primary": "#FFFFFFFF"
+  }
+ }
+}

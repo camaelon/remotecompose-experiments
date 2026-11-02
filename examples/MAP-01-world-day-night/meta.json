@@ -39,7 +39,8 @@
  "teaches": [
   "WorldMap with night: true shades where it is night now, from the clock; cities by name, labels beside them",
   "UTC minutes of the day: (timeInMin() - offsetToUtc() / 60 + 1440) % 1440",
-  "The map is geometry fixed at build time (~3.5 KB for the world at low detail); the night shade is one pathExpression that moves with the clock"
+  "The map is geometry fixed at build time (~3.5 KB for the world at low detail); the night shade is one pathExpression that moves with the clock",
+  "\"fill\": true makes the map take the height left in the column and rescale with the window; text, dots and lines grow with it (0.8x to 1.8x)"
  ],
  "inputs": {
   "variables": {},
@@ -47,7 +48,7 @@
   "touch": false
  },
  "check": {
-  "describe": "At 10:30 UTC on 31 October the day is centred on Europe and Africa (the sun over 22.5°E), the Americas and East Asia are in night; the header reads 10:30 UTC in any time zone.",
+  "describe": "At 10:30 UTC on 31 October the day is centred on Europe and Africa (the sun over 22.5°E), the Americas and East Asia are in night; the header reads 10:30 UTC in any time zone. The map fills the space under the header at every size (a world keeps its 2.5:1, so a tall window has bands above and below); city names grow with it.",
   "render": {
    "clock": 1793442600000
   },
@@ -69,13 +70,23 @@
     "componentTheme": "mono-light"
    },
    {
-    "name": "narrow",
-    "width": 260,
-    "height": 200
-   },
-   {
     "name": "evening",
     "clock": 1793475000000
+   },
+   {
+    "name": "small",
+    "width": 240,
+    "height": 220
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360
+   },
+   {
+    "name": "large",
+    "width": 1000,
+    "height": 700
    }
   ]
  },
@@ -93,45 +104,46 @@
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 8170,
+  "bytes": 9132,
   "header": {
    "width": 360,
    "height": 220
   },
-  "op_count": 132,
+  "op_count": 176,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
-   "ANIMATED_FLOAT": 19,
-   "CLIP_RECT": 2,
-   "COLOR_CONSTANT": 10,
-   "COLOR_EXPRESSIONS": 10,
+   "ANIMATED_FLOAT": 35,
+   "CLIP_RECT": 3,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
    "CoreText": 2,
    "DATA_TEXT": 8,
    "DRAW_CIRCLE": 4,
    "DRAW_PATH": 2,
-   "DRAW_TEXT_ANCHOR": 4,
+   "DRAW_TEXT_ANCHOR": 8,
    "HEADER": 1,
+   "LAYOUT_BOX": 1,
    "LAYOUT_CANVAS": 1,
    "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 1,
    "LayoutComponentContent": 5,
-   "LoopOperation": 10,
+   "LoopOperation": 12,
    "MATRIX_RESTORE": 3,
    "MATRIX_SAVE": 3,
    "MATRIX_SCALE": 1,
    "MATRIX_TRANSLATE": 1,
    "MODIFIER_BACKGROUND": 1,
-   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_HEIGHT": 3,
    "MODIFIER_PADDING": 1,
    "MODIFIER_WIDTH": 4,
-   "NAMED_VARIABLE": 5,
-   "PAINT_VALUES": 4,
+   "NAMED_VARIABLE": 6,
+   "PAINT_VALUES": 15,
    "PATH_DATA": 1,
    "PathExpression": 1,
-   "THEME": 15,
+   "THEME": 18,
    "TextFromFloat": 2,
    "TextMerge": 3
   },
@@ -155,6 +167,11 @@
     "name": "onSurface",
     "type": "color",
     "value": "#FFE6EAF2"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
    },
    {
     "name": "track",
@@ -190,11 +207,11 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 7662,
+    "bytes": 8530,
     "component_modes": {
      "WorldMap": "expand"
     },
-    "op_count": 91,
+    "op_count": 127,
     "host_variables": [
      {
       "name": "background",
@@ -215,6 +232,11 @@
       "name": "onSurface",
       "type": "color",
       "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
      }
     ],
     "java_identical": true,
@@ -224,11 +246,11 @@
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 7662,
+    "bytes": 8530,
     "component_modes": {
      "WorldMap": "expand"
     },
-    "op_count": 91,
+    "op_count": 127,
     "host_variables": [
      {
       "name": "background",
@@ -249,6 +271,11 @@
       "name": "onSurface",
       "type": "color",
       "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
      }
     ],
     "java_identical": true,
@@ -256,18 +283,36 @@
     "render": "render-mono-light.png",
     "render_findings": []
    },
-   "narrow": {
-    "render": "render-narrow.png",
-    "render_findings": [],
-    "size": [
-     260,
-     200
-    ],
-    "audit_findings": []
-   },
    "evening": {
     "render": "render-evening.png",
     "render_findings": []
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [],
+    "size": [
+     240,
+     220
+    ],
+    "audit_findings": []
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": []
+   },
+   "large": {
+    "render": "render-large.png",
+    "render_findings": [],
+    "size": [
+     1000,
+     700
+    ],
+    "audit_findings": []
    }
   },
   "json_keys": [
@@ -276,6 +321,7 @@
    "apiLevel",
    "background",
    "bottom",
+   "box",
    "canvas",
    "children",
    "cities",
@@ -299,6 +345,7 @@
    "error",
    "expressionX",
    "expressionY",
+   "fill",
    "flags",
    "fontSize",
    "fontWeight",
@@ -311,7 +358,7 @@
    "labels",
    "left",
    "light",
-   "map_world_land_low",
+   "map_box_land_low",
    "modifiers",
    "muted",
    "name",
@@ -334,9 +381,11 @@
    "save",
    "scale",
    "semantics",
-   "spacedBy",
    "start",
+   "strokeJoin",
+   "strokeWidth",
    "style",
+   "surface",
    "sx",
    "sy",
    "text",
@@ -352,6 +401,7 @@
    "variable",
    "variables",
    "verticalAlignment",
+   "verticalWeight",
    "weight",
    "whole",
    "width",
@@ -384,19 +434,19 @@
     "<arithmetic>"
    ]
   },
-  "built_at": "2026-11-01T22:49:23.241Z"
+  "built_at": "2026-11-02T08:52:45.312Z"
  },
  "components": [
   "WorldMap"
  ],
  "snippets": [
   {
-   "pointer": "/root/column/children/1",
+   "pointer": "/root/column/children/2",
    "shows": "map.world",
    "note": "the world at low detail, four cities by name"
   },
   {
-   "pointer": "/root/column/children/1",
+   "pointer": "/root/column/children/2",
    "shows": "map.daynight",
    "note": "night: true shades the night side from the clock"
   },
