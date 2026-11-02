@@ -362,6 +362,7 @@ Traps the library hit (the linter catches the first four):
 - There are no colour expressions. To show a state colour, overlay two copies and fade one
   with paint alpha, or with `graphicsLayer {alpha: expr}` (see Switch, Chip, Tabs).
 - `textFromFloat`'s `whole` is the number of digits kept: `whole: 1` prints 10 as "0".
+- `textFromFloat` follows `StringUtils.floatToString`, which prints every x.97 as x.96 at 2 decimals and values under 0.001 as garbage, on every player. For exact cents, print `floor(cents / 100)` and `cents % 100` as whole numbers and join them with a "." (zero-padded, flags 12), where cents is `round(v * 100)`.
 - Paint state can carry from one canvas to the next. The TS player keeps the last paint
   `alpha`, so a canvas that starts without one inherits a 0 and draws nothing; C++ resets it.
   Start each branch that later fades with `{"alpha": 1}` in its first paint (Switch and

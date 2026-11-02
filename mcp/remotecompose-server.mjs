@@ -477,7 +477,11 @@ function withLook(args, componentTheme) {
 }
 
 /** An error in one line: "rc2image failed:" alone says nothing, the reason is on the next line. */
-const errorLine = (e) => String(e?.message ?? e).split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 2).join(" ").slice(0, 300);
+// (The player's own operation log comes first and would hide the reason.)
+const errorLine = (e) => {
+    const line = String(e?.message ?? e).split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("[rc]")).slice(0, 2).join(" ").slice(0, 300);
+    return /declares no such named variable/.test(line) ? `${line} Only exported variables can be set from outside: declare it with "export": true.` : line;
+};
 
 /** An inspect tool's JSON result. */
 async function inspectJson(name, args) {

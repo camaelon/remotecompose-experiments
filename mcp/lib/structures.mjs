@@ -18,7 +18,7 @@ export const STRUCTURES = [
       adapts: "secondary facts drop when short, the line stays", examples: [], components: ["Steps", "LabelValue"],
       signals: [[/\b(flight|boarding|itinerary|journey|trip|shipment)\b/, 3], [/\b(package|parcel|delivery|order) (delivery )?(tracker|status)\b/, 4], [/\bprogress line\b/, 3], [/\bthe steps\b.*\bcurrent\b/, 4]] },
     { id: "form-result", is: "labelled inputs, choices and a main action, with a result where there is one",
-      adapts: "scrolls when short; the result stays visible", examples: ["CMP-25", "CMP-12", "EXP-15"], core: ["InputsResult", "ChoiceChips"],
+      adapts: "scrolls when short; the result stays visible", examples: ["CMP-25", "CMP-12", "EXP-15"], core: ["InputsResult", "ChoiceChips", "Stepper"],
       signals: [[/\b(login|log in|sign[- ]?in|sign[- ]?up|register|form|fields?|checkout)\b/, 4], [/\b(calculator|converter|quiz)\b/, 4], [/\bbutton\b/, 1]] },
     { id: "control-rows", template: "RowList", is: "uniform rows, each with its own control: a checkbox, a switch or a slider",
       adapts: "rows drop their subtitles, a count stays", examples: ["CMP-18", "CMP-14", "CMP-05"],
