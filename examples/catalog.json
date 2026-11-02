@@ -1,7 +1,7 @@
 {
  "version": 1,
  "vocabulary": "docs/examples-vocabulary.json",
- "built_at": "2026-11-02T02:30:57.595Z",
+ "built_at": "2026-11-02T05:07:56.131Z",
  "examples": [
   {
    "id": "A11Y-01",
@@ -20861,6 +20861,150 @@
      "uniforms",
      "value",
      "variables",
+     "width"
+    ]
+   }
+  },
+  {
+   "id": "DRW-16",
+   "name": "bitmap-image",
+   "version": 1,
+   "title": "A picture in the document",
+   "summary": "A PNG embedded with resources.bitmaps and drawn in canvases with drawScaledBitmap: one cropped to fill its box, one fitted inside it.",
+   "prompt": "Show an image embedded in the document, once cropped to fill and once fitted inside its box.",
+   "level": 2,
+   "family": "DRW",
+   "capabilities": {
+    "primary": [
+     "image.bitmap"
+    ],
+    "secondary": []
+   },
+   "use_cases": [],
+   "form_factor": "widget-4x2",
+   "keywords": [
+    "image",
+    "picture",
+    "photo",
+    "png",
+    "base64",
+    "bitmap",
+    "album art",
+    "cover image",
+    "drawScaledBitmap",
+    "drawBitmap",
+    "crop",
+    "fit"
+   ],
+   "teaches": [
+    "resources.bitmaps takes {\"base64\": ...} or {\"file\": ...}, PNG only, and embeds the bytes",
+    "drawScaledBitmap: src is in image pixels, dst in dp, scaleType 0 none, 1 inside, 2 fill width, 3 fill height, 4 fit, 5 crop, 6 stretch, 7 fixed scale"
+   ],
+   "pitfalls": [
+    "The image's bytes go into the document, so its size is the PNG's size: keep images small",
+    "drawBitmap needs right and bottom here",
+    "The Java parser has these draw commands but not resources.bitmaps: there the host supplies images, so this document's bytes differ from Java's"
+   ],
+   "snippets": [
+    {
+     "pointer": "/resources/bitmaps",
+     "shows": "image.bitmap",
+     "note": "a named PNG as base64; {\"file\": \"a.png\"} also works"
+    },
+    {
+     "pointer": "/root/row/children/0/canvas/commands/0",
+     "shows": "image.bitmap",
+     "note": "cropped to fill, sized from the box"
+    }
+   ],
+   "inputs": {},
+   "check": {
+    "describe": "Two pictures of four coloured quadrants: the left crops to fill its box, the right fits inside with bands above and below",
+    "render": {},
+    "renders": [
+     {
+      "name": "square",
+      "width": 160,
+      "height": 160
+     },
+     {
+      "name": "phone",
+      "width": 360,
+      "height": 640
+     }
+    ]
+   },
+   "related": [
+    "DRW-15",
+    "CMP-19"
+   ],
+   "java_difference": "the Java parser has no resources.bitmaps: images come from the host through defineBitmap",
+   "folder": "DRW-16-bitmap-image",
+   "derived": {
+    "bytes": 1088,
+    "op_count": 28,
+    "header": {
+     "width": 320,
+     "height": 160
+    },
+    "host_variables": [],
+    "java_identical": false,
+    "renders": {
+     "square": {
+      "render": "render-square.png"
+     },
+     "phone": {
+      "render": "render-phone.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 0
+    },
+    "evidence": {
+     "image.bitmap": [
+      "drawScaledBitmap",
+      "bitmaps"
+     ]
+    },
+    "json_keys": [
+     "apiLevel",
+     "base64",
+     "bitmaps",
+     "box",
+     "canvas",
+     "children",
+     "commands",
+     "contentDescription",
+     "dstBottom",
+     "dstLeft",
+     "dstRight",
+     "dstTop",
+     "header",
+     "height",
+     "image",
+     "modifiers",
+     "padding",
+     "photo",
+     "profiles",
+     "resources",
+     "root",
+     "row",
+     "scaleType",
+     "srcBottom",
+     "srcLeft",
+     "srcRight",
+     "srcTop",
+     "type",
+     "weight",
      "width"
     ]
    }
@@ -51459,7 +51603,7 @@
     "It fills its box: inside a column or row, give the box a size or pass size. A canvas with nothing to measure against is 0 dp",
     "The composition covers the box like an image (cropped to the long side); the symbol or initial stays centred at 45% of the short side",
     "The initial is the first letter as the app sends it, not uppercased: send a capital. An empty host title shows the discs with nothing on them",
-    "Real images: the format has drawBitmap and the Java parser reads it, but json2rc refuses it today (no image node, no drawBitmap, no drawScaledBitmap), so through these tools a document cannot show album art. Until then the placeholder is the art: send a colour taken from the album through color and the track number through seed"
+    "Real images: pass \"slots\": {\"image\": [{\"canvas\": {\"modifiers\": [\"fillMaxSize\"], \"commands\": [{\"type\": \"drawScaledBitmap\", \"image\": \"@cover\", \"srcLeft\": 0, \"srcTop\": 0, \"srcRight\": 600, \"srcBottom\": 600, \"dstLeft\": 0, \"dstTop\": 0, \"dstRight\": \"componentWidth()\", \"dstBottom\": \"componentHeight()\", \"scaleType\": 5, \"contentDescription\": \"Album cover\"}]}}]}, with \"cover\": {\"base64\": \"...\"} or {\"file\": \"cover.png\"} under resources.bitmaps. PNG only; the image bytes go into the document, so keep it small. src is the image's own pixel size. scaleType 5 crops to fill. The slot's corners are rounded by CoverArt"
    ],
    "folder": "components/CoverArt",
    "derived": {

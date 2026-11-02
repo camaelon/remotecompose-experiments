@@ -47,7 +47,7 @@
  "slots": {
   "image": {
    "optional": true,
-   "doc": "What goes over the placeholder when there is real art, sized fillMaxSize: it sits inside the corners. See the pitfall: json2rc cannot draw a bitmap today"
+   "doc": "What goes over the placeholder when there is real art, sized fillMaxSize: it sits inside the corners. Declare the PNG under resources.bitmaps, then a canvas with drawScaledBitmap (see the pitfall and DRW-16)"
   }
  },
  "locals": {
@@ -741,6 +741,6 @@
   "It fills its box: inside a column or row, give the box a size or pass size. A canvas with nothing to measure against is 0 dp",
   "The composition covers the box like an image (cropped to the long side); the symbol or initial stays centred at 45% of the short side",
   "The initial is the first letter as the app sends it, not uppercased: send a capital. An empty host title shows the discs with nothing on them",
-  "Real images: the format has drawBitmap and the Java parser reads it, but json2rc refuses it today (no image node, no drawBitmap, no drawScaledBitmap), so through these tools a document cannot show album art. Until then the placeholder is the art: send a colour taken from the album through color and the track number through seed"
+  "Real images: pass \"slots\": {\"image\": [{\"canvas\": {\"modifiers\": [\"fillMaxSize\"], \"commands\": [{\"type\": \"drawScaledBitmap\", \"image\": \"@cover\", \"srcLeft\": 0, \"srcTop\": 0, \"srcRight\": 600, \"srcBottom\": 600, \"dstLeft\": 0, \"dstTop\": 0, \"dstRight\": \"componentWidth()\", \"dstBottom\": \"componentHeight()\", \"scaleType\": 5, \"contentDescription\": \"Album cover\"}]}}]}, with \"cover\": {\"base64\": \"...\"} or {\"file\": \"cover.png\"} under resources.bitmaps. PNG only; the image bytes go into the document, so keep it small. src is the image's own pixel size. scaleType 5 crops to fill. The slot's corners are rounded by CoverArt"
  ]
 }

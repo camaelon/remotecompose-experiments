@@ -68,6 +68,7 @@ exports.OP = {
     MODIFIER_PADDING: 58, MODIFIER_CLIP_RECT: 108, MODIFIER_ROUNDED_CLIP_RECT: 54,
     DATA_FLOAT: 80, ANIMATED_FLOAT: 81, COLOR_CONSTANT: 138, NAMED_VARIABLE: 137,
     PAINT_VALUES: 40, DRAW_RECT: 42, DRAW_CIRCLE: 46, DRAW_LINE: 47, DRAW_OVAL: 56,
+    DRAW_BITMAP: 44, DRAW_BITMAP_INT: 66, DRAW_BITMAP_SCALED: 149,
     DRAW_ROUND_RECT: 51, DRAW_ARC: 152, DRAW_SECTOR: 52, DRAW_TEXT_ANCHOR: 133,
     MATRIX_SAVE: 130, MATRIX_RESTORE: 131, WAKE_IN: 191, MATRIX_TRANSLATE: 127, MATRIX_SCALE: 126,
     MATRIX_ROTATE: 129, CLIP_RECT: 39, LOOP_START: 215, THEME: 63, COLOR_EXPRESSION: 134,
@@ -461,6 +462,18 @@ class Writer {
     drawOval(l, t, r, b) { this.op(exports.OP.DRAW_OVAL, [l, t, r, b]); }
     drawCircle(cx, cy, rad) { this.op(exports.OP.DRAW_CIRCLE, [cx, cy, rad]); }
     drawLine(x1, y1, x2, y2) { this.op(exports.OP.DRAW_LINE, [x1, y1, x2, y2]); }
+    /** DRAW_BITMAP (44): l, t, r, b are float bits. */
+    drawBitmap(imageId, l, t, r, b, cdId) {
+        this.op(exports.OP.DRAW_BITMAP, [imageId, l, t, r, b, cdId]);
+    }
+    /** DRAW_BITMAP_INT (66): whole pixels, source then destination. */
+    drawBitmapInt(imageId, src, dst, cdId) {
+        this.op(exports.OP.DRAW_BITMAP_INT, [imageId, ...src, ...dst, cdId]);
+    }
+    /** DRAW_BITMAP_SCALED (149): src, dst and scaleFactor are float bits; scaleType is an int. */
+    drawBitmapScaled(imageId, src, dst, scaleType, scaleFactor, cdId) {
+        this.op(exports.OP.DRAW_BITMAP_SCALED, [imageId, ...src, ...dst, scaleType, scaleFactor, cdId]);
+    }
     drawRoundRect(l, t, r, b, rx, ry) {
         this.op(exports.OP.DRAW_ROUND_RECT, [l, t, r, b, rx, ry]);
     }

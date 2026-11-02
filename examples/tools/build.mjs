@@ -367,7 +367,11 @@ for (const { dir, kind, name } of dirs) {
                        evidence: d.evidence, json_keys: d.json_keys } });
     } else failures.push(dir);
 }
-if (!only.length || WRITE_CATALOG) {
+// A partial --catalog must not drop what it did not build: refuse rather than shrink the catalog.
+const catalogFile = path.join(ROOT, "catalog.json");
+const shrinks = only.length && existsSync(catalogFile) && (() => { const was = JSON.parse(readFileSync(catalogFile, "utf8")), built = new Set([...catalog, ...componentCatalog].map((e) => e.id)); return [...(was.examples ?? []), ...(was.components ?? [])].some((e) => !built.has(e.id)); })();
+if (WRITE_CATALOG && shrinks) console.error("catalog.json NOT rewritten: this run did not build every example in it. Pass all prefixes, or build without ids.");
+if (!only.length || (WRITE_CATALOG && !shrinks)) {
     // `related` ids must name examples that exist (the plan's ids that aren't built yet don't).
     const ids = new Set([...catalog, ...componentCatalog].map((e) => e.id));
     for (const e of [...catalog, ...componentCatalog]) {

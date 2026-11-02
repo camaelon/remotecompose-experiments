@@ -2335,6 +2335,34 @@ class Parser {
             w.drawSector(f("left"), f("top"), f("right"), f("bottom"), f("startAngle"), f("sweepAngle"));
             return;
         }
+        if (t === "drawbitmap" || t === "drawbitmapint") {
+            const image = this.bitmapId(command.image);
+            const cd = () => (command.contentDescription == null ? 0 : w.addText(String(command.contentDescription)));
+            if (t === "drawbitmapint" || "srcLeft" in command) {
+                const whole = (k) => {
+                    if (!(k in command))
+                        throw new NotImplementedComponent(`${command.type}: missing required field '${k}'`);
+                    return Math.trunc(Number(command[k]));
+                };
+                const src = ["srcLeft", "srcTop", "srcRight", "srcBottom"].map(whole);
+                const dst = ["dstLeft", "dstTop", "dstRight", "dstBottom"].map(whole);
+                w.drawBitmapInt(image, src, dst, cd());
+                return;
+            }
+            // (The reference asks the platform for the size when right and bottom are missing; there is no platform here.)
+            const box = ["left", "top", "right", "bottom"].map(f);
+            w.drawBitmap(image, box[0], box[1], box[2], box[3], cd());
+            return;
+        }
+        if (t === "drawscaledbitmap") {
+            const image = this.bitmapId(command.image);
+            const src = ["srcLeft", "srcTop", "srcRight", "srcBottom"].map(f);
+            const dst = ["dstLeft", "dstTop", "dstRight", "dstBottom"].map(f);
+            const factor = "scaleFactor" in command ? f("scaleFactor") : this.fbits(1);
+            const cd = command.contentDescription == null ? 0 : w.addText(String(command.contentDescription));
+            w.drawBitmapScaled(image, src, dst, Math.trunc(Number(command.scaleType ?? 0)), factor, cd);
+            return;
+        }
         if (t === "drawtextanchored") {
             w.drawTextAnchored(this.resolveTextId(command.text), f("x"), f("y"), f("panX"), f("panY"), Number(command.flags ?? 0));
             return;

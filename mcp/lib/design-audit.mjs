@@ -345,7 +345,9 @@ function wrongKeyFindings(doc) {
         for (const [k, v] of Object.entries(x)) {
             const nodeBody = (NODE_KINDS.test(k) || k === "root") && isObj(v);
             // A component call ({"StatusMark": {...}}) takes the component's own params: not a node.
-            const call = /^[A-Z]/.test(k) && isObj(v);
+            // So is a draw command: drawBitmap and its kin do take a contentDescription.
+            const call = (/^[A-Z]/.test(k) || /^draw/i.test(k)) && isObj(v);
+            if (/^draw/i.test(String(x.type ?? ""))) continue;
             if (self && k in WRONG_KEYS && !(k === "contentDescription" && x === doc.header)) hits.set(k, (hits.get(k) ?? 0) + 1);
             visit(v, !call && (nodeBody || (k === "children") || (self && !["modifiers", "resources", "components", "params", "locals"].includes(k))));
         }

@@ -1879,7 +1879,45 @@ void UpdateDynamicFloatListOp::apply(RemoteContext& context) {
 void DrawBitmapScaled::apply(RemoteContext& context) {
     if (context.getMode() == ContextMode::PAINT) {
         auto* pc = context.getPaintContext();
-        if (pc) pc->drawBitmap(imageId, oDstL, oDstT, oDstR, oDstB);
+        if (!pc) return;
+        // ImageScaling.java: where the source lands inside the destination, in whole pixels.
+        const int sw = (int)(oSrcR - oSrcL), sh = (int)(oSrcB - oSrcT);
+        const float width = oDstR - oDstL, height = oDstB - oDstT;
+        const int boxW = (int)width, boxH = (int)height;
+        int dw = boxW, dh = boxH;
+        int dLeft = 0, dTop = 0, dRight = dw, dBottom = dh;
+        const auto centre = [&] {
+            dTop = (boxH - dh) / 2; dBottom = dh + dTop;
+            dLeft = (boxW - dw) / 2; dRight = dw + dLeft;
+        };
+        bool scaled = sw != 0 && sh != 0;
+        if (scaled) switch (scaleType & 0xFF) {
+            case 0: dh = sh; dw = sw; centre(); break;                       // none
+            case 1:                                                          // inside
+                if (dh > sh && dw > sw) { dh = sh; dw = sw; }
+                else if (sw * height > width * sh) dh = dw * sh / sw;
+                else dw = dh * sw / sh;
+                centre();
+                break;
+            case 2: dh = dw * sh / sw; centre(); break;                      // fill width
+            case 3: dw = dh * sw / sh; centre(); break;                      // fill height
+            case 4:                                                          // fit
+                if (sw * height > width * sh) { dh = dw * sh / sw; dTop = (boxH - dh) / 2; dBottom = dh + dTop; }
+                else { dw = dh * sw / sh; dLeft = (boxW - dw) / 2; dRight = dw + dLeft; }
+                break;
+            case 5:                                                          // crop
+                if (sw * height < width * sh) { dh = dw * sh / sw; dTop = (boxH - dh) / 2; dBottom = dh + dTop; }
+                else { dw = dh * sw / sh; dLeft = (boxW - dw) / 2; dRight = dw + dLeft; }
+                break;
+            case 7: dh = (int)(sh * oScaleFactor); dw = (int)(sw * oScaleFactor); centre(); break;   // fixed scale
+            default: break;                                                  // fill bounds
+        }
+        pc->matrixSave();
+        pc->clipRect(oDstL, oDstT, oDstR, oDstB);
+        if (scaled) pc->drawBitmapInt(imageId, (int)oSrcL, (int)oSrcT, (int)oSrcR, (int)oSrcB,
+                                      (int)(dLeft + oDstL), (int)(dTop + oDstT), (int)(dRight + oDstL), (int)(dBottom + oDstT), descriptionId);
+        else pc->drawBitmap(imageId, oDstL, oDstT, oDstR, oDstB);
+        pc->matrixRestore();
     }
 }
 

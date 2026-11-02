@@ -374,6 +374,8 @@ Traps the library hit (the linter catches the first four):
 
 ## Drawing something the library doesn't have
 
+A picture: declare it under `resources.bitmaps` (`{"base64": "..."}` or `{"file": "a.png"}`, PNG only) and draw it in a canvas with `drawScaledBitmap` (scaleType 0 none, 1 inside, 2 fill width, 3 fill height, 4 fit, 5 crop, 6 stretch, 7 fixed scale). See DRW-16.
+
 When a screen needs to show a thing the library has no component for (a moon phase, a wind
 arrow, a tide curve, a fuel gauge of an unusual shape), `build_kit` lists it under
 `needs_component`. Write a component for it rather than:
