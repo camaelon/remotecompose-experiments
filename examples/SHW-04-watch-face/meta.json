@@ -58,7 +58,8 @@
   "Battery from the system: batteryLevel() (system variable 38), its arc's sweep max(3.6, 3.6 * level) and its colour by two conditionalOperations (lt 40 amber, lt 20 red); the label swaps BATTERY for LOW the same way",
   "Steps from the host: exported steps and stepGoal, a ring of 360 * clamp(0, 1, steps / goal) and the count grouped by thousands (textFromFloat flags 20: no padding, groups of three)",
   "The date window: the weekday cut from \"MONTUEWEDTHUFRISATSUN\" with textSubtext at (weekDay() - 1) * 3, the day zero-padded (flags 12)",
-  "Always-on: every look-dependent command is a {\"$if\": \"theme.mono\"} fork; the mono-dark build is the ambient document (black dial, outlined hollow hands, grey batons, no second hand, so it repaints once a minute instead of every frame)"
+  "Always-on: every look-dependent command is a {\"$if\": \"theme.mono\"} fork; the mono-dark build is the ambient document (black dial, outlined hollow hands, grey batons, no second hand, so it repaints once a minute instead of every frame)",
+  "Light and dark: every colour of the face is a themed colour in resources.colors (dark: the charcoal dial; light: a porcelain dial with gunmetal hands), and the dial gradient takes them by name (\"@colors.dialHi\"), so the face follows the system theme; mono keeps to the theme tokens"
  ],
  "pitfalls": [
   "batteryLevel() is a json2rc / C++ / TypeScript extension: the Java reference parser has no system battery (EXAMPLES_FINDINGS U31) and refuses the expression. On Android today the host would export a float instead (as HST-03 does)",
@@ -100,7 +101,7 @@
   "touch": false
  },
  "check": {
-  "describe": "10:10:30 on Monday 2 November: the hour and minute hands make the classic V over a lit charcoal dial, the red second hand points straight down to six, MON 02 sits in the window at six, 7,412 steps fill three quarters of the green ring at nine and 82% fills the battery ring at three. battery-low (battery 15, 14:47:05 on Saturday 7 November, 12,500 steps): the battery ring is a short red arc with LOW under 15%, the steps ring is closed, SAT 07, the second hand points to one. sweep-1 and sweep-2, a quarter of a second apart, show the second hand between the seconds (it sweeps, it does not tick). mono-dark (always-on): black dial, grey batons, hollow white hands, no second hand, no gradient. Sizes 192, 300 and 454 are the same face scaled.",
+  "describe": "10:10:30 on Monday 2 November: the hour and minute hands make the classic V over a lit charcoal dial, the red second hand points straight down to six, MON 02 sits in the window at six, 7,412 steps fill three quarters of the green ring at nine and 82% fills the battery ring at three. battery-low (battery 15, 14:47:05 on Saturday 7 November, 12,500 steps): the battery ring is a short red arc with LOW under 15%, the steps ring is closed, SAT 07, the second hand points to one. sweep-1 and sweep-2, a quarter of a second apart, show the second hand between the seconds (it sweeps, it does not tick). mono-dark (always-on): black dial, grey batons, hollow white hands, no second hand, no gradient. Sizes 192, 300 and 454 are the same face scaled. light: a porcelain dial (white to pale grey), gunmetal faceted hands with soft grey shadows, black batons, deeper green, amber and red rings and a vermilion second hand; battery-low-light shows the red LOW ring on it.",
   "render": {
    "clock": "2026-11-02T10:10:30",
    "system_variables": {
@@ -109,6 +110,14 @@
    "round": true
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
    {
     "name": "battery-low",
     "clock": "2026-11-07T14:47:05",
@@ -158,6 +167,17 @@
     "name": "large",
     "width": 454,
     "height": 454
+   },
+   {
+    "name": "battery-low-light",
+    "theme": "light",
+    "clock": "2026-11-07T14:47:05",
+    "system_variables": {
+     "38": 15
+    },
+    "variables": {
+     "steps": 12500
+    }
    }
   ]
  },
@@ -173,15 +193,17 @@
   "component_modes": {},
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 3442,
+  "bytes": 6337,
   "header": {
    "width": 227,
    "height": 227
   },
-  "op_count": 169,
+  "op_count": 389,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
    "ANIMATED_FLOAT": 18,
+   "COLOR_CONSTANT": 44,
+   "COLOR_EXPRESSIONS": 44,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
    "ConditionalOperations": 4,
@@ -197,7 +219,7 @@
    "LAYOUT_CANVAS": 1,
    "LAYOUT_ROOT": 1,
    "LayoutComponentContent": 1,
-   "LoopOperation": 2,
+   "LoopOperation": 46,
    "MATRIX_RESTORE": 8,
    "MATRIX_ROTATE": 8,
    "MATRIX_SAVE": 8,
@@ -206,14 +228,95 @@
    "MODIFIER_BACKGROUND": 1,
    "MODIFIER_HEIGHT": 1,
    "MODIFIER_WIDTH": 1,
-   "NAMED_VARIABLE": 2,
+   "NAMED_VARIABLE": 24,
    "PAINT_VALUES": 42,
    "PATH_DATA": 6,
+   "THEME": 66,
    "TextFromFloat": 3,
    "TextMerge": 1,
    "TextSubtext": 1
   },
   "host_variables": [
+   {
+    "name": "accent",
+    "type": "color",
+    "value": "#FFFF5A2E"
+   },
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "baton",
+    "type": "color",
+    "value": "#FFD5DBE3"
+   },
+   {
+    "name": "battLow",
+    "type": "color",
+    "value": "#FFFF4D4F"
+   },
+   {
+    "name": "battOk",
+    "type": "color",
+    "value": "#FF7CE38B"
+   },
+   {
+    "name": "battWarn",
+    "type": "color",
+    "value": "#FFFFC247"
+   },
+   {
+    "name": "dateFill",
+    "type": "color",
+    "value": "#FF07090C"
+   },
+   {
+    "name": "dialEdge",
+    "type": "color",
+    "value": "#FF040506"
+   },
+   {
+    "name": "dialHi",
+    "type": "color",
+    "value": "#FF283243"
+   },
+   {
+    "name": "dialMid",
+    "type": "color",
+    "value": "#FF121822"
+   },
+   {
+    "name": "dialRing",
+    "type": "color",
+    "value": "#FF2B3442"
+   },
+   {
+    "name": "handDark",
+    "type": "color",
+    "value": "#FFAEB7C4"
+   },
+   {
+    "name": "handLight",
+    "type": "color",
+    "value": "#FFDCE1E8"
+   },
+   {
+    "name": "minTick",
+    "type": "color",
+    "value": "#FF7A8596"
+   },
+   {
+    "name": "secondDot",
+    "type": "color",
+    "value": "#FF1A1F27"
+   },
+   {
+    "name": "shadow",
+    "type": "color",
+    "value": "#FF000000"
+   },
    {
     "name": "stepGoal",
     "type": "float",
@@ -223,6 +326,36 @@
     "name": "steps",
     "type": "float",
     "value": 7412
+   },
+   {
+    "name": "stepsArc",
+    "type": "color",
+    "value": "#FF35E0A1"
+   },
+   {
+    "name": "subFill",
+    "type": "color",
+    "value": "#FF0A0D12"
+   },
+   {
+    "name": "subLabel",
+    "type": "color",
+    "value": "#FF9AA5B5"
+   },
+   {
+    "name": "subStroke",
+    "type": "color",
+    "value": "#FF3A4454"
+   },
+   {
+    "name": "subTrack",
+    "type": "color",
+    "value": "#FF1D2430"
+   },
+   {
+    "name": "valueText",
+    "type": "color",
+    "value": "#FFF2F4F7"
    }
   ],
   "render_findings": [],
@@ -244,6 +377,16 @@
   },
   "java_identical": false,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
    "battery-low": {
     "render": "render-battery-low.png",
     "render_findings": []
@@ -276,14 +419,79 @@
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 2503,
+    "bytes": 3122,
     "component_modes": {},
-    "op_count": 112,
+    "op_count": 154,
     "host_variables": [
+     {
+      "name": "accent",
+      "type": "color",
+      "value": "#FFFF5A2E"
+     },
      {
       "name": "background",
       "type": "color",
       "value": "#FF000000"
+     },
+     {
+      "name": "baton",
+      "type": "color",
+      "value": "#FFD5DBE3"
+     },
+     {
+      "name": "battLow",
+      "type": "color",
+      "value": "#FFFF4D4F"
+     },
+     {
+      "name": "battOk",
+      "type": "color",
+      "value": "#FF7CE38B"
+     },
+     {
+      "name": "battWarn",
+      "type": "color",
+      "value": "#FFFFC247"
+     },
+     {
+      "name": "dateFill",
+      "type": "color",
+      "value": "#FF07090C"
+     },
+     {
+      "name": "dialEdge",
+      "type": "color",
+      "value": "#FF040506"
+     },
+     {
+      "name": "dialHi",
+      "type": "color",
+      "value": "#FF283243"
+     },
+     {
+      "name": "dialMid",
+      "type": "color",
+      "value": "#FF121822"
+     },
+     {
+      "name": "dialRing",
+      "type": "color",
+      "value": "#FF2B3442"
+     },
+     {
+      "name": "handDark",
+      "type": "color",
+      "value": "#FFAEB7C4"
+     },
+     {
+      "name": "handLight",
+      "type": "color",
+      "value": "#FFDCE1E8"
+     },
+     {
+      "name": "minTick",
+      "type": "color",
+      "value": "#FF7A8596"
      },
      {
       "name": "muted",
@@ -296,6 +504,16 @@
       "value": "#FFFFFFFF"
      },
      {
+      "name": "secondDot",
+      "type": "color",
+      "value": "#FF1A1F27"
+     },
+     {
+      "name": "shadow",
+      "type": "color",
+      "value": "#FF424242"
+     },
+     {
       "name": "stepGoal",
       "type": "float",
       "value": 10000
@@ -304,6 +522,36 @@
       "name": "steps",
       "type": "float",
       "value": 7412
+     },
+     {
+      "name": "stepsArc",
+      "type": "color",
+      "value": "#FF35E0A1"
+     },
+     {
+      "name": "subFill",
+      "type": "color",
+      "value": "#FF0A0D12"
+     },
+     {
+      "name": "subLabel",
+      "type": "color",
+      "value": "#FF9AA5B5"
+     },
+     {
+      "name": "subStroke",
+      "type": "color",
+      "value": "#FF3A4454"
+     },
+     {
+      "name": "subTrack",
+      "type": "color",
+      "value": "#FF1D2430"
+     },
+     {
+      "name": "valueText",
+      "type": "color",
+      "value": "#FFF2F4F7"
      }
     ],
     "java_identical": false,
@@ -313,14 +561,79 @@
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 2503,
+    "bytes": 3122,
     "component_modes": {},
-    "op_count": 112,
+    "op_count": 154,
     "host_variables": [
+     {
+      "name": "accent",
+      "type": "color",
+      "value": "#FFD9431A"
+     },
      {
       "name": "background",
       "type": "color",
       "value": "#FFFFFFFF"
+     },
+     {
+      "name": "baton",
+      "type": "color",
+      "value": "#FF1B2230"
+     },
+     {
+      "name": "battLow",
+      "type": "color",
+      "value": "#FFD3263B"
+     },
+     {
+      "name": "battOk",
+      "type": "color",
+      "value": "#FF2E9B47"
+     },
+     {
+      "name": "battWarn",
+      "type": "color",
+      "value": "#FFCF8600"
+     },
+     {
+      "name": "dateFill",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "dialEdge",
+      "type": "color",
+      "value": "#FFCDD2D9"
+     },
+     {
+      "name": "dialHi",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "dialMid",
+      "type": "color",
+      "value": "#FFF0F1F3"
+     },
+     {
+      "name": "dialRing",
+      "type": "color",
+      "value": "#FFC9CED6"
+     },
+     {
+      "name": "handDark",
+      "type": "color",
+      "value": "#FF161C27"
+     },
+     {
+      "name": "handLight",
+      "type": "color",
+      "value": "#FF4A5465"
+     },
+     {
+      "name": "minTick",
+      "type": "color",
+      "value": "#FF7D8796"
      },
      {
       "name": "muted",
@@ -333,6 +646,16 @@
       "value": "#FF000000"
      },
      {
+      "name": "secondDot",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "shadow",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
       "name": "stepGoal",
       "type": "float",
       "value": 10000
@@ -341,6 +664,36 @@
       "name": "steps",
       "type": "float",
       "value": 7412
+     },
+     {
+      "name": "stepsArc",
+      "type": "color",
+      "value": "#FF0E9F68"
+     },
+     {
+      "name": "subFill",
+      "type": "color",
+      "value": "#FFE8EBEF"
+     },
+     {
+      "name": "subLabel",
+      "type": "color",
+      "value": "#FF5F6979"
+     },
+     {
+      "name": "subStroke",
+      "type": "color",
+      "value": "#FFC3C9D2"
+     },
+     {
+      "name": "subTrack",
+      "type": "color",
+      "value": "#FFD3D8DF"
+     },
+     {
+      "name": "valueText",
+      "type": "color",
+      "value": "#FF141A24"
      }
     ],
     "java_identical": false,
@@ -369,15 +722,25 @@
     "audit_findings": [
      "info: repaint_continuous"
     ]
+   },
+   "battery-low-light": {
+    "theme": "light",
+    "render": "render-battery-low-light.png",
+    "render_findings": []
    }
   },
   "json_keys": [
    "$if",
+   "accent",
    "alpha",
    "angle",
    "apiLevel",
    "background",
+   "baton",
    "batt",
+   "battLow",
+   "battOk",
+   "battWarn",
    "bottom",
    "canvas",
    "centerX",
@@ -390,7 +753,13 @@
    "contentDescription",
    "cx",
    "cy",
+   "dark",
+   "dateFill",
    "decimal",
+   "dialEdge",
+   "dialHi",
+   "dialMid",
+   "dialRing",
    "drawArc",
    "drawCircle",
    "drawLine",
@@ -403,6 +772,8 @@
    "export",
    "flags",
    "from",
+   "handDark",
+   "handLight",
    "header",
    "height",
    "hourL",
@@ -413,9 +784,11 @@
    "index",
    "left",
    "len",
+   "light",
    "loop",
    "minL",
    "minR",
+   "minTick",
    "minW",
    "modifiers",
    "name",
@@ -438,18 +811,25 @@
    "ry",
    "save",
    "scale",
+   "secondDot",
    "semantics",
    "shader",
+   "shadow",
    "start",
    "startAngle",
    "stepFrac",
    "stepGoal",
    "steps",
+   "stepsArc",
    "stops",
    "strokeCap",
    "strokeJoin",
    "strokeWidth",
    "style",
+   "subFill",
+   "subLabel",
+   "subStroke",
+   "subTrack",
    "sweepAngle",
    "sx",
    "sy",
@@ -464,6 +844,7 @@
    "v1",
    "v2",
    "value",
+   "valueText",
    "varName",
    "variable",
    "variables",
@@ -522,7 +903,7 @@
     "textSubtext"
    ]
   },
-  "built_at": "2026-11-02T18:45:56.572Z"
+  "built_at": "2026-11-02T20:18:18.046Z"
  },
- "java_difference": "batteryLevel() (system variable 38) is a json2rc extension the Java reference parser does not know (EXAMPLES_FINDINGS U31): it refuses the expression. With the battery read from a host float instead the two converters write identical bytes (3451 B, checked)"
+ "java_difference": "batteryLevel() (system variable 38) is a json2rc extension the Java reference parser does not know (EXAMPLES_FINDINGS U31): it refuses the expression. With the battery read from a host float instead the two converters write identical bytes (6337 B; mono 3122 B, checked)"
 }

@@ -69,7 +69,9 @@
   "Rain and snow are clock-driven loops, not particle systems: y = (seed·(H + 40) + t·speed) % (H + 40) − 20. Every frame is a pure function of the time, so any clock renders the same in every player and nothing needs warming up. A conditionalOperations on @weather == 1 or 2 runs only the active loop",
   "Ridges are pathCreate plus 49 pathAppendLineTo in a loop, closed along the bottom. Each is painted in its day colour, then a night veil at 1 − dayA, a dusk tint at tw·0.35, and a snow cover when @weather == 2",
   "Sizes come from the box: horizon at 0.7·H, sun and moon radii from min(W, 1.2·H), and text clamp(34, 96, min(H·0.095, W·0.2)). Below 300 dp of height the third line drops its 'Sunrise / Sunset' part (code = isDay + 2·step(H, 300) picks the variant), so the 4x2 widget keeps the temperature, condition and time",
-  "Condition text: ci = @weather + 3·step(starA, 0.3)·(1 − wet) picks one of four conditional drawTextAnchored ('Clear', 'Rain', 'Snow', 'Clear night'). addDataList + textLookup would be shorter, but the Java parser drops the list id (U4)"
+  "Condition text: ci = @weather + 3·step(starA, 0.3)·(1 − wet) picks one of four conditional drawTextAnchored ('Clear', 'Rain', 'Snow', 'Clear night'). addDataList + textLookup would be shorter, but the Java parser drops the list id (U4)",
+  "Four looks. The scene is the sky itself, so it stays the same in light and dark. The UI follows the theme: light puts the readout on a white 88% card with dark ink, and dark uses white ink with a soft shadow, a dark scrim and a faint navy card. Mono ({\"$if\": \"theme.mono\"}) redraws the scene as a line drawing in onSurface and muted on the background: ridges, pines, cabin and clouds filled with the background and outlined (hidden lines), the sun a disc with a ring by day, the moon its lit part by night, stars as dots, lit windows filled instead of outlined, and static rain dashes or snow dots. It has no time-driven motion, so it repaints once a minute",
+  "h = timeInMin() / 60: the sun and moon move per minute, plenty for their arcs, and the mono documents need no faster clock"
  ],
  "pitfalls": [
   "json2rc writes a `variable` (and a resource variable) where it is first used. If that first use is inside a conditionalOperations whose condition is false, the TypeScript player never computes it, and later uses read 0. Here, S first used in the moon block left the daytime sun at its minimum size and drew no clouds, pines or cabin. The C++ player computes it anyway. Make sure every shared variable is used once outside a conditional before any conditional block (here the sun and moon draw unconditionally, and their alpha hides them). The same goes for a TextFromFloat: a clock text first used inside a skipped conditional showed a stale hour in the TypeScript player. So the three variants of the third line are chosen by paint alpha (step(2, code), …), not by conditionals",
@@ -77,7 +79,8 @@
   "smooth_step is smooth_step(value, upper, lower), and ifElse is ifElse(else, then, condition)",
   "% is a float remainder that keeps the sign: add the span before % ((x + W) % W) when x can be negative",
   "The moon travels the night arc between sunset and sunrise. That is a stylisation: the real moon rises later each day with its phase. The phase itself is real",
-  "Every expression stays within Android's 32 entries. The cloud position needed its span (cspan) split out to get there"
+  "Every expression stays within Android's 32 entries. The cloud position needed its span (cspan) split out to get there",
+  "A paint `alpha` after a `color` replaces that colour's alpha: a transparent themed card followed by alpha 1 drew an opaque black box. Give translucent themed colours their alpha in the colour and add no alpha op after them"
  ],
  "snippets": [
   {
@@ -86,29 +89,34 @@
    "note": "elevation from the clock and the host sunrise/sunset"
   },
   {
-   "pointer": "/root/commands/34",
+   "pointer": "/root/commands/32/else/2",
    "shows": "draw.gradient",
    "note": "the day sky over the night one, alpha from the elevation"
   },
   {
-   "pointer": "/root/commands/52",
+   "pointer": "/root/commands/32/else/20",
    "shows": "draw.path",
    "note": "the moon's lit part in its real phase"
   },
   {
-   "pointer": "/root/commands/56",
+   "pointer": "/root/commands/32/else/24",
    "shows": "data.loop",
    "note": "drifting clouds, one closed path each, three passes (white, dusk tint, rain grey)"
   },
   {
-   "pointer": "/root/commands/119",
+   "pointer": "/root/commands/32/else/90",
    "shows": "host.variables",
    "note": "rain only when @weather == 1"
   },
   {
-   "pointer": "/root/commands/133",
+   "pointer": "/root/commands/49",
    "shows": "text.dynamic",
    "note": "condition word chosen by ci = @weather + 3·night, one conditional text each"
+  },
+  {
+   "pointer": "/root/commands/32/then",
+   "shows": "draw.path",
+   "note": "mono: the same scene as a line drawing (ridges, pines, cabin and clouds filled with the background and outlined), the sun as a disc and the moon as its lit part, lit windows filled; static between minutes"
   }
  ],
  "inputs": {
@@ -139,11 +147,31 @@
   "touch": false
  },
  "check": {
-  "describe": "12:30: blue day sky, sun high, white clouds, green ridges, pines, a red-brown cabin with smoke; '9°', 'Clear' and '12:30 · Sunset 17:17' top left. 07:10: purple-to-peach dawn with pink clouds. 17:25: orange dusk with a purple ridge silhouette. 21:30: navy sky, twinkling stars, the waning moon, the cabin windows glowing. Rain: grey overcast veil, grey clouds, slanted streaks. Snow by night: snow-white ridges, roof and pines, falling flakes, '-3°'. The widget (360x180) keeps temperature, condition and time; the tablet scales the scene and the text.",
+  "describe": "12:30: blue day sky, sun high, white clouds, green ridges, pines, a red-brown cabin with smoke; '9°', 'Clear' and '12:30 · Sunset 17:17' top left. 07:10: purple-to-peach dawn with pink clouds. 17:25: orange dusk with a purple ridge silhouette. 21:30: navy sky, twinkling stars, the waning moon, the cabin windows glowing. Rain: grey overcast veil, grey clouds, slanted streaks. Snow by night: snow-white ridges, roof and pines, falling flakes, '-3°'. The widget (360x180) keeps temperature, condition and time; the tablet scales the scene and the text. Light (12:30): the readout on a white translucent card in dark ink. Dark (21:30): white text on the night sky. Mono-dark (21:30): a white line drawing on black with stars, the half-lit moon, outlined clouds, ridges, pines and the cabin with filled (lit) windows. Mono-light (12:30): the same in black on white, with the sun as a filled disc and a ring.",
   "render": {
    "clock": "2026-11-02T12:30"
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "clock": "2026-11-02T12:30"
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "clock": "2026-11-02T21:30"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "clock": "2026-11-02T21:30"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "clock": "2026-11-02T12:30"
+   },
    {
     "name": "dawn",
     "clock": "2026-11-02T07:10"
@@ -206,15 +234,21 @@
   "SHW-12"
  ],
  "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 10742,
+  "bytes": 12825,
   "header": {
    "width": 360,
    "height": 780
   },
-  "op_count": 389,
+  "op_count": 480,
   "operations": {
-   "ANIMATED_FLOAT": 167,
+   "ANIMATED_FLOAT": 190,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
    "ConditionalOperations": 19,
@@ -224,24 +258,56 @@
    "DRAW_LINE": 1,
    "DRAW_PATH": 22,
    "DRAW_RECT": 12,
+   "DRAW_ROUND_RECT": 1,
    "DRAW_TEXT_ANCHOR": 13,
    "HEADER": 1,
    "LAYOUT_CANVAS": 1,
    "LAYOUT_ROOT": 1,
    "LayoutComponentContent": 1,
-   "LoopOperation": 9,
+   "LoopOperation": 21,
    "MODIFIER_BACKGROUND": 1,
    "MODIFIER_HEIGHT": 1,
    "MODIFIER_WIDTH": 1,
-   "NAMED_VARIABLE": 4,
-   "PAINT_VALUES": 56,
+   "NAMED_VARIABLE": 10,
+   "PAINT_VALUES": 57,
    "PATH_CREATE": 5,
-   "PathAppend": 15,
+   "PathAppend": 21,
    "PathExpression": 2,
+   "THEME": 18,
    "TextFromFloat": 10,
    "TextMerge": 16
   },
   "host_variables": [
+   {
+    "name": "card",
+    "type": "color",
+    "value": "#5C0A1220"
+   },
+   {
+    "name": "ink",
+    "type": "color",
+    "value": "#FFFFFFFF"
+   },
+   {
+    "name": "inkShadow",
+    "type": "color",
+    "value": "#47000000"
+   },
+   {
+    "name": "sceneBg",
+    "type": "color",
+    "value": "#FF03050F"
+   },
+   {
+    "name": "scrim",
+    "type": "color",
+    "value": "#70000000"
+   },
+   {
+    "name": "scrimMid",
+    "type": "color",
+    "value": "#38000000"
+   },
    {
     "name": "sunrise",
     "type": "float",
@@ -267,11 +333,10 @@
   "audit": {
    "error": 0,
    "warning": 0,
-   "info": 4
+   "info": 3
   },
   "audit_findings": [
    "info: repaint_continuous",
-   "info: hardcoded_colors",
    "info: text_in_canvas",
    "info: expression_entries"
   ],
@@ -284,6 +349,170 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 9502,
+    "component_modes": {},
+    "op_count": 349,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "card",
+      "type": "color",
+      "value": "#00000000"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "inkShadow",
+      "type": "color",
+      "value": "#00000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "sceneBg",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "scrim",
+      "type": "color",
+      "value": "#00000000"
+     },
+     {
+      "name": "scrimMid",
+      "type": "color",
+      "value": "#00000000"
+     },
+     {
+      "name": "sunrise",
+      "type": "float",
+      "value": 7.30000019
+     },
+     {
+      "name": "sunset",
+      "type": "float",
+      "value": 17.2999992
+     },
+     {
+      "name": "temp",
+      "type": "float",
+      "value": 9
+     },
+     {
+      "name": "weather",
+      "type": "float",
+      "value": 0
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 9502,
+    "component_modes": {},
+    "op_count": 349,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "card",
+      "type": "color",
+      "value": "#00000000"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "inkShadow",
+      "type": "color",
+      "value": "#00000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "sceneBg",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "scrim",
+      "type": "color",
+      "value": "#00000000"
+     },
+     {
+      "name": "scrimMid",
+      "type": "color",
+      "value": "#00000000"
+     },
+     {
+      "name": "sunrise",
+      "type": "float",
+      "value": 7.30000019
+     },
+     {
+      "name": "sunset",
+      "type": "float",
+      "value": 17.2999992
+     },
+     {
+      "name": "temp",
+      "type": "float",
+      "value": 9
+     },
+     {
+      "name": "weather",
+      "type": "float",
+      "value": 0
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "dawn": {
     "render": "render-dawn.png",
     "render_findings": []
@@ -342,10 +571,12 @@
    }
   },
   "json_keys": [
+   "$if",
    "alpha",
    "apiLevel",
    "background",
    "bottom",
+   "card",
    "centerX",
    "centerY",
    "color",
@@ -357,12 +588,15 @@
    "count",
    "cx",
    "cy",
+   "dark",
    "decimal",
    "drawCircle",
    "drawLine",
    "drawPath",
    "drawRect",
+   "drawRoundRect",
    "drawTextAnchored",
+   "else",
    "end",
    "export",
    "expressionX",
@@ -375,10 +609,15 @@
    "id1",
    "id2",
    "index",
+   "ink",
+   "inkShadow",
    "left",
+   "light",
    "linearGradient",
    "loop",
    "modifiers",
+   "mono-dark",
+   "mono-light",
    "name",
    "ops",
    "paint",
@@ -395,10 +634,16 @@
    "resources",
    "right",
    "root",
+   "rx",
+   "ry",
+   "sceneBg",
+   "scrim",
+   "scrimMid",
    "shader",
    "start",
    "stops",
    "strokeCap",
+   "strokeJoin",
    "strokeWidth",
    "style",
    "sunrise",
@@ -406,6 +651,7 @@
    "temp",
    "text",
    "textSize",
+   "then",
    "top",
    "type",
    "until",
@@ -428,7 +674,6 @@
    "time.clock": [
     "timeInHr",
     "timeInMin",
-    "timeInSec",
     "continuousSec"
    ],
    "draw.gradient": [
@@ -476,6 +721,7 @@
    ],
    "draw.shapes": [
     "drawRect",
+    "drawRoundRect",
     "drawCircle",
     "drawLine"
    ],
@@ -488,6 +734,6 @@
     "componentHeight()"
    ]
   },
-  "built_at": "2026-11-02T18:48:37.805Z"
+  "built_at": "2026-11-02T20:22:53.666Z"
  }
 }

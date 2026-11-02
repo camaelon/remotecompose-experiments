@@ -1,0 +1,215 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 360,
+  "profiles": 513,
+  "contentDescription": "Generative art: a slowly turning harmonograph over a drifting nebula, with sparks carried by a flow field; the figure changes every minute"
+ },
+ "resources": {
+  "variables": {
+   "m": "timeInMin()",
+   "nA": "(2 + floor(5 * seed(@m * 3 + 1, rand()))) * (2 * step(seed(@m * 3 + 2, rand()), 0.35) - 1)"
+  },
+  "colors": {
+   "muted": "#FF9E9E9E",
+   "onSurface": "#FFFFFFFF",
+   "paper": "#FF000000",
+   "wash": "#00000000",
+   "spark": "#FFFFE7B8",
+   "bead": "#FFFFF4DC",
+   "ink": "#FFFFFFFF",
+   "line1": "#FFFFE3B3",
+   "line2": "#FFB8E8FF",
+   "line3": "#FFFFC2DA",
+   "line4": "#FFD9FFE8"
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "@colors.paper"
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "W",
+     "value": "componentWidth()"
+    }
+   },
+   {
+    "variable": {
+     "name": "H",
+     "value": "componentHeight()"
+    }
+   },
+   {
+    "variable": {
+     "name": "S",
+     "value": "min(@W, @H)"
+    }
+   },
+   {
+    "variable": {
+     "name": "cx",
+     "value": "@W / 2"
+    }
+   },
+   {
+    "variable": {
+     "name": "cy",
+     "value": "@H / 2"
+    }
+   },
+   {
+    "variable": {
+     "name": "R",
+     "value": "@S * 0.4"
+    }
+   },
+   {
+    "variable": {
+     "name": "fx",
+     "value": "12.566 / @W"
+    }
+   },
+   {
+    "variable": {
+     "name": "fy",
+     "value": "12.566 / @H"
+    }
+   },
+   {
+    "variable": {
+     "name": "p1m",
+     "value": "@m * 0.9"
+    }
+   },
+   {
+    "variable": {
+     "name": "p2m",
+     "value": "@m * 1.7"
+    }
+   },
+   {
+    "pathExpression": {
+     "id": "curveM",
+     "expressionX": "@cx + @R * exp(-0.02 * a[0]) * (0.62 * cos(a[0] + @p1m) + 0.38 * cos(a[0] * (@nA + 0.035) + @p2m))",
+     "expressionY": "@cy + @R * exp(-0.02 * a[0]) * (0.62 * sin(a[0] + @p1m) + 0.38 * sin(a[0] * (@nA + 0.035) + @p2m))",
+     "start": 0,
+     "end": 75.4,
+     "count": 900
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.onSurface"
+      },
+      {
+       "style": "stroke"
+      },
+      {
+       "strokeWidth": 0.8
+      },
+      {
+       "strokeJoin": "round"
+      }
+     ]
+    }
+   },
+   {
+    "drawPath": {
+     "path": "curveM"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "i",
+     "from": 0,
+     "until": 6,
+     "commands": [
+      {
+       "variable": {
+        "name": "um",
+        "value": "75.4 * i / 6 + 3"
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@cx + @R * exp(-0.02 * @um) * (0.62 * cos(@um + @p1m) + 0.38 * cos(@um * (@nA + 0.035) + @p2m))",
+        "cy": "@cy + @R * exp(-0.02 * @um) * (0.62 * sin(@um + @p1m) + 0.38 * sin(@um * (@nA + 0.035) + @p2m))",
+        "radius": 2.2
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": 1
+      },
+      {
+       "color": "@colors.muted"
+      },
+      {
+       "textSize": 11
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textMerge",
+       "id1": "Nº ",
+       "id2": {
+        "type": "textFromFloat",
+        "value": "@m + 1",
+        "whole": 4,
+        "decimal": 0,
+        "flags": 13
+       }
+      },
+      "id2": {
+       "type": "textMerge",
+       "id1": "   ·   ",
+       "id2": {
+        "type": "textMerge",
+        "id1": {
+         "type": "textFromFloat",
+         "value": "abs(@nA - 1)",
+         "whole": 1,
+         "decimal": 0,
+         "flags": 5
+        },
+        "id2": "-fold"
+       }
+      }
+     },
+     "x": "@cx",
+     "y": "@H - 22",
+     "panX": 0,
+     "panY": 0
+    }
+   }
+  ]
+ }
+}

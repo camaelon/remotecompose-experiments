@@ -18,11 +18,15 @@
    "pillw": "windowWidth() - 48 - @lpl"
   },
   "colors": {
-   "sheet": {
+   "background": {
     "light": "#FFFFFFFF",
     "dark": "#FF151823"
    },
-   "ink": {
+   "surface": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF151823"
+   },
+   "onSurface": {
     "light": "#FF1A1D29",
     "dark": "#FFF1F2F6"
    },
@@ -33,6 +37,30 @@
    "track": {
     "light": "#FFD9DCE5",
     "dark": "#FF3A3E4E"
+   },
+   "outline": {
+    "light": "#FFD9DCE5",
+    "dark": "#FF3A3E4E"
+   },
+   "acc0": {
+    "light": "#FF2F7FE0",
+    "dark": "#FF4D94EE"
+   },
+   "acc1": {
+    "light": "#FFEB6A4B",
+    "dark": "#FFF07E62"
+   },
+   "acc2": {
+    "light": "#FF6457DE",
+    "dark": "#FF7D72EA"
+   },
+   "onAccent": {
+    "light": "#FFFFFFFF",
+    "dark": "#FFFFFFFF"
+   },
+   "dim": {
+    "light": "#00000000",
+    "dark": "#33000000"
    }
   },
   "paths": {
@@ -1564,7 +1592,7 @@
    "modifiers": [
     "fillMaxSize",
     {
-     "background": "@colors.sheet"
+     "background": "@colors.background"
     }
    ],
    "children": [
@@ -1686,10 +1714,23 @@
         }
        },
        {
-        "variable": {
-         "name": "t",
-         "value": "continuousSec()"
-        }
+        "$if": "theme.mono",
+        "then": [
+         {
+          "variable": {
+           "name": "t",
+           "value": "0"
+          }
+         }
+        ],
+        "else": [
+         {
+          "variable": {
+           "name": "t",
+           "value": "continuousSec()"
+          }
+         }
+        ]
        },
        {
         "variable": {
@@ -1707,91 +1748,97 @@
         }
        },
        {
-        "paint": {
-         "ops": [
-          {
-           "linearGradient": {
-            "x1": 0,
-            "y1": 0,
-            "x2": 0,
-            "y2": "@sh",
-            "colors": [
-             "#FF6FB6F7",
-             "#FFD6ECFF"
-            ]
-           }
-          },
-          {
-           "alpha": "1"
+        "$if": "theme.mono",
+        "then": [],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "linearGradient": {
+              "x1": 0,
+              "y1": 0,
+              "x2": 0,
+              "y2": "@sh",
+              "colors": [
+               "#FF6FB6F7",
+               "#FFD6ECFF"
+              ]
+             }
+            },
+            {
+             "alpha": "1"
+            }
+           ]
           }
-         ]
-        }
-       },
-       {
-        "drawRect": {
-         "left": 0,
-         "top": 0,
-         "right": "@W",
-         "bottom": "@H"
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "linearGradient": {
-            "x1": 0,
-            "y1": 0,
-            "x2": 0,
-            "y2": "@sh",
-            "colors": [
-             "#FF5B5DAA",
-             "#FFFFB38A"
-            ]
-           }
-          },
-          {
-           "alpha": "clamp(0, 1, @pos)"
+         },
+         {
+          "drawRect": {
+           "left": 0,
+           "top": 0,
+           "right": "@W",
+           "bottom": "@H"
           }
-         ]
-        }
-       },
-       {
-        "drawRect": {
-         "left": 0,
-         "top": 0,
-         "right": "@W",
-         "bottom": "@H"
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "linearGradient": {
-            "x1": 0,
-            "y1": 0,
-            "x2": 0,
-            "y2": "@sh",
-            "colors": [
-             "#FF070B1F",
-             "#FF27295A"
-            ]
-           }
-          },
-          {
-           "alpha": "clamp(0, 1, @pos - 1)"
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "linearGradient": {
+              "x1": 0,
+              "y1": 0,
+              "x2": 0,
+              "y2": "@sh",
+              "colors": [
+               "#FF5B5DAA",
+               "#FFFFB38A"
+              ]
+             }
+            },
+            {
+             "alpha": "clamp(0, 1, @pos)"
+            }
+           ]
           }
-         ]
-        }
-       },
-       {
-        "drawRect": {
-         "left": 0,
-         "top": 0,
-         "right": "@W",
-         "bottom": "@H"
-        }
+         },
+         {
+          "drawRect": {
+           "left": 0,
+           "top": 0,
+           "right": "@W",
+           "bottom": "@H"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "linearGradient": {
+              "x1": 0,
+              "y1": 0,
+              "x2": 0,
+              "y2": "@sh",
+              "colors": [
+               "#FF070B1F",
+               "#FF27295A"
+              ]
+             }
+            },
+            {
+             "alpha": "clamp(0, 1, @pos - 1)"
+            }
+           ]
+          }
+         },
+         {
+          "drawRect": {
+           "left": 0,
+           "top": 0,
+           "right": "@W",
+           "bottom": "@H"
+          }
+         }
+        ]
        },
        {
         "save": [
@@ -1820,13 +1867,35 @@
              "shader": 0
             },
             {
-             "color": "#FFFFFFFF"
-            },
-            {
              "style": "fill"
             }
            ]
           }
+         },
+         {
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              }
+             ]
+            }
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "#FFFFFFFF"
+              }
+             ]
+            }
+           }
+          ]
          },
          {
           "loop": {
@@ -1860,79 +1929,118 @@
           }
          },
          {
-          "paint": {
-           "ops": [
-            {
-             "radialGradient": {
-              "centerX": "86 - @pos * 8",
-              "centerY": "@my",
-              "radius": 60,
-              "colors": [
-               "#40F4EFD8",
-               "#00F4EFD8"
-              ]
-             }
-            },
-            {
-             "alpha": "@night"
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "alpha": "@night"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 1.6
+              }
+             ]
             }
-           ]
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "86 - @pos * 8",
-           "cy": "@my",
-           "radius": 60
-          }
-         },
-         {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FFF4EFD8"
-            },
-            {
-             "alpha": "@night"
+           },
+           {
+            "drawCircle": {
+             "cx": "86 - @pos * 8",
+             "cy": "@my",
+             "radius": 19
             }
-           ]
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "86 - @pos * 8",
-           "cy": "@my",
-           "radius": 19
-          }
-         },
-         {
-          "paint": {
-           "ops": [
-            {
-             "color": "#FFDCD5BA"
-            },
-            {
-             "alpha": "@night"
+           },
+           {
+            "drawCircle": {
+             "cx": "80 - @pos * 8",
+             "cy": "@my - 5",
+             "radius": 4
             }
-           ]
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "80 - @pos * 8",
-           "cy": "@my - 5",
-           "radius": 4
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "93 - @pos * 8",
-           "cy": "@my + 6",
-           "radius": 3
-          }
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "radialGradient": {
+                "centerX": "86 - @pos * 8",
+                "centerY": "@my",
+                "radius": 60,
+                "colors": [
+                 "#40F4EFD8",
+                 "#00F4EFD8"
+                ]
+               }
+              },
+              {
+               "alpha": "@night"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "86 - @pos * 8",
+             "cy": "@my",
+             "radius": 60
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FFF4EFD8"
+              },
+              {
+               "alpha": "@night"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "86 - @pos * 8",
+             "cy": "@my",
+             "radius": 19
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "#FFDCD5BA"
+              },
+              {
+               "alpha": "@night"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "80 - @pos * 8",
+             "cy": "@my - 5",
+             "radius": 4
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "93 - @pos * 8",
+             "cy": "@my + 6",
+             "radius": 3
+            }
+           }
+          ]
          },
          {
           "variable": {
@@ -1947,72 +2055,107 @@
           }
          },
          {
-          "paint": {
-           "ops": [
-            {
-             "radialGradient": {
-              "centerX": "@sx",
-              "centerY": "@sy",
-              "radius": 90,
-              "colors": [
-               "#66FFE9A8",
-               "#00FFE9A8"
-              ]
-             }
-            },
-            {
-             "alpha": 1
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "alpha": 1
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 1.6
+              }
+             ]
             }
-           ]
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "@sx",
-           "cy": "@sy",
-           "radius": 90
-          }
-         },
-         {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FFFFE27A"
-            },
-            {
-             "alpha": 1
+           },
+           {
+            "drawCircle": {
+             "cx": "@sx",
+             "cy": "@sy",
+             "radius": "28 + 8 * clamp(0, 1, @pos)"
             }
-           ]
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "@sx",
-           "cy": "@sy",
-           "radius": "28 + 8 * clamp(0, 1, @pos)"
-          }
-         },
-         {
-          "paint": {
-           "ops": [
-            {
-             "color": "#FFFF8F5A"
-            },
-            {
-             "alpha": "clamp(0, 1, @pos)"
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "radialGradient": {
+                "centerX": "@sx",
+                "centerY": "@sy",
+                "radius": 90,
+                "colors": [
+                 "#66FFE9A8",
+                 "#00FFE9A8"
+                ]
+               }
+              },
+              {
+               "alpha": 1
+              }
+             ]
             }
-           ]
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "@sx",
-           "cy": "@sy",
-           "radius": "28 + 8 * clamp(0, 1, @pos)"
-          }
+           },
+           {
+            "drawCircle": {
+             "cx": "@sx",
+             "cy": "@sy",
+             "radius": 90
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FFFFE27A"
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@sx",
+             "cy": "@sy",
+             "radius": "28 + 8 * clamp(0, 1, @pos)"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "#FFFF8F5A"
+              },
+              {
+               "alpha": "clamp(0, 1, @pos)"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@sx",
+             "cy": "@sy",
+             "radius": "28 + 8 * clamp(0, 1, @pos)"
+            }
+           }
+          ]
          },
          {
           "loop": {
@@ -2053,55 +2196,111 @@
                }
               },
               {
-               "paint": {
-                "ops": [
-                 {
-                  "color": "#F2FFFFFF"
-                 },
-                 {
-                  "alpha": 1
+               "$if": "theme.mono",
+               "then": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "shader": 0
+                   },
+                   {
+                    "color": "@colors.background"
+                   },
+                   {
+                    "alpha": 1
+                   },
+                   {
+                    "style": "fill"
+                   }
+                  ]
                  }
-                ]
-               }
-              },
-              {
-               "drawPath": {
-                "path": "cloud"
-               }
-              },
-              {
-               "paint": {
-                "ops": [
-                 {
-                  "color": "#FFFFD3C4"
-                 },
-                 {
-                  "alpha": "clamp(0, 1, @pos)"
+                },
+                {
+                 "drawPath": {
+                  "path": "cloud"
                  }
-                ]
-               }
-              },
-              {
-               "drawPath": {
-                "path": "cloud"
-               }
-              },
-              {
-               "paint": {
-                "ops": [
-                 {
-                  "color": "#FF2E3466"
-                 },
-                 {
-                  "alpha": "clamp(0, 1, @pos - 1)"
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 2
+                   },
+                   {
+                    "strokeJoin": "round"
+                   }
+                  ]
                  }
-                ]
-               }
-              },
-              {
-               "drawPath": {
-                "path": "cloud"
-               }
+                },
+                {
+                 "drawPath": {
+                  "path": "cloud"
+                 }
+                }
+               ],
+               "else": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "#F2FFFFFF"
+                   },
+                   {
+                    "alpha": 1
+                   },
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "cloud"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "#FFFFD3C4"
+                   },
+                   {
+                    "alpha": "clamp(0, 1, @pos)"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "cloud"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "#FF2E3466"
+                   },
+                   {
+                    "alpha": "clamp(0, 1, @pos - 1)"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "cloud"
+                 }
+                }
+               ]
               }
              ]
             }
@@ -2121,130 +2320,212 @@
           }
          },
          {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FFA8C6E6"
-            },
-            {
-             "alpha": "1"
-            },
-            {
-             "style": "fill"
-            }
-           ]
-          }
-         },
-         {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
               {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_far % 1200)",
-                "dy": 0
-               }
+               "shader": 0
               },
               {
-               "drawPath": {
-                "path": "far"
-               }
+               "color": "@colors.background"
+              },
+              {
+               "alpha": 1
+              },
+              {
+               "style": "fill"
               }
              ]
             }
-           ]
-          }
-         },
-         {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FFB98AA8"
-            },
-            {
-             "alpha": "clamp(0, 1, @pos)"
-            },
-            {
-             "style": "fill"
-            }
-           ]
-          }
-         },
-         {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
               {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_far % 1200)",
-                "dy": 0
-               }
-              },
-              {
-               "drawPath": {
-                "path": "far"
-               }
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_far % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "far"
+                 }
+                }
+               ]
               }
              ]
             }
-           ]
-          }
-         },
-         {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FF262D52"
-            },
-            {
-             "alpha": "clamp(0, 1, @pos - 1)"
-            },
-            {
-             "style": "fill"
+           },
+           {
+            "pathExpression": {
+             "id": "far_l",
+             "expressionX": "a[0] - @o_far",
+             "expressionY": "292 - 70 * abs(sin(a[0] * 0.015708 + 0.3)) - 34 * abs(sin(a[0] * 0.02618 + 1.1)) - 16 * sin(a[0] * 0.005236 + 2)",
+             "start": "@o_far - 20",
+             "end": "@o_far + @P + 20",
+             "count": 96
             }
-           ]
-          }
-         },
-         {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
+           },
+           {
+            "paint": {
+             "ops": [
               {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_far % 1200)",
-                "dy": 0
-               }
+               "color": "@colors.onSurface"
               },
               {
-               "drawPath": {
-                "path": "far"
-               }
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 1.6
+              },
+              {
+               "strokeJoin": "round"
               }
              ]
             }
-           ]
-          }
+           },
+           {
+            "drawPath": {
+             "path": "far_l"
+            }
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FFA8C6E6"
+              },
+              {
+               "alpha": "1"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_far % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "far"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FFB98AA8"
+              },
+              {
+               "alpha": "clamp(0, 1, @pos)"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_far % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "far"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FF262D52"
+              },
+              {
+               "alpha": "clamp(0, 1, @pos - 1)"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_far % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "far"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
          },
          {
           "save": [
@@ -2261,19 +2542,50 @@
             }
            },
            {
-            "paint": {
-             "ops": [
-              {
-               "shader": 0
-              },
-              {
-               "color": "#FF7A6FD0"
-              },
-              {
-               "alpha": "0.8 * (1 - @night)"
+            "$if": "theme.mono",
+            "then": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "alpha": "1 - @night"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 7
+                }
+               ]
               }
-             ]
-            }
+             }
+            ],
+            "else": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "#FF7A6FD0"
+                },
+                {
+                 "alpha": "0.8 * (1 - @night)"
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             }
+            ]
            },
            {
             "drawPath": {
@@ -2297,130 +2609,212 @@
           }
          },
          {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FF7DB892"
-            },
-            {
-             "alpha": "1"
-            },
-            {
-             "style": "fill"
-            }
-           ]
-          }
-         },
-         {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
               {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_mid % 1200)",
-                "dy": 0
-               }
+               "shader": 0
               },
               {
-               "drawPath": {
-                "path": "mid"
-               }
+               "color": "@colors.background"
+              },
+              {
+               "alpha": 1
+              },
+              {
+               "style": "fill"
               }
              ]
             }
-           ]
-          }
-         },
-         {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FFB07A7A"
-            },
-            {
-             "alpha": "clamp(0, 1, @pos)"
-            },
-            {
-             "style": "fill"
-            }
-           ]
-          }
-         },
-         {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
               {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_mid % 1200)",
-                "dy": 0
-               }
-              },
-              {
-               "drawPath": {
-                "path": "mid"
-               }
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_mid % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "mid"
+                 }
+                }
+               ]
               }
              ]
             }
-           ]
-          }
-         },
-         {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FF1C2E3D"
-            },
-            {
-             "alpha": "clamp(0, 1, @pos - 1)"
-            },
-            {
-             "style": "fill"
+           },
+           {
+            "pathExpression": {
+             "id": "mid_l",
+             "expressionX": "a[0] - @o_mid",
+             "expressionY": "338 - 22 * sin(a[0] * 0.010472 + 0.8) - 14 * sin(a[0] * 0.020944 + 2.2) - 8 * sin(a[0] * 0.005236 + 0)",
+             "start": "@o_mid - 20",
+             "end": "@o_mid + @P + 20",
+             "count": 96
             }
-           ]
-          }
-         },
-         {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
+           },
+           {
+            "paint": {
+             "ops": [
               {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_mid % 1200)",
-                "dy": 0
-               }
+               "color": "@colors.onSurface"
               },
               {
-               "drawPath": {
-                "path": "mid"
-               }
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 1.6
+              },
+              {
+               "strokeJoin": "round"
               }
              ]
             }
-           ]
-          }
+           },
+           {
+            "drawPath": {
+             "path": "mid_l"
+            }
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FF7DB892"
+              },
+              {
+               "alpha": "1"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_mid % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "mid"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FFB07A7A"
+              },
+              {
+               "alpha": "clamp(0, 1, @pos)"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_mid % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "mid"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FF1C2E3D"
+              },
+              {
+               "alpha": "clamp(0, 1, @pos - 1)"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_mid % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "mid"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
          },
          {
           "variable": {
@@ -2429,130 +2823,212 @@
           }
          },
          {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FFA3D38A"
-            },
-            {
-             "alpha": "1"
-            },
-            {
-             "style": "fill"
-            }
-           ]
-          }
-         },
-         {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
               {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_meadow % 1200)",
-                "dy": 0
-               }
+               "shader": 0
               },
               {
-               "drawPath": {
-                "path": "meadow"
-               }
+               "color": "@colors.background"
+              },
+              {
+               "alpha": 1
+              },
+              {
+               "style": "fill"
               }
              ]
             }
-           ]
-          }
-         },
-         {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FFDDA176"
-            },
-            {
-             "alpha": "clamp(0, 1, @pos)"
-            },
-            {
-             "style": "fill"
-            }
-           ]
-          }
-         },
-         {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
               {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_meadow % 1200)",
-                "dy": 0
-               }
-              },
-              {
-               "drawPath": {
-                "path": "meadow"
-               }
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_meadow % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "meadow"
+                 }
+                }
+               ]
               }
              ]
             }
-           ]
-          }
-         },
-         {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FF18292E"
-            },
-            {
-             "alpha": "clamp(0, 1, @pos - 1)"
-            },
-            {
-             "style": "fill"
+           },
+           {
+            "pathExpression": {
+             "id": "meadow_l",
+             "expressionX": "a[0] - @o_meadow",
+             "expressionY": "374 - 5 * sin(a[0] * 0.015708 + 0.5) - 3 * sin(a[0] * 0.005236 + 1)",
+             "start": "@o_meadow - 20",
+             "end": "@o_meadow + @P + 20",
+             "count": 96
             }
-           ]
-          }
-         },
-         {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
+           },
+           {
+            "paint": {
+             "ops": [
               {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_meadow % 1200)",
-                "dy": 0
-               }
+               "color": "@colors.onSurface"
               },
               {
-               "drawPath": {
-                "path": "meadow"
-               }
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 1.6
+              },
+              {
+               "strokeJoin": "round"
               }
              ]
             }
-           ]
-          }
+           },
+           {
+            "drawPath": {
+             "path": "meadow_l"
+            }
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FFA3D38A"
+              },
+              {
+               "alpha": "1"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_meadow % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "meadow"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FFDDA176"
+              },
+              {
+               "alpha": "clamp(0, 1, @pos)"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_meadow % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "meadow"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FF18292E"
+              },
+              {
+               "alpha": "clamp(0, 1, @pos - 1)"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_meadow % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "meadow"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
          },
          {
           "save": [
@@ -2583,58 +3059,114 @@
               }
              },
              {
-              "paint": {
-               "ops": [
-                {
-                 "shader": 0
-                },
-                {
-                 "color": "#FF2F7D5B"
-                },
-                {
-                 "alpha": 1
+              "$if": "theme.mono",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "@colors.background"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#33FF8F5A"
-                },
-                {
-                 "alpha": "clamp(0, 1, @pos)"
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#CC0B1A1F"
-                },
-                {
-                 "alpha": "clamp(0, 1, @pos - 1)"
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 2.0
+                  },
+                  {
+                   "strokeJoin": "round"
+                  }
+                 ]
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ],
+              "else": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "#FF2F7D5B"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#33FF8F5A"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#CC0B1A1F"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos - 1)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ]
              }
             ]
            },
@@ -2653,58 +3185,114 @@
               }
              },
              {
-              "paint": {
-               "ops": [
-                {
-                 "shader": 0
-                },
-                {
-                 "color": "#FF2F7D5B"
-                },
-                {
-                 "alpha": 1
+              "$if": "theme.mono",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "@colors.background"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#33FF8F5A"
-                },
-                {
-                 "alpha": "clamp(0, 1, @pos)"
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#CC0B1A1F"
-                },
-                {
-                 "alpha": "clamp(0, 1, @pos - 1)"
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 1.39
+                  },
+                  {
+                   "strokeJoin": "round"
+                  }
+                 ]
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ],
+              "else": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "#FF2F7D5B"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#33FF8F5A"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#CC0B1A1F"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos - 1)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ]
              }
             ]
            },
@@ -2723,58 +3311,114 @@
               }
              },
              {
-              "paint": {
-               "ops": [
-                {
-                 "shader": 0
-                },
-                {
-                 "color": "#FF2F7D5B"
-                },
-                {
-                 "alpha": 1
+              "$if": "theme.mono",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "@colors.background"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#33FF8F5A"
-                },
-                {
-                 "alpha": "clamp(0, 1, @pos)"
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#CC0B1A1F"
-                },
-                {
-                 "alpha": "clamp(0, 1, @pos - 1)"
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 1.78
+                  },
+                  {
+                   "strokeJoin": "round"
+                  }
+                 ]
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ],
+              "else": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "#FF2F7D5B"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#33FF8F5A"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#CC0B1A1F"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos - 1)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ]
              }
             ]
            },
@@ -2793,58 +3437,114 @@
               }
              },
              {
-              "paint": {
-               "ops": [
-                {
-                 "shader": 0
-                },
-                {
-                 "color": "#FF2F7D5B"
-                },
-                {
-                 "alpha": 1
+              "$if": "theme.mono",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "@colors.background"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#33FF8F5A"
-                },
-                {
-                 "alpha": "clamp(0, 1, @pos)"
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#CC0B1A1F"
-                },
-                {
-                 "alpha": "clamp(0, 1, @pos - 1)"
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 1.19
+                  },
+                  {
+                   "strokeJoin": "round"
+                  }
+                 ]
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ],
+              "else": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "#FF2F7D5B"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#33FF8F5A"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#CC0B1A1F"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos - 1)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ]
              }
             ]
            },
@@ -2863,58 +3563,114 @@
               }
              },
              {
-              "paint": {
-               "ops": [
-                {
-                 "shader": 0
-                },
-                {
-                 "color": "#FF2F7D5B"
-                },
-                {
-                 "alpha": 1
+              "$if": "theme.mono",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "@colors.background"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#33FF8F5A"
-                },
-                {
-                 "alpha": "clamp(0, 1, @pos)"
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#CC0B1A1F"
-                },
-                {
-                 "alpha": "clamp(0, 1, @pos - 1)"
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 1.6
+                  },
+                  {
+                   "strokeJoin": "round"
+                  }
+                 ]
                 }
-               ]
-              }
-             },
-             {
-              "drawPath": {
-               "path": "pine"
-              }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ],
+              "else": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "#FF2F7D5B"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#33FF8F5A"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#CC0B1A1F"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos - 1)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ]
              }
             ]
            },
@@ -2933,112 +3689,265 @@
               }
              },
              {
+              "$if": "theme.mono",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "@colors.background"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 2.13
+                  },
+                  {
+                   "strokeJoin": "round"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ],
+              "else": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "shader": 0
+                  },
+                  {
+                   "color": "#FF2F7D5B"
+                  },
+                  {
+                   "alpha": 1
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#33FF8F5A"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#CC0B1A1F"
+                  },
+                  {
+                   "alpha": "clamp(0, 1, @pos - 1)"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "pine"
+                }
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "$if": "theme.mono",
+            "then": [
+             {
               "paint": {
                "ops": [
                 {
                  "shader": 0
                 },
                 {
-                 "color": "#FF2F7D5B"
+                 "color": "@colors.onSurface"
                 },
                 {
                  "alpha": 1
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1.6
                 }
                ]
               }
              },
              {
-              "drawPath": {
-               "path": "pine"
+              "drawLine": {
+               "x1": 0,
+               "y1": -38,
+               "x2": 0,
+               "y2": 0
               }
              },
              {
               "paint": {
                "ops": [
                 {
-                 "color": "#33FF8F5A"
+                 "shader": 0
                 },
                 {
-                 "alpha": "clamp(0, 1, @pos)"
+                 "color": "@colors.background"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "style": "fill"
                 }
                ]
               }
              },
              {
               "drawPath": {
-               "path": "pine"
+               "path": "sign"
               }
              },
              {
               "paint": {
                "ops": [
                 {
-                 "color": "#CC0B1A1F"
+                 "color": "@colors.onSurface"
                 },
                 {
-                 "alpha": "clamp(0, 1, @pos - 1)"
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1.6
+                },
+                {
+                 "strokeJoin": "round"
                 }
                ]
               }
              },
              {
               "drawPath": {
-               "path": "pine"
+               "path": "sign"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "textSize": 9
+                }
+               ]
+              }
+             }
+            ],
+            "else": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "#FF8D5B3A"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawRect": {
+               "left": -3,
+               "top": -58,
+               "right": 3,
+               "bottom": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FFE8B04B"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "sign"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FFFFFFFF"
+                },
+                {
+                 "textSize": 9
+                }
+               ]
               }
              }
             ]
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "shader": 0
-              },
-              {
-               "color": "#FF8D5B3A"
-              },
-              {
-               "alpha": 1
-              },
-              {
-               "style": "fill"
-              }
-             ]
-            }
-           },
-           {
-            "drawRect": {
-             "left": -3,
-             "top": -58,
-             "right": 3,
-             "bottom": 0
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FFE8B04B"
-              }
-             ]
-            }
-           },
-           {
-            "drawPath": {
-             "path": "sign"
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FFFFFFFF"
-              },
-              {
-               "textSize": 9
-              }
-             ]
-            }
            },
            {
             "drawTextAnchored": {
@@ -3067,55 +3976,59 @@
             }
            },
            {
-            "paint": {
-             "ops": [
-              {
-               "shader": 0
-              },
-              {
-               "color": "#FFEF5B5B"
-              },
-              {
-               "alpha": 1
-              },
-              {
-               "style": "fill"
-              }
-             ]
-            }
-           },
-           {
-            "drawPath": {
-             "path": "env"
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FFFFC145"
-              }
-             ]
-            }
-           },
-           {
-            "drawPath": {
-             "path": "gore"
-            }
-           },
-           {
-            "save": [
+            "$if": "theme.mono",
+            "then": [
              {
-              "scale": {
-               "sx": 0.38,
-               "sy": 1
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "@colors.background"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "env"
               }
              },
              {
               "paint": {
                "ops": [
                 {
-                 "color": "#FFEF5B5B"
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1.6
+                },
+                {
+                 "strokeJoin": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "env"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "stroke"
                 }
                ]
               }
@@ -3124,80 +4037,202 @@
               "drawPath": {
                "path": "gore"
               }
+             },
+             {
+              "save": [
+               {
+                "scale": {
+                 "sx": 0.38,
+                 "sy": 1
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "strokeWidth": 4.21
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "gore"
+                }
+               }
+              ]
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "strokeWidth": 1.6
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": -14,
+               "y1": 62,
+               "x2": -10,
+               "y2": 86
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 14,
+               "y1": 62,
+               "x2": 10,
+               "y2": 86
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": -13,
+               "top": 86,
+               "right": 13,
+               "bottom": 104,
+               "rx": 3,
+               "ry": 3
+              }
+             }
+            ],
+            "else": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "#FFEF5B5B"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "env"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FFFFC145"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "gore"
+              }
+             },
+             {
+              "save": [
+               {
+                "scale": {
+                 "sx": 0.38,
+                 "sy": 1
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#FFEF5B5B"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "gore"
+                }
+               }
+              ]
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FF6B4A3A"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1.5
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": -14,
+               "y1": 62,
+               "x2": -10,
+               "y2": 86
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 14,
+               "y1": 62,
+               "x2": 10,
+               "y2": 86
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FF8D5B3A"
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": -13,
+               "top": 86,
+               "right": 13,
+               "bottom": 104,
+               "rx": 3,
+               "ry": 3
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FFFFB347"
+                },
+                {
+                 "alpha": "0.5 + 0.5 * sin(@t * 7)"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 0,
+               "cy": 74,
+               "radius": 3
+              }
              }
             ]
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FF6B4A3A"
-              },
-              {
-               "style": "stroke"
-              },
-              {
-               "strokeWidth": 1.5
-              }
-             ]
-            }
-           },
-           {
-            "drawLine": {
-             "x1": -14,
-             "y1": 62,
-             "x2": -10,
-             "y2": 86
-            }
-           },
-           {
-            "drawLine": {
-             "x1": 14,
-             "y1": 62,
-             "x2": 10,
-             "y2": 86
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FF8D5B3A"
-              },
-              {
-               "style": "fill"
-              }
-             ]
-            }
-           },
-           {
-            "drawRoundRect": {
-             "left": -13,
-             "top": 86,
-             "right": 13,
-             "bottom": 104,
-             "rx": 3,
-             "ry": 3
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FFFFB347"
-              },
-              {
-               "alpha": "0.5 + 0.5 * sin(@t * 7)"
-              }
-             ]
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": 0,
-             "cy": 74,
-             "radius": 3
-            }
            }
           ]
          },
@@ -3210,248 +4245,357 @@
             }
            },
            {
-            "paint": {
-             "ops": [
-              {
-               "radialGradient": {
-                "centerX": 60,
-                "centerY": -8,
-                "radius": 110,
-                "colors": [
-                 "#88FFAA4A",
-                 "#00FFAA4A"
-                ]
-               }
-              },
-              {
-               "alpha": "@night * (1 + 0.12 * sin(@t * 11) + 0.08 * sin(@t * 17.3)) * 0.9"
-              }
-             ]
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": 60,
-             "cy": -8,
-             "radius": 110
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "shader": 0
-              },
-              {
-               "color": "#FFE07A4F"
-              },
-              {
-               "alpha": 1
-              },
-              {
-               "style": "fill"
-              }
-             ]
-            }
-           },
-           {
-            "drawPath": {
-             "path": "tent"
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FFFFB45E"
-              },
-              {
-               "alpha": "@night * 0.55"
-              }
-             ]
-            }
-           },
-           {
-            "drawPath": {
-             "path": "tentlit"
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FF3A2230"
-              },
-              {
-               "alpha": 1
-              }
-             ]
-            }
-           },
-           {
-            "drawPath": {
-             "path": "door"
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FFFFC66B"
-              },
-              {
-               "alpha": "@night * (0.7 + 0.3 * sin(@t * 5))"
-              }
-             ]
-            }
-           },
-           {
-            "save": [
+            "$if": "theme.mono",
+            "then": [
              {
-              "scale": {
-               "sx": 0.6,
-               "sy": 0.6
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "@colors.background"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "style": "fill"
+                }
+               ]
               }
              },
              {
               "drawPath": {
-               "path": "door"
-              }
-             }
-            ]
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FF5A3A2A"
-              },
-              {
-               "alpha": 1
-              },
-              {
-               "style": "stroke"
-              },
-              {
-               "strokeWidth": 5
-              },
-              {
-               "strokeCap": "round"
-              }
-             ]
-            }
-           },
-           {
-            "drawLine": {
-             "x1": 46,
-             "y1": -2,
-             "x2": 74,
-             "y2": -8
-            }
-           },
-           {
-            "drawLine": {
-             "x1": 46,
-             "y1": -8,
-             "x2": 74,
-             "y2": -2
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "style": "fill"
-              },
-              {
-               "color": "#FFFFA53A"
-              },
-              {
-               "alpha": 1
-              }
-             ]
-            }
-           },
-           {
-            "save": [
-             {
-              "translate": {
-               "dx": 60,
-               "dy": -8
-              }
-             },
-             {
-              "scale": {
-               "sx": "(1 + 0.12 * sin(@t * 11) + 0.08 * sin(@t * 17.3))",
-               "sy": "(1 + 0.12 * sin(@t * 11) + 0.08 * sin(@t * 17.3))"
-              }
-             },
-             {
-              "drawPath": {
-               "path": "flame"
+               "path": "tent"
               }
              },
              {
               "paint": {
                "ops": [
                 {
-                 "color": "#FFFFF0A6"
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1.6
+                },
+                {
+                 "strokeJoin": "round"
                 }
                ]
               }
              },
              {
-              "scale": {
-               "sx": 0.55,
-               "sy": 0.55
+              "drawPath": {
+               "path": "tent"
               }
              },
              {
               "drawPath": {
-               "path": "flame"
+               "path": "door"
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 46,
+               "y1": -2,
+               "x2": 74,
+               "y2": -8
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 46,
+               "y1": -8,
+               "x2": 74,
+               "y2": -2
+              }
+             },
+             {
+              "save": [
+               {
+                "translate": {
+                 "dx": 60,
+                 "dy": -8
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "flame"
+                }
+               },
+               {
+                "scale": {
+                 "sx": 0.5,
+                 "sy": 0.5
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "strokeWidth": 3.2
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "flame"
+                }
+               }
+              ]
+             }
+            ],
+            "else": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "radialGradient": {
+                  "centerX": 60,
+                  "centerY": -8,
+                  "radius": 110,
+                  "colors": [
+                   "#88FFAA4A",
+                   "#00FFAA4A"
+                  ]
+                 }
+                },
+                {
+                 "alpha": "@night * (1 + 0.12 * sin(@t * 11) + 0.08 * sin(@t * 17.3)) * 0.9"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 60,
+               "cy": -8,
+               "radius": 110
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "shader": 0
+                },
+                {
+                 "color": "#FFE07A4F"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "tent"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FFFFB45E"
+                },
+                {
+                 "alpha": "@night * 0.55"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "tentlit"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FF3A2230"
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "door"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FFFFC66B"
+                },
+                {
+                 "alpha": "@night * (0.7 + 0.3 * sin(@t * 5))"
+                }
+               ]
+              }
+             },
+             {
+              "save": [
+               {
+                "scale": {
+                 "sx": 0.6,
+                 "sy": 0.6
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "door"
+                }
+               }
+              ]
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FF5A3A2A"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 5
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 46,
+               "y1": -2,
+               "x2": 74,
+               "y2": -8
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 46,
+               "y1": -8,
+               "x2": 74,
+               "y2": -2
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                },
+                {
+                 "color": "#FFFFA53A"
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "save": [
+               {
+                "translate": {
+                 "dx": 60,
+                 "dy": -8
+                }
+               },
+               {
+                "scale": {
+                 "sx": "(1 + 0.12 * sin(@t * 11) + 0.08 * sin(@t * 17.3))",
+                 "sy": "(1 + 0.12 * sin(@t * 11) + 0.08 * sin(@t * 17.3))"
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "flame"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "#FFFFF0A6"
+                  }
+                 ]
+                }
+               },
+               {
+                "scale": {
+                 "sx": 0.55,
+                 "sy": 0.55
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "flame"
+                }
+               }
+              ]
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FFFFC66B"
+                }
+               ]
+              }
+             },
+             {
+              "loop": {
+               "index": "j",
+               "from": 0,
+               "until": 6,
+               "commands": [
+                {
+                 "variable": {
+                  "name": "sp",
+                  "value": "fract(@t * 0.6 + j * 0.37)"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "alpha": "(1 - @sp) * @night"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawCircle": {
+                  "cx": "60 + 7 * sin(@t * 3 + j * 2.4) + (j - 2.5) * 3",
+                  "cy": "-30 - @sp * 70",
+                  "radius": "1.6 - @sp"
+                 }
+                }
+               ]
               }
              }
             ]
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FFFFC66B"
-              }
-             ]
-            }
-           },
-           {
-            "loop": {
-             "index": "j",
-             "from": 0,
-             "until": 6,
-             "commands": [
-              {
-               "variable": {
-                "name": "sp",
-                "value": "fract(@t * 0.6 + j * 0.37)"
-               }
-              },
-              {
-               "paint": {
-                "ops": [
-                 {
-                  "alpha": "(1 - @sp) * @night"
-                 }
-                ]
-               }
-              },
-              {
-               "drawCircle": {
-                "cx": "60 + 7 * sin(@t * 3 + j * 2.4) + (j - 2.5) * 3",
-                "cy": "-30 - @sp * 70",
-                "radius": "1.6 - @sp"
-               }
-              }
-             ]
-            }
            }
           ]
          },
@@ -3462,16 +4606,227 @@
           }
          },
          {
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "@colors.background"
+              },
+              {
+               "alpha": 1
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_front % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "front"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "pathExpression": {
+             "id": "front_l",
+             "expressionX": "a[0] - @o_front",
+             "expressionY": "420 - 9 * sin(a[0] * 0.020944 + 0.2) - 6 * abs(sin(a[0] * 0.05236 + 1.3)) - 4 * sin(a[0] * 0.005236 + 0)",
+             "start": "@o_front - 20",
+             "end": "@o_front + @P + 20",
+             "count": 96
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 1.6
+              },
+              {
+               "strokeJoin": "round"
+              }
+             ]
+            }
+           },
+           {
+            "drawPath": {
+             "path": "front_l"
+            }
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FF4E9A5C"
+              },
+              {
+               "alpha": "1"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_front % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "front"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FF8A5A52"
+              },
+              {
+               "alpha": "clamp(0, 1, @pos)"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_front % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "front"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "shader": 0
+              },
+              {
+               "color": "#FF0C171C"
+              },
+              {
+               "alpha": "clamp(0, 1, @pos - 1)"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "@tiles",
+             "commands": [
+              {
+               "save": [
+                {
+                 "translate": {
+                  "dx": "(k - 1) * 1200 - (@o_front % 1200)",
+                  "dy": 0
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "front"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "$if": "theme.mono",
+        "then": [],
+        "else": [
+         {
           "paint": {
            "ops": [
             {
              "shader": 0
             },
             {
-             "color": "#FF4E9A5C"
-            },
-            {
-             "alpha": "1"
+             "alpha": 1
             },
             {
              "style": "fill"
@@ -3480,111 +4835,20 @@
           }
          },
          {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
-              {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_front % 1200)",
-                "dy": 0
-               }
-              },
-              {
-               "drawPath": {
-                "path": "front"
-               }
-              }
-             ]
-            }
-           ]
-          }
-         },
-         {
           "paint": {
            "ops": [
             {
-             "shader": 0
-            },
-            {
-             "color": "#FF8A5A52"
-            },
-            {
-             "alpha": "clamp(0, 1, @pos)"
-            },
-            {
-             "style": "fill"
+             "color": "@colors.dim"
             }
            ]
           }
          },
          {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
-              {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_front % 1200)",
-                "dy": 0
-               }
-              },
-              {
-               "drawPath": {
-                "path": "front"
-               }
-              }
-             ]
-            }
-           ]
-          }
-         },
-         {
-          "paint": {
-           "ops": [
-            {
-             "shader": 0
-            },
-            {
-             "color": "#FF0C171C"
-            },
-            {
-             "alpha": "clamp(0, 1, @pos - 1)"
-            },
-            {
-             "style": "fill"
-            }
-           ]
-          }
-         },
-         {
-          "loop": {
-           "index": "k",
-           "from": 0,
-           "until": "@tiles",
-           "commands": [
-            {
-             "save": [
-              {
-               "translate": {
-                "dx": "(k - 1) * 1200 - (@o_front % 1200)",
-                "dy": 0
-               }
-              },
-              {
-               "drawPath": {
-                "path": "front"
-               }
-              }
-             ]
-            }
-           ]
+          "drawRect": {
+           "left": 0,
+           "top": 0,
+           "right": "@W",
+           "bottom": "@H"
           }
          }
         ]
@@ -3622,7 +4886,7 @@
            "shader": 0
           },
           {
-           "color": "@colors.sheet"
+           "color": "@colors.surface"
           },
           {
            "alpha": 1
@@ -3644,6 +4908,46 @@
         }
        },
        {
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.outline"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 1.5
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@pl",
+           "top": "@y0",
+           "right": "@W + 40",
+           "bottom": "@H + 40",
+           "rx": 28,
+           "ry": 28
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         }
+        ],
+        "else": []
+       },
+       {
         "save": [
          {
           "translate": {
@@ -3661,7 +4965,7 @@
           "paint": {
            "ops": [
             {
-             "color": "@colors.ink"
+             "color": "@colors.onSurface"
             },
             {
              "alpha": "clamp(0, 1, 1 - abs(@pos - 0) * 2)"
@@ -3734,7 +5038,7 @@
           "paint": {
            "ops": [
             {
-             "color": "@colors.ink"
+             "color": "@colors.onSurface"
             },
             {
              "alpha": "clamp(0, 1, 1 - abs(@pos - 1) * 2)"
@@ -3807,7 +5111,7 @@
           "paint": {
            "ops": [
             {
-             "color": "@colors.ink"
+             "color": "@colors.onSurface"
             },
             {
              "alpha": "clamp(0, 1, 1 - abs(@pos - 2) * 2)"
@@ -3933,70 +5237,99 @@
         }
        },
        {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FF2F7FE0"
-          },
-          {
-           "alpha": "1"
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "alpha": 1
+            }
+           ]
           }
-         ]
-        }
-       },
-       {
-        "drawRoundRect": {
-         "left": "@dl - 4",
-         "top": "@dy - 4",
-         "right": "@dr + 4",
-         "bottom": "@dy + 4",
-         "rx": 4,
-         "ry": 4
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFEB6A4B"
-          },
-          {
-           "alpha": "clamp(0, 1, @pos)"
+         },
+         {
+          "drawRoundRect": {
+           "left": "@dl - 4",
+           "top": "@dy - 4",
+           "right": "@dr + 4",
+           "bottom": "@dy + 4",
+           "rx": 4,
+           "ry": 4
           }
-         ]
-        }
-       },
-       {
-        "drawRoundRect": {
-         "left": "@dl - 4",
-         "top": "@dy - 4",
-         "right": "@dr + 4",
-         "bottom": "@dy + 4",
-         "rx": 4,
-         "ry": 4
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FF6457DE"
-          },
-          {
-           "alpha": "clamp(0, 1, @pos - 1)"
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.acc0"
+            },
+            {
+             "alpha": "1"
+            }
+           ]
           }
-         ]
-        }
-       },
-       {
-        "drawRoundRect": {
-         "left": "@dl - 4",
-         "top": "@dy - 4",
-         "right": "@dr + 4",
-         "bottom": "@dy + 4",
-         "rx": 4,
-         "ry": 4
-        }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@dl - 4",
+           "top": "@dy - 4",
+           "right": "@dr + 4",
+           "bottom": "@dy + 4",
+           "rx": 4,
+           "ry": 4
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.acc1"
+            },
+            {
+             "alpha": "clamp(0, 1, @pos)"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@dl - 4",
+           "top": "@dy - 4",
+           "right": "@dr + 4",
+           "bottom": "@dy + 4",
+           "rx": 4,
+           "ry": 4
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.acc2"
+            },
+            {
+             "alpha": "clamp(0, 1, @pos - 1)"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@dl - 4",
+           "top": "@dy - 4",
+           "right": "@dr + 4",
+           "bottom": "@dy + 4",
+           "rx": 4,
+           "ry": 4
+          }
+         }
+        ]
        },
        {
         "variable": {
@@ -4011,77 +5344,118 @@
         }
        },
        {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FF2F7FE0"
-          },
-          {
-           "alpha": "1"
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "alpha": 1
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 2
+            }
+           ]
           }
-         ]
-        }
-       },
-       {
-        "drawRoundRect": {
-         "left": "@bl",
-         "top": "@hb - 28",
-         "right": "@W - 24",
-         "bottom": "@hb + 28",
-         "rx": 28,
-         "ry": 28
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFEB6A4B"
-          },
-          {
-           "alpha": "clamp(0, 1, @pos)"
+         },
+         {
+          "drawRoundRect": {
+           "left": "@bl",
+           "top": "@hb - 28",
+           "right": "@W - 24",
+           "bottom": "@hb + 28",
+           "rx": 28,
+           "ry": 28
           }
-         ]
-        }
-       },
-       {
-        "drawRoundRect": {
-         "left": "@bl",
-         "top": "@hb - 28",
-         "right": "@W - 24",
-         "bottom": "@hb + 28",
-         "rx": 28,
-         "ry": 28
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FF6457DE"
-          },
-          {
-           "alpha": "clamp(0, 1, @pos - 1)"
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.acc0"
+            },
+            {
+             "alpha": "1"
+            }
+           ]
           }
-         ]
-        }
-       },
-       {
-        "drawRoundRect": {
-         "left": "@bl",
-         "top": "@hb - 28",
-         "right": "@W - 24",
-         "bottom": "@hb + 28",
-         "rx": 28,
-         "ry": 28
-        }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@bl",
+           "top": "@hb - 28",
+           "right": "@W - 24",
+           "bottom": "@hb + 28",
+           "rx": 28,
+           "ry": 28
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.acc1"
+            },
+            {
+             "alpha": "clamp(0, 1, @pos)"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@bl",
+           "top": "@hb - 28",
+           "right": "@W - 24",
+           "bottom": "@hb + 28",
+           "rx": 28,
+           "ry": 28
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.acc2"
+            },
+            {
+             "alpha": "clamp(0, 1, @pos - 1)"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@bl",
+           "top": "@hb - 28",
+           "right": "@W - 24",
+           "bottom": "@hb + 28",
+           "rx": 28,
+           "ry": 28
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onAccent"
+            }
+           ]
+          }
+         }
+        ]
        },
        {
         "paint": {
          "ops": [
-          {
-           "color": "#FFFFFFFF"
-          },
           {
            "alpha": "clamp(0, 1, 1 - 2.5 * @e)"
           },

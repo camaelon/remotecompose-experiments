@@ -62,9 +62,11 @@
   "Day to night with chain alphas: the sky, every ridge and the clouds are drawn three times (day colour at alpha 1, dusk at clamp(pos), night at clamp(pos - 1)); the sun's height, the moon, the stars and the firelight read the same pos",
   "Worm indicator: with i = min(1, floor(pos)) and u = pos - i, the pill runs from dot i + max(0, 2u - 1) to dot i + min(1, 2u): its head reaches the next dot half-way, then its tail follows",
   "The arrow button grows into Get started with e = smooth_step(pos - 1, 1, 0): its left edge moves from W - 80 to the panel's left + 24, the arrow fades out and the label in. Tap targets are layout boxes whose visibility is the integer expression min(1, |page - 2|) (Skip, Next) or its complement (Get started, a hostNamedAction)",
+  "Four looks: the sheet, text, dots and track are the theme tokens surface/onSurface/muted/track (overridden with the design's light/dark values, remapped by the mono palettes); accents are themed acc0..acc2; in dark a themed 20 % black veil dims the illustration so it sits with the dark sheet. Mono forks ({\"$if\": \"theme.mono\"}) turn the illustration into line art: every shape is filled with the background (so nearer layers hide farther ones) and outlined in onSurface, ridge crests are pathExpressions of the same periodic profile (no seams between tiles), sun and moon are circles, the button is an outlined pill; t = 0 stops the ambient motion while the swipe, parallax, worm and button morph still work",
   "Landscape: land = step(W / H, 1.2) turns the bottom sheet into a right-hand panel; the illustration centres on the visible left part and the tap boxes are shifted by a width expression"
  ],
  "pitfalls": [
+  "A paint's alpha op overrides its colour's alpha: the dark-theme veil (#33000000) drawn with alpha 1 in one paint was opaque black. Set alpha in an earlier paint, then the colour",
   "A paint that sets a colour resets the alpha: give every coloured paint its own alpha (the body text was visible on every page until it had one)",
   "Expressions are capped at 32 entries: the cloud wrap-around is split into cw, cv, cx",
   "% of a negative number stays negative: the clouds add 100 page widths before the modulo",
@@ -108,13 +110,104 @@
   "touch": true
  },
  "check": {
-  "describe": "360x760 light, page 1: blue sky, sun and clouds, pale mountains, green hills, pines and a TRAIL sign; white sheet with Find your trail, two lines, three dots (first blue), Skip and a round blue arrow. drag: 60, 120, 200 px left the pines slide out faster than the mountains, the sky turns violet, the balloon enters, the dot stretches toward the second. release: eases to page 2 (dusk sky, orange sun low behind the balloon, Go further, safely, orange arrow). page 3: night sky with stars and moon, a lit tent and campfire, Sleep under the stars, a full-width violet Get started pill. Dark: the sheet is near-black with light text. Tablet 800x1280 scales text; landscape 760x360 and 1280x800 put the text in a right-hand panel.",
+  "describe": "Looks: light and dark page 1 (dark: dark sheet, light text, the illustration slightly dimmed), mono-dark after a swipe to page 2 (white line art on black: mountain crests, the balloon, page 2 text at full contrast, second dot active), mono-light page 3 (black line art on white: moon, stars, tent and flame outlines, an outlined Get started pill). 360x760 light, page 1: blue sky, sun and clouds, pale mountains, green hills, pines and a TRAIL sign; white sheet with Find your trail, two lines, three dots (first blue), Skip and a round blue arrow. drag: 60, 120, 200 px left the pines slide out faster than the mountains, the sky turns violet, the balloon enters, the dot stretches toward the second. release: eases to page 2 (dusk sky, orange sun low behind the balloon, Go further, safely, orange arrow). page 3: night sky with stars and moon, a lit tent and campfire, Sleep under the stars, a full-width violet Get started pill. Dark: the sheet is near-black with light text. Tablet 800x1280 scales text; landscape 760x360 and 1280x800 put the text in a right-hand panel.",
   "render": {
    "clock": "2026-11-02T10:00:00",
    "theme": "light",
    "duration": 1
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "touch_events": [
+     {
+      "t": 0.5,
+      "type": "down",
+      "x": 300,
+      "y": 300
+     },
+     {
+      "t": 0.55,
+      "type": "move",
+      "x": 280,
+      "y": 300
+     },
+     {
+      "t": 0.6,
+      "type": "move",
+      "x": 260,
+      "y": 300
+     },
+     {
+      "t": 0.65,
+      "type": "move",
+      "x": 240,
+      "y": 300
+     },
+     {
+      "t": 0.7,
+      "type": "move",
+      "x": 220,
+      "y": 300
+     },
+     {
+      "t": 0.75,
+      "type": "move",
+      "x": 200,
+      "y": 300
+     },
+     {
+      "t": 0.8,
+      "type": "move",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.85,
+      "type": "move",
+      "x": 160,
+      "y": 300
+     },
+     {
+      "t": 0.9,
+      "type": "move",
+      "x": 140,
+      "y": 300
+     },
+     {
+      "t": 0.95,
+      "type": "move",
+      "x": 120,
+      "y": 300
+     },
+     {
+      "t": 1,
+      "type": "move",
+      "x": 100,
+      "y": 300
+     },
+     {
+      "t": 1,
+      "type": "up",
+      "x": 100,
+      "y": 300
+     }
+    ],
+    "duration": 2
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "variables": {
+     "page": 2
+    },
+    "duration": 1.5
+   },
    {
     "name": "dark",
     "theme": "dark"
@@ -478,17 +571,17 @@
   "component_modes": {},
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 18246,
+  "bytes": 19259,
   "header": {
    "width": 360,
    "height": 760
   },
-  "op_count": 618,
+  "op_count": 693,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 5,
    "ANIMATED_FLOAT": 173,
-   "COLOR_CONSTANT": 8,
-   "COLOR_EXPRESSIONS": 8,
+   "COLOR_CONSTANT": 22,
+   "COLOR_EXPRESSIONS": 22,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
    "DATA_FLOAT": 3,
@@ -496,7 +589,7 @@
    "DRAW_CIRCLE": 12,
    "DRAW_LINE": 7,
    "DRAW_PATH": 44,
-   "DRAW_RECT": 5,
+   "DRAW_RECT": 6,
    "DRAW_ROUND_RECT": 8,
    "DRAW_TEXT_ANCHOR": 12,
    "DataListFloat": 2,
@@ -509,7 +602,7 @@
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 1,
    "LayoutComponentContent": 5,
-   "LoopOperation": 24,
+   "LoopOperation": 38,
    "MATRIX_RESTORE": 30,
    "MATRIX_ROTATE": 1,
    "MATRIX_SAVE": 30,
@@ -523,10 +616,10 @@
    "MODIFIER_TOUCH_UP": 1,
    "MODIFIER_VISIBILITY": 2,
    "MODIFIER_WIDTH": 12,
-   "NAMED_VARIABLE": 7,
-   "PAINT_VALUES": 81,
+   "NAMED_VARIABLE": 14,
+   "PAINT_VALUES": 85,
    "PATH_DATA": 13,
-   "THEME": 12,
+   "THEME": 33,
    "TextFromFloat": 1,
    "TextMerge": 3,
    "TextSubtext": 1,
@@ -534,9 +627,29 @@
   },
   "host_variables": [
    {
-    "name": "ink",
+    "name": "acc0",
     "type": "color",
-    "value": "#FFF1F2F6"
+    "value": "#FF4D94EE"
+   },
+   {
+    "name": "acc1",
+    "type": "color",
+    "value": "#FFF07E62"
+   },
+   {
+    "name": "acc2",
+    "type": "color",
+    "value": "#FF7D72EA"
+   },
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF151823"
+   },
+   {
+    "name": "dim",
+    "type": "color",
+    "value": "#33000000"
    },
    {
     "name": "muted",
@@ -544,12 +657,27 @@
     "value": "#FF9A9FB2"
    },
    {
+    "name": "onAccent",
+    "type": "color",
+    "value": "#FFFFFFFF"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFF1F2F6"
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A3E4E"
+   },
+   {
     "name": "page",
     "type": "float",
     "value": 0
    },
    {
-    "name": "sheet",
+    "name": "surface",
     "type": "color",
     "value": "#FF151823"
    },
@@ -581,11 +709,12 @@
   "audit": {
    "error": 0,
    "warning": 1,
-   "info": 3
+   "info": 4
   },
   "audit_findings": [
    "warning: text_in_canvas",
    "info: repaint_continuous",
+   "info: repeated_subtree",
    "info: expression_entries",
    "info: never_executed"
   ],
@@ -598,6 +727,193 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 15392,
+    "component_modes": {},
+    "motion_removed": 1,
+    "op_count": 454,
+    "host_variables": [
+     {
+      "name": "acc0",
+      "type": "color",
+      "value": "#FF4D94EE"
+     },
+     {
+      "name": "acc1",
+      "type": "color",
+      "value": "#FFF07E62"
+     },
+     {
+      "name": "acc2",
+      "type": "color",
+      "value": "#FF7D72EA"
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "dim",
+      "type": "color",
+      "value": "#33000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onAccent",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "page",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "tlen",
+      "type": "float_array",
+      "value": [
+       15,
+       18,
+       21
+      ]
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "tstart",
+      "type": "float_array",
+      "value": [
+       0,
+       15,
+       33
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 15392,
+    "component_modes": {},
+    "motion_removed": 1,
+    "op_count": 454,
+    "host_variables": [
+     {
+      "name": "acc0",
+      "type": "color",
+      "value": "#FF2F7FE0"
+     },
+     {
+      "name": "acc1",
+      "type": "color",
+      "value": "#FFEB6A4B"
+     },
+     {
+      "name": "acc2",
+      "type": "color",
+      "value": "#FF6457DE"
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "dim",
+      "type": "color",
+      "value": "#00000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onAccent",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "page",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "tlen",
+      "type": "float_array",
+      "value": [
+       15,
+       18,
+       21
+      ]
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "tstart",
+      "type": "float_array",
+      "value": [
+       0,
+       15,
+       33
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "dark": {
     "theme": "dark",
     "render": "render-dark.png",
@@ -692,6 +1008,10 @@
    }
   },
   "json_keys": [
+   "$if",
+   "acc0",
+   "acc1",
+   "acc2",
    "alpha",
    "angle",
    "anim",
@@ -710,10 +1030,12 @@
    "column",
    "commands",
    "contentDescription",
+   "count",
    "cx",
    "cy",
    "dark",
    "decimal",
+   "dim",
    "door",
    "down",
    "drawCircle",
@@ -724,8 +1046,12 @@
    "drawTextAnchored",
    "dx",
    "dy",
+   "else",
+   "end",
    "env",
    "export",
+   "expressionX",
+   "expressionY",
    "far",
    "flags",
    "flame",
@@ -736,10 +1062,10 @@
    "header",
    "height",
    "horizontalAlignment",
+   "id",
    "id1",
    "id2",
    "index",
-   "ink",
    "left",
    "len",
    "light",
@@ -751,16 +1077,20 @@
    "modifiers",
    "muted",
    "name",
+   "onAccent",
    "onClick",
+   "onSurface",
    "onTouchDown",
    "onTouchUp",
    "ops",
+   "outline",
    "padding",
    "page",
    "paint",
    "panX",
    "panY",
    "path",
+   "pathExpression",
    "paths",
    "pillw",
    "pine",
@@ -780,7 +1110,6 @@
    "scale",
    "semantics",
    "shader",
-   "sheet",
    "sign",
    "size",
    "start",
@@ -788,6 +1117,7 @@
    "strokeJoin",
    "strokeWidth",
    "style",
+   "surface",
    "sx",
    "sy",
    "target",
@@ -796,6 +1126,7 @@
    "text",
    "textSize",
    "textSubtext",
+   "then",
    "tlen",
    "top",
    "track",
@@ -861,6 +1192,6 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-02T18:49:07.066Z"
+  "built_at": "2026-11-02T20:23:54.610Z"
  }
 }

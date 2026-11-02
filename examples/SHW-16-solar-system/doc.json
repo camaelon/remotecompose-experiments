@@ -11,7 +11,8 @@
    "sel": 2,
    "speed": 1,
    "t0": 0,
-   "c0": 0
+   "c0": 0,
+   "rateHeld": 0.0192
   },
   "floatArrays": {
    "orb": [
@@ -60,41 +61,71 @@
     0.0833,
     1.0
    ]
+  },
+  "colors": {
+   "space": {
+    "light": "#FFF4F1EA",
+    "dark": "#FF04060C"
+   },
+   "star": {
+    "light": "#FF8E97A8",
+    "dark": "#FFFFFFFF"
+   },
+   "orbit": {
+    "light": "#FFA3ACBC",
+    "dark": "#FF2A3550"
+   },
+   "glow1": {
+    "light": "#88FFB347",
+    "dark": "#99FFB347"
+   },
+   "glow2": {
+    "light": "#22FF8A2A",
+    "dark": "#33FF8A2A"
+   },
+   "glow3": {
+    "light": "#00FF8A2A",
+    "dark": "#00FF6A00"
+   }
   }
  },
  "root": [
   {
-   "variable": {
-    "name": "selC",
-    "value": {
-     "value": "@sel % 4",
-     "anim": 0.35
+   "$if": "theme.mono",
+   "then": [
+    {
+     "variable": {
+      "name": "selC",
+      "value": "@sel % 4"
+     }
+    },
+    {
+     "variable": {
+      "name": "selR",
+      "value": "floor(@sel / 4)"
+     }
     }
-   }
-  },
-  {
-   "variable": {
-    "name": "selR",
-    "value": {
-     "value": "floor(@sel / 4)",
-     "anim": 0.35
+   ],
+   "else": [
+    {
+     "variable": {
+      "name": "selC",
+      "value": {
+       "value": "@sel % 4",
+       "anim": 0.3
+      }
+     }
+    },
+    {
+     "variable": {
+      "name": "selR",
+      "value": {
+       "value": "floor(@sel / 4)",
+       "anim": 0.3
+      }
+     }
     }
-   }
-  },
-  {
-   "variable": {
-    "name": "spdA",
-    "value": {
-     "value": "@speed",
-     "anim": 0.35
-    }
-   }
-  },
-  {
-   "variable": {
-    "name": "rateNow",
-    "value": "arrayGet(@spd, @speed)"
-   }
+   ]
   },
   {
    "variable": {
@@ -103,10 +134,23 @@
    }
   },
   {
-   "variable": {
-    "name": "simT",
-    "value": "@today + @t0 + (animationTime() - @c0) * @rateNow"
-   }
+   "$if": "theme.mono",
+   "then": [
+    {
+     "variable": {
+      "name": "simT",
+      "value": "@today + 0"
+     }
+    }
+   ],
+   "else": [
+    {
+     "variable": {
+      "name": "simT",
+      "value": "@today + @t0 + (animationTime() - @c0) * @rateHeld"
+     }
+    }
+   ]
   },
   {
    "variable": {
@@ -186,7 +230,7 @@
        "modifiers": [
         "fillMaxSize",
         {
-         "background": "#FF04060C"
+         "background": "@colors.background"
         },
         {
          "semantics": {
@@ -282,38 +326,61 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
+         "$if": "theme.mono",
+         "then": [],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.space"
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "loop": {
-          "index": "si",
-          "from": 0,
-          "until": 140,
-          "commands": [
-           {
-            "paint": {
-             "ops": [
-              {
-               "alpha": "0.25 + 0.35 * fract(@si * 0.377) + 0.25 * sin(continuousSec() * (1 + fract(@si * 0.53) * 2) + @si)"
+          },
+          {
+           "drawRect": {
+            "left": 0,
+            "top": 0,
+            "right": "componentWidth()",
+            "bottom": "componentHeight()"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.star"
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "si",
+            "from": 0,
+            "until": 140,
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "0.25 + 0.35 * fract(@si * 0.377) + 0.25 * sin(continuousSec() * (1 + fract(@si * 0.53) * 2) + @si)"
+                }
+               ]
               }
-             ]
-            }
-           },
-           {
-            "drawCircle": {
-             "cx": "fract(0.5 + @si * 0.75487767) * componentWidth()",
-             "cy": "fract(0.5 + @si * 0.56984029) * componentHeight()",
-             "radius": "0.5 + fract(@si * 0.917) * 0.9"
-            }
+             },
+             {
+              "drawCircle": {
+               "cx": "fract(0.5 + @si * 0.75487767) * componentWidth()",
+               "cy": "fract(0.5 + @si * 0.56984029) * componentHeight()",
+               "radius": "0.5 + fract(@si * 0.917) * 0.9"
+              }
+             }
+            ]
            }
-          ]
-         }
+          }
+         ]
         },
         {
          "translate": {
@@ -328,46 +395,52 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "alpha": 1
-           },
-           {
-            "radialGradient": {
-             "centerX": "componentWidth() / 2",
-             "centerY": "componentHeight() / 2",
-             "radius": "@sunR * 4.2",
-             "colors": [
-              "#99FFB347",
-              "#33FF8A2A",
-              "#00FF6A00"
-             ],
-             "stops": [
-              0,
-              0.35,
-              1
-             ]
-            }
+         "$if": "theme.mono",
+         "then": [],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             },
+             {
+              "radialGradient": {
+               "centerX": "componentWidth() / 2",
+               "centerY": "componentHeight() / 2",
+               "radius": "@sunR * 4.2",
+               "colors": [
+                "@colors.glow1",
+                "@colors.glow2",
+                "@colors.glow3"
+               ],
+               "stops": [
+                0,
+                0.35,
+                1
+               ]
+              }
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "componentWidth() / 2",
-          "cy": "componentHeight() / 2",
-          "radius": "@sunR * 4.2"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "shader": 0
+          },
+          {
+           "drawCircle": {
+            "cx": "componentWidth() / 2",
+            "cy": "componentHeight() / 2",
+            "radius": "@sunR * 4.2"
            }
-          ]
-         }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "clearDepth3D": {}
@@ -397,20 +470,63 @@
          }
         },
         {
-         "lights3D": {
-          "lights": [
-           {
-            "type": "point",
-            "pos": [
-             0,
-             0,
-             0
-            ],
-            "color": "#FFFFF4E0",
-            "intensity": 1.05
+         "$if": "theme.mono",
+         "then": [
+          {
+           "lights3D": {
+            "lights": [
+             {
+              "type": "directional",
+              "dir": [
+               1,
+               0,
+               0
+              ],
+              "color": "#FFFFFFFF",
+              "intensity": 0.85
+             },
+             {
+              "type": "directional",
+              "dir": [
+               0,
+               1,
+               0
+              ],
+              "color": "#FFFFFFFF",
+              "intensity": 0.85
+             },
+             {
+              "type": "directional",
+              "dir": [
+               0,
+               0,
+               1
+              ],
+              "color": "#FFFFFFFF",
+              "intensity": 0.85
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "lights3D": {
+            "lights": [
+             {
+              "type": "point",
+              "pos": [
+               0,
+               0,
+               0
+              ],
+              "color": "#FFFFF4E0",
+              "intensity": 1.05
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "meshPrimitive3D": {
@@ -481,19 +597,85 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFC24E"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "meshPrimitive3D": {
+            "id": 5,
+            "primitive": "sphere",
+            "radius": 1,
+            "center": [
+             0,
+             0,
+             0
+            ],
+            "segments": 12
            }
-          ]
-         }
-        },
-        {
-         "drawMesh3D": {
-          "mesh": 1,
-          "mode": "smooth"
-         }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             }
+            ]
+           }
+          },
+          {
+           "drawMesh3D": {
+            "mesh": 5,
+            "mode": "flat"
+           }
+          },
+          {
+           "depthBias3D": {
+            "constant": -0.003,
+            "slope": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
+           }
+          },
+          {
+           "drawMesh3D": {
+            "mesh": 5,
+            "wireframe": true,
+            "edges": [
+             0,
+             1
+            ]
+           }
+          },
+          {
+           "depthBias3D": {
+            "constant": 0,
+            "slope": 0
+           }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFC24E"
+             }
+            ]
+           }
+          },
+          {
+           "drawMesh3D": {
+            "mesh": 1,
+            "mode": "smooth"
+           }
+          }
+         ]
         },
         {
          "variable": {
@@ -515,13 +697,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF7FB2FF"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawMesh3D": {
@@ -530,13 +728,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF2A3550"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.orbit"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "loop": {
@@ -600,13 +814,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFB0A79C"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFB0A79C"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawMesh3D": {
@@ -642,13 +872,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE9CB8C"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFE9CB8C"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawMesh3D": {
@@ -684,13 +930,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF4F8FE6"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FF4F8FE6"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawMesh3D": {
@@ -720,13 +982,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFC8CCD4"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFC8CCD4"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawMesh3D": {
@@ -762,13 +1040,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFD9643E"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFD9643E"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawMesh3D": {
@@ -804,13 +1098,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFDDB68A"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFDDB68A"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawMesh3D": {
@@ -846,13 +1156,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE8D193"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFE8D193"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawMesh3D": {
@@ -880,13 +1206,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFC9B27A"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFC9B27A"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawMesh3D": {
@@ -922,13 +1264,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFA2DCE4"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFA2DCE4"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawMesh3D": {
@@ -964,13 +1322,29 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF557BEA"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FF557BEA"
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawMesh3D": {
@@ -1033,16 +1407,29 @@
          }
         },
         {
-         "variable": {
-          "name": "pulse",
-          "value": "0.55 + 0.45 * sin(continuousSec() * 3)"
-         }
+         "$if": "theme.mono",
+         "then": [
+          {
+           "variable": {
+            "name": "pulse",
+            "value": "1"
+           }
+          }
+         ],
+         "else": [
+          {
+           "variable": {
+            "name": "pulse",
+            "value": "0.55 + 0.45 * sin(continuousSec() * 3)"
+           }
+          }
+         ]
         },
         {
          "paint": {
           "ops": [
            {
-            "color": "#FF7FB2FF"
+            "color": "@colors.primary"
            },
            {
             "alpha": "@pulse"
@@ -1087,7 +1474,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FFE8ECF4"
+            "color": "@colors.onSurface"
            },
            {
             "alpha": 1
@@ -1147,7 +1534,7 @@
                "text": {
                 "value": "Solar System",
                 "fontSize": 24,
-                "color": "#FFE8ECF4",
+                "color": "@colors.onSurface",
                 "fontWeight": 700
                }
               },
@@ -1158,7 +1545,7 @@
                   "text": {
                    "value": "Year ",
                    "fontSize": 13,
-                   "color": "#FF8C96AA"
+                   "color": "@colors.muted"
                   }
                  },
                  {
@@ -1171,7 +1558,7 @@
                     "flags": 0
                    },
                    "fontSize": 13,
-                   "color": "#FF7FB2FF",
+                   "color": "@colors.primary",
                    "fontWeight": 600
                   }
                  },
@@ -1179,7 +1566,7 @@
                   "text": {
                    "value": "  \u00b7  drag to tilt",
                    "fontSize": 13,
-                   "color": "#FF8C96AA"
+                   "color": "@colors.muted"
                   }
                  }
                 ]
@@ -1221,10 +1608,19 @@
                "clip": 24
               },
               {
-               "background": "#E00B101B"
+               "background": "@colors.monoOutline"
               },
               {
-               "padding": 12
+               "padding": 1
+              },
+              {
+               "clip": 23
+              },
+              {
+               "background": "@colors.surface"
+              },
+              {
+               "padding": 11
               }
              ],
              "children": [
@@ -1246,7 +1642,7 @@
                   "text": {
                    "value": "@pname",
                    "fontSize": 22,
-                   "color": "#FFE8ECF4",
+                   "color": "@colors.onSurface",
                    "fontWeight": 600
                   }
                  },
@@ -1254,7 +1650,7 @@
                   "text": {
                    "value": "@pfact",
                    "fontSize": 13,
-                   "color": "#FF8C96AA"
+                   "color": "@colors.muted"
                   }
                  }
                 ]
@@ -1276,38 +1672,119 @@
                    ],
                    "commands": [
                     {
+                     "$if": "theme.mono",
+                     "then": [
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.outline"
+                         },
+                         {
+                          "style": "stroke"
+                         },
+                         {
+                          "strokeWidth": 1
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "loop": {
+                        "index": "ci",
+                        "from": 0,
+                        "until": 8,
+                        "commands": [
+                         {
+                          "drawRoundRect": {
+                           "left": "(@ci % 4) * (componentWidth() / 4) + 3",
+                           "top": "floor(@ci / 4) * 44 + 4",
+                           "right": "(@ci % 4 + 1) * (componentWidth() / 4) - 3",
+                           "bottom": "floor(@ci / 4) * 44 + 40",
+                           "rx": 18,
+                           "ry": 18
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ],
+                     "else": [
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.surfaceHigh"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "loop": {
+                        "index": "ci",
+                        "from": 0,
+                        "until": 8,
+                        "commands": [
+                         {
+                          "drawRoundRect": {
+                           "left": "(@ci % 4) * (componentWidth() / 4) + 3",
+                           "top": "floor(@ci / 4) * 44 + 4",
+                           "right": "(@ci % 4 + 1) * (componentWidth() / 4) - 3",
+                           "bottom": "floor(@ci / 4) * 44 + 40",
+                           "rx": 18,
+                           "ry": 18
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    },
+                    {
+                     "$if": "theme.mono",
+                     "then": [],
+                     "else": [
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.primary"
+                         },
+                         {
+                          "alpha": 0.16
+                         },
+                         {
+                          "style": "fill"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRoundRect": {
+                        "left": "@selC * (componentWidth() / 4) + 3",
+                        "top": "@selR * 44 + 4",
+                        "right": "(@selC + 1) * (componentWidth() / 4) - 3",
+                        "bottom": "@selR * 44 + 40",
+                        "rx": 18,
+                        "ry": 18
+                       }
+                      }
+                     ]
+                    },
+                    {
                      "paint": {
                       "ops": [
                        {
-                        "color": "#FF141A28"
-                       }
-                      ]
-                     }
-                    },
-                    {
-                     "loop": {
-                      "index": "ci",
-                      "from": 0,
-                      "until": 8,
-                      "commands": [
+                        "color": "@colors.primary"
+                       },
                        {
-                        "drawRoundRect": {
-                         "left": "(@ci % 4) * (componentWidth() / 4) + 3",
-                         "top": "floor(@ci / 4) * 44 + 3",
-                         "right": "(@ci % 4 + 1) * (componentWidth() / 4) - 3",
-                         "bottom": "floor(@ci / 4) * 44 + 41",
-                         "rx": 12,
-                         "ry": 12
-                        }
-                       }
-                      ]
-                     }
-                    },
-                    {
-                     "paint": {
-                      "ops": [
+                        "alpha": 1
+                       },
                        {
-                        "color": "#FF1F3358"
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 2
                        }
                       ]
                      }
@@ -1315,36 +1792,20 @@
                     {
                      "drawRoundRect": {
                       "left": "@selC * (componentWidth() / 4) + 3",
-                      "top": "@selR * 44 + 3",
+                      "top": "@selR * 44 + 4",
                       "right": "(@selC + 1) * (componentWidth() / 4) - 3",
-                      "bottom": "@selR * 44 + 41",
-                      "rx": 12,
-                      "ry": 12
+                      "bottom": "@selR * 44 + 40",
+                      "rx": 18,
+                      "ry": 18
                      }
                     },
                     {
                      "paint": {
                       "ops": [
                        {
-                        "color": "#FF7FB2FF"
-                       },
-                       {
-                        "style": "stroke"
-                       },
-                       {
-                        "strokeWidth": 1.5
+                        "style": "fill"
                        }
                       ]
-                     }
-                    },
-                    {
-                     "drawRoundRect": {
-                      "left": "@selC * (componentWidth() / 4) + 3.75",
-                      "top": "@selR * 44 + 3.75",
-                      "right": "(@selC + 1) * (componentWidth() / 4) - 3.75",
-                      "bottom": "@selR * 44 + 40.25",
-                      "rx": 11,
-                      "ry": 11
                      }
                     }
                    ]
@@ -1393,7 +1854,7 @@
                            "text": {
                             "value": "Mercury",
                             "fontSize": 13,
-                            "color": "#FFE8ECF4",
+                            "color": "@colors.onSurface",
                             "fontWeight": 500
                            }
                           }
@@ -1428,7 +1889,7 @@
                            "text": {
                             "value": "Venus",
                             "fontSize": 13,
-                            "color": "#FFE8ECF4",
+                            "color": "@colors.onSurface",
                             "fontWeight": 500
                            }
                           }
@@ -1463,7 +1924,7 @@
                            "text": {
                             "value": "Earth",
                             "fontSize": 13,
-                            "color": "#FFE8ECF4",
+                            "color": "@colors.onSurface",
                             "fontWeight": 500
                            }
                           }
@@ -1498,7 +1959,7 @@
                            "text": {
                             "value": "Mars",
                             "fontSize": 13,
-                            "color": "#FFE8ECF4",
+                            "color": "@colors.onSurface",
                             "fontWeight": 500
                            }
                           }
@@ -1545,7 +2006,7 @@
                            "text": {
                             "value": "Jupiter",
                             "fontSize": 13,
-                            "color": "#FFE8ECF4",
+                            "color": "@colors.onSurface",
                             "fontWeight": 500
                            }
                           }
@@ -1580,7 +2041,7 @@
                            "text": {
                             "value": "Saturn",
                             "fontSize": 13,
-                            "color": "#FFE8ECF4",
+                            "color": "@colors.onSurface",
                             "fontWeight": 500
                            }
                           }
@@ -1615,7 +2076,7 @@
                            "text": {
                             "value": "Uranus",
                             "fontSize": 13,
-                            "color": "#FFE8ECF4",
+                            "color": "@colors.onSurface",
                             "fontWeight": 500
                            }
                           }
@@ -1650,7 +2111,7 @@
                            "text": {
                             "value": "Neptune",
                             "fontSize": 13,
-                            "color": "#FFE8ECF4",
+                            "color": "@colors.onSurface",
                             "fontWeight": 500
                            }
                           }
@@ -1667,332 +2128,50 @@
                }
               },
               {
-               "box": {
-                "modifiers": [
-                 {
-                  "height": 10
-                 }
-                ]
-               }
-              },
-              {
-               "text": {
-                "value": "Speed",
-                "fontSize": 12,
-                "color": "#FF8C96AA",
-                "modifiers": [
-                 {
-                  "padding": [
-                   4,
-                   0,
-                   4,
-                   4
+               "$if": "theme.mono",
+               "then": [],
+               "else": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "height": 6
+                   }
                   ]
                  }
-                ]
-               }
-              },
-              {
-               "box": {
-                "modifiers": [
-                 "fillMaxWidth",
-                 {
-                  "height": 40
+                },
+                {
+                 "ChoiceChips": {
+                  "label": "Speed",
+                  "style": "segmented",
+                  "items": [
+                   "Day/s",
+                   "Week/s",
+                   "Month/s",
+                   "Year/s"
+                  ],
+                  "selected": "@speed",
+                  "color": "@colors.primary",
+                  "onClick": [
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@t0",
+                    "value": "@t0 + (animationTime() - @c0) * @rateHeld"
+                   },
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@c0",
+                    "value": "animationTime() + 0"
+                   },
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@rateHeld",
+                    "value": "arrayGet(@spd, @speed)"
+                   }
+                  ]
                  }
-                ],
-                "children": [
-                 {
-                  "canvas": {
-                   "modifiers": [
-                    "fillMaxSize"
-                   ],
-                   "commands": [
-                    {
-                     "paint": {
-                      "ops": [
-                       {
-                        "color": "#FF141A28"
-                       }
-                      ]
-                     }
-                    },
-                    {
-                     "loop": {
-                      "index": "ci",
-                      "from": 0,
-                      "until": 4,
-                      "commands": [
-                       {
-                        "drawRoundRect": {
-                         "left": "(@ci % 4) * (componentWidth() / 4) + 3",
-                         "top": "floor(@ci / 4) * 40 + 3",
-                         "right": "(@ci % 4 + 1) * (componentWidth() / 4) - 3",
-                         "bottom": "floor(@ci / 4) * 40 + 37",
-                         "rx": 12,
-                         "ry": 12
-                        }
-                       }
-                      ]
-                     }
-                    },
-                    {
-                     "paint": {
-                      "ops": [
-                       {
-                        "color": "#FF1F3358"
-                       }
-                      ]
-                     }
-                    },
-                    {
-                     "drawRoundRect": {
-                      "left": "@spdA * (componentWidth() / 4) + 3",
-                      "top": "0 * 40 + 3",
-                      "right": "(@spdA + 1) * (componentWidth() / 4) - 3",
-                      "bottom": "0 * 40 + 37",
-                      "rx": 12,
-                      "ry": 12
-                     }
-                    },
-                    {
-                     "paint": {
-                      "ops": [
-                       {
-                        "color": "#FF7FB2FF"
-                       },
-                       {
-                        "style": "stroke"
-                       },
-                       {
-                        "strokeWidth": 1.5
-                       }
-                      ]
-                     }
-                    },
-                    {
-                     "drawRoundRect": {
-                      "left": "@spdA * (componentWidth() / 4) + 3.75",
-                      "top": "0 * 40 + 3.75",
-                      "right": "(@spdA + 1) * (componentWidth() / 4) - 3.75",
-                      "bottom": "0 * 40 + 36.25",
-                      "rx": 11,
-                      "ry": 11
-                     }
-                    }
-                   ]
-                  }
-                 },
-                 {
-                  "column": {
-                   "modifiers": [
-                    "fillMaxSize"
-                   ],
-                   "children": [
-                    {
-                     "row": {
-                      "modifiers": [
-                       "fillMaxWidth",
-                       {
-                        "height": 40
-                       }
-                      ],
-                      "children": [
-                       {
-                        "box": {
-                         "horizontalAlignment": "center",
-                         "verticalAlignment": "center",
-                         "modifiers": [
-                          {
-                           "weight": 1
-                          },
-                          "fillMaxHeight",
-                          {
-                           "semantics": {
-                            "contentDescription": "Speed Day/s",
-                            "role": "button"
-                           }
-                          },
-                          {
-                           "onClick": [
-                            {
-                             "type": "valueFloatExpressionChange",
-                             "target": "@t0",
-                             "value": "@simT - @today"
-                            },
-                            {
-                             "type": "valueFloatExpressionChange",
-                             "target": "@c0",
-                             "value": "animationTime() + 0"
-                            },
-                            {
-                             "type": "valueFloatChange",
-                             "target": "@speed",
-                             "value": 0
-                            }
-                           ]
-                          }
-                         ],
-                         "children": [
-                          {
-                           "text": {
-                            "value": "Day/s",
-                            "fontSize": 13,
-                            "color": "#FFE8ECF4",
-                            "fontWeight": 500
-                           }
-                          }
-                         ]
-                        }
-                       },
-                       {
-                        "box": {
-                         "horizontalAlignment": "center",
-                         "verticalAlignment": "center",
-                         "modifiers": [
-                          {
-                           "weight": 1
-                          },
-                          "fillMaxHeight",
-                          {
-                           "semantics": {
-                            "contentDescription": "Speed Week/s",
-                            "role": "button"
-                           }
-                          },
-                          {
-                           "onClick": [
-                            {
-                             "type": "valueFloatExpressionChange",
-                             "target": "@t0",
-                             "value": "@simT - @today"
-                            },
-                            {
-                             "type": "valueFloatExpressionChange",
-                             "target": "@c0",
-                             "value": "animationTime() + 0"
-                            },
-                            {
-                             "type": "valueFloatChange",
-                             "target": "@speed",
-                             "value": 1
-                            }
-                           ]
-                          }
-                         ],
-                         "children": [
-                          {
-                           "text": {
-                            "value": "Week/s",
-                            "fontSize": 13,
-                            "color": "#FFE8ECF4",
-                            "fontWeight": 500
-                           }
-                          }
-                         ]
-                        }
-                       },
-                       {
-                        "box": {
-                         "horizontalAlignment": "center",
-                         "verticalAlignment": "center",
-                         "modifiers": [
-                          {
-                           "weight": 1
-                          },
-                          "fillMaxHeight",
-                          {
-                           "semantics": {
-                            "contentDescription": "Speed Month/s",
-                            "role": "button"
-                           }
-                          },
-                          {
-                           "onClick": [
-                            {
-                             "type": "valueFloatExpressionChange",
-                             "target": "@t0",
-                             "value": "@simT - @today"
-                            },
-                            {
-                             "type": "valueFloatExpressionChange",
-                             "target": "@c0",
-                             "value": "animationTime() + 0"
-                            },
-                            {
-                             "type": "valueFloatChange",
-                             "target": "@speed",
-                             "value": 2
-                            }
-                           ]
-                          }
-                         ],
-                         "children": [
-                          {
-                           "text": {
-                            "value": "Month/s",
-                            "fontSize": 13,
-                            "color": "#FFE8ECF4",
-                            "fontWeight": 500
-                           }
-                          }
-                         ]
-                        }
-                       },
-                       {
-                        "box": {
-                         "horizontalAlignment": "center",
-                         "verticalAlignment": "center",
-                         "modifiers": [
-                          {
-                           "weight": 1
-                          },
-                          "fillMaxHeight",
-                          {
-                           "semantics": {
-                            "contentDescription": "Speed Year/s",
-                            "role": "button"
-                           }
-                          },
-                          {
-                           "onClick": [
-                            {
-                             "type": "valueFloatExpressionChange",
-                             "target": "@t0",
-                             "value": "@simT - @today"
-                            },
-                            {
-                             "type": "valueFloatExpressionChange",
-                             "target": "@c0",
-                             "value": "animationTime() + 0"
-                            },
-                            {
-                             "type": "valueFloatChange",
-                             "target": "@speed",
-                             "value": 3
-                            }
-                           ]
-                          }
-                         ],
-                         "children": [
-                          {
-                           "text": {
-                            "value": "Year/s",
-                            "fontSize": 13,
-                            "color": "#FFE8ECF4",
-                            "fontWeight": 500
-                           }
-                          }
-                         ]
-                        }
-                       }
-                      ]
-                     }
-                    }
-                   ]
-                  }
-                 }
-                ]
-               }
+                }
+               ]
               }
              ]
             }

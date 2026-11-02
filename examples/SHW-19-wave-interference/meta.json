@@ -7,7 +7,7 @@
  "prompt": "Make a physics-class demo of wave interference that is also beautiful: a 3D water surface animated as the sum of circular waves from two sources, coloured by height, with a 2D control to change the frequency and the distance between the sources.",
  "level": 5,
  "family": "SHW",
- "hand_built": "Chart3D draws z = f(x, y) over a square with flat colour bands; a round pond, colour by height through a texture, a live clock phase and the XY pad need the 3D ops by hand.",
+ "hand_built": "Chart3D draws z = f(x, y) over a square with flat colour bands; a round pond, colour by height through a texture, a live clock phase and the XY pad need the 3D ops by hand. The XY pad stays hand-built: no library component sets two values from one drag (two Sliders would lose the point of the demo); its colours are themed (resources.colors) and it has its own mono look.",
  "capabilities": {
   "primary": [
    "3d.surface",
@@ -58,7 +58,8 @@
   "Make an XY pad with two touchExpressions in touchMode 6 (absolute) on one canvas, each mapping touchX() or touchY() minus the canvas's root position (componentValue valueType 4 and 5) into a clamped range",
   "Place the pad before the 3D canvas in document order (a touch variable is live only from its declaration on): a Box draws the overlay first and the transparent 3D canvas over it, and the 3D buffer only covers the pond",
   "Frame the pond in the free part of the window: a 2D translate before the 3D draws moves the window-sized 3D buffer to the free region's centre, and the camera distance is the max of two fits (width and height of that region)",
-  "Make the mono look a ripple tank: a second texture whose crest rows are opaque white and the rest transparent (texels with alpha 0 are not drawn), multiplied by @colors.onSurface under three saturating lights, frozen in time"
+  "Make the mono look a ripple tank: a second texture whose crest rows are opaque white and the rest transparent (texels with alpha 0 are not drawn), multiplied by @colors.onSurface under three saturating lights, frozen in time",
+  "Theme a textured surface: the texel is multiplied by the paint colour, so a themed paint (white in light, a cool grey in dark) gives one gradient bitmap a bright daylight look and a moodier night look"
  ],
  "pitfalls": [
   "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players only",
@@ -66,7 +67,7 @@
   "In the TypeScript web player a texture can be missing on the first frame (bitmaps decode asynchronously): the surface draws untextured white for a frame, then coloured",
   "The surface expressions are long (two square roots per source, written twice: height and uv); Android's 32-entry expression limit does not apply as 3D does not play there yet, but it would",
   "The phase is ω·t, so changing the frequency jumps the phase; harmless while dragging, but it is not a physical change of frequency in a running ripple tank",
-  "The literal colours are a deliberate dark art piece: only mono follows the theme"
+  "The water colour is a bitmap (a texture can't follow the theme), so the light and dark looks share one gradient and the dark look dims it with a themed paint colour (texel × paint): pond_water is white in light, #CCD6E4 in dark"
  ],
  "java_difference": "3D support has not landed in androidx yet (coming): the Java JSON parser does not know camera3D, lights3D, matrix3D, meshPrimitive3D or drawMesh3D; plays in the C++ and TypeScript players",
  "snippets": [
@@ -92,11 +93,31 @@
   }
  ],
  "check": {
-  "describe": "A dark screen: 'Two sources, one pond' at the top; in the middle a round pond in perspective inside a grey stone rim, its surface rippling in rings from two small gold balls, deep navy in the troughs, cyan to white on the crests, with calm radial nodal lines between; at the bottom a rounded pad with a gold puck and readouts '1.0 Hz', '2.0 m', '1.1 m'. Later in time the ripples have moved and the view has swayed. Dragging the puck to the top right gives 1.8 Hz and 3.6 m: shorter waves, sources wider apart, many more nodal lines. Landscape: pond on the right, text and pad on the left. Small (2x2): the pond alone. Mono: the same layout in black and white, crests as solid onSurface bands (a ripple tank), still.",
+  "describe": "Dark: a deep navy screen; 'Two sources, one pond' at the top; in the middle a round pond in perspective inside a grey stone rim, its surface rippling in rings from two small gold balls, deep navy in the troughs, cyan to white on the crests, with calm radial nodal lines between; at the bottom a rounded pad with a gold puck and readouts '1.0 Hz', '2.0 m', '1.1 m'. Later in time the ripples have moved and the view has swayed. Dragging the puck to the top right gives 1.8 Hz and 3.6 m: shorter waves, sources wider apart, many more nodal lines. Landscape: pond on the right, text and pad on the left. Small (2x2): the pond alone. Light: the same pond on a pale grey-blue page, brighter lagoon water, dark ink text, a white pad with an amber puck. Mono: the same layout in black and white, crests as solid onSurface bands (a ripple tank), still.",
   "render": {
    "clock": 1000
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "clock": 1000
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "clock": 1000
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "clock": 1000
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "clock": 1000
+   },
    {
     "name": "later",
     "clock": 3700
@@ -180,16 +201,6 @@
     "width": 170,
     "height": 170,
     "clock": 1000
-   },
-   {
-    "name": "mono-dark",
-    "componentTheme": "mono-dark",
-    "clock": 1000
-   },
-   {
-    "name": "mono-light",
-    "componentTheme": "mono-light",
-    "clock": 1000
    }
   ]
  },
@@ -204,15 +215,17 @@
   "component_modes": {},
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 4895,
+  "bytes": 6446,
   "header": {
    "width": 360,
    "height": 640
   },
-  "op_count": 175,
+  "op_count": 289,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
-   "ANIMATED_FLOAT": 39,
+   "ANIMATED_FLOAT": 41,
+   "COLOR_CONSTANT": 22,
+   "COLOR_EXPRESSIONS": 22,
    "COMPONENT_VALUE": 6,
    "CanvasContent": 2,
    "CoreText": 11,
@@ -222,7 +235,7 @@
    "DRAW_CIRCLE": 2,
    "DRAW_LINE": 4,
    "DRAW_MESH_3D": 4,
-   "DRAW_ROUND_RECT": 1,
+   "DRAW_ROUND_RECT": 2,
    "DRAW_TEXT_ANCHOR": 2,
    "HEADER": 1,
    "LAYOUT_BOX": 4,
@@ -231,7 +244,7 @@
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 4,
    "LayoutComponentContent": 20,
-   "LoopOperation": 1,
+   "LoopOperation": 23,
    "MATRIX_3D_OP": 4,
    "MATRIX_TRANSLATE": 1,
    "MESH_EXPRESSION_3D": 1,
@@ -241,15 +254,73 @@
    "MODIFIER_PADDING": 6,
    "MODIFIER_VISIBILITY": 1,
    "MODIFIER_WIDTH": 9,
+   "NAMED_VARIABLE": 11,
    "PAINT_3D_STATE": 3,
-   "PAINT_VALUES": 9,
+   "PAINT_VALUES": 10,
    "SET_CAMERA_3D": 1,
    "SET_LIGHTS_3D": 1,
    "SET_TEXTURE_3D": 2,
+   "THEME": 33,
    "TextFromFloat": 3,
    "TouchExpression": 2
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "pond_bg",
+    "type": "color",
+    "value": "#FF050B18"
+   },
+   {
+    "name": "pond_cross",
+    "type": "color",
+    "value": "#66FFD27A"
+   },
+   {
+    "name": "pond_edge",
+    "type": "color",
+    "value": "#00000000"
+   },
+   {
+    "name": "pond_gold",
+    "type": "color",
+    "value": "#FFFFD27A"
+   },
+   {
+    "name": "pond_grid",
+    "type": "color",
+    "value": "#FF22324F"
+   },
+   {
+    "name": "pond_halo",
+    "type": "color",
+    "value": "#33FFD27A"
+   },
+   {
+    "name": "pond_ink",
+    "type": "color",
+    "value": "#FFEAF4FF"
+   },
+   {
+    "name": "pond_muted",
+    "type": "color",
+    "value": "#FF8396B3"
+   },
+   {
+    "name": "pond_panel",
+    "type": "color",
+    "value": "#FF0D1830"
+   },
+   {
+    "name": "pond_rim",
+    "type": "color",
+    "value": "#FF6F7E9C"
+   },
+   {
+    "name": "pond_water",
+    "type": "color",
+    "value": "#FFCCD6E4"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
@@ -270,6 +341,170 @@
   },
   "java_identical": false,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 5083,
+    "component_modes": {},
+    "op_count": 192,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "pond_bg",
+      "type": "color",
+      "value": "#FF050B18"
+     },
+     {
+      "name": "pond_cross",
+      "type": "color",
+      "value": "#66FFD27A"
+     },
+     {
+      "name": "pond_edge",
+      "type": "color",
+      "value": "#00000000"
+     },
+     {
+      "name": "pond_gold",
+      "type": "color",
+      "value": "#FFFFD27A"
+     },
+     {
+      "name": "pond_grid",
+      "type": "color",
+      "value": "#FF22324F"
+     },
+     {
+      "name": "pond_halo",
+      "type": "color",
+      "value": "#33FFD27A"
+     },
+     {
+      "name": "pond_ink",
+      "type": "color",
+      "value": "#FFEAF4FF"
+     },
+     {
+      "name": "pond_muted",
+      "type": "color",
+      "value": "#FF8396B3"
+     },
+     {
+      "name": "pond_panel",
+      "type": "color",
+      "value": "#FF0D1830"
+     },
+     {
+      "name": "pond_rim",
+      "type": "color",
+      "value": "#FF6F7E9C"
+     },
+     {
+      "name": "pond_water",
+      "type": "color",
+      "value": "#FFCCD6E4"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 5083,
+    "component_modes": {},
+    "op_count": 192,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "pond_bg",
+      "type": "color",
+      "value": "#FFF1F4F8"
+     },
+     {
+      "name": "pond_cross",
+      "type": "color",
+      "value": "#88E09A10"
+     },
+     {
+      "name": "pond_edge",
+      "type": "color",
+      "value": "#FFD5DCE6"
+     },
+     {
+      "name": "pond_gold",
+      "type": "color",
+      "value": "#FFE09A10"
+     },
+     {
+      "name": "pond_grid",
+      "type": "color",
+      "value": "#FFDDE4EC"
+     },
+     {
+      "name": "pond_halo",
+      "type": "color",
+      "value": "#33E09A10"
+     },
+     {
+      "name": "pond_ink",
+      "type": "color",
+      "value": "#FF14202E"
+     },
+     {
+      "name": "pond_muted",
+      "type": "color",
+      "value": "#FF566477"
+     },
+     {
+      "name": "pond_panel",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "pond_rim",
+      "type": "color",
+      "value": "#FFB4BECC"
+     },
+     {
+      "name": "pond_water",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "later": {
     "render": "render-later.png",
     "render_findings": []
@@ -320,50 +555,6 @@
      "info: unused_variables",
      "info: repaint_continuous"
     ]
-   },
-   "mono-dark": {
-    "componentTheme": "mono-dark",
-    "bytes": 4746,
-    "component_modes": {},
-    "op_count": 170,
-    "host_variables": [
-     {
-      "name": "background",
-      "type": "color",
-      "value": "#FF000000"
-     },
-     {
-      "name": "onSurface",
-      "type": "color",
-      "value": "#FFFFFFFF"
-     }
-    ],
-    "java_identical": false,
-    "repaint": "idle",
-    "render": "render-mono-dark.png",
-    "render_findings": []
-   },
-   "mono-light": {
-    "componentTheme": "mono-light",
-    "bytes": 4746,
-    "component_modes": {},
-    "op_count": 170,
-    "host_variables": [
-     {
-      "name": "background",
-      "type": "color",
-      "value": "#FFFFFFFF"
-     },
-     {
-      "name": "onSurface",
-      "type": "color",
-      "value": "#FF000000"
-     }
-    ],
-    "java_identical": false,
-    "repaint": "idle",
-    "render": "render-mono-light.png",
-    "render_findings": []
    }
   },
   "json_keys": [
@@ -382,6 +573,7 @@
    "children",
    "clearDepth3D",
    "color",
+   "colors",
    "column",
    "commands",
    "componentValue",
@@ -389,6 +581,7 @@
    "crest",
    "cx",
    "cy",
+   "dark",
    "decimal",
    "defaultValue",
    "dir",
@@ -416,6 +609,7 @@
    "intensity",
    "land",
    "left",
+   "light",
    "lights",
    "lights3D",
    "loop",
@@ -439,6 +633,17 @@
    "paint",
    "panX",
    "panY",
+   "pond_bg",
+   "pond_cross",
+   "pond_edge",
+   "pond_gold",
+   "pond_grid",
+   "pond_halo",
+   "pond_ink",
+   "pond_muted",
+   "pond_panel",
+   "pond_rim",
+   "pond_water",
    "primitive",
    "profiles",
    "projection",
@@ -527,6 +732,6 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-02T18:48:27.305Z"
+  "built_at": "2026-11-02T20:22:35.127Z"
  }
 }

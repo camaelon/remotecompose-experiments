@@ -59,7 +59,8 @@
   "A soft terminator from three night shades a few degrees of longitude apart, each at alpha 0.16: deep night gets all three, the twilight edges one or two",
   "Local time per city from one exported float array of UTC offsets (utcOffsets, the app keeps it right through DST): raw = utcMin + off * 60, the time (raw + 1440) % 1440, the day floor(raw / 1440) cut from \"YesterdayToday    Tomorrow \"",
   "One inline component, CityCard, for the six cards: its sky is a gradient picked by two conditionalOperations, the sun drawn at 0.62 - 0.55 * el of the card's height, so a card's sun rises and sets with the real one",
-  "Responsive without branches: cols = 6 on a landscape window from 600 dp, else 2; the card width floor((W - 32) / cols) and its height from what the map leaves (up to 0.8 x its width), in a flow; the map takes the rest (verticalWeight) and keeps its 2.54:1, centred"
+  "Responsive without branches: cols = 6 on a landscape window from 600 dp, else 2; the card width floor((W - 32) / cols) and its height from what the map leaves (up to 0.8 x its width), in a flow; the map takes the rest (verticalWeight) and keeps its 2.54:1, centred",
+  "Four looks: the map's colours are document colours with light, dark, mono-dark and mono-light values (land grey, sea and night shade the background in mono); {\"$if\": \"theme.mono\"} forks draw the night edge as a line, the sun as a ring and each card as an outline with a sun or moon glyph instead of a coloured sky, so day and night read by shape"
  ],
  "pitfalls": [
   "The offsets are standard time in November (New York -5, London 0, Sydney +11): the format has no time-zone database, so the app sets utcOffsets when DST changes",
@@ -97,7 +98,7 @@
   "touch": false
  },
  "check": {
-  "describe": "10:30 UTC on 2 November: the day side is centred on Africa and Europe with the sun just south of the equator over 22.5 E; London 10:30 and Dubai 14:30 are lit (blue skies, a high sun, warm dots with a halo on the map); San Francisco 02:30, New York 05:30, Tokyo 19:30 and Sydney 21:30 are night cards with stars and a crescent. dawn (07:15 UTC): London's card is in dusk colours with the sun on its horizon, the terminator just past it. evening (19:45 UTC): the day is over the Americas, San Francisco and New York lit, Tokyo 04:45 and Sydney 06:45 read Tomorrow (Sydney's sun rising). june and december tilt the terminator opposite ways (the sun north or south of the equator). tablet (1024x640): the map wide on top, one row of six cards; tablet-portrait (800x1280) and phone: two columns, the cards taller to use the height.",
+  "describe": "10:30 UTC on 2 November: the day side is centred on Africa and Europe with the sun just south of the equator over 22.5 E; London 10:30 and Dubai 14:30 are lit (blue skies, a high sun, warm dots with a halo on the map); San Francisco 02:30, New York 05:30, Tokyo 19:30 and Sydney 21:30 are night cards with stars and a crescent. dawn (07:15 UTC): London's card is in dusk colours with the sun on its horizon, the terminator just past it. evening (19:45 UTC): the day is over the Americas, San Francisco and New York lit, Tokyo 04:45 and Sydney 06:45 read Tomorrow (Sydney's sun rising). june and december tilt the terminator opposite ways (the sun north or south of the equator). tablet (1024x640): the map wide on top, one row of six cards; tablet-portrait (800x1280) and phone: two columns, the cards taller to use the height. mono-dark and mono-light: no hue: grey land, the night side faded with its edge drawn as a line, the sun a disc in a ring, day cities filled dots with a halo and night cities hollow rings; each card an outlined rounded box with a rayed sun (day) or a crescent (night) and the time in white on black (or black on white).",
   "render": {
    "clock": 1793615400000,
    "theme": "dark"
@@ -106,6 +107,24 @@
    {
     "name": "light",
     "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "tablet-mono-dark",
+    "componentTheme": "mono-dark",
+    "width": 1024,
+    "height": 640
    },
    {
     "name": "dawn",
@@ -162,17 +181,17 @@
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 30200,
+  "bytes": 30244,
   "header": {
    "width": 360,
    "height": 720
   },
-  "op_count": 833,
+  "op_count": 836,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
    "ANIMATED_FLOAT": 215,
    "CLIP_RECT": 7,
-   "COLOR_CONSTANT": 20,
+   "COLOR_CONSTANT": 21,
    "COLOR_EXPRESSIONS": 18,
    "COMPONENT_VALUE": 14,
    "CanvasContent": 7,
@@ -203,8 +222,8 @@
    "MODIFIER_HEIGHT": 28,
    "MODIFIER_PADDING": 13,
    "MODIFIER_WIDTH": 41,
-   "NAMED_VARIABLE": 17,
-   "PAINT_VALUES": 75,
+   "NAMED_VARIABLE": 18,
+   "PAINT_VALUES": 76,
    "PATH_DATA": 1,
    "PathExpression": 3,
    "THEME": 27,
@@ -315,6 +334,11 @@
     "value": "#FF000000"
    },
    {
+    "name": "onSky",
+    "type": "color",
+    "value": "#FFFFFFFF"
+   },
+   {
     "name": "onSurface",
     "type": "color",
     "value": "#FFE6EAF2"
@@ -365,6 +389,457 @@
     "theme": "light",
     "render": "render-light.png",
     "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 26823,
+    "component_modes": {
+     "CityCard": "expand"
+    },
+    "op_count": 658,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "cCosLat",
+      "type": "float_array",
+      "value": [
+       0.790499985,
+       0.758000016,
+       0.622399986,
+       0.904799998,
+       0.81220001,
+       0.830299973
+      ]
+     },
+     {
+      "name": "cLon",
+      "type": "float_array",
+      "value": [
+       -122.419998,
+       -74.0100021,
+       -0.129999995,
+       55.2700005,
+       139.690002,
+       151.210007
+      ]
+     },
+     {
+      "name": "cSinLat",
+      "type": "float_array",
+      "value": [
+       0.612500012,
+       0.652199984,
+       0.782700002,
+       0.425799996,
+       0.583400011,
+       -0.557299972
+      ]
+     },
+     {
+      "name": "cX",
+      "type": "float_array",
+      "value": [
+       159.899994,
+       294.399994,
+       499.600006,
+       653.5,
+       888,
+       920
+      ]
+     },
+     {
+      "name": "cY",
+      "type": "float_array",
+      "value": [
+       128.399994,
+       120.199997,
+       90.3000031,
+       163.300003,
+       134.199997,
+       327.399994
+      ]
+     },
+     {
+      "name": "cityDay",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "cityNight",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "grid",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "label",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "land",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "nightShade",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSky",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "sea",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "sun",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "utcOffsets",
+      "type": "float_array",
+      "value": [
+       -8,
+       -5,
+       0,
+       4,
+       9,
+       11
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 26823,
+    "component_modes": {
+     "CityCard": "expand"
+    },
+    "op_count": 658,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "cCosLat",
+      "type": "float_array",
+      "value": [
+       0.790499985,
+       0.758000016,
+       0.622399986,
+       0.904799998,
+       0.81220001,
+       0.830299973
+      ]
+     },
+     {
+      "name": "cLon",
+      "type": "float_array",
+      "value": [
+       -122.419998,
+       -74.0100021,
+       -0.129999995,
+       55.2700005,
+       139.690002,
+       151.210007
+      ]
+     },
+     {
+      "name": "cSinLat",
+      "type": "float_array",
+      "value": [
+       0.612500012,
+       0.652199984,
+       0.782700002,
+       0.425799996,
+       0.583400011,
+       -0.557299972
+      ]
+     },
+     {
+      "name": "cX",
+      "type": "float_array",
+      "value": [
+       159.899994,
+       294.399994,
+       499.600006,
+       653.5,
+       888,
+       920
+      ]
+     },
+     {
+      "name": "cY",
+      "type": "float_array",
+      "value": [
+       128.399994,
+       120.199997,
+       90.3000031,
+       163.300003,
+       134.199997,
+       327.399994
+      ]
+     },
+     {
+      "name": "cityDay",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "cityNight",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "grid",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "label",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "land",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "nightShade",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSky",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "sea",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "sun",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "utcOffsets",
+      "type": "float_array",
+      "value": [
+       -8,
+       -5,
+       0,
+       4,
+       9,
+       11
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "tablet-mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 26823,
+    "component_modes": {
+     "CityCard": "expand"
+    },
+    "op_count": 658,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "cCosLat",
+      "type": "float_array",
+      "value": [
+       0.790499985,
+       0.758000016,
+       0.622399986,
+       0.904799998,
+       0.81220001,
+       0.830299973
+      ]
+     },
+     {
+      "name": "cLon",
+      "type": "float_array",
+      "value": [
+       -122.419998,
+       -74.0100021,
+       -0.129999995,
+       55.2700005,
+       139.690002,
+       151.210007
+      ]
+     },
+     {
+      "name": "cSinLat",
+      "type": "float_array",
+      "value": [
+       0.612500012,
+       0.652199984,
+       0.782700002,
+       0.425799996,
+       0.583400011,
+       -0.557299972
+      ]
+     },
+     {
+      "name": "cX",
+      "type": "float_array",
+      "value": [
+       159.899994,
+       294.399994,
+       499.600006,
+       653.5,
+       888,
+       920
+      ]
+     },
+     {
+      "name": "cY",
+      "type": "float_array",
+      "value": [
+       128.399994,
+       120.199997,
+       90.3000031,
+       163.300003,
+       134.199997,
+       327.399994
+      ]
+     },
+     {
+      "name": "cityDay",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "cityNight",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "grid",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "label",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "land",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "nightShade",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSky",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "sea",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "sun",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "utcOffsets",
+      "type": "float_array",
+      "value": [
+       -8,
+       -5,
+       0,
+       4,
+       9,
+       11
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-tablet-mono-dark.png",
+    "render_findings": [],
+    "size": [
+     1024,
+     640
+    ],
+    "audit_findings": [
+     "info: size_single_op",
+     "info: expression_entries"
+    ]
    },
    "dawn": {
     "render": "render-dawn.png",
@@ -435,9 +910,11 @@
    }
   },
   "json_keys": [
+   "$if",
    "$map",
    "CityCard",
    "alpha",
+   "angle",
    "apiLevel",
    "avail",
    "background",
@@ -484,6 +961,7 @@
    "dx",
    "dy",
    "el",
+   "else",
    "end",
    "export",
    "expressionX",
@@ -518,12 +996,15 @@
    "maxLines",
    "mm",
    "modifiers",
+   "mono-dark",
+   "mono-light",
    "muted",
    "nEdge",
    "name",
    "nightShade",
    "nsz",
    "off",
+   "onSky",
    "onSurface",
    "operation",
    "ops",
@@ -536,6 +1017,8 @@
    "path",
    "pathExpression",
    "paths",
+   "pivotX",
+   "pivotY",
    "profiles",
    "radius",
    "raw",
@@ -544,6 +1027,7 @@
    "resources",
    "right",
    "root",
+   "rotate",
    "row",
    "rows",
    "rx",
@@ -556,6 +1040,7 @@
    "start",
    "static",
    "stops",
+   "strokeCap",
    "strokeWidth",
    "style",
    "summary",
@@ -568,6 +1053,7 @@
    "textSize",
    "textSubtext",
    "textTransform",
+   "then",
    "top",
    "translate",
    "tsz",
@@ -642,6 +1128,6 @@
     "textMerge"
    ]
   },
-  "built_at": "2026-11-02T18:48:35.619Z"
+  "built_at": "2026-11-02T20:22:49.250Z"
  }
 }

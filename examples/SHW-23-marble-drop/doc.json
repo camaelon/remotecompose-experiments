@@ -11,6 +11,44 @@
    "drops": 0,
    "tx": 0,
    "ty": 0
+  },
+  "colors": {
+   "bg1": {
+    "light": "#FFFBF8F1",
+    "dark": "#FF0B0F1E"
+   },
+   "bg2": {
+    "light": "#FFE9E3F3",
+    "dark": "#FF1A1035"
+   },
+   "peg": {
+    "light": "#FF6A7194",
+    "dark": "#FFB9C2E8"
+   },
+   "divider": {
+    "light": "#FF4A5384",
+    "dark": "#FF49D3FF"
+   },
+   "m0": {
+    "light": "#FFE5306C",
+    "dark": "#FFFF4D8D"
+   },
+   "m1": {
+    "light": "#FFEE8A00",
+    "dark": "#FFFFB547"
+   },
+   "m2": {
+    "light": "#FF12A372",
+    "dark": "#FF4DE3A3"
+   },
+   "m3": {
+    "light": "#FF1C7FE0",
+    "dark": "#FF4DB8FF"
+   },
+   "m4": {
+    "light": "#FF8550E6",
+    "dark": "#FFB27CFF"
+   }
   }
  },
  "root": {
@@ -224,39 +262,63 @@
     }
    },
    {
-    "paint": {
-     "ops": [
-      {
-       "linearGradient": {
-        "x1": 0,
-        "y1": 0,
-        "x2": 0,
-        "y2": "@H",
-        "colors": [
-         "#FF0B0F1E",
-         "#FF1A1035"
-        ]
-       }
+    "$if": "theme.mono",
+    "then": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.background"
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "drawRect": {
-     "left": 0,
-     "top": 0,
-     "right": "@W",
-     "bottom": "@H"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "shader": 0
+     },
+     {
+      "drawRect": {
+       "left": 0,
+       "top": 0,
+       "right": "@W",
+       "bottom": "@H"
       }
-     ]
-    }
+     }
+    ],
+    "else": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "linearGradient": {
+          "x1": 0,
+          "y1": 0,
+          "x2": 0,
+          "y2": "@H",
+          "colors": [
+           "@colors.bg1",
+           "@colors.bg2"
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "drawRect": {
+       "left": 0,
+       "top": 0,
+       "right": "@W",
+       "bottom": "@H"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "shader": 0
+        }
+       ]
+      }
+     }
+    ]
    },
    {
     "save": {}
@@ -268,11 +330,36 @@
     }
    },
    {
+    "$if": "theme.mono",
+    "then": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.muted"
+        }
+       ]
+      }
+     }
+    ],
+    "else": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.divider"
+        },
+        {
+         "alpha": 0.35
+        }
+       ]
+      }
+     }
+    ]
+   },
+   {
     "paint": {
      "ops": [
-      {
-       "color": "#3349D3FF"
-      },
       {
        "style": "stroke"
       },
@@ -320,13 +407,29 @@
     }
    },
    {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FFB9C2E8"
+    "$if": "theme.mono",
+    "then": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.muted"
+        }
+       ]
       }
-     ]
-    }
+     }
+    ],
+    "else": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.peg"
+        }
+       ]
+      }
+     }
+    ]
    },
    {
     "loop": {
@@ -504,544 +607,1023 @@
     }
    },
    {
-    "particlesComparison": {
-     "systemId": "@balls",
-     "min": 0,
-     "max": 6,
-     "condition": "1",
-     "commands": [
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "#FFFF4D8D"
-         },
-         {
-          "alpha": "max(0, 1 - h * 4)"
-         },
-         {
-          "style": "stroke"
-         },
-         {
-          "strokeWidth": "@pr * 0.6"
+    "$if": "theme.mono",
+    "then": [
+     {
+      "particlesComparison": {
+       "systemId": "@balls",
+       "min": 0,
+       "max": 6,
+       "condition": "1",
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "alpha": "max(0, 1 - h * 4)"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@pr * 0.5"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "hx",
-        "cy": "hy",
-        "radius": "@pr * (1.6 + h * 8)"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "style": "fill"
+        },
+        {
+         "drawCircle": {
+          "cx": "hx",
+          "cy": "hy",
+          "radius": "@pr * (1.6 + h * 8)"
          }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": "max(0, 1 - out * 2) * step(out, 0)"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "(floor(x / @S) + 0.5) * @S",
-        "cy": "@H - @Y0 - @S * 0.1",
-        "radius": "@S * (0.25 + out * 0.6)"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": 0.22
+        },
+        {
+         "drawLine": {
+          "x1": "(floor(x / @S) + 0.15) * @S",
+          "y1": "@H - @Y0 - @S * 0.3",
+          "x2": "(floor(x / @S) + 0.85) * @S",
+          "y2": "@H - @Y0 - @S * 0.3"
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x",
-        "cy": "y",
-        "radius": "@r * 1.8"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": 1
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           },
+           {
+            "style": "fill"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x",
-        "cy": "y",
-        "radius": "@r"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "#B3FFFFFF"
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r"
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x - @r * 0.35",
-        "cy": "y - @r * 0.35",
-        "radius": "@r * 0.32"
-       }
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "particlesComparison": {
-     "systemId": "@balls",
-     "min": 6,
-     "max": 12,
-     "condition": "1",
-     "commands": [
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "#FFFFB547"
-         },
-         {
-          "alpha": "max(0, 1 - h * 4)"
-         },
-         {
-          "style": "stroke"
-         },
-         {
-          "strokeWidth": "@pr * 0.6"
+     },
+     {
+      "particlesComparison": {
+       "systemId": "@balls",
+       "min": 6,
+       "max": 12,
+       "condition": "1",
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "alpha": "max(0, 1 - h * 4)"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@pr * 0.5"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "hx",
-        "cy": "hy",
-        "radius": "@pr * (1.6 + h * 8)"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "style": "fill"
+        },
+        {
+         "drawCircle": {
+          "cx": "hx",
+          "cy": "hy",
+          "radius": "@pr * (1.6 + h * 8)"
          }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": "max(0, 1 - out * 2) * step(out, 0)"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "(floor(x / @S) + 0.5) * @S",
-        "cy": "@H - @Y0 - @S * 0.1",
-        "radius": "@S * (0.25 + out * 0.6)"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": 0.22
+        },
+        {
+         "drawLine": {
+          "x1": "(floor(x / @S) + 0.15) * @S",
+          "y1": "@H - @Y0 - @S * 0.3",
+          "x2": "(floor(x / @S) + 0.85) * @S",
+          "y2": "@H - @Y0 - @S * 0.3"
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x",
-        "cy": "y",
-        "radius": "@r * 1.8"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": 1
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           },
+           {
+            "style": "fill"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x",
-        "cy": "y",
-        "radius": "@r"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "#B3FFFFFF"
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@r * 0.32"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x - @r * 0.35",
-        "cy": "y - @r * 0.35",
-        "radius": "@r * 0.32"
-       }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r * 0.84"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "particlesComparison": {
-     "systemId": "@balls",
-     "min": 12,
-     "max": 18,
-     "condition": "1",
-     "commands": [
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "#FF4DE3A3"
-         },
-         {
-          "alpha": "max(0, 1 - h * 4)"
-         },
-         {
-          "style": "stroke"
-         },
-         {
-          "strokeWidth": "@pr * 0.6"
+     },
+     {
+      "particlesComparison": {
+       "systemId": "@balls",
+       "min": 12,
+       "max": 18,
+       "condition": "1",
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "alpha": "max(0, 1 - h * 4)"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@pr * 0.5"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "hx",
-        "cy": "hy",
-        "radius": "@pr * (1.6 + h * 8)"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "style": "fill"
+        },
+        {
+         "drawCircle": {
+          "cx": "hx",
+          "cy": "hy",
+          "radius": "@pr * (1.6 + h * 8)"
          }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": "max(0, 1 - out * 2) * step(out, 0)"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "(floor(x / @S) + 0.5) * @S",
-        "cy": "@H - @Y0 - @S * 0.1",
-        "radius": "@S * (0.25 + out * 0.6)"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": 0.22
+        },
+        {
+         "drawLine": {
+          "x1": "(floor(x / @S) + 0.15) * @S",
+          "y1": "@H - @Y0 - @S * 0.3",
+          "x2": "(floor(x / @S) + 0.85) * @S",
+          "y2": "@H - @Y0 - @S * 0.3"
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x",
-        "cy": "y",
-        "radius": "@r * 1.8"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": 1
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           },
+           {
+            "style": "fill"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x",
-        "cy": "y",
-        "radius": "@r"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "#B3FFFFFF"
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r"
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x - @r * 0.35",
-        "cy": "y - @r * 0.35",
-        "radius": "@r * 0.32"
-       }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.background"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r * 0.4"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           }
+          ]
+         }
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "particlesComparison": {
-     "systemId": "@balls",
-     "min": 18,
-     "max": 24,
-     "condition": "1",
-     "commands": [
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "#FF4DB8FF"
-         },
-         {
-          "alpha": "max(0, 1 - h * 4)"
-         },
-         {
-          "style": "stroke"
-         },
-         {
-          "strokeWidth": "@pr * 0.6"
+     },
+     {
+      "particlesComparison": {
+       "systemId": "@balls",
+       "min": 18,
+       "max": 24,
+       "condition": "1",
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "alpha": "max(0, 1 - h * 4)"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@pr * 0.5"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "hx",
-        "cy": "hy",
-        "radius": "@pr * (1.6 + h * 8)"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "style": "fill"
+        },
+        {
+         "drawCircle": {
+          "cx": "hx",
+          "cy": "hy",
+          "radius": "@pr * (1.6 + h * 8)"
          }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": "max(0, 1 - out * 2) * step(out, 0)"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "(floor(x / @S) + 0.5) * @S",
-        "cy": "@H - @Y0 - @S * 0.1",
-        "radius": "@S * (0.25 + out * 0.6)"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": 0.22
+        },
+        {
+         "drawLine": {
+          "x1": "(floor(x / @S) + 0.15) * @S",
+          "y1": "@H - @Y0 - @S * 0.3",
+          "x2": "(floor(x / @S) + 0.85) * @S",
+          "y2": "@H - @Y0 - @S * 0.3"
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x",
-        "cy": "y",
-        "radius": "@r * 1.8"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": 1
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           },
+           {
+            "style": "fill"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x",
-        "cy": "y",
-        "radius": "@r"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "#B3FFFFFF"
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@r * 0.32"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x - @r * 0.35",
-        "cy": "y - @r * 0.35",
-        "radius": "@r * 0.32"
-       }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r * 0.84"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r * 0.3"
+         }
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "particlesComparison": {
-     "systemId": "@balls",
-     "min": 24,
-     "max": 30,
-     "condition": "1",
-     "commands": [
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "#FFB27CFF"
-         },
-         {
-          "alpha": "max(0, 1 - h * 4)"
-         },
-         {
-          "style": "stroke"
-         },
-         {
-          "strokeWidth": "@pr * 0.6"
+     },
+     {
+      "particlesComparison": {
+       "systemId": "@balls",
+       "min": 24,
+       "max": 30,
+       "condition": "1",
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "alpha": "max(0, 1 - h * 4)"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@pr * 0.5"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "hx",
-        "cy": "hy",
-        "radius": "@pr * (1.6 + h * 8)"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "style": "fill"
+        },
+        {
+         "drawCircle": {
+          "cx": "hx",
+          "cy": "hy",
+          "radius": "@pr * (1.6 + h * 8)"
          }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": "max(0, 1 - out * 2) * step(out, 0)"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "(floor(x / @S) + 0.5) * @S",
-        "cy": "@H - @Y0 - @S * 0.1",
-        "radius": "@S * (0.25 + out * 0.6)"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": 0.22
+        },
+        {
+         "drawLine": {
+          "x1": "(floor(x / @S) + 0.15) * @S",
+          "y1": "@H - @Y0 - @S * 0.3",
+          "x2": "(floor(x / @S) + 0.85) * @S",
+          "y2": "@H - @Y0 - @S * 0.3"
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x",
-        "cy": "y",
-        "radius": "@r * 1.8"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": 1
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           },
+           {
+            "style": "fill"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x",
-        "cy": "y",
-        "radius": "@r"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "#B3FFFFFF"
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@r * 0.32"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "x - @r * 0.35",
-        "cy": "y - @r * 0.35",
-        "radius": "@r * 0.32"
-       }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r * 0.84"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r * 0.55"
+         }
+        }
+       ]
       }
-     ]
-    }
+     }
+    ],
+    "else": [
+     {
+      "particlesComparison": {
+       "systemId": "@balls",
+       "min": 0,
+       "max": 6,
+       "condition": "1",
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.m0"
+           },
+           {
+            "alpha": "max(0, 1 - h * 4)"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@pr * 0.6"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "hx",
+          "cy": "hy",
+          "radius": "@pr * (1.6 + h * 8)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "(floor(x / @S) + 0.5) * @S",
+          "cy": "@H - @Y0 - @S * 0.1",
+          "radius": "@S * (0.25 + out * 0.6)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 0.2
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r * 1.8"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#B3FFFFFF"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x - @r * 0.35",
+          "cy": "y - @r * 0.35",
+          "radius": "@r * 0.32"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "particlesComparison": {
+       "systemId": "@balls",
+       "min": 6,
+       "max": 12,
+       "condition": "1",
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.m1"
+           },
+           {
+            "alpha": "max(0, 1 - h * 4)"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@pr * 0.6"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "hx",
+          "cy": "hy",
+          "radius": "@pr * (1.6 + h * 8)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "(floor(x / @S) + 0.5) * @S",
+          "cy": "@H - @Y0 - @S * 0.1",
+          "radius": "@S * (0.25 + out * 0.6)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 0.2
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r * 1.8"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#B3FFFFFF"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x - @r * 0.35",
+          "cy": "y - @r * 0.35",
+          "radius": "@r * 0.32"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "particlesComparison": {
+       "systemId": "@balls",
+       "min": 12,
+       "max": 18,
+       "condition": "1",
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.m2"
+           },
+           {
+            "alpha": "max(0, 1 - h * 4)"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@pr * 0.6"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "hx",
+          "cy": "hy",
+          "radius": "@pr * (1.6 + h * 8)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "(floor(x / @S) + 0.5) * @S",
+          "cy": "@H - @Y0 - @S * 0.1",
+          "radius": "@S * (0.25 + out * 0.6)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 0.2
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r * 1.8"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#B3FFFFFF"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x - @r * 0.35",
+          "cy": "y - @r * 0.35",
+          "radius": "@r * 0.32"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "particlesComparison": {
+       "systemId": "@balls",
+       "min": 18,
+       "max": 24,
+       "condition": "1",
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.m3"
+           },
+           {
+            "alpha": "max(0, 1 - h * 4)"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@pr * 0.6"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "hx",
+          "cy": "hy",
+          "radius": "@pr * (1.6 + h * 8)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "(floor(x / @S) + 0.5) * @S",
+          "cy": "@H - @Y0 - @S * 0.1",
+          "radius": "@S * (0.25 + out * 0.6)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 0.2
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r * 1.8"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#B3FFFFFF"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x - @r * 0.35",
+          "cy": "y - @r * 0.35",
+          "radius": "@r * 0.32"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "particlesComparison": {
+       "systemId": "@balls",
+       "min": 24,
+       "max": 30,
+       "condition": "1",
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.m4"
+           },
+           {
+            "alpha": "max(0, 1 - h * 4)"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@pr * 0.6"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "hx",
+          "cy": "hy",
+          "radius": "@pr * (1.6 + h * 8)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "(floor(x / @S) + 0.5) * @S",
+          "cy": "@H - @Y0 - @S * 0.1",
+          "radius": "@S * (0.25 + out * 0.6)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 0.2
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r * 1.8"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x",
+          "cy": "y",
+          "radius": "@r"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#B3FFFFFF"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "x - @r * 0.35",
+          "cy": "y - @r * 0.35",
+          "radius": "@r * 0.32"
+         }
+        }
+       ]
+      }
+     }
+    ]
    },
    {
     "restore": {}
@@ -1050,7 +1632,7 @@
     "paint": {
      "ops": [
       {
-       "color": "#FFF2F4FF"
+       "color": "@colors.onSurface"
       },
       {
        "textSize": "@S * 0.5"
@@ -1071,7 +1653,7 @@
     "paint": {
      "ops": [
       {
-       "color": "#FF8F94B8"
+       "color": "@colors.muted"
       },
       {
        "textSize": "@S * 0.3"

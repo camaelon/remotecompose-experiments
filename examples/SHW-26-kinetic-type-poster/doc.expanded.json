@@ -1,0 +1,502 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "A moving festival poster: ECHO in huge letters that drop in one after another with red echoes trailing beneath, a red disc beating inside a turning ring of text, sound rings spreading across the page, a line of text flowing along a wave, and a tilted black band with the dates scrolling. Echo Festival, Lisbon, 14 to 16 May 2026."
+ },
+ "resources": {
+  "colors": {
+   "paper": {
+    "light": "#FFF0EADC",
+    "dark": "#FF141118"
+   },
+   "ink": {
+    "light": "#FF141414",
+    "dark": "#FFF0EADC"
+   },
+   "red": {
+    "light": "#FFFF4A1C",
+    "dark": "#FFFF5A2E"
+   },
+   "ringLine": {
+    "light": "#FF141414",
+    "dark": "#FFB9A9C9"
+   },
+   "band": {
+    "light": "#FF141414",
+    "dark": "#FFF0EADC"
+   },
+   "bandText": {
+    "light": "#FFFF4A1C",
+    "dark": "#FFE23B12"
+   }
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "@colors.paper"
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "W",
+     "value": "componentWidth()"
+    }
+   },
+   {
+    "variable": {
+     "name": "H",
+     "value": "componentHeight()"
+    }
+   },
+   {
+    "variable": {
+     "name": "t",
+     "value": "animationTime()"
+    }
+   },
+   {
+    "variable": {
+     "name": "tl",
+     "value": "continuousSec()"
+    }
+   },
+   {
+    "variable": {
+     "name": "sc",
+     "value": "min(@W / 360, @H / 640)"
+    }
+   },
+   {
+    "variable": {
+     "name": "ox",
+     "value": "(@W - 360 * @sc) / 2"
+    }
+   },
+   {
+    "variable": {
+     "name": "oy",
+     "value": "(@H - 640 * @sc) / 2"
+    }
+   },
+   {
+    "paint": {
+     "color": "@colors.paper",
+     "style": "fill"
+    }
+   },
+   {
+    "drawRect": {
+     "left": 0,
+     "top": 0,
+     "right": "@W",
+     "bottom": "@H"
+    }
+   },
+   {
+    "save": {
+     "commands": [
+      {
+       "translate": {
+        "dx": "@ox",
+        "dy": "@oy"
+       }
+      },
+      {
+       "scale": {
+        "sx": "@sc",
+        "sy": "@sc"
+       }
+      },
+      {
+       "paint": {
+        "color": "@colors.ringLine",
+        "style": "stroke",
+        "strokeWidth": 1.2
+       }
+      },
+      {
+       "loop": {
+        "index": "i",
+        "from": 0,
+        "until": 9,
+        "commands": [
+         {
+          "variable": {
+           "name": "ph",
+           "value": "fract(@tl * 0.18 + i / 9)"
+          }
+         },
+         {
+          "paint": {
+           "alpha": "(1 - @ph) * 0.55"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": 252,
+           "cy": 178,
+           "radius": "70 + @ph * 520"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "variable": {
+        "name": "beat",
+        "value": "pow(1 - fract(@tl * 1.6), 3)"
+       }
+      },
+      {
+       "paint": {
+        "color": "@colors.red",
+        "style": "fill",
+        "alpha": 1
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": 252,
+        "cy": 178,
+        "radius": "72 + 6 * @beat"
+       }
+      },
+      {
+       "pathExpression": {
+        "id": "ring",
+        "expressionX": "252 + 96 * cos(a[0])",
+        "expressionY": "178 + 96 * sin(a[0])",
+        "start": 0,
+        "end": 6.2832,
+        "count": 96,
+        "flags": 1
+       }
+      },
+      {
+       "save": {
+        "commands": [
+         {
+          "rotate": {
+           "angle": "(@tl * 14) % 360",
+           "pivotX": 252,
+           "pivotY": 178
+          }
+         },
+         {
+          "paint": {
+           "color": "@colors.ink",
+           "style": "fill",
+           "textSize": 13.5
+          }
+         },
+         {
+          "drawTextOnPath": {
+           "text": "SOUND · LIGHT · MOTION · THREE NIGHTS · LISBOA · MMXXVI · ",
+           "path": "ring",
+           "hOffset": 0,
+           "vOffset": -4
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "color": "@colors.ink",
+        "style": "fill",
+        "textSize": 11
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "Nº 07",
+        "x": 24,
+        "y": 34,
+        "panX": -1,
+        "panY": 0
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "LX FACTORY",
+        "x": 24,
+        "y": 50,
+        "panX": -1,
+        "panY": 0
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "LISBOA",
+        "x": 24,
+        "y": 66,
+        "panX": -1,
+        "panY": 0
+       }
+      },
+      {
+       "loop": {
+        "index": "ee",
+        "from": 1,
+        "until": 6,
+        "commands": [
+         {
+          "variable": {
+           "name": "e",
+           "value": "6 - ee"
+          }
+         },
+         {
+          "variable": {
+           "name": "eo",
+           "value": "@e * (10 + 6 * sin(@tl * 2.2 - @e * 0.5))"
+          }
+         },
+         {
+          "loop": {
+           "index": "i",
+           "from": 0,
+           "until": 4,
+           "commands": [
+            {
+             "variable": {
+              "name": "ep",
+              "value": "clamp((@t - 0.9 - i * 0.14 - @e * 0.08) / 0.5, 1, 0)"
+             }
+            },
+            {
+             "paint": {
+              "color": "@colors.red",
+              "style": "stroke",
+              "strokeWidth": 1.4,
+              "textSize": 112,
+              "alpha": "(0.95 - @e * 0.15) * @ep"
+             }
+            },
+            {
+             "textSubtext": {
+              "text": "ECHO",
+              "start": "i",
+              "len": 1,
+              "varName": "le"
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": "@le",
+              "x": "52 + i * 82",
+              "y": "@eo + 392",
+              "panX": 0,
+              "panY": 0
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "color": "@colors.ink",
+        "style": "fillAndStroke",
+        "strokeWidth": 3,
+        "textSize": 112,
+        "alpha": 1
+       }
+      },
+      {
+       "loop": {
+        "index": "i",
+        "from": 0,
+        "until": 4,
+        "commands": [
+         {
+          "variable": {
+           "name": "lp",
+           "value": "clamp((@t - 0.2 - i * 0.14) / 0.8, 1, 0) - 1"
+          }
+         },
+         {
+          "variable": {
+           "name": "le2",
+           "value": "1 + 2.70158 * @lp * @lp * @lp + 1.70158 * @lp * @lp"
+          }
+         },
+         {
+          "textSubtext": {
+           "text": "ECHO",
+           "start": "i",
+           "len": 1,
+           "varName": "lt"
+          }
+         },
+         {
+          "save": {
+           "commands": [
+            {
+             "scale": {
+              "sx": 1,
+              "sy": "1 + 0.07 * sin(@tl * 3 - i * 1.1) * clamp(@t - 1.2 - i * 0.14, 1, 0)",
+              "pivotX": "52 + i * 82",
+              "pivotY": 438
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": "@lt",
+              "x": "52 + i * 82",
+              "y": "392 - (1 - @le2) * 420",
+              "panX": 0,
+              "panY": 0
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "pathExpression": {
+        "id": "wave",
+        "expressionX": "a[0]",
+        "expressionY": "520 + 16 * sin(a[0] * 0.024 - continuousSec() * 1.7)",
+        "start": "-@ox / @sc - 60",
+        "end": "(@W - @ox) / @sc + 60",
+        "count": 96
+       }
+      },
+      {
+       "paint": {
+        "color": "@colors.ink",
+        "style": "fill",
+        "textSize": 17,
+        "alpha": 1
+       }
+      },
+      {
+       "textMeasure": {
+        "text": "fourteen artists — three nights — one room full of noise — ",
+        "mode": 0,
+        "name": "ww"
+       }
+      },
+      {
+       "drawTextOnPath": {
+        "text": "fourteen artists — three nights — one room full of noise — fourteen artists — three nights — one room full of noise — fourteen artists — three nights — one room full of noise — fourteen artists — three nights — one room full of noise — ",
+        "path": "wave",
+        "hOffset": "-((@tl * 38) % @ww)",
+        "vOffset": -6
+       }
+      },
+      {
+       "paint": {
+        "color": "@colors.ink",
+        "style": "fill",
+        "textSize": 10.5
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "KAITO  ·  MARA VOSS  ·  THE LOW HUM  ·  OSSO",
+        "x": 24,
+        "y": 556,
+        "panX": -1,
+        "panY": 0
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "LUME  ·  PALE ATLAS  ·  DJ TERRA  ·  + 7 MORE",
+        "x": 24,
+        "y": 572,
+        "panX": -1,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "variable": {
+     "name": "by",
+     "value": "@oy + 610 * @sc"
+    }
+   },
+   {
+    "save": {
+     "commands": [
+      {
+       "rotate": {
+        "angle": -5,
+        "pivotX": "@W / 2",
+        "pivotY": "@by"
+       }
+      },
+      {
+       "paint": {
+        "color": "@colors.band",
+        "style": "fill"
+       }
+      },
+      {
+       "drawRect": {
+        "left": "-@W",
+        "top": "@by - 17 * @sc",
+        "right": "@W * 2",
+        "bottom": "@by + 17 * @sc"
+       }
+      },
+      {
+       "paint": {
+        "color": "@colors.bandText",
+        "style": "fillAndStroke",
+        "strokeWidth": "0.6 * @sc",
+        "textSize": "16 * @sc"
+       }
+      },
+      {
+       "textMeasure": {
+        "text": "ECHO FESTIVAL 2026  —  LISBON  —  14 · 15 · 16 MAY  —  ",
+        "mode": 0,
+        "name": "bw"
+       }
+      },
+      {
+       "variable": {
+        "name": "bx",
+        "value": "-((@tl * 60 * @sc) % @bw) - @W * 0.2"
+       }
+      },
+      {
+       "loop": {
+        "index": "i",
+        "from": 0,
+        "until": "ceil(@W * 1.5 / @bw) + 1",
+        "commands": [
+         {
+          "drawTextAnchored": {
+           "text": "ECHO FESTIVAL 2026  —  LISBON  —  14 · 15 · 16 MAY  —  ",
+           "x": "@bx + i * @bw",
+           "y": "@by",
+           "panX": -1,
+           "panY": 0
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

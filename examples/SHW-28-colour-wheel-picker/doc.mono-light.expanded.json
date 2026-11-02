@@ -1,0 +1,2202 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 760,
+  "profiles": 513,
+  "contentDescription": "HSV colour picker: a hue ring around a saturation and value square, a live swatch, the hex code and WCAG contrast against white and black text"
+ },
+ "resources": {
+  "colors": {
+   "background": "#FFFFFFFF",
+   "muted": "#FF616161",
+   "onSurface": "#FF000000",
+   "outline": "#FF616161",
+   "surface": "#FFFFFFFF",
+   "track": "#FF616161",
+   "halo": "#1F000000",
+   "edge": "#33000000"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "drag",
+    "value": 0
+   }
+  },
+  {
+   "variable": {
+    "name": "downX",
+    "value": 0
+   }
+  },
+  {
+   "variable": {
+    "name": "downY",
+    "value": 0
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     }
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "semantics": {
+          "contentDescription": "Colour picker. Drag round the ring to choose the hue, drag in the square to choose saturation and brightness"
+         }
+        },
+        {
+         "onTouchDown": [
+          {
+           "type": "valueFloatExpressionChange",
+           "target": "@downX",
+           "value": "touchX()"
+          },
+          {
+           "type": "valueFloatExpressionChange",
+           "target": "@downY",
+           "value": "touchY()"
+          },
+          {
+           "type": "valueFloatChange",
+           "target": "@drag",
+           "value": 1
+          }
+         ]
+        },
+        {
+         "onTouchUp": [
+          {
+           "type": "valueFloatChange",
+           "target": "@drag",
+           "value": 0
+          }
+         ]
+        }
+       ],
+       "commands": [
+        {
+         "variable": {
+          "name": "w",
+          "value": "componentWidth()"
+         }
+        },
+        {
+         "variable": {
+          "name": "h",
+          "value": "componentHeight()"
+         }
+        },
+        {
+         "variable": {
+          "name": "L",
+          "value": "step(@w, @h * 1.05)"
+         }
+        },
+        {
+         "variable": {
+          "name": "sh",
+          "value": "ifElse(64 + 28 * step(@h, 700), 92, @L)"
+         }
+        },
+        {
+         "variable": {
+          "name": "D",
+          "value": "max(150, ifElse(min(@w - 40, @h - @sh - 338), min(@h - 120, @w - 400), @L))"
+         }
+        },
+        {
+         "variable": {
+          "name": "Ro",
+          "value": "@D / 2"
+         }
+        },
+        {
+         "variable": {
+          "name": "T",
+          "value": "max(16, @D * 0.075)"
+         }
+        },
+        {
+         "variable": {
+          "name": "Rm",
+          "value": "@Ro - @T / 2"
+         }
+        },
+        {
+         "variable": {
+          "name": "cx",
+          "value": "ifElse(@w / 2, 32 + @Ro, @L)"
+         }
+        },
+        {
+         "variable": {
+          "name": "cy",
+          "value": "ifElse(88 + @Ro, 72 + (@h - 72) / 2, @L)"
+         }
+        },
+        {
+         "variable": {
+          "name": "q",
+          "value": "(@Ro - @T - 12) * 0.7071"
+         }
+        },
+        {
+         "variable": {
+          "name": "px",
+          "value": "ifElse(20, @cx + @Ro + 40, @L)"
+         }
+        },
+        {
+         "variable": {
+          "name": "pw",
+          "value": "ifElse(@w - 40, @w - @px - 28, @L)"
+         }
+        },
+        {
+         "variable": {
+          "name": "py",
+          "value": "ifElse(@cy + @Ro + 28, 72 + max(0, (@h - 72 - 298) / 2), @L)"
+         }
+        },
+        {
+         "variable": {
+          "name": "ddx",
+          "value": "@downX - @cx"
+         }
+        },
+        {
+         "variable": {
+          "name": "ddy",
+          "value": "@downY - @cy"
+         }
+        },
+        {
+         "variable": {
+          "name": "inSq",
+          "value": "step(@q + 12, abs(@ddx)) * step(@q + 12, abs(@ddy))"
+         }
+        },
+        {
+         "variable": {
+          "name": "rAct",
+          "value": "@drag * (1 - @inSq) * step(@Ro + 28, hypot(@ddx, @ddy))"
+         }
+        },
+        {
+         "variable": {
+          "name": "sAct",
+          "value": "@drag * @inSq"
+         }
+        },
+        {
+         "variable": {
+          "name": "liveH",
+          "value": "(atan2(touchY() - @cy, touchX() - @cx) * 57.29578 + 450) % 360"
+         }
+        },
+        {
+         "variable": {
+          "name": "liveS",
+          "value": "max(0, min(1, (touchX() - @cx + @q) / (2 * @q)))"
+         }
+        },
+        {
+         "variable": {
+          "name": "liveV",
+          "value": "max(0, min(1, (@cy + @q - touchY()) / (2 * @q)))"
+         }
+        },
+        {
+         "touchExpression": {
+          "name": "Hr",
+          "defaultValue": 212,
+          "min": "ifElse(-100000, @liveH, @rAct)",
+          "max": "ifElse(100000, @liveH, @rAct)",
+          "expression": [
+           0
+          ],
+          "touchMode": 1
+         }
+        },
+        {
+         "touchExpression": {
+          "name": "Sr",
+          "defaultValue": 0.74,
+          "min": "ifElse(-100000, @liveS, @sAct)",
+          "max": "ifElse(100000, @liveS, @sAct)",
+          "expression": [
+           0
+          ],
+          "touchMode": 1
+         }
+        },
+        {
+         "touchExpression": {
+          "name": "Vr",
+          "defaultValue": 0.84,
+          "min": "ifElse(-100000, @liveV, @sAct)",
+          "max": "ifElse(100000, @liveV, @sAct)",
+          "expression": [
+           0
+          ],
+          "touchMode": 1
+         }
+        },
+        {
+         "variable": {
+          "name": "hue",
+          "value": "ifElse(@Hr, @liveH, @rAct)"
+         }
+        },
+        {
+         "variable": {
+          "name": "sat",
+          "value": "ifElse(@Sr, @liveS, @sAct)"
+         }
+        },
+        {
+         "variable": {
+          "name": "val",
+          "value": "ifElse(@Vr, @liveV, @sAct)"
+         }
+        },
+        {
+         "variable": {
+          "name": "kr",
+          "value": "(5 + @hue / 60) % 6"
+         }
+        },
+        {
+         "variable": {
+          "name": "R",
+          "value": "round(255 * @val * (1 - @sat * max(0, min(min(@kr, 4 - @kr), 1))))"
+         }
+        },
+        {
+         "variable": {
+          "name": "lr",
+          "value": "ifElse(pow((@R / 255 + 0.055) / 1.055, 2.4), @R / 3294.6, step(10.31475, @R))"
+         }
+        },
+        {
+         "variable": {
+          "name": "kg",
+          "value": "(3 + @hue / 60) % 6"
+         }
+        },
+        {
+         "variable": {
+          "name": "G",
+          "value": "round(255 * @val * (1 - @sat * max(0, min(min(@kg, 4 - @kg), 1))))"
+         }
+        },
+        {
+         "variable": {
+          "name": "lg",
+          "value": "ifElse(pow((@G / 255 + 0.055) / 1.055, 2.4), @G / 3294.6, step(10.31475, @G))"
+         }
+        },
+        {
+         "variable": {
+          "name": "kb",
+          "value": "(1 + @hue / 60) % 6"
+         }
+        },
+        {
+         "variable": {
+          "name": "B",
+          "value": "round(255 * @val * (1 - @sat * max(0, min(min(@kb, 4 - @kb), 1))))"
+         }
+        },
+        {
+         "variable": {
+          "name": "lb",
+          "value": "ifElse(pow((@B / 255 + 0.055) / 1.055, 2.4), @B / 3294.6, step(10.31475, @B))"
+         }
+        },
+        {
+         "variable": {
+          "name": "lum",
+          "value": "0.2126 * @lr + 0.7152 * @lg + 0.0722 * @lb"
+         }
+        },
+        {
+         "variable": {
+          "name": "cW",
+          "value": "1.05 / (@lum + 0.05)"
+         }
+        },
+        {
+         "variable": {
+          "name": "cB",
+          "value": "(@lum + 0.05) / 0.05"
+         }
+        },
+        {
+         "variable": {
+          "name": "gW",
+          "value": "step(@cW, 3) + step(@cW, 4.5) + step(@cW, 7)"
+         }
+        },
+        {
+         "variable": {
+          "name": "gB",
+          "value": "step(@cB, 3) + step(@cB, 4.5) + step(@cB, 7)"
+         }
+        },
+        {
+         "textSubtext": {
+          "text": "0123456789ABCDEF#",
+          "start": 16,
+          "len": 1,
+          "varName": "xHash"
+         }
+        },
+        {
+         "textSubtext": {
+          "text": "0123456789ABCDEF#",
+          "start": "floor(@R / 16)",
+          "len": 1,
+          "varName": "xRh"
+         }
+        },
+        {
+         "textSubtext": {
+          "text": "0123456789ABCDEF#",
+          "start": "@R % 16",
+          "len": 1,
+          "varName": "xRl"
+         }
+        },
+        {
+         "textSubtext": {
+          "text": "0123456789ABCDEF#",
+          "start": "floor(@G / 16)",
+          "len": 1,
+          "varName": "xGh"
+         }
+        },
+        {
+         "textSubtext": {
+          "text": "0123456789ABCDEF#",
+          "start": "@G % 16",
+          "len": 1,
+          "varName": "xGl"
+         }
+        },
+        {
+         "textSubtext": {
+          "text": "0123456789ABCDEF#",
+          "start": "floor(@B / 16)",
+          "len": 1,
+          "varName": "xBh"
+         }
+        },
+        {
+         "textSubtext": {
+          "text": "0123456789ABCDEF#",
+          "start": "@B % 16",
+          "len": 1,
+          "varName": "xBl"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.background"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": 0,
+          "top": 0,
+          "right": "@w",
+          "bottom": "@h"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "textSize": 20
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "Colour",
+          "x": 20,
+          "y": 34,
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "HSV  ·  sRGB  ·  WCAG 2.2 contrast",
+          "x": 20,
+          "y": 54,
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 20,
+          "y1": 70,
+          "x2": "@w - 20",
+          "y2": 70
+         }
+        },
+        {
+         "variable": {
+          "name": "dotX",
+          "value": "@w - 32"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.5
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@cx",
+          "cy": "@cy",
+          "radius": "@Ro"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@cx",
+          "cy": "@cy",
+          "radius": "@Ro - @T"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "textSize": "max(9, @T * 0.5)"
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "R",
+          "x": "@cx + @Rm * 0.0",
+          "y": "@cy - @Rm * 1.0",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "Y",
+          "x": "@cx + @Rm * 0.86603",
+          "y": "@cy - @Rm * 0.5",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "G",
+          "x": "@cx + @Rm * 0.86602",
+          "y": "@cy - @Rm * -0.5",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "C",
+          "x": "@cx + @Rm * -0.0",
+          "y": "@cy - @Rm * -1.0",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "B",
+          "x": "@cx + @Rm * -0.86603",
+          "y": "@cy - @Rm * -0.5",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "M",
+          "x": "@cx + @Rm * -0.86602",
+          "y": "@cy - @Rm * 0.5",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "stroke"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "shader": 0
+           },
+           {
+            "color": "@colors.outline"
+           },
+           {
+            "strokeWidth": 1.2
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "loop": {
+          "index": "i",
+          "from": 0,
+          "until": 24,
+          "commands": [
+           {
+            "variable": {
+             "name": "ta",
+             "value": "i * 0.261799"
+            }
+           },
+           {
+            "variable": {
+             "name": "tl",
+             "value": "4 + 5 * (1 - min(1, i % 2))"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@cx + (@Ro + 5) * sin(@ta)",
+             "y1": "@cy - (@Ro + 5) * cos(@ta)",
+             "x2": "@cx + (@Ro + 5 + @tl) * sin(@ta)",
+             "y2": "@cy - (@Ro + 5 + @tl) * cos(@ta)"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1
+           }
+          ]
+         }
+        },
+        {
+         "loop": {
+          "index": "j",
+          "from": 1,
+          "until": 4,
+          "commands": [
+           {
+            "drawLine": {
+             "x1": "@cx - @q + @q * j * 0.5",
+             "y1": "@cy - @q",
+             "x2": "@cx - @q + @q * j * 0.5",
+             "y2": "@cy + @q"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@cx - @q",
+             "y1": "@cy - @q + @q * j * 0.5",
+             "x2": "@cx + @q",
+             "y2": "@cy - @q + @q * j * 0.5"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "strokeWidth": 1.5
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@cx - @q",
+          "top": "@cy - @q",
+          "right": "@cx + @q",
+          "bottom": "@cy + @q",
+          "rx": 6,
+          "ry": 6
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "textSize": 10
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "SATURATION",
+          "x": "@cx + @q - 4",
+          "y": "@cy + @q - 7",
+          "panX": 1,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "VALUE",
+          "x": "@cx - @q + 5",
+          "y": "@cy - @q + 12",
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "variable": {
+          "name": "hx",
+          "value": "@cx - @q + 2 * @q * @sat"
+         }
+        },
+        {
+         "variable": {
+          "name": "hy",
+          "value": "@cy + @q - 2 * @q * @val"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "shader": 0
+           },
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1
+           },
+           {
+            "alpha": 0.5
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@cx - @q",
+          "y1": "@hy",
+          "x2": "@cx + @q",
+          "y2": "@hy"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@hx",
+          "y1": "@cy - @q",
+          "x2": "@hx",
+          "y2": "@cy + @q"
+         }
+        },
+        {
+         "variable": {
+          "name": "sr",
+          "value": "9 + 4 * @sAct"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           },
+           {
+            "color": "@colors.background"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@hx",
+          "cy": "@hy",
+          "radius": "@sr"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 2.5
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@hx",
+          "cy": "@hy",
+          "radius": "@sr + 1"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@hx",
+          "cy": "@hy",
+          "radius": 2.5
+         }
+        },
+        {
+         "variable": {
+          "name": "ha",
+          "value": "@hue * 0.0174533"
+         }
+        },
+        {
+         "variable": {
+          "name": "rx",
+          "value": "@cx + @Rm * sin(@ha)"
+         }
+        },
+        {
+         "variable": {
+          "name": "ry",
+          "value": "@cy - @Rm * cos(@ha)"
+         }
+        },
+        {
+         "variable": {
+          "name": "rr",
+          "value": "@T * 0.5 + 2 + 4 * @rAct"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           },
+           {
+            "color": "@colors.background"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@rx",
+          "cy": "@ry",
+          "radius": "@rr"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 3
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@rx",
+          "cy": "@ry",
+          "radius": "@rr + 1"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@rx",
+          "cy": "@ry",
+          "radius": 2.5
+         }
+        },
+        {
+         "variable": {
+          "name": "as",
+          "value": "26 + 8 * step(@sh, 80)"
+         }
+        },
+        {
+         "variable": {
+          "name": "pr",
+          "value": "@px + @pw"
+         }
+        },
+        {
+         "variable": {
+          "name": "sm",
+          "value": "@px + @pw / 2"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "shader": 0
+           },
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.5
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@px",
+          "top": "@py",
+          "right": "@pr",
+          "bottom": "@py + @sh",
+          "rx": 14,
+          "ry": 14
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "No colour on this display: read the values below",
+          "x": "@sm",
+          "y": "@py + @sh / 2",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "variable": {
+          "name": "y2",
+          "value": "@py + @sh + 40"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "textSize": 28
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textMerge",
+           "id1": "@xHash",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "@xRh",
+             "id2": "@xRl"
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": "@xGh",
+              "id2": "@xGl"
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": "@xBh",
+              "id2": "@xBl"
+             }
+            }
+           }
+          },
+          "x": "@px",
+          "y": "@y2",
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "HEX",
+          "x": "@px",
+          "y": "@y2 + 20",
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.outline"
+           },
+           {
+            "textSize": 11
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "H",
+          "x": "@pr - 104",
+          "y": "@y2 - 2 - 14",
+          "panX": 1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "textSize": 14
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "round(@hue)",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": "°"
+          },
+          "x": "@pr - 104",
+          "y": "@y2 - 2",
+          "panX": 1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.outline"
+           },
+           {
+            "textSize": 11
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "S",
+          "x": "@pr - 52",
+          "y": "@y2 - 2 - 14",
+          "panX": 1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "textSize": 14
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "round(@sat * 100)",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": "%"
+          },
+          "x": "@pr - 52",
+          "y": "@y2 - 2",
+          "panX": 1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.outline"
+           },
+           {
+            "textSize": 11
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "V",
+          "x": "@pr",
+          "y": "@y2 - 2 - 14",
+          "panX": 1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "textSize": 14
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "round(@val * 100)",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": "%"
+          },
+          "x": "@pr",
+          "y": "@y2 - 2",
+          "panX": 1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textMerge",
+           "id1": "rgb(",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@R",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": ", ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@G",
+               "whole": 3,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": ", ",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@B",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": ")"
+               }
+              }
+             }
+            }
+           }
+          },
+          "x": "@pr",
+          "y": "@y2 + 20",
+          "panX": 1,
+          "panY": 0
+         }
+        },
+        {
+         "variable": {
+          "name": "y3",
+          "value": "@py + @sh + 90"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.surface"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@px",
+          "top": "@y3",
+          "right": "@pr",
+          "bottom": "@y3 + 54",
+          "rx": 10,
+          "ry": 10
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.2
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@px + 8",
+          "top": "@y3 + 8",
+          "right": "@px + 46",
+          "bottom": "@y3 + 46",
+          "rx": 7,
+          "ry": 7
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "textSize": 11
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "W",
+          "x": "@px + 27",
+          "y": "@y3 + 27",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "textSize": 13
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "White text",
+          "x": "@px + 58",
+          "y": "@y3 + 21",
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@cW",
+            "whole": 2,
+            "decimal": 2,
+            "flags": 5
+           },
+           "id2": " : 1"
+          },
+          "x": "@px + 58",
+          "y": "@y3 + 39",
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "variable": {
+          "name": "m0W",
+          "value": "@px + 132"
+         }
+        },
+        {
+         "variable": {
+          "name": "m1W",
+          "value": "@pr - 94"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "strokeWidth": 4
+           },
+           {
+            "strokeCap": "round"
+           },
+           {
+            "style": "stroke"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@m0W",
+          "y1": "@y3 + 27",
+          "x2": "@m1W",
+          "y2": "@y3 + 27"
+         }
+        },
+        {
+         "variable": {
+          "name": "mfW",
+          "value": "@m0W + (@m1W - @m0W) * log(@cW) / 1.32222"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@m0W",
+          "y1": "@y3 + 27",
+          "x2": "@mfW",
+          "y2": "@y3 + 27"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           },
+           {
+            "color": "@colors.surface"
+           },
+           {
+            "strokeWidth": 2
+           },
+           {
+            "strokeCap": "butt"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@m0W + (@m1W - @m0W) * 0.477121 / 1.32222",
+          "y1": "@y3 + 23",
+          "x2": "@m0W + (@m1W - @m0W) * 0.477121 / 1.32222",
+          "y2": "@y3 + 31"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@m0W + (@m1W - @m0W) * 0.653213 / 1.32222",
+          "y1": "@y3 + 23",
+          "x2": "@m0W + (@m1W - @m0W) * 0.653213 / 1.32222",
+          "y2": "@y3 + 31"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@m0W + (@m1W - @m0W) * 0.845098 / 1.32222",
+          "y1": "@y3 + 23",
+          "x2": "@m0W + (@m1W - @m0W) * 0.845098 / 1.32222",
+          "y2": "@y3 + 31"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": "step(@cW, 4.5)"
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@pr - 82",
+          "top": "@y3 + 15",
+          "right": "@pr - 8",
+          "bottom": "@y3 + 39",
+          "rx": 12,
+          "ry": 12
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.2
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@pr - 82",
+          "top": "@y3 + 15",
+          "right": "@pr - 8",
+          "bottom": "@y3 + 39",
+          "rx": 12,
+          "ry": 12
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": "1 - min(1, abs(@gW - 0))"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "Fail",
+          "x": "@pr - 45",
+          "y": "@y3 + 27",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": "1 - min(1, abs(@gW - 1))"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "AA Large",
+          "x": "@pr - 45",
+          "y": "@y3 + 27",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "color": "@colors.background"
+           },
+           {
+            "alpha": "1 - min(1, abs(@gW - 2))"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "AA",
+          "x": "@pr - 45",
+          "y": "@y3 + 27",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "color": "@colors.background"
+           },
+           {
+            "alpha": "1 - min(1, abs(@gW - 3))"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "AAA",
+          "x": "@pr - 45",
+          "y": "@y3 + 27",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.surface"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@px",
+          "top": "@y3 + 62",
+          "right": "@pr",
+          "bottom": "@y3 + 62 + 54",
+          "rx": 10,
+          "ry": 10
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.2
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@px + 8",
+          "top": "@y3 + 62 + 8",
+          "right": "@px + 46",
+          "bottom": "@y3 + 62 + 46",
+          "rx": 7,
+          "ry": 7
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "textSize": 11
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "B",
+          "x": "@px + 27",
+          "y": "@y3 + 62 + 27",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "textSize": 13
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "Black text",
+          "x": "@px + 58",
+          "y": "@y3 + 62 + 21",
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@cB",
+            "whole": 2,
+            "decimal": 2,
+            "flags": 5
+           },
+           "id2": " : 1"
+          },
+          "x": "@px + 58",
+          "y": "@y3 + 62 + 39",
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "variable": {
+          "name": "m0B",
+          "value": "@px + 132"
+         }
+        },
+        {
+         "variable": {
+          "name": "m1B",
+          "value": "@pr - 94"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "strokeWidth": 4
+           },
+           {
+            "strokeCap": "round"
+           },
+           {
+            "style": "stroke"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@m0B",
+          "y1": "@y3 + 62 + 27",
+          "x2": "@m1B",
+          "y2": "@y3 + 62 + 27"
+         }
+        },
+        {
+         "variable": {
+          "name": "mfB",
+          "value": "@m0B + (@m1B - @m0B) * log(@cB) / 1.32222"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@m0B",
+          "y1": "@y3 + 62 + 27",
+          "x2": "@mfB",
+          "y2": "@y3 + 62 + 27"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           },
+           {
+            "color": "@colors.surface"
+           },
+           {
+            "strokeWidth": 2
+           },
+           {
+            "strokeCap": "butt"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@m0B + (@m1B - @m0B) * 0.477121 / 1.32222",
+          "y1": "@y3 + 62 + 23",
+          "x2": "@m0B + (@m1B - @m0B) * 0.477121 / 1.32222",
+          "y2": "@y3 + 62 + 31"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@m0B + (@m1B - @m0B) * 0.653213 / 1.32222",
+          "y1": "@y3 + 62 + 23",
+          "x2": "@m0B + (@m1B - @m0B) * 0.653213 / 1.32222",
+          "y2": "@y3 + 62 + 31"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@m0B + (@m1B - @m0B) * 0.845098 / 1.32222",
+          "y1": "@y3 + 62 + 23",
+          "x2": "@m0B + (@m1B - @m0B) * 0.845098 / 1.32222",
+          "y2": "@y3 + 62 + 31"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": "step(@cB, 4.5)"
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@pr - 82",
+          "top": "@y3 + 62 + 15",
+          "right": "@pr - 8",
+          "bottom": "@y3 + 62 + 39",
+          "rx": 12,
+          "ry": 12
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.2
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@pr - 82",
+          "top": "@y3 + 62 + 15",
+          "right": "@pr - 8",
+          "bottom": "@y3 + 62 + 39",
+          "rx": 12,
+          "ry": 12
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": "1 - min(1, abs(@gB - 0))"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "Fail",
+          "x": "@pr - 45",
+          "y": "@y3 + 62 + 27",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": "1 - min(1, abs(@gB - 1))"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "AA Large",
+          "x": "@pr - 45",
+          "y": "@y3 + 62 + 27",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "color": "@colors.background"
+           },
+           {
+            "alpha": "1 - min(1, abs(@gB - 2))"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "AA",
+          "x": "@pr - 45",
+          "y": "@y3 + 62 + 27",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "color": "@colors.background"
+           },
+           {
+            "alpha": "1 - min(1, abs(@gB - 3))"
+           },
+           {
+            "textSize": 12
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "AAA",
+          "x": "@pr - 45",
+          "y": "@y3 + 62 + 27",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "size": 1
+        },
+        {
+         "semantics": {
+          "contentDescription": {
+           "type": "textMerge",
+           "id1": "Selected colour ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "@xHash",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@xRh",
+               "id2": "@xRl"
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": "@xGh",
+                "id2": "@xGl"
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": "@xBh",
+                "id2": "@xBl"
+               }
+              }
+             }
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": ". White text contrast ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@cW",
+                "whole": 2,
+                "decimal": 1,
+                "flags": 5
+               },
+               "id2": " to 1, "
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": "AA needs 4.5",
+               "id2": {
+                "type": "textMerge",
+                "id1": ". Black text contrast ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@cB",
+                   "whole": 2,
+                   "decimal": 1,
+                   "flags": 5
+                  },
+                  "id2": " to 1"
+                 },
+                 "id2": "."
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

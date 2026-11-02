@@ -1,0 +1,1148 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Marble drop: a physics toy. Coloured marbles fall through a field of pegs and bounce into bins; tap to drop a marble, tilt the device to tip them."
+ },
+ "resources": {
+  "variables": {
+   "drops": 0,
+   "tx": 0,
+   "ty": 0
+  },
+  "colors": {
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "bg1": {
+    "light": "#FFFBF8F1",
+    "dark": "#FF0B0F1E"
+   },
+   "bg2": {
+    "light": "#FFE9E3F3",
+    "dark": "#FF1A1035"
+   },
+   "peg": {
+    "light": "#FF6A7194",
+    "dark": "#FFB9C2E8"
+   },
+   "divider": {
+    "light": "#FF4A5384",
+    "dark": "#FF49D3FF"
+   },
+   "m0": {
+    "light": "#FFE5306C",
+    "dark": "#FFFF4D8D"
+   },
+   "m1": {
+    "light": "#FFEE8A00",
+    "dark": "#FFFFB547"
+   },
+   "m2": {
+    "light": "#FF12A372",
+    "dark": "#FF4DE3A3"
+   },
+   "m3": {
+    "light": "#FF1C7FE0",
+    "dark": "#FF4DB8FF"
+   },
+   "m4": {
+    "light": "#FF8550E6",
+    "dark": "#FFB27CFF"
+   }
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "onTouchDown": [
+     {
+      "type": "valueFloatExpressionChange",
+      "target": "@tx",
+      "value": "touchX() + 0"
+     },
+     {
+      "type": "valueFloatExpressionChange",
+      "target": "@ty",
+      "value": "touchY() + 0"
+     },
+     {
+      "type": "valueFloatExpressionChange",
+      "target": "@drops",
+      "value": "@drops + 1"
+     }
+    ]
+   },
+   {
+    "semantics": {
+     "contentDescription": "Marble drop physics toy. Tap anywhere to drop a marble there."
+    }
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "W",
+     "value": "componentWidth()"
+    }
+   },
+   {
+    "variable": {
+     "name": "H",
+     "value": "componentHeight()"
+    }
+   },
+   {
+    "variable": {
+     "name": "S",
+     "value": "min(@W / 8, @H / 13)"
+    }
+   },
+   {
+    "variable": {
+     "name": "nC",
+     "value": "floor(@W / 2 / @S)"
+    }
+   },
+   {
+    "variable": {
+     "name": "r",
+     "value": "@S * 0.16"
+    }
+   },
+   {
+    "variable": {
+     "name": "pr",
+     "value": "@S * 0.085"
+    }
+   },
+   {
+    "variable": {
+     "name": "cx",
+     "value": "@W / 2"
+    }
+   },
+   {
+    "variable": {
+     "name": "Y0",
+     "value": "max(@H * 0.2, @S * 1.6)"
+    }
+   },
+   {
+    "variable": {
+     "name": "nR",
+     "value": "floor((@H - @Y0 - @S * 1.6) / (@S / 2))"
+    }
+   },
+   {
+    "variable": {
+     "name": "Hf",
+     "value": "@nR * @S / 2"
+    }
+   },
+   {
+    "variable": {
+     "name": "Wh",
+     "value": "@W / 2 - @r"
+    }
+   },
+   {
+    "variable": {
+     "name": "nWh",
+     "value": "@r - @W / 2"
+    }
+   },
+   {
+    "variable": {
+     "name": "WhI",
+     "value": "@W / 2 - @r - 0.5"
+    }
+   },
+   {
+    "variable": {
+     "name": "R2b",
+     "value": "2 * (@r + @pr) * (@r + @pr)"
+    }
+   },
+   {
+    "variable": {
+     "name": "Jc",
+     "value": "1.5 / (2 * @R2b)"
+    }
+   },
+   {
+    "variable": {
+     "name": "kp",
+     "value": "1 / (4 * @R2b)"
+    }
+   },
+   {
+    "variable": {
+     "name": "mTop",
+     "value": "0 - @r - @pr"
+    }
+   },
+   {
+    "variable": {
+     "name": "mBot",
+     "value": "@Hf + @r + @pr"
+    }
+   },
+   {
+    "variable": {
+     "name": "Yexit",
+     "value": "@H - @Y0 + @r"
+    }
+   },
+   {
+    "variable": {
+     "name": "Ytop",
+     "value": "0 - @Y0 - @r"
+    }
+   },
+   {
+    "variable": {
+     "name": "dt",
+     "value": "min(deltaTime(), 0.04) / 4"
+    }
+   },
+   {
+    "variable": {
+     "name": "D4",
+     "value": "@dt * 4"
+    }
+   },
+   {
+    "variable": {
+     "name": "gk",
+     "value": "@S * 16 / 9.8"
+    }
+   },
+   {
+    "variable": {
+     "name": "tilt",
+     "value": "step(hypot(accelerationX(), accelerationY()), 2)"
+    }
+   },
+   {
+    "variable": {
+     "name": "gxd",
+     "value": "0 - accelerationX() * @gk * @tilt * @dt"
+    }
+   },
+   {
+    "variable": {
+     "name": "gyd",
+     "value": "(accelerationY() * @tilt + 9.8 * (1 - @tilt)) * @gk * @dt"
+    }
+   },
+   {
+    "variable": {
+     "name": "dm",
+     "value": "1 - 0.3 * @dt"
+    }
+   },
+   {
+    "variable": {
+     "name": "slot",
+     "value": "(@drops % 5) * 6 + 3 + floor(@drops / 5) % 3"
+    }
+   },
+   {
+    "variable": {
+     "name": "rxw",
+     "value": "@W * 0.7"
+    }
+   },
+   {
+    "variable": {
+     "name": "rvw",
+     "value": "@S * 0.6"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "linearGradient": {
+        "x1": 0,
+        "y1": 0,
+        "x2": 0,
+        "y2": "@H",
+        "colors": [
+         "@colors.bg1",
+         "@colors.bg2"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   {
+    "drawRect": {
+     "left": 0,
+     "top": 0,
+     "right": "@W",
+     "bottom": "@H"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "shader": 0
+      }
+     ]
+    }
+   },
+   {
+    "save": {}
+   },
+   {
+    "translate": {
+     "dx": "@cx",
+     "dy": "@Y0"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.divider"
+      },
+      {
+       "alpha": 0.35
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "stroke"
+      },
+      {
+       "strokeWidth": "@S * 0.05"
+      },
+      {
+       "strokeCap": "round"
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "bi",
+     "from": "1 - @nC",
+     "until": "@nC",
+     "commands": [
+      {
+       "drawLine": {
+        "x1": "bi * @S",
+        "y1": "@Hf + @S * 0.6",
+        "x2": "bi * @S",
+        "y2": "@H - @Y0 - @S * 0.15"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "drawLine": {
+     "x1": "0 - @W / 2",
+     "y1": "@H - @Y0 - @S * 0.08",
+     "x2": "@W / 2",
+     "y2": "@H - @Y0 - @S * 0.08"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.peg"
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "pj",
+     "from": 0,
+     "until": "@nR + 1",
+     "commands": [
+      {
+       "loop": {
+        "index": "pb",
+        "from": "-1 - @nC",
+        "until": "@nC + 2",
+        "commands": [
+         {
+          "drawCircle": {
+           "cx": "(pb + (pj % 2) / 2) * @S",
+           "cy": "pj * @S / 2",
+           "radius": "@pr * step(@W / 2 + @pr - abs((pb + (pj % 2) / 2) * @S), 0)"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   {
+    "createParticles": {
+     "id": "balls",
+     "count": 30,
+     "variables": [
+      "wl",
+      "k",
+      "seen",
+      "fresh",
+      "sp",
+      "out",
+      "x",
+      "y",
+      "vx",
+      "vy",
+      "fu",
+      "fw",
+      "J",
+      "P",
+      "m",
+      "h",
+      "hx",
+      "hy"
+     ],
+     "initialValues": [
+      "1",
+      "u",
+      "0",
+      "0",
+      "0",
+      "0 - (u % 6) * 0.35 - u * 0.04",
+      "0",
+      "100000",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "0",
+      "9",
+      "0",
+      "0"
+     ]
+    }
+   },
+   {
+    "particlesLoop": {
+     "system": "@balls",
+     "equations": [
+      "ifElse(1 - 1.6 * step(abs(x), @WhI) * step(x * vx, 0), 1, step(1, wl))",
+      "k",
+      "@drops",
+      "step(@drops, seen + 0.5) * step(0.5, abs(@slot - k))",
+      "max(step(@drops, seen + 0.5) * step(0.5, abs(@slot - k)), step(out, k % 4 + 0.6 + step(k % 6, 2.5) * 1000000) * (1 - sp))",
+      "ifElse(ifElse(0, out + @dt, step(y, @Yexit)), 0, sp)",
+      "ifElse(clamp(x + vx * @dt + P * (fu + fw), @Wh, @nWh), ifElse((rand() - 0.5) * @rxw, @tx - @cx, fresh), sp)",
+      "ifElse(y + vy * @dt + P * (fu - fw), ifElse(@Ytop, @ty - @Y0, fresh), sp)",
+      "ifElse(vx * wl * @dm + @gxd - J * (fu + fw), (rand() - 0.5) * @rvw, sp)",
+      "ifElse(vy * @dm + @gyd - J * (fu - fw), 0, sp)",
+      "x + y + (vx + vy) * @D4 - round((x + y + (vx + vy) * @D4) / @S) * @S",
+      "x - y + (vx - vy) * @D4 - round((x - y + (vx - vy) * @D4) / @S) * @S",
+      "ifElse(@Jc * min((vx + vy) * fu + (vx - vy) * fw, 0) * step(@R2b, fu * fu + fw * fw) * m, 0, abs(J))",
+      "@kp * m * max(@R2b - (fu * fu + fw * fw), 0)",
+      "step(y, @mTop) * step(@mBot, y)",
+      "ifElse(h + @dt, 0, abs(J))",
+      "ifElse(hx, x - (fu + fw) / 2, abs(J))",
+      "ifElse(hy, y - (fu - fw) / 2, abs(J))"
+     ],
+     "commands": []
+    }
+   },
+   {
+    "particlesLoop": {
+     "system": "@balls",
+     "equations": [
+      "ifElse(1 - 1.6 * step(abs(x), @WhI) * step(x * vx, 0), 1, step(1, wl))",
+      "k",
+      "@drops",
+      "step(@drops, seen + 0.5) * step(0.5, abs(@slot - k))",
+      "max(step(@drops, seen + 0.5) * step(0.5, abs(@slot - k)), step(out, k % 4 + 0.6 + step(k % 6, 2.5) * 1000000) * (1 - sp))",
+      "ifElse(ifElse(0, out + @dt, step(y, @Yexit)), 0, sp)",
+      "ifElse(clamp(x + vx * @dt + P * (fu + fw), @Wh, @nWh), ifElse((rand() - 0.5) * @rxw, @tx - @cx, fresh), sp)",
+      "ifElse(y + vy * @dt + P * (fu - fw), ifElse(@Ytop, @ty - @Y0, fresh), sp)",
+      "ifElse(vx * wl * @dm + @gxd - J * (fu + fw), (rand() - 0.5) * @rvw, sp)",
+      "ifElse(vy * @dm + @gyd - J * (fu - fw), 0, sp)",
+      "x + y + (vx + vy) * @D4 - round((x + y + (vx + vy) * @D4) / @S) * @S",
+      "x - y + (vx - vy) * @D4 - round((x - y + (vx - vy) * @D4) / @S) * @S",
+      "ifElse(@Jc * min((vx + vy) * fu + (vx - vy) * fw, 0) * step(@R2b, fu * fu + fw * fw) * m, 0, abs(J))",
+      "@kp * m * max(@R2b - (fu * fu + fw * fw), 0)",
+      "step(y, @mTop) * step(@mBot, y)",
+      "ifElse(h + @dt, 0, abs(J))",
+      "ifElse(hx, x - (fu + fw) / 2, abs(J))",
+      "ifElse(hy, y - (fu - fw) / 2, abs(J))"
+     ],
+     "commands": []
+    }
+   },
+   {
+    "particlesLoop": {
+     "system": "@balls",
+     "equations": [
+      "ifElse(1 - 1.6 * step(abs(x), @WhI) * step(x * vx, 0), 1, step(1, wl))",
+      "k",
+      "@drops",
+      "step(@drops, seen + 0.5) * step(0.5, abs(@slot - k))",
+      "max(step(@drops, seen + 0.5) * step(0.5, abs(@slot - k)), step(out, k % 4 + 0.6 + step(k % 6, 2.5) * 1000000) * (1 - sp))",
+      "ifElse(ifElse(0, out + @dt, step(y, @Yexit)), 0, sp)",
+      "ifElse(clamp(x + vx * @dt + P * (fu + fw), @Wh, @nWh), ifElse((rand() - 0.5) * @rxw, @tx - @cx, fresh), sp)",
+      "ifElse(y + vy * @dt + P * (fu - fw), ifElse(@Ytop, @ty - @Y0, fresh), sp)",
+      "ifElse(vx * wl * @dm + @gxd - J * (fu + fw), (rand() - 0.5) * @rvw, sp)",
+      "ifElse(vy * @dm + @gyd - J * (fu - fw), 0, sp)",
+      "x + y + (vx + vy) * @D4 - round((x + y + (vx + vy) * @D4) / @S) * @S",
+      "x - y + (vx - vy) * @D4 - round((x - y + (vx - vy) * @D4) / @S) * @S",
+      "ifElse(@Jc * min((vx + vy) * fu + (vx - vy) * fw, 0) * step(@R2b, fu * fu + fw * fw) * m, 0, abs(J))",
+      "@kp * m * max(@R2b - (fu * fu + fw * fw), 0)",
+      "step(y, @mTop) * step(@mBot, y)",
+      "ifElse(h + @dt, 0, abs(J))",
+      "ifElse(hx, x - (fu + fw) / 2, abs(J))",
+      "ifElse(hy, y - (fu - fw) / 2, abs(J))"
+     ],
+     "commands": []
+    }
+   },
+   {
+    "particlesLoop": {
+     "system": "@balls",
+     "equations": [
+      "ifElse(1 - 1.6 * step(abs(x), @WhI) * step(x * vx, 0), 1, step(1, wl))",
+      "k",
+      "@drops",
+      "step(@drops, seen + 0.5) * step(0.5, abs(@slot - k))",
+      "max(step(@drops, seen + 0.5) * step(0.5, abs(@slot - k)), step(out, k % 4 + 0.6 + step(k % 6, 2.5) * 1000000) * (1 - sp))",
+      "ifElse(ifElse(0, out + @dt, step(y, @Yexit)), 0, sp)",
+      "ifElse(clamp(x + vx * @dt + P * (fu + fw), @Wh, @nWh), ifElse((rand() - 0.5) * @rxw, @tx - @cx, fresh), sp)",
+      "ifElse(y + vy * @dt + P * (fu - fw), ifElse(@Ytop, @ty - @Y0, fresh), sp)",
+      "ifElse(vx * wl * @dm + @gxd - J * (fu + fw), (rand() - 0.5) * @rvw, sp)",
+      "ifElse(vy * @dm + @gyd - J * (fu - fw), 0, sp)",
+      "x + y + (vx + vy) * @D4 - round((x + y + (vx + vy) * @D4) / @S) * @S",
+      "x - y + (vx - vy) * @D4 - round((x - y + (vx - vy) * @D4) / @S) * @S",
+      "ifElse(@Jc * min((vx + vy) * fu + (vx - vy) * fw, 0) * step(@R2b, fu * fu + fw * fw) * m, 0, abs(J))",
+      "@kp * m * max(@R2b - (fu * fu + fw * fw), 0)",
+      "step(y, @mTop) * step(@mBot, y)",
+      "ifElse(h + @dt, 0, abs(J))",
+      "ifElse(hx, x - (fu + fw) / 2, abs(J))",
+      "ifElse(hy, y - (fu - fw) / 2, abs(J))"
+     ],
+     "commands": []
+    }
+   },
+   {
+    "particlesComparison": {
+     "systemId": "@balls",
+     "min": 0,
+     "max": 6,
+     "condition": "1",
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.m0"
+         },
+         {
+          "alpha": "max(0, 1 - h * 4)"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@pr * 0.6"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "hx",
+        "cy": "hy",
+        "radius": "@pr * (1.6 + h * 8)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "(floor(x / @S) + 0.5) * @S",
+        "cy": "@H - @Y0 - @S * 0.1",
+        "radius": "@S * (0.25 + out * 0.6)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 0.2
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x",
+        "cy": "y",
+        "radius": "@r * 1.8"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x",
+        "cy": "y",
+        "radius": "@r"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#B3FFFFFF"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x - @r * 0.35",
+        "cy": "y - @r * 0.35",
+        "radius": "@r * 0.32"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "particlesComparison": {
+     "systemId": "@balls",
+     "min": 6,
+     "max": 12,
+     "condition": "1",
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.m1"
+         },
+         {
+          "alpha": "max(0, 1 - h * 4)"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@pr * 0.6"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "hx",
+        "cy": "hy",
+        "radius": "@pr * (1.6 + h * 8)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "(floor(x / @S) + 0.5) * @S",
+        "cy": "@H - @Y0 - @S * 0.1",
+        "radius": "@S * (0.25 + out * 0.6)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 0.2
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x",
+        "cy": "y",
+        "radius": "@r * 1.8"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x",
+        "cy": "y",
+        "radius": "@r"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#B3FFFFFF"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x - @r * 0.35",
+        "cy": "y - @r * 0.35",
+        "radius": "@r * 0.32"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "particlesComparison": {
+     "systemId": "@balls",
+     "min": 12,
+     "max": 18,
+     "condition": "1",
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.m2"
+         },
+         {
+          "alpha": "max(0, 1 - h * 4)"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@pr * 0.6"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "hx",
+        "cy": "hy",
+        "radius": "@pr * (1.6 + h * 8)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "(floor(x / @S) + 0.5) * @S",
+        "cy": "@H - @Y0 - @S * 0.1",
+        "radius": "@S * (0.25 + out * 0.6)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 0.2
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x",
+        "cy": "y",
+        "radius": "@r * 1.8"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x",
+        "cy": "y",
+        "radius": "@r"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#B3FFFFFF"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x - @r * 0.35",
+        "cy": "y - @r * 0.35",
+        "radius": "@r * 0.32"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "particlesComparison": {
+     "systemId": "@balls",
+     "min": 18,
+     "max": 24,
+     "condition": "1",
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.m3"
+         },
+         {
+          "alpha": "max(0, 1 - h * 4)"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@pr * 0.6"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "hx",
+        "cy": "hy",
+        "radius": "@pr * (1.6 + h * 8)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "(floor(x / @S) + 0.5) * @S",
+        "cy": "@H - @Y0 - @S * 0.1",
+        "radius": "@S * (0.25 + out * 0.6)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 0.2
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x",
+        "cy": "y",
+        "radius": "@r * 1.8"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x",
+        "cy": "y",
+        "radius": "@r"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#B3FFFFFF"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x - @r * 0.35",
+        "cy": "y - @r * 0.35",
+        "radius": "@r * 0.32"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "particlesComparison": {
+     "systemId": "@balls",
+     "min": 24,
+     "max": 30,
+     "condition": "1",
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.m4"
+         },
+         {
+          "alpha": "max(0, 1 - h * 4)"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@pr * 0.6"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "hx",
+        "cy": "hy",
+        "radius": "@pr * (1.6 + h * 8)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": "max(0, 0.8 - out * 1.6) * step(out, 0)"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "(floor(x / @S) + 0.5) * @S",
+        "cy": "@H - @Y0 - @S * 0.1",
+        "radius": "@S * (0.25 + out * 0.6)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 0.2
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x",
+        "cy": "y",
+        "radius": "@r * 1.8"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x",
+        "cy": "y",
+        "radius": "@r"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#B3FFFFFF"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "x - @r * 0.35",
+        "cy": "y - @r * 0.35",
+        "radius": "@r * 0.32"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "restore": {}
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.onSurface"
+      },
+      {
+       "textSize": "@S * 0.5"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Marble drop",
+     "x": "@S * 0.45",
+     "y": "@S * 0.75",
+     "panX": -1,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.muted"
+      },
+      {
+       "textSize": "@S * 0.3"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Tap to drop a marble · tilt to tip",
+     "x": "@S * 0.45",
+     "y": "@S * 1.2",
+     "panX": -1,
+     "panY": 0
+    }
+   }
+  ]
+ }
+}

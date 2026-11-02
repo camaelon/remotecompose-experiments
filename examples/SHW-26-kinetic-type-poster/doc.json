@@ -6,12 +6,44 @@
   "profiles": 513,
   "contentDescription": "A moving festival poster: ECHO in huge letters that drop in one after another with red echoes trailing beneath, a red disc beating inside a turning ring of text, sound rings spreading across the page, a line of text flowing along a wave, and a tilted black band with the dates scrolling. Echo Festival, Lisbon, 14 to 16 May 2026."
  },
+ "resources": {
+  "colors": {
+   "paper": {
+    "light": "#FFF0EADC",
+    "dark": "#FF141118"
+   },
+   "ink": {
+    "light": "#FF141414",
+    "dark": "#FFF0EADC"
+   },
+   "red": {
+    "light": "#FFFF4A1C",
+    "dark": "#FFFF5A2E"
+   },
+   "ringLine": {
+    "light": "#FF141414",
+    "dark": "#FFB9A9C9"
+   },
+   "band": {
+    "light": "#FF141414",
+    "dark": "#FFF0EADC"
+   },
+   "bandText": {
+    "light": "#FFFF4A1C",
+    "dark": "#FFE23B12"
+   }
+  }
+ },
  "root": {
   "type": "canvas",
   "modifiers": [
    "fillMaxSize",
    {
-    "background": "#FFF0EADC"
+    "background": {
+     "$if": "theme.mono",
+     "then": "@colors.background",
+     "else": "@colors.paper"
+    }
    }
   ],
   "commands": [
@@ -30,13 +62,21 @@
    {
     "variable": {
      "name": "t",
-     "value": "animationTime()"
+     "value": {
+      "$if": "theme.mono",
+      "then": "4",
+      "else": "animationTime()"
+     }
     }
    },
    {
     "variable": {
      "name": "tl",
-     "value": "continuousSec()"
+     "value": {
+      "$if": "theme.mono",
+      "then": "0",
+      "else": "continuousSec()"
+     }
     }
    },
    {
@@ -59,7 +99,11 @@
    },
    {
     "paint": {
-     "color": "#FFF0EADC",
+     "color": {
+      "$if": "theme.mono",
+      "then": "@colors.background",
+      "else": "@colors.paper"
+     },
      "style": "fill"
     }
    },
@@ -88,7 +132,11 @@
       },
       {
        "paint": {
-        "color": "#FF141414",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.muted",
+         "else": "@colors.ringLine"
+        },
         "style": "stroke",
         "strokeWidth": 1.2
        }
@@ -107,7 +155,11 @@
          },
          {
           "paint": {
-           "alpha": "(1 - @ph) * 0.55"
+           "alpha": {
+            "$if": "theme.mono",
+            "then": "1 - @ph * 0.8",
+            "else": "(1 - @ph) * 0.55"
+           }
           }
          },
          {
@@ -127,18 +179,47 @@
        }
       },
       {
-       "paint": {
-        "color": "#FFFF4A1C",
-        "style": "fill",
-        "alpha": 1
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": 252,
-        "cy": 178,
-        "radius": "72 + 6 * @beat"
-       }
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "color": "@colors.onSurface",
+          "style": "stroke",
+          "strokeWidth": 2.5,
+          "alpha": 1
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": 252,
+          "cy": 178,
+          "radius": 72
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": 252,
+          "cy": 178,
+          "radius": 8
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "color": "@colors.red",
+          "style": "fill",
+          "alpha": 1
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": 252,
+          "cy": 178,
+          "radius": "72 + 6 * @beat"
+         }
+        }
+       ]
       },
       {
        "pathExpression": {
@@ -163,7 +244,11 @@
          },
          {
           "paint": {
-           "color": "#FF141414",
+           "color": {
+            "$if": "theme.mono",
+            "then": "@colors.onSurface",
+            "else": "@colors.ink"
+           },
            "style": "fill",
            "textSize": 13.5
           }
@@ -181,7 +266,11 @@
       },
       {
        "paint": {
-        "color": "#FF141414",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.onSurface",
+         "else": "@colors.ink"
+        },
         "style": "fill",
         "textSize": 11
        }
@@ -245,7 +334,11 @@
             },
             {
              "paint": {
-              "color": "#FFFF4A1C",
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.muted",
+               "else": "@colors.red"
+              },
               "style": "stroke",
               "strokeWidth": 1.4,
               "textSize": 112,
@@ -277,7 +370,11 @@
       },
       {
        "paint": {
-        "color": "#FF141414",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.onSurface",
+         "else": "@colors.ink"
+        },
         "style": "fillAndStroke",
         "strokeWidth": 3,
         "textSize": 112,
@@ -340,7 +437,11 @@
        "pathExpression": {
         "id": "wave",
         "expressionX": "a[0]",
-        "expressionY": "520 + 16 * sin(a[0] * 0.024 - continuousSec() * 1.7)",
+        "expressionY": {
+         "$if": "theme.mono",
+         "then": "520 + 16 * sin(a[0] * 0.024 - 1)",
+         "else": "520 + 16 * sin(a[0] * 0.024 - continuousSec() * 1.7)"
+        },
         "start": "-@ox / @sc - 60",
         "end": "(@W - @ox) / @sc + 60",
         "count": 96
@@ -348,7 +449,11 @@
       },
       {
        "paint": {
-        "color": "#FF141414",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.onSurface",
+         "else": "@colors.ink"
+        },
         "style": "fill",
         "textSize": 17,
         "alpha": 1
@@ -371,7 +476,11 @@
       },
       {
        "paint": {
-        "color": "#FF141414",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.onSurface",
+         "else": "@colors.ink"
+        },
         "style": "fill",
         "textSize": 10.5
        }
@@ -414,22 +523,70 @@
        }
       },
       {
-       "paint": {
-        "color": "#FF141414",
-        "style": "fill"
-       }
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "color": "@colors.background",
+          "style": "fill"
+         }
+        },
+        {
+         "drawRect": {
+          "left": "-@W",
+          "top": "@by - 17 * @sc",
+          "right": "@W * 2",
+          "bottom": "@by + 17 * @sc"
+         }
+        },
+        {
+         "paint": {
+          "color": "@colors.onSurface",
+          "style": "stroke",
+          "strokeWidth": "1.5 * @sc"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "-@W",
+          "y1": "@by - 17 * @sc",
+          "x2": "@W * 2",
+          "y2": "@by - 17 * @sc"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "-@W",
+          "y1": "@by + 17 * @sc",
+          "x2": "@W * 2",
+          "y2": "@by + 17 * @sc"
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "color": "@colors.band",
+          "style": "fill"
+         }
+        },
+        {
+         "drawRect": {
+          "left": "-@W",
+          "top": "@by - 17 * @sc",
+          "right": "@W * 2",
+          "bottom": "@by + 17 * @sc"
+         }
+        }
+       ]
       },
       {
-       "drawRect": {
-        "left": "-@W",
-        "top": "@by - 17 * @sc",
-        "right": "@W * 2",
-        "bottom": "@by + 17 * @sc"
-       }
-      },
-      {
        "paint": {
-        "color": "#FFFF4A1C",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.onSurface",
+         "else": "@colors.bandText"
+        },
         "style": "fillAndStroke",
         "strokeWidth": "0.6 * @sc",
         "textSize": "16 * @sc"

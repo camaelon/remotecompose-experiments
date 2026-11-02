@@ -556,6 +556,60 @@
      16.6
     ]
    }
+  },
+  "colors": {
+   "page": {
+    "light": "#FFE4E1DA",
+    "dark": "#FF0A0B0D"
+   },
+   "tile": {
+    "light": "#FFFCFBF8",
+    "dark": "#FF1C1D21"
+   },
+   "flap": {
+    "light": "#FFF3F1EC",
+    "dark": "#FF24252B"
+   },
+   "ink": {
+    "light": "#FF1B1C1F",
+    "dark": "#FFF2EEE3"
+   },
+   "split": {
+    "light": "#FFC4BFB4",
+    "dark": "#FF050506"
+   },
+   "accent": {
+    "light": "#FFA35F00",
+    "dark": "#FFF5B83D"
+   },
+   "muted": {
+    "light": "#FF67635B",
+    "dark": "#FF8C8A84"
+   },
+   "band": {
+    "light": "#FF1B1C1F",
+    "dark": "#FFF5B83D"
+   },
+   "bandText": {
+    "light": "#FFF5B83D",
+    "dark": "#FF0A0B0D"
+   },
+   "sOnTime": {
+    "light": "#FF1E8A45",
+    "dark": "#FF5FD38A"
+   },
+   "sBoarding": {
+    "light": "#FFB26B00",
+    "dark": "#FFF5B83D"
+   },
+   "sDelayed": {
+    "light": "#FFD2540A",
+    "dark": "#FFFF8A3D"
+   },
+   "sCanceled": {
+    "light": "#FFC62828",
+    "dark": "#FFFF5252"
+   }
   }
  },
  "root": {
@@ -563,7 +617,11 @@
   "modifiers": [
    "fillMaxSize",
    {
-    "background": "#FF0A0B0D"
+    "background": {
+     "$if": "theme.mono",
+     "then": "@colors.background",
+     "else": "@colors.page"
+    }
    }
   ],
   "commands": [
@@ -660,7 +718,11 @@
    {
     "variable": {
      "name": "t",
-     "value": "animationTime()"
+     "value": {
+      "$if": "theme.mono",
+      "then": "6",
+      "else": "animationTime()"
+     }
     }
    },
    {
@@ -707,7 +769,11 @@
    },
    {
     "paint": {
-     "color": "#FFF5B83D",
+     "color": {
+      "$if": "theme.mono",
+      "then": "@colors.onSurface",
+      "else": "@colors.accent"
+     },
      "style": "fill",
      "textSize": "@th * 0.78"
     }
@@ -723,7 +789,11 @@
    },
    {
     "paint": {
-     "color": "#FF8C8A84",
+     "color": {
+      "$if": "theme.mono",
+      "then": "@colors.muted",
+      "else": "@colors.muted"
+     },
      "textSize": "@th * 0.3"
     }
    },
@@ -757,7 +827,11 @@
    {
     "variable": {
      "name": "cs",
-     "value": "continuousSec() % 60"
+     "value": {
+      "$if": "theme.mono",
+      "then": "30",
+      "else": "continuousSec() % 60"
+     }
     }
    },
    {
@@ -876,7 +950,11 @@
       },
       {
        "paint": {
-        "color": "#FF1C1D21",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.background",
+         "else": "@colors.tile"
+        },
         "style": "fill"
        }
       },
@@ -892,7 +970,11 @@
       },
       {
        "paint": {
-        "color": "#FFF2EEE3",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.onSurface",
+         "else": "@colors.ink"
+        },
         "style": "fillAndStroke",
         "strokeWidth": "@cw * 0.035",
         "textSize": "@th * 0.62"
@@ -965,7 +1047,11 @@
          },
          {
           "paint": {
-           "color": "#FF24252B",
+           "color": {
+            "$if": "theme.mono",
+            "then": "@colors.background",
+            "else": "@colors.flap"
+           },
            "style": "fill"
           }
          },
@@ -981,7 +1067,11 @@
          },
          {
           "paint": {
-           "color": "#FFF2EEE3",
+           "color": {
+            "$if": "theme.mono",
+            "then": "@colors.onSurface",
+            "else": "@colors.ink"
+           },
            "style": "fillAndStroke",
            "strokeWidth": "@cw * 0.035",
            "textSize": "@th * 0.62"
@@ -1015,17 +1105,51 @@
        }
       },
       {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "color": "@colors.outline",
+          "style": "stroke",
+          "strokeWidth": 1
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@hx0",
+          "top": "@hy",
+          "right": "@hx1",
+          "bottom": "@hy1",
+          "rx": "@cw * 0.12",
+          "ry": "@cw * 0.12"
+         }
+        }
+       ]
+      },
+      {
        "paint": {
-        "color": "#FF050506",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.background",
+         "else": "@colors.split"
+        },
         "alpha": 1,
         "style": "fill"
        }
       },
       {
        "drawRect": {
-        "left": "@hx0",
+        "left": {
+         "$if": "theme.mono",
+         "then": "@hx0 - 1",
+         "else": "@hx0"
+        },
         "top": "@hmd - @cw * 0.03",
-        "right": "@hx1",
+        "right": {
+         "$if": "theme.mono",
+         "then": "@hx1 + 1",
+         "else": "@hx1"
+        },
         "bottom": "@hmd + @cw * 0.03"
        }
       }
@@ -1034,7 +1158,11 @@
    },
    {
     "paint": {
-     "color": "#FF8C8A84",
+     "color": {
+      "$if": "theme.mono",
+      "then": "@colors.muted",
+      "else": "@colors.muted"
+     },
      "style": "fill",
      "textSize": "@cw * 0.42"
     }
@@ -1278,7 +1406,11 @@
          },
          {
           "paint": {
-           "color": "#FF1C1D21",
+           "color": {
+            "$if": "theme.mono",
+            "then": "@colors.background",
+            "else": "@colors.tile"
+           },
            "style": "fill"
           }
          },
@@ -1294,7 +1426,11 @@
          },
          {
           "paint": {
-           "color": "#FFF2EEE3",
+           "color": {
+            "$if": "theme.mono",
+            "then": "@colors.onSurface",
+            "else": "@colors.ink"
+           },
            "style": "fillAndStroke",
            "strokeWidth": "@cw * 0.035",
            "textSize": "@th * 0.62"
@@ -1367,7 +1503,11 @@
             },
             {
              "paint": {
-              "color": "#FF24252B",
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.background",
+               "else": "@colors.flap"
+              },
               "style": "fill"
              }
             },
@@ -1383,7 +1523,11 @@
             },
             {
              "paint": {
-              "color": "#FFF2EEE3",
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.ink"
+              },
               "style": "fillAndStroke",
               "strokeWidth": "@cw * 0.035",
               "textSize": "@th * 0.62"
@@ -1417,17 +1561,51 @@
           }
          },
          {
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "color": "@colors.outline",
+             "style": "stroke",
+             "strokeWidth": 1
+            }
+           },
+           {
+            "drawRoundRect": {
+             "left": "@qx0",
+             "top": "@cyv",
+             "right": "@qx1",
+             "bottom": "@qy1",
+             "rx": "@cw * 0.12",
+             "ry": "@cw * 0.12"
+            }
+           }
+          ]
+         },
+         {
           "paint": {
-           "color": "#FF050506",
+           "color": {
+            "$if": "theme.mono",
+            "then": "@colors.background",
+            "else": "@colors.split"
+           },
            "alpha": 1,
            "style": "fill"
           }
          },
          {
           "drawRect": {
-           "left": "@qx0",
+           "left": {
+            "$if": "theme.mono",
+            "then": "@qx0 - 1",
+            "else": "@qx0"
+           },
            "top": "@qmd - @cw * 0.03",
-           "right": "@qx1",
+           "right": {
+            "$if": "theme.mono",
+            "then": "@qx1 + 1",
+            "else": "@qx1"
+           },
            "bottom": "@qmd + @cw * 0.03"
           }
          }
@@ -1532,7 +1710,11 @@
       },
       {
        "paint": {
-        "color": "#FF1C1D21",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.background",
+         "else": "@colors.tile"
+        },
         "style": "fill"
        }
       },
@@ -1548,7 +1730,11 @@
       },
       {
        "paint": {
-        "color": "#FFF2EEE3",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.onSurface",
+         "else": "@colors.ink"
+        },
         "style": "fillAndStroke",
         "strokeWidth": "@cw * 0.035",
         "textSize": "@th * ifElse(0.46, 0.38, @tall)"
@@ -1621,7 +1807,11 @@
          },
          {
           "paint": {
-           "color": "#FF24252B",
+           "color": {
+            "$if": "theme.mono",
+            "then": "@colors.background",
+            "else": "@colors.flap"
+           },
            "style": "fill"
           }
          },
@@ -1637,7 +1827,11 @@
          },
          {
           "paint": {
-           "color": "#FFF2EEE3",
+           "color": {
+            "$if": "theme.mono",
+            "then": "@colors.onSurface",
+            "else": "@colors.ink"
+           },
            "style": "fillAndStroke",
            "strokeWidth": "@cw * 0.035",
            "textSize": "@th * ifElse(0.46, 0.38, @tall)"
@@ -1677,193 +1871,399 @@
        }
       },
       {
-       "paint": {
-        "color": "#FF5FD38A",
-        "style": "fillAndStroke",
-        "strokeWidth": "@cw * 0.035",
-        "textSize": "@th * ifElse(0.46, 0.38, @tall)"
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@wx0",
-           "top": "@wy1 - @th",
-           "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 1))) * @wdone",
-           "bottom": "@wy1"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@wgC",
-           "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
-           "y": "@wmd",
-           "panX": -1,
-           "panY": 0
-          }
-         },
-         {
-          "paint": {
-           "style": "fill",
-           "alpha": 1
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
-           "cy": "@wmd",
-           "radius": "@cw * ifElse(0.2, 0.13, @tall)"
-          }
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "color": "@colors.onSurface",
+          "style": "stroke",
+          "strokeWidth": 1.5
          }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "color": "#FFF5B83D",
-        "style": "fillAndStroke",
-        "strokeWidth": "@cw * 0.035",
-        "textSize": "@th * ifElse(0.46, 0.38, @tall)"
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@wx0",
-           "top": "@wy1 - @th",
-           "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 2))) * @wdone",
-           "bottom": "@wy1"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@wgC",
-           "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
-           "y": "@wmd",
-           "panX": -1,
-           "panY": 0
-          }
-         },
-         {
-          "paint": {
-           "style": "fill",
-           "alpha": "0.55 + 0.45 * sin(@t * 6)"
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
-           "cy": "@wmd",
-           "radius": "@cw * ifElse(0.2, 0.13, @tall)"
-          }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "clipRect": {
+             "left": "@wx0",
+             "top": "@wy1 - @th",
+             "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 1))) * @wdone",
+             "bottom": "@wy1"
+            }
+           },
+           {
+            "paint": {
+             "style": "stroke"
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+             "cy": "@wmd",
+             "radius": "@cw * ifElse(0.27, 0.17, @tall)"
+            }
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "color": "#FFFF8A3D",
-        "style": "fillAndStroke",
-        "strokeWidth": "@cw * 0.035",
-        "textSize": "@th * ifElse(0.46, 0.38, @tall)"
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@wx0",
-           "top": "@wy1 - @th",
-           "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 3))) * @wdone",
-           "bottom": "@wy1"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@wgC",
-           "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
-           "y": "@wmd",
-           "panX": -1,
-           "panY": 0
-          }
-         },
-         {
-          "paint": {
-           "style": "fill",
-           "alpha": 1
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
-           "cy": "@wmd",
-           "radius": "@cw * ifElse(0.2, 0.13, @tall)"
-          }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "clipRect": {
+             "left": "@wx0",
+             "top": "@wy1 - @th",
+             "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 2))) * @wdone",
+             "bottom": "@wy1"
+            }
+           },
+           {
+            "paint": {
+             "style": "stroke"
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+             "cy": "@wmd",
+             "radius": "@cw * ifElse(0.27, 0.17, @tall)"
+            }
+           },
+           {
+            "paint": {
+             "style": "fill"
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+             "cy": "@wmd",
+             "radius": "@cw * ifElse(0.27, 0.17, @tall)"
+            }
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "color": "#FFFF5252",
-        "style": "fillAndStroke",
-        "strokeWidth": "@cw * 0.035",
-        "textSize": "@th * ifElse(0.46, 0.38, @tall)"
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "clipRect": {
-           "left": "@wx0",
-           "top": "@wy1 - @th",
-           "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 4))) * @wdone",
-           "bottom": "@wy1"
-          }
-         },
-         {
-          "drawTextAnchored": {
-           "text": "@wgC",
-           "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
-           "y": "@wmd",
-           "panX": -1,
-           "panY": 0
-          }
-         },
-         {
-          "paint": {
-           "style": "fill",
-           "alpha": 1
-          }
-         },
-         {
-          "drawCircle": {
-           "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
-           "cy": "@wmd",
-           "radius": "@cw * ifElse(0.2, 0.13, @tall)"
-          }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "clipRect": {
+             "left": "@wx0",
+             "top": "@wy1 - @th",
+             "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 3))) * @wdone",
+             "bottom": "@wy1"
+            }
+           },
+           {
+            "paint": {
+             "style": "stroke"
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+             "cy": "@wmd",
+             "radius": "@cw * ifElse(0.27, 0.17, @tall)"
+            }
+           },
+           {
+            "paint": {
+             "style": "fill"
+            }
+           },
+           {
+            "drawSector": {
+             "left": "@wx0 + @cw * ifElse(0.7, 0.42, @tall) - @cw * ifElse(0.27, 0.17, @tall)",
+             "top": "@wmd - @cw * ifElse(0.27, 0.17, @tall)",
+             "right": "@wx0 + @cw * ifElse(0.7, 0.42, @tall) + @cw * ifElse(0.27, 0.17, @tall)",
+             "bottom": "@wmd + @cw * ifElse(0.27, 0.17, @tall)",
+             "startAngle": 90,
+             "sweepAngle": 180
+            }
+           }
+          ]
          }
-        ]
-       }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "clipRect": {
+             "left": "@wx0",
+             "top": "@wy1 - @th",
+             "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 4))) * @wdone",
+             "bottom": "@wy1"
+            }
+           },
+           {
+            "paint": {
+             "style": "stroke"
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+             "cy": "@wmd",
+             "radius": "@cw * ifElse(0.27, 0.17, @tall)"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@wx0 + @cw * ifElse(0.7, 0.42, @tall) - @cw * ifElse(0.27, 0.17, @tall) * 0.7",
+             "y1": "@wmd + @cw * ifElse(0.27, 0.17, @tall) * 0.7",
+             "x2": "@wx0 + @cw * ifElse(0.7, 0.42, @tall) + @cw * ifElse(0.27, 0.17, @tall) * 0.7",
+             "y2": "@wmd - @cw * ifElse(0.27, 0.17, @tall) * 0.7"
+            }
+           }
+          ]
+         }
+        }
+       ],
+       "else": []
+      },
+      {
+       "$if": "!theme.mono",
+       "then": [
+        {
+         "paint": {
+          "color": "@colors.sOnTime",
+          "style": "fillAndStroke",
+          "strokeWidth": "@cw * 0.035",
+          "textSize": "@th * ifElse(0.46, 0.38, @tall)"
+         }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "clipRect": {
+             "left": "@wx0",
+             "top": "@wy1 - @th",
+             "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 1))) * @wdone",
+             "bottom": "@wy1"
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "@wgC",
+             "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
+             "y": "@wmd",
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "style": "fill",
+             "alpha": 1
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+             "cy": "@wmd",
+             "radius": "@cw * ifElse(0.2, 0.13, @tall)"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "$if": "!theme.mono",
+       "then": [
+        {
+         "paint": {
+          "color": "@colors.sBoarding",
+          "style": "fillAndStroke",
+          "strokeWidth": "@cw * 0.035",
+          "textSize": "@th * ifElse(0.46, 0.38, @tall)"
+         }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "clipRect": {
+             "left": "@wx0",
+             "top": "@wy1 - @th",
+             "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 2))) * @wdone",
+             "bottom": "@wy1"
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "@wgC",
+             "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
+             "y": "@wmd",
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "style": "fill",
+             "alpha": "0.55 + 0.45 * sin(@t * 6)"
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+             "cy": "@wmd",
+             "radius": "@cw * ifElse(0.2, 0.13, @tall)"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "$if": "!theme.mono",
+       "then": [
+        {
+         "paint": {
+          "color": "@colors.sDelayed",
+          "style": "fillAndStroke",
+          "strokeWidth": "@cw * 0.035",
+          "textSize": "@th * ifElse(0.46, 0.38, @tall)"
+         }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "clipRect": {
+             "left": "@wx0",
+             "top": "@wy1 - @th",
+             "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 3))) * @wdone",
+             "bottom": "@wy1"
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "@wgC",
+             "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
+             "y": "@wmd",
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "style": "fill",
+             "alpha": 1
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+             "cy": "@wmd",
+             "radius": "@cw * ifElse(0.2, 0.13, @tall)"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "$if": "!theme.mono",
+       "then": [
+        {
+         "paint": {
+          "color": "@colors.sCanceled",
+          "style": "fillAndStroke",
+          "strokeWidth": "@cw * 0.035",
+          "textSize": "@th * ifElse(0.46, 0.38, @tall)"
+         }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "clipRect": {
+             "left": "@wx0",
+             "top": "@wy1 - @th",
+             "right": "@wx0 + (@wx1 - @wx0) * (1 - min(1, abs(@wcur - 4))) * @wdone",
+             "bottom": "@wy1"
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "@wgC",
+             "x": "@wx0 + @cw * ifElse(1.4, 0.85, @tall)",
+             "y": "@wmd",
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "style": "fill",
+             "alpha": 1
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@wx0 + @cw * ifElse(0.7, 0.42, @tall)",
+             "cy": "@wmd",
+             "radius": "@cw * ifElse(0.2, 0.13, @tall)"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "color": "@colors.outline",
+          "style": "stroke",
+          "strokeWidth": 1
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@wx0",
+          "top": "@sy",
+          "right": "@wx1",
+          "bottom": "@wy1",
+          "rx": "@cw * 0.12",
+          "ry": "@cw * 0.12"
+         }
+        }
+       ]
       },
       {
        "paint": {
-        "color": "#FF050506",
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.background",
+         "else": "@colors.split"
+        },
         "alpha": 1,
         "style": "fill"
        }
       },
       {
        "drawRect": {
-        "left": "@wx0",
+        "left": {
+         "$if": "theme.mono",
+         "then": "@wx0 - 1",
+         "else": "@wx0"
+        },
         "top": "@wmd - @cw * 0.03",
-        "right": "@wx1",
+        "right": {
+         "$if": "theme.mono",
+         "then": "@wx1 + 1",
+         "else": "@wx1"
+        },
         "bottom": "@wmd + @cw * 0.03"
        }
       }
@@ -1877,22 +2277,49 @@
     }
    },
    {
-    "paint": {
-     "color": "#FFF5B83D",
-     "style": "fill"
-    }
+    "$if": "theme.mono",
+    "then": [
+     {
+      "paint": {
+       "color": "@colors.onSurface",
+       "style": "stroke",
+       "strokeWidth": 1.5
+      }
+     },
+     {
+      "drawLine": {
+       "x1": 0,
+       "y1": "@tky",
+       "x2": "@W",
+       "y2": "@tky"
+      }
+     }
+    ],
+    "else": [
+     {
+      "paint": {
+       "color": "@colors.band",
+       "style": "fill"
+      }
+     },
+     {
+      "drawRect": {
+       "left": 0,
+       "top": "@tky",
+       "right": "@W",
+       "bottom": "@tky + @tk"
+      }
+     }
+    ]
    },
    {
-    "drawRect": {
-     "left": 0,
-     "top": "@tky",
-     "right": "@W",
-     "bottom": "@tky + @tk"
-    }
-   },
-   {
     "paint": {
-     "color": "#FF0A0B0D",
+     "color": {
+      "$if": "theme.mono",
+      "then": "@colors.onSurface",
+      "else": "@colors.bandText"
+     },
+     "style": "fill",
      "textSize": "@tk * 0.5"
     }
    },

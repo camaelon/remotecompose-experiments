@@ -10,6 +10,80 @@
   "variables": {
    "dir": 1,
    "taps": 0
+  },
+  "colors": {
+   "sky1": {
+    "light": "#FFF4F1FF",
+    "dark": "#FF16204A"
+   },
+   "sky2": {
+    "light": "#FFD9E2F7",
+    "dark": "#FF070A18"
+   },
+   "dust": {
+    "light": "#FF8E9BC4",
+    "dark": "#FFDDE4FF"
+   },
+   "halo": {
+    "light": "#FF2FB3A8",
+    "dark": "#FF40E0D0"
+   },
+   "planet1": {
+    "light": "#FF7FE3D2",
+    "dark": "#FF8CF2E0"
+   },
+   "planet2": {
+    "light": "#FF2C7FD0",
+    "dark": "#FF3487D6"
+   },
+   "planet3": {
+    "light": "#FF1E2D78",
+    "dark": "#FF22307A"
+   },
+   "ring": {
+    "light": "#FF34406E",
+    "dark": "#FFFFFFFF"
+   },
+   "orbit": {
+    "light": "#FF5B6AA0",
+    "dark": "#FFA8B8FF"
+   },
+   "star": {
+    "light": "#FFE09A00",
+    "dark": "#FFFFD36B"
+   },
+   "starCore": {
+    "light": "#FFFFF3C2",
+    "dark": "#FFFFF6D8"
+   },
+   "comet": {
+    "light": "#FFE53935",
+    "dark": "#FFFF5A4E"
+   },
+   "cometCore": {
+    "light": "#FFFFD5CC",
+    "dark": "#FFFFC4B0"
+   },
+   "player": {
+    "light": "#FF0E9FB8",
+    "dark": "#FF7DF9FF"
+   },
+   "playerCore": {
+    "light": "#FFFFFFFF",
+    "dark": "#FFFFFFFF"
+   },
+   "score": {
+    "light": "#FFFFFFFF",
+    "dark": "#FFF2F5FF"
+   },
+   "veil": {
+    "light": "#FFF4F1FF",
+    "dark": "#FF070A18"
+   },
+   "accent": {
+    "light": "#FFB86E00",
+    "dark": "#FFFFD36B"
+   }
   }
  },
  "root": {
@@ -86,182 +160,256 @@
     }
    },
    {
-    "paint": {
-     "ops": [
-      {
-       "radialGradient": {
-        "centerX": "@cx",
-        "centerY": "@cy",
-        "radius": "max(@W, @H) * 0.75",
-        "colors": [
-         "#FF16204A",
-         "#FF070A18"
-        ]
-       }
+    "$if": "theme.mono",
+    "then": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.background"
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "drawRect": {
-     "left": 0,
-     "top": 0,
-     "right": "@W",
-     "bottom": "@H"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "shader": 0
-      },
-      {
-       "color": "#FFDDE4FF"
+     },
+     {
+      "drawRect": {
+       "left": 0,
+       "top": 0,
+       "right": "@W",
+       "bottom": "@H"
       }
-     ]
-    }
-   },
-   {
-    "loop": {
-     "index": "i",
-     "from": 0,
-     "until": 70,
-     "commands": [
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": "0.25 + 0.25 * sin(@t * (1 + i % 3) + i)"
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.onSurface"
+        },
+        {
+         "style": "stroke"
+        },
+        {
+         "strokeWidth": "@u * 0.008"
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@cx",
+       "cy": "@cy",
+       "radius": "@Ro * 0.44"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.muted"
+        },
+        {
+         "strokeWidth": "@u * 0.004"
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@cx",
+       "cy": "@cy",
+       "radius": "@Ro"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "style": "fill"
+        }
+       ]
+      }
+     }
+    ],
+    "else": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "radialGradient": {
+          "centerX": "@cx",
+          "centerY": "@cy",
+          "radius": "max(@W, @H) * 0.75",
+          "colors": [
+           "@colors.sky1",
+           "@colors.sky2"
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "fract(sin(i * 12.9898) * 43758.547) * @W",
-        "cy": "fract(sin(i * 78.233) * 12543.31) * @H",
-        "radius": "0.6 + (i % 4) * 0.35"
-       }
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "alpha": 1
+     },
+     {
+      "drawRect": {
+       "left": 0,
+       "top": 0,
+       "right": "@W",
+       "bottom": "@H"
       }
-     ]
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FF40E0D0"
-      },
-      {
-       "alpha": 0.13
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "shader": 0
+        },
+        {
+         "color": "@colors.dust"
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@cx",
-     "cy": "@cy",
-     "radius": "@Ro * 0.56"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "alpha": 1
+     },
+     {
+      "loop": {
+       "index": "i",
+       "from": 0,
+       "until": 70,
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "0.25 + 0.25 * sin(@t * (1 + i % 3) + i)"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "fract(sin(i * 12.9898) * 43758.547) * @W",
+          "cy": "fract(sin(i * 78.233) * 12543.31) * @H",
+          "radius": "0.6 + (i % 4) * 0.35"
+         }
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "radialGradient": {
-        "centerX": "@cx - @Ro * 0.14",
-        "centerY": "@cy - @Ro * 0.16",
-        "radius": "@Ro * 0.5",
-        "colors": [
-         "#FF8CF2E0",
-         "#FF3487D6",
-         "#FF22307A"
-        ]
-       }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.halo"
+        },
+        {
+         "alpha": 0.16
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@cx",
-     "cy": "@cy",
-     "radius": "@Ro * 0.44"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "shader": 0
-      },
-      {
-       "color": "#1FFFFFFF"
-      },
-      {
-       "style": "stroke"
-      },
-      {
-       "strokeWidth": "@u * 0.006"
+     },
+     {
+      "drawCircle": {
+       "cx": "@cx",
+       "cy": "@cy",
+       "radius": "@Ro * 0.56"
       }
-     ]
-    }
-   },
-   {
-    "drawOval": {
-     "left": "@cx - @Ro * 0.72",
-     "top": "@cy - @Ro * 0.12",
-     "right": "@cx + @Ro * 0.72",
-     "bottom": "@cy + @Ro * 0.12"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "color": "#40A8B8FF"
-      },
-      {
-       "strokeWidth": "@u * 0.004"
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "alpha": 1
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@cx",
-     "cy": "@cy",
-     "radius": "@Ro"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "style": "fill"
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "radialGradient": {
+          "centerX": "@cx - @Ro * 0.14",
+          "centerY": "@cy - @Ro * 0.16",
+          "radius": "@Ro * 0.5",
+          "colors": [
+           "@colors.planet1",
+           "@colors.planet2",
+           "@colors.planet3"
+          ]
+         }
+        }
+       ]
       }
-     ]
-    }
+     },
+     {
+      "drawCircle": {
+       "cx": "@cx",
+       "cy": "@cy",
+       "radius": "@Ro * 0.44"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "shader": 0
+        },
+        {
+         "color": "@colors.ring"
+        },
+        {
+         "alpha": 0.35
+        },
+        {
+         "style": "stroke"
+        },
+        {
+         "strokeWidth": "@u * 0.006"
+        }
+       ]
+      }
+     },
+     {
+      "drawOval": {
+       "left": "@cx - @Ro * 0.72",
+       "top": "@cy - @Ro * 0.12",
+       "right": "@cx + @Ro * 0.72",
+       "bottom": "@cy + @Ro * 0.12"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.orbit"
+        },
+        {
+         "alpha": 0.45
+        },
+        {
+         "strokeWidth": "@u * 0.004"
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@cx",
+       "cy": "@cy",
+       "radius": "@Ro"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "style": "fill"
+        },
+        {
+         "alpha": 1
+        }
+       ]
+      }
+     }
+    ]
    },
    {
     "createParticles": {
@@ -387,305 +535,469 @@
     }
    },
    {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FFFFD36B"
-      },
-      {
-       "alpha": "0.18 * @play + 0.08"
+    "variable": {
+     "name": "over",
+     "value": "(1 - @play) * step(@taps, 0.5)"
+    }
+   },
+   {
+    "variable": {
+     "name": "start",
+     "value": "(1 - @play) * step(0.5, @taps)"
+    }
+   },
+   {
+    "$if": "theme.mono",
+    "then": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.onSurface"
+        },
+        {
+         "style": "stroke"
+        },
+        {
+         "strokeWidth": "@u * 0.006"
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@sx",
-     "cy": "@sy",
-     "radius": "@sr * 2.4"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "alpha": 1
+     },
+     {
+      "drawCircle": {
+       "cx": "@sx",
+       "cy": "@sy",
+       "radius": "@sr"
       }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@sx",
-     "cy": "@sy",
-     "radius": "@sr * (1 + 0.12 * sin(@t * (6 + 14 * (1 - lf))))"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FFFFF6D8"
+     },
+     {
+      "drawArc": {
+       "left": "@sx - @sr * 1.9",
+       "top": "@sy - @sr * 1.9",
+       "right": "@sx + @sr * 1.9",
+       "bottom": "@sy + @sr * 1.9",
+       "startAngle": -90,
+       "sweepAngle": "360 * lf * @play"
       }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@sx",
-     "cy": "@sy",
-     "radius": "@sr * 0.45"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FFFFD36B"
-      },
-      {
-       "style": "stroke"
-      },
-      {
-       "strokeWidth": "@u * 0.007"
-      },
-      {
-       "strokeCap": "round"
-      },
-      {
-       "alpha": "0.9 * @play"
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "style": "fill"
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "drawArc": {
-     "left": "@sx - @sr * 1.9",
-     "top": "@sy - @sr * 1.9",
-     "right": "@sx + @sr * 1.9",
-     "bottom": "@sy + @sr * 1.9",
-     "startAngle": -90,
-     "sweepAngle": "360 * lf"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "alpha": "max(0, 1 - ct * 2.5)"
-      },
-      {
-       "strokeWidth": "@u * 0.006"
+     },
+     {
+      "drawCircle": {
+       "cx": "@sx",
+       "cy": "@sy",
+       "radius": "@sr * 0.35"
       }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@qx",
-     "cy": "@qy",
-     "radius": "@sr + ct * @u * 0.25"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "style": "fill"
-      },
-      {
-       "textSize": "@u * 0.05"
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "style": "stroke"
+        },
+        {
+         "strokeWidth": "@u * 0.004"
+        },
+        {
+         "alpha": "max(0, 1 - ct * 2.5)"
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "drawTextAnchored": {
-     "text": "+1",
-     "x": "@qx",
-     "y": "@qy - @u * 0.05 - ct * @u * 0.12",
-     "panX": 0,
-     "panY": 0
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FFFF5A4E"
+     },
+     {
+      "drawCircle": {
+       "cx": "@qx",
+       "cy": "@qy",
+       "radius": "@sr + ct * @u * 0.25"
       }
-     ]
-    }
-   },
-   {
-    "loop": {
-     "index": "j",
-     "from": 1,
-     "until": 10,
-     "commands": [
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": "0.5 - j * 0.05"
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "style": "fill"
+        },
+        {
+         "alpha": 1
+        }
+       ]
+      }
+     },
+     {
+      "drawRect": {
+       "left": "@hx - @sr * 0.85",
+       "top": "@hy - @sr * 0.85",
+       "right": "@hx + @sr * 0.85",
+       "bottom": "@hy + @sr * 0.85"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.background"
+        }
+       ]
+      }
+     },
+     {
+      "drawRect": {
+       "left": "@hx - @sr * 0.35",
+       "top": "@hy - @sr * 0.35",
+       "right": "@hx + @sr * 0.35",
+       "bottom": "@hy + @sr * 0.35"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.onSurface"
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@px",
+       "cy": "@py",
+       "radius": "@sr * 0.9"
+      }
+     }
+    ],
+    "else": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.star"
+        },
+        {
+         "alpha": "0.18 * @play + 0.08"
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@sx",
+       "cy": "@sy",
+       "radius": "@sr * 2.4"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "alpha": 1
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@sx",
+       "cy": "@sy",
+       "radius": "@sr * (1 + 0.12 * sin(@t * (6 + 14 * (1 - lf))))"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.starCore"
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@sx",
+       "cy": "@sy",
+       "radius": "@sr * 0.45"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.star"
+        },
+        {
+         "style": "stroke"
+        },
+        {
+         "strokeWidth": "@u * 0.007"
+        },
+        {
+         "strokeCap": "round"
+        },
+        {
+         "alpha": "0.9 * @play"
+        }
+       ]
+      }
+     },
+     {
+      "drawArc": {
+       "left": "@sx - @sr * 1.9",
+       "top": "@sy - @sr * 1.9",
+       "right": "@sx + @sr * 1.9",
+       "bottom": "@sy + @sr * 1.9",
+       "startAngle": -90,
+       "sweepAngle": "360 * lf"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "alpha": "max(0, 1 - ct * 2.5)"
+        },
+        {
+         "strokeWidth": "@u * 0.006"
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@qx",
+       "cy": "@qy",
+       "radius": "@sr + ct * @u * 0.25"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "style": "fill"
+        },
+        {
+         "textSize": "@u * 0.05"
+        }
+       ]
+      }
+     },
+     {
+      "drawTextAnchored": {
+       "text": "+1",
+       "x": "@qx",
+       "y": "@qy - @u * 0.05 - ct * @u * 0.12",
+       "panX": 0,
+       "panY": 0
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.comet"
+        }
+       ]
+      }
+     },
+     {
+      "loop": {
+       "index": "j",
+       "from": 1,
+       "until": 10,
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "0.5 - j * 0.05"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "@cx + @Ro * cos(ha - hd * j * 0.05)",
-        "cy": "@cy + @Ro * sin(ha - hd * j * 0.05)",
-        "radius": "@sr * (0.9 - j * 0.08)"
-       }
-      }
-     ]
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "alpha": 0.25
-      }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@hx",
-     "cy": "@hy",
-     "radius": "@sr * 1.9"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "alpha": 1
-      }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@hx",
-     "cy": "@hy",
-     "radius": "@sr * 0.95"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FFFFC4B0"
-      }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@hx - @sr * 0.25",
-     "cy": "@hy - @sr * 0.25",
-     "radius": "@sr * 0.35"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FF7DF9FF"
-      }
-     ]
-    }
-   },
-   {
-    "loop": {
-     "index": "j",
-     "from": 1,
-     "until": 12,
-     "commands": [
-      {
-       "paint": {
-        "ops": [
-         {
-          "alpha": "(0.55 - j * 0.045) * @play"
+        },
+        {
+         "drawCircle": {
+          "cx": "@cx + @Ro * cos(ha - hd * j * 0.05)",
+          "cy": "@cy + @Ro * sin(ha - hd * j * 0.05)",
+          "radius": "@sr * (0.9 - j * 0.08)"
          }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "@cx + @Ro * cos(th - @dir * j * 0.035)",
-        "cy": "@cy + @Ro * sin(th - @dir * j * 0.035)",
-        "radius": "@sr * (0.8 - j * 0.05)"
-       }
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "alpha": 0.25
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "alpha": 0.25
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@px",
-     "cy": "@py",
-     "radius": "@sr * 2"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "alpha": 1
+     },
+     {
+      "drawCircle": {
+       "cx": "@hx",
+       "cy": "@hy",
+       "radius": "@sr * 1.9"
       }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@px",
-     "cy": "@py",
-     "radius": "@sr * 0.9"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FFFFFFFF"
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "alpha": 1
+        }
+       ]
       }
-     ]
-    }
-   },
-   {
-    "drawCircle": {
-     "cx": "@px",
-     "cy": "@py",
-     "radius": "@sr * 0.45"
-    }
-   },
-   {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FFF2F5FF"
-      },
-      {
-       "textSize": "@u * 0.11"
-      },
-      {
-       "alpha": "@play"
+     },
+     {
+      "drawCircle": {
+       "cx": "@hx",
+       "cy": "@hy",
+       "radius": "@sr * 0.95"
       }
-     ]
-    }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.cometCore"
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@hx - @sr * 0.25",
+       "cy": "@hy - @sr * 0.25",
+       "radius": "@sr * 0.35"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.player"
+        }
+       ]
+      }
+     },
+     {
+      "loop": {
+       "index": "j",
+       "from": 1,
+       "until": 12,
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "(0.55 - j * 0.045) * @play"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@cx + @Ro * cos(th - @dir * j * 0.035)",
+          "cy": "@cy + @Ro * sin(th - @dir * j * 0.035)",
+          "radius": "@sr * (0.8 - j * 0.05)"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "alpha": 0.25
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@px",
+       "cy": "@py",
+       "radius": "@sr * 2"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "alpha": 1
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@px",
+       "cy": "@py",
+       "radius": "@sr * 0.9"
+      }
+     },
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.playerCore"
+        }
+       ]
+      }
+     },
+     {
+      "drawCircle": {
+       "cx": "@px",
+       "cy": "@py",
+       "radius": "@sr * 0.45"
+      }
+     }
+    ]
+   },
+   {
+    "$if": "theme.mono",
+    "then": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.onSurface"
+        },
+        {
+         "textSize": "@u * 0.11"
+        },
+        {
+         "alpha": "@play"
+        }
+       ]
+      }
+     }
+    ],
+    "else": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.score"
+        },
+        {
+         "textSize": "@u * 0.11"
+        },
+        {
+         "alpha": "@play"
+        }
+       ]
+      }
+     }
+    ]
    },
    {
     "drawTextAnchored": {
@@ -706,7 +1018,7 @@
     "paint": {
      "ops": [
       {
-       "color": "#FF8C96C8"
+       "color": "@colors.muted"
       },
       {
        "textSize": "@u * 0.04"
@@ -740,7 +1052,7 @@
     "paint": {
      "ops": [
       {
-       "alpha": "@play * 0.8"
+       "alpha": "@play * 0.9"
       }
      ]
     }
@@ -755,16 +1067,35 @@
     }
    },
    {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FF070A18"
-      },
-      {
-       "alpha": "(1 - @play) * 0.6"
+    "$if": "theme.mono",
+    "then": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.background"
+        },
+        {
+         "alpha": "(1 - @play) * 0.8"
+        }
+       ]
       }
-     ]
-    }
+     }
+    ],
+    "else": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.veil"
+        },
+        {
+         "alpha": "(1 - @play) * 0.7"
+        }
+       ]
+      }
+     }
+    ]
    },
    {
     "drawRect": {
@@ -775,22 +1106,10 @@
     }
    },
    {
-    "variable": {
-     "name": "over",
-     "value": "(1 - @play) * step(@taps, 0.5)"
-    }
-   },
-   {
-    "variable": {
-     "name": "start",
-     "value": "(1 - @play) * step(0.5, @taps)"
-    }
-   },
-   {
     "paint": {
      "ops": [
       {
-       "color": "#FFF2F5FF"
+       "color": "@colors.onSurface"
       },
       {
        "textSize": "@u * 0.085"
@@ -814,7 +1133,7 @@
     "paint": {
      "ops": [
       {
-       "color": "#FFB8C2F0"
+       "color": "@colors.muted"
       },
       {
        "textSize": "@u * 0.042"
@@ -836,7 +1155,7 @@
    },
    {
     "drawTextAnchored": {
-     "text": "Dodge the red comet. Tap to reverse.",
+     "text": "Dodge the comet. Tap to reverse.",
      "x": "@cx",
      "y": "@cy + @u * 0.09",
      "panX": 0,
@@ -844,19 +1163,41 @@
     }
    },
    {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FFFFD36B"
-      },
-      {
-       "textSize": "@u * 0.05"
-      },
-      {
-       "alpha": "@start * (0.7 + 0.3 * sin(@t * 4))"
+    "$if": "theme.mono",
+    "then": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.onSurface"
+        },
+        {
+         "textSize": "@u * 0.05"
+        },
+        {
+         "alpha": "@start"
+        }
+       ]
       }
-     ]
-    }
+     }
+    ],
+    "else": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.accent"
+        },
+        {
+         "textSize": "@u * 0.05"
+        },
+        {
+         "alpha": "@start * (0.7 + 0.3 * sin(@t * 4))"
+        }
+       ]
+      }
+     }
+    ]
    },
    {
     "drawTextAnchored": {
@@ -871,7 +1212,7 @@
     "paint": {
      "ops": [
       {
-       "color": "#FFF2F5FF"
+       "color": "@colors.onSurface"
       },
       {
        "textSize": "@u * 0.085"
@@ -895,7 +1236,7 @@
     "paint": {
      "ops": [
       {
-       "color": "#FFB8C2F0"
+       "color": "@colors.muted"
       },
       {
        "textSize": "@u * 0.05"
@@ -926,16 +1267,35 @@
     }
    },
    {
-    "paint": {
-     "ops": [
-      {
-       "color": "#FFFFD36B"
-      },
-      {
-       "alpha": "@over * step(dT, 0.7) * (0.7 + 0.3 * sin(@t * 4))"
+    "$if": "theme.mono",
+    "then": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.onSurface"
+        },
+        {
+         "alpha": "@over * step(dT, 0.7)"
+        }
+       ]
       }
-     ]
-    }
+     }
+    ],
+    "else": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.accent"
+        },
+        {
+         "alpha": "@over * step(dT, 0.7) * (0.7 + 0.3 * sin(@t * 4))"
+        }
+       ]
+      }
+     }
+    ]
    },
    {
     "drawTextAnchored": {

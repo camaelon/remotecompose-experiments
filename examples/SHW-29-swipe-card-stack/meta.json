@@ -7,7 +7,7 @@
  "prompt": "Make a Tinder-style card stack of travel destinations with drawn art: I drag a card sideways and it rotates with my finger, if I fling it past a threshold it flies off left or right with a Like/Nope stamp, the next card scales up from behind, and it counts my likes. It should feel physical: fling and spring back.",
  "level": 5,
  "family": "SHW",
- "hand_built": "The library has no swipeable stack; the gesture state machine (press, release speed, fling-or-spring decision, flight, the stack's lift) and the card art are written by hand.",
+ "hand_built": "The library has no swipeable stack: the gesture state machine (press, release speed, fling-or-spring decision, flight, the stack's lift) and the card art are hand-built; the Pass and Save buttons are the library IconButton (outlined, 64 dp).",
  "capabilities": {
   "primary": [
    "input.press",
@@ -59,7 +59,8 @@
   "Draw a stack with one loop: i = 0..3 is depth 2, 1, 0 and the card in flight; each depth's scale, offset and dimming come from k + a shared lift that follows the drag (and finishes after a fling)",
   "Paint five different scenes from one body: per-card float arrays drive layer alphas (night, warm, day skies, aurora, sea, landmarks) and ridge parameters for pathExpression",
   "Close a pathExpression ridge to the bottom by running a[0] slightly past 0..1 with x clamped and y = ifElse(card height, ridge, inside)",
-  "Fire wakeIn only while a card moves: 0.016 + 3600 · step(t, 1.4)"
+  "Fire wakeIn only while a card moves: 0.016 + 3600 · step(t, 1.4)",
+  "Give a picture-led card stack four looks: light and dark keep the painted art and theme only the page, header, counters and buttons; mono redraws each scene as hidden-line art (fill each ridge with the page colour, stroke it in onSurface) with outlined stamps and card edges instead of colour"
  ],
  "pitfalls": [
   "Modifier actions are parsed before the canvas commands and cannot read tree variables (componentWidth(), touchExpression values): keep the gesture state in root variables and do geometry in the tree",
@@ -69,51 +70,57 @@
   "step(x, edge) is strict: step(1, 1) is 0, so test a direction with step(@dir, 0.5)",
   "A computed colour is evaluated once per frame, not per loop iteration: vary paint alpha and gradients by the loop index instead",
   "Taps are ignored for 0.3 s after a fling so two cards are never in flight",
-  "Java's addDataList drops the list id, so textLookup cannot reach it from JSON: each card's texts are five drawTextAnchored per field, the right one shown by alpha 1 - min(1, |c - j|)"
+  "Java's addDataList drops the list id, so textLookup cannot reach it from JSON: each card's texts are five drawTextAnchored per field, the right one shown by alpha 1 - min(1, |c - j|)",
+  "Numbers that a component reads (IconButton's onClick) belong in resources.variables, not root variable commands (U57)"
  ],
  "snippets": [
   {
-   "pointer": "/root/16/box/children/0/canvas/modifiers/3",
+   "pointer": "/root/0/box/children/0/canvas/modifiers/3",
    "shows": "input.press",
    "note": "release: distance, speed, fling-or-spring decision, counts"
   },
   {
-   "pointer": "/root/16/box/children/0/canvas/modifiers/2",
+   "pointer": "/root/0/box/children/0/canvas/modifiers/2",
    "shows": "input.press",
    "note": "press: where and when the finger went down"
   },
   {
-   "pointer": "/root/16/box/children/0/canvas/commands/11",
+   "pointer": "/root/0/box/children/0/canvas/commands/11",
    "shows": "time.animation",
    "note": "the damped spring of the time since release"
   },
   {
-   "pointer": "/root/16/box/children/0/canvas/commands/16",
+   "pointer": "/root/0/box/children/0/canvas/commands/16",
    "shows": "time.animation",
    "note": "the flight: release offset plus speed and acceleration"
   },
   {
-   "pointer": "/root/16/box/children/0/canvas/commands/51",
+   "pointer": "/root/0/box/children/0/canvas/commands/52",
    "shows": "data.loop",
    "note": "four iterations: three stacked cards and the one in flight"
   },
   {
-   "pointer": "/root/16/box/children/0/canvas/commands/51/loop/commands/8/save/commands/42",
+   "pointer": "/root/0/box/children/0/canvas/commands/52/loop/commands/8/save/commands/4/else/62",
    "shows": "draw.path",
    "note": "a ridge from per-card arrays, closed to the card bottom"
   },
   {
-   "pointer": "/root/16/box/children/0/canvas/commands/51/loop/commands/8/save/commands/129",
+   "pointer": "/root/0/box/children/0/canvas/commands/52/loop/commands/8/save/commands/4/then/46",
+   "shows": "draw.path",
+   "note": "mono: the same ridge as a hidden-line drawing (page-colour fill, onSurface stroke)"
+  },
+  {
+   "pointer": "/root/0/box/children/0/canvas/commands/52/loop/commands/8/save/commands/5",
    "shows": "expr.select",
    "note": "the LIKE stamp fades in with the drag"
   },
   {
-   "pointer": "/root/16/box/children/1/row/children/1/box/modifiers/4",
+   "pointer": "/root/0/box/children/1/row/children/1",
    "shows": "input.tap",
-   "note": "Save button: the same fling, guarded while a card flies"
+   "note": "Save: library IconButton running the same fling, guarded while a card flies"
   },
   {
-   "pointer": "/root/16/box/children/0/canvas/commands/22",
+   "pointer": "/root/0/box/children/0/canvas/commands/22",
    "shows": "anim.trigger",
    "note": "frames only while a card moves"
   }
@@ -124,9 +131,10 @@
   "touch": true
  },
  "check": {
-  "describe": "Rest: Lofoten on top (night sky, aurora, red cabins), Kyoto and Santorini peeking below, 0 passed / 0 saved. Dragging right by 90 px tilts the card, fades in LIKE and lifts Kyoto. A flick (70 px in 80 ms) flies Lofoten off to the right and SAVED reads 1; a slow 65 px drag springs back with a small overshoot. Dragging Kyoto left shows NOPE over Santorini. The Pass and Save buttons fling the top card the same way. 320x568 and 700x1000 scale the card as one design.",
+  "describe": "Rest: Lofoten on top (night sky, aurora, red cabins), Kyoto and Santorini peeking below, 0 passed / 0 saved. Dragging right by 90 px tilts the card, fades in LIKE and lifts Kyoto. A flick (70 px in 80 ms) flies Lofoten off to the right and SAVED reads 1; a slow 65 px drag springs back with a small overshoot. Dragging Kyoto left shows NOPE over Santorini. The Pass and Save buttons fling the top card the same way. 320x568 and 700x1000 scale the card as one design. Light: a pale page with dark header text and the painted cards; dark: the night page. Mono (dark and light): the scenes become hidden-line drawings in one ink, stamps and card edges outlined, buttons outlined.",
   "render": {
-   "clock": "2026-11-02T10:00:00"
+   "clock": "2026-11-02T10:00:00",
+   "theme": "dark"
   },
   "interact": [
    {
@@ -174,7 +182,86 @@
   ],
   "renders": [
    {
-    "name": "drag-like",
+    "name": "light",
+    "theme": "light",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 230,
+      "y": 310
+     },
+     {
+      "t": 0.5,
+      "type": "move",
+      "x": 270,
+      "y": 320
+     }
+    ],
+    "duration": 0.55
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 230,
+      "y": 310
+     },
+     {
+      "t": 0.5,
+      "type": "move",
+      "x": 270,
+      "y": 320
+     }
+    ],
+    "duration": 0.55
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "clock": "2026-11-02T10:00:00",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 230,
+      "y": 310
+     },
+     {
+      "t": 0.5,
+      "type": "move",
+      "x": 270,
+      "y": 320
+     }
+    ],
+    "duration": 0.55
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
     "clock": "2026-11-02T10:00:00",
     "touch_events": [
      {
@@ -221,7 +308,8 @@
       "y": 290
      }
     ],
-    "duration": 0.3
+    "duration": 0.3,
+    "theme": "dark"
    },
    {
     "name": "after-fling",
@@ -246,7 +334,8 @@
       "y": 290
      }
     ],
-    "duration": 1.2
+    "duration": 1.2,
+    "theme": "dark"
    },
    {
     "name": "spring-back",
@@ -271,7 +360,8 @@
       "y": 290
      }
     ],
-    "duration": 0.32
+    "duration": 0.32,
+    "theme": "dark"
    },
    {
     "name": "nope",
@@ -314,7 +404,8 @@
       "y": 330
      }
     ],
-    "duration": 1.15
+    "duration": 1.15,
+    "theme": "dark"
    },
    {
     "name": "buttons",
@@ -333,19 +424,22 @@
       "y": 660
      }
     ],
-    "duration": 1.6
+    "duration": 1.6,
+    "theme": "dark"
    },
    {
     "name": "small-phone",
     "clock": "2026-11-02T10:00:00",
     "width": 320,
-    "height": 568
+    "height": 568,
+    "theme": "light"
    },
    {
     "name": "tablet",
     "clock": "2026-11-02T10:00:00",
     "width": 700,
-    "height": 1000
+    "height": 1000,
+    "theme": "dark"
    }
   ]
  },
@@ -358,54 +452,66 @@
   "VAR-06"
  ],
  "derived": {
+  "components": [
+   "IconButton"
+  ],
+  "component_instances": 2,
+  "component_modes": {
+   "IconButton": "expand"
+  },
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 13970,
+  "bytes": 15733,
   "header": {
    "width": 360,
    "height": 720
   },
-  "op_count": 556,
+  "op_count": 685,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 3,
    "ANIMATED_FLOAT": 216,
    "CLIP_PATH": 1,
+   "COLOR_CONSTANT": 22,
+   "COLOR_EXPRESSIONS": 22,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 3,
    "DATA_FLOAT": 18,
    "DATA_TEXT": 31,
-   "DRAW_CIRCLE": 6,
+   "DRAW_CIRCLE": 4,
    "DRAW_LINE": 4,
    "DRAW_PATH": 11,
    "DRAW_RECT": 15,
    "DRAW_ROUND_RECT": 5,
    "DRAW_TEXT_ANCHOR": 28,
    "DataListFloat": 17,
+   "GraphicsLayerModifier": 2,
    "HEADER": 1,
-   "LAYOUT_BOX": 3,
+   "LAYOUT_BOX": 7,
    "LAYOUT_CANVAS": 3,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 1,
-   "LayoutComponentContent": 7,
-   "LoopOperation": 5,
+   "LayoutComponentContent": 11,
+   "LoopOperation": 27,
    "MATRIX_RESTORE": 3,
    "MATRIX_ROTATE": 3,
    "MATRIX_SAVE": 3,
    "MATRIX_SCALE": 1,
-   "MATRIX_TRANSLATE": 4,
-   "MODIFIER_BACKGROUND": 2,
+   "MATRIX_TRANSLATE": 2,
+   "MODIFIER_BACKGROUND": 5,
    "MODIFIER_CLICK": 2,
-   "MODIFIER_HEIGHT": 7,
-   "MODIFIER_PADDING": 1,
+   "MODIFIER_HEIGHT": 9,
+   "MODIFIER_PADDING": 5,
    "MODIFIER_TOUCH_DOWN": 1,
    "MODIFIER_TOUCH_UP": 1,
-   "MODIFIER_WIDTH": 7,
-   "NAMED_VARIABLE": 17,
+   "MODIFIER_WIDTH": 9,
+   "NAMED_VARIABLE": 28,
    "PAINT_VALUES": 70,
    "PATH_CREATE": 1,
    "PATH_DATA": 1,
    "PathAppend": 9,
    "PathExpression": 5,
-   "RoundedClipRectModifierOperation": 2,
+   "RoundedClipRectModifierOperation": 4,
+   "THEME": 33,
    "TextFromFloat": 2,
    "ValueFloatExpressionChangeActionOperation": 32,
    "WAKE_IN": 1
@@ -423,6 +529,11 @@
     ]
    },
    {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
     "name": "cabins",
     "type": "float_array",
     "value": [
@@ -432,6 +543,16 @@
      0,
      0
     ]
+   },
+   {
+    "name": "cardShadow",
+    "type": "color",
+    "value": "#55000000"
+   },
+   {
+    "name": "cardShadow2",
+    "type": "color",
+    "value": "#33000000"
    },
    {
     "name": "day",
@@ -445,6 +566,16 @@
     ]
    },
    {
+    "name": "glow",
+    "type": "color",
+    "value": "#FF1F1B2E"
+   },
+   {
+    "name": "glow0",
+    "type": "color",
+    "value": "#000F1115"
+   },
+   {
     "name": "houses",
     "type": "float_array",
     "value": [
@@ -454,6 +585,16 @@
      0,
      0
     ]
+   },
+   {
+    "name": "like",
+    "type": "color",
+    "value": "#FF3DDC97"
+   },
+   {
+    "name": "likeStamp",
+    "type": "color",
+    "value": "#FF3DDC97"
    },
    {
     "name": "lw",
@@ -467,6 +608,11 @@
     ]
    },
    {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
     "name": "night",
     "type": "float_array",
     "value": [
@@ -476,6 +622,21 @@
      0,
      0
     ]
+   },
+   {
+    "name": "nope",
+    "type": "color",
+    "value": "#FFFF5A6A"
+   },
+   {
+    "name": "nopeStamp",
+    "type": "color",
+    "value": "#FFFF5A6A"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
    },
    {
     "name": "ra1",
@@ -653,10 +814,9 @@
   "audit": {
    "error": 0,
    "warning": 0,
-   "info": 3
+   "info": 2
   },
   "audit_findings": [
-   "info: hardcoded_colors",
    "info: text_in_canvas",
    "info: expression_entries"
   ],
@@ -669,31 +829,655 @@
   },
   "java_identical": true,
   "renders": {
-   "drag-like": {
-    "render": "render-drag-like.png",
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 13808,
+    "component_modes": {
+     "IconButton": "expand"
+    },
+    "op_count": 566,
+    "host_variables": [
+     {
+      "name": "aur",
+      "type": "float_array",
+      "value": [
+       1,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "cabins",
+      "type": "float_array",
+      "value": [
+       1,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "cardShadow",
+      "type": "color",
+      "value": "#55000000"
+     },
+     {
+      "name": "cardShadow2",
+      "type": "color",
+      "value": "#33000000"
+     },
+     {
+      "name": "day",
+      "type": "float_array",
+      "value": [
+       0,
+       0,
+       0.800000012,
+       0,
+       0.600000024
+      ]
+     },
+     {
+      "name": "glow",
+      "type": "color",
+      "value": "#FF1F1B2E"
+     },
+     {
+      "name": "glow0",
+      "type": "color",
+      "value": "#000F1115"
+     },
+     {
+      "name": "houses",
+      "type": "float_array",
+      "value": [
+       0,
+       0,
+       1,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "like",
+      "type": "color",
+      "value": "#FF3DDC97"
+     },
+     {
+      "name": "likeStamp",
+      "type": "color",
+      "value": "#FF3DDC97"
+     },
+     {
+      "name": "lw",
+      "type": "float_array",
+      "value": [
+       0,
+       0.300000012,
+       0.349999994,
+       0.949999988,
+       0.150000006
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "night",
+      "type": "float_array",
+      "value": [
+       0.920000017,
+       0.150000006,
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "nope",
+      "type": "color",
+      "value": "#FFFF5A6A"
+     },
+     {
+      "name": "nopeStamp",
+      "type": "color",
+      "value": "#FFFF5A6A"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "ra1",
+      "type": "float_array",
+      "value": [
+       0.159999996,
+       0.0500000007,
+       0.0500000007,
+       0.0299999993,
+       0.219999999,
+       0.100000001,
+       0.0399999991,
+       0.100000001,
+       0.0500000007,
+       0.0599999987,
+       0.0500000007,
+       0.0299999993,
+       0.0599999987,
+       0.0399999991,
+       0.0299999993
+      ]
+     },
+     {
+      "name": "ra2",
+      "type": "float_array",
+      "value": [
+       0.0599999987,
+       0.0199999996,
+       0.00999999978,
+       0.00999999978,
+       0.0700000003,
+       0.0399999991,
+       0.0149999997,
+       0.0299999993,
+       0.0199999996,
+       0.0199999996,
+       0.0199999996,
+       0.00999999978,
+       0.0199999996,
+       0.00999999978,
+       0.00999999978
+      ]
+     },
+     {
+      "name": "rb",
+      "type": "float_array",
+      "value": [
+       0.560000002,
+       0.600000024,
+       0.620000005,
+       0.579999983,
+       0.5,
+       0.660000026,
+       0.680000007,
+       0.699999988,
+       0.660000026,
+       0.620000005,
+       0.779999971,
+       0.800000012,
+       0.680000007,
+       0.75999999,
+       0.800000012
+      ]
+     },
+     {
+      "name": "rf1",
+      "type": "float_array",
+      "value": [
+       9,
+       3,
+       2.20000005,
+       2,
+       7.5,
+       11,
+       4,
+       3,
+       2.5999999,
+       5,
+       6,
+       5,
+       2,
+       1.60000002,
+       3
+      ]
+     },
+     {
+      "name": "rf2",
+      "type": "float_array",
+      "value": [
+       23,
+       11,
+       9,
+       7,
+       19,
+       27,
+       13,
+       10,
+       8,
+       14,
+       17,
+       15,
+       7,
+       5,
+       12
+      ]
+     },
+     {
+      "name": "sea",
+      "type": "float_array",
+      "value": [
+       0.300000012,
+       0,
+       1,
+       0,
+       0.699999988
+      ]
+     },
+     {
+      "name": "sunR",
+      "type": "float_array",
+      "value": [
+       0.0500000007,
+       0.109999999,
+       0.0799999982,
+       0.170000002,
+       0.0599999987
+      ]
+     },
+     {
+      "name": "sunX",
+      "type": "float_array",
+      "value": [
+       0.720000029,
+       0.300000012,
+       0.779999971,
+       0.5,
+       0.239999995
+      ]
+     },
+     {
+      "name": "sunY",
+      "type": "float_array",
+      "value": [
+       0.159999996,
+       0.360000014,
+       0.300000012,
+       0.419999987,
+       0.180000007
+      ]
+     },
+     {
+      "name": "torii",
+      "type": "float_array",
+      "value": [
+       0,
+       1,
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "warm",
+      "type": "float_array",
+      "value": [
+       0,
+       0.850000024,
+       0.349999994,
+       1,
+       0.25
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 13808,
+    "component_modes": {
+     "IconButton": "expand"
+    },
+    "op_count": 566,
+    "host_variables": [
+     {
+      "name": "aur",
+      "type": "float_array",
+      "value": [
+       1,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "cabins",
+      "type": "float_array",
+      "value": [
+       1,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "cardShadow",
+      "type": "color",
+      "value": "#26202838"
+     },
+     {
+      "name": "cardShadow2",
+      "type": "color",
+      "value": "#14202838"
+     },
+     {
+      "name": "day",
+      "type": "float_array",
+      "value": [
+       0,
+       0,
+       0.800000012,
+       0,
+       0.600000024
+      ]
+     },
+     {
+      "name": "glow",
+      "type": "color",
+      "value": "#FFE6E3F2"
+     },
+     {
+      "name": "glow0",
+      "type": "color",
+      "value": "#00F5F7FA"
+     },
+     {
+      "name": "houses",
+      "type": "float_array",
+      "value": [
+       0,
+       0,
+       1,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "like",
+      "type": "color",
+      "value": "#FF0E8A55"
+     },
+     {
+      "name": "likeStamp",
+      "type": "color",
+      "value": "#FF3DDC97"
+     },
+     {
+      "name": "lw",
+      "type": "float_array",
+      "value": [
+       0,
+       0.300000012,
+       0.349999994,
+       0.949999988,
+       0.150000006
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "night",
+      "type": "float_array",
+      "value": [
+       0.920000017,
+       0.150000006,
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "nope",
+      "type": "color",
+      "value": "#FFD0303F"
+     },
+     {
+      "name": "nopeStamp",
+      "type": "color",
+      "value": "#FFFF5A6A"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "ra1",
+      "type": "float_array",
+      "value": [
+       0.159999996,
+       0.0500000007,
+       0.0500000007,
+       0.0299999993,
+       0.219999999,
+       0.100000001,
+       0.0399999991,
+       0.100000001,
+       0.0500000007,
+       0.0599999987,
+       0.0500000007,
+       0.0299999993,
+       0.0599999987,
+       0.0399999991,
+       0.0299999993
+      ]
+     },
+     {
+      "name": "ra2",
+      "type": "float_array",
+      "value": [
+       0.0599999987,
+       0.0199999996,
+       0.00999999978,
+       0.00999999978,
+       0.0700000003,
+       0.0399999991,
+       0.0149999997,
+       0.0299999993,
+       0.0199999996,
+       0.0199999996,
+       0.0199999996,
+       0.00999999978,
+       0.0199999996,
+       0.00999999978,
+       0.00999999978
+      ]
+     },
+     {
+      "name": "rb",
+      "type": "float_array",
+      "value": [
+       0.560000002,
+       0.600000024,
+       0.620000005,
+       0.579999983,
+       0.5,
+       0.660000026,
+       0.680000007,
+       0.699999988,
+       0.660000026,
+       0.620000005,
+       0.779999971,
+       0.800000012,
+       0.680000007,
+       0.75999999,
+       0.800000012
+      ]
+     },
+     {
+      "name": "rf1",
+      "type": "float_array",
+      "value": [
+       9,
+       3,
+       2.20000005,
+       2,
+       7.5,
+       11,
+       4,
+       3,
+       2.5999999,
+       5,
+       6,
+       5,
+       2,
+       1.60000002,
+       3
+      ]
+     },
+     {
+      "name": "rf2",
+      "type": "float_array",
+      "value": [
+       23,
+       11,
+       9,
+       7,
+       19,
+       27,
+       13,
+       10,
+       8,
+       14,
+       17,
+       15,
+       7,
+       5,
+       12
+      ]
+     },
+     {
+      "name": "sea",
+      "type": "float_array",
+      "value": [
+       0.300000012,
+       0,
+       1,
+       0,
+       0.699999988
+      ]
+     },
+     {
+      "name": "sunR",
+      "type": "float_array",
+      "value": [
+       0.0500000007,
+       0.109999999,
+       0.0799999982,
+       0.170000002,
+       0.0599999987
+      ]
+     },
+     {
+      "name": "sunX",
+      "type": "float_array",
+      "value": [
+       0.720000029,
+       0.300000012,
+       0.779999971,
+       0.5,
+       0.239999995
+      ]
+     },
+     {
+      "name": "sunY",
+      "type": "float_array",
+      "value": [
+       0.159999996,
+       0.360000014,
+       0.300000012,
+       0.419999987,
+       0.180000007
+      ]
+     },
+     {
+      "name": "torii",
+      "type": "float_array",
+      "value": [
+       0,
+       1,
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "warm",
+      "type": "float_array",
+      "value": [
+       0,
+       0.850000024,
+       0.349999994,
+       1,
+       0.25
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-light.png",
     "render_findings": []
    },
    "fling": {
+    "theme": "dark",
     "render": "render-fling.png",
     "render_findings": []
    },
    "after-fling": {
+    "theme": "dark",
     "render": "render-after-fling.png",
     "render_findings": []
    },
    "spring-back": {
+    "theme": "dark",
     "render": "render-spring-back.png",
     "render_findings": []
    },
    "nope": {
+    "theme": "dark",
     "render": "render-nope.png",
     "render_findings": []
    },
    "buttons": {
+    "theme": "dark",
     "render": "render-buttons.png",
     "render_findings": []
    },
    "small-phone": {
+    "theme": "light",
     "render": "render-small-phone.png",
     "render_findings": [],
     "size": [
@@ -705,6 +1489,7 @@
     ]
    },
    "tablet": {
+    "theme": "dark",
     "render": "render-tablet.png",
     "render_findings": [],
     "size": [
@@ -717,6 +1502,8 @@
    }
   },
   "json_keys": [
+   "$if",
+   "IconButton",
    "alpha",
    "angle",
    "apiLevel",
@@ -726,9 +1513,12 @@
    "box",
    "cabins",
    "canvas",
+   "cardShadow",
+   "cardShadow2",
    "centerX",
    "centerY",
    "children",
+   "clickable",
    "clip",
    "clipPath",
    "color",
@@ -738,8 +1528,14 @@
    "count",
    "cx",
    "cy",
+   "dark",
    "day",
    "decimal",
+   "dir",
+   "downT",
+   "downX",
+   "downY",
+   "drag",
    "drawCircle",
    "drawLine",
    "drawPath",
@@ -748,27 +1544,48 @@
    "drawTextAnchored",
    "dx",
    "dy",
+   "else",
+   "enabled",
    "end",
    "expressionX",
    "expressionY",
    "flags",
    "floatArrays",
    "from",
+   "glow",
+   "glow0",
+   "graphicsLayer",
+   "gx",
+   "gy",
    "header",
    "heart",
    "height",
    "horizontalAlignment",
    "houses",
+   "icon",
    "id",
    "index",
+   "label",
    "left",
+   "light",
+   "like",
+   "likeStamp",
+   "likes",
    "linearGradient",
    "loop",
    "lw",
    "modifiers",
+   "muted",
+   "mv",
+   "n",
    "name",
    "night",
+   "nope",
+   "nopeStamp",
+   "nopes",
+   "ok",
    "onClick",
+   "onSurface",
    "onTouchDown",
    "onTouchUp",
    "ops",
@@ -791,24 +1608,27 @@
    "radialGradient",
    "radius",
    "rb",
+   "relX",
+   "relY",
    "resources",
    "rf1",
    "rf2",
    "right",
-   "role",
    "root",
    "rotate",
-   "roundedRect",
    "row",
    "rx",
    "ry",
    "save",
    "scale",
+   "scaleX",
+   "scaleY",
    "sea",
    "seconds",
    "semantics",
    "shader",
    "size",
+   "slots",
    "spacedBy",
    "start",
    "strokeCap",
@@ -822,13 +1642,17 @@
    "target",
    "text",
    "textSize",
+   "then",
    "top",
    "torii",
    "translate",
    "type",
    "until",
+   "upT",
    "value",
    "variable",
+   "variables",
+   "vel",
    "verticalAlignment",
    "warm",
    "whole",
@@ -899,6 +1723,9 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-02T18:49:00.678Z"
- }
+  "built_at": "2026-11-02T20:23:42.614Z"
+ },
+ "components": [
+  "IconButton"
+ ]
 }

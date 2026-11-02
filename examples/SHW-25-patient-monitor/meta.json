@@ -133,11 +133,35 @@
   "touch": false
  },
  "check": {
-  "describe": "800x480 at 14:37:04: three traces (green ECG with narrow R waves, cyan pleth with a dicrotic notch, yellow respiration), each with an 18 px erase gap and a bright head dot; tiles HR 72, SpO2 98 with a perfusion bar, RR 16, NIBP 118/76 MAP 90. At 14:37:06 the heads have moved 200 px (ECG, pleth) and 50 px (resp). hr 148: banner HR HIGH 148, the HR tile red with white text, 148 bpm beats with normal-width QRS. 360x640: traces on top, tiles in a 2x2 grid. alarm-off-phase (0.3 s later in the blink): the red tile and banner dimmed.",
+  "describe": "800x480 at 14:37:04: three traces (green ECG with narrow R waves, cyan pleth with a dicrotic notch, yellow respiration), each with an 18 px erase gap and a bright head dot; tiles HR 72, SpO2 98 with a perfusion bar, RR 16, NIBP 118/76 MAP 90. At 14:37:06 the heads have moved 200 px (ECG, pleth) and 50 px (resp). hr 148: banner HR HIGH 148, the HR tile red with white text, 148 bpm beats with normal-width QRS. 360x640: traces on top, tiles in a 2x2 grid. alarm-off-phase (0.3 s later in the blink): the red tile and banner dimmed. Light: a light page with white tiles and deeper green, blue and amber traces; the alarm tile red with white text. Mono-dark (hr 148): white on black, no glow, traces and blink step once a second; the alarm tile is filled solid white with black numbers on the blink and outlined 4 px between, the banner a solid pill. Mono-light: the same in black on white.",
   "render": {
    "clock": "2026-11-02T14:37:04"
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "clock": "2026-11-02T14:37:04"
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "clock": "2026-11-02T14:37:04"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "clock": "2026-11-02T14:37:04",
+    "variables": {
+     "hr": 148
+    },
+    "duration": 1.1
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "clock": "2026-11-02T14:37:04"
+   },
    {
     "name": "later",
     "clock": "2026-11-02T14:37:06"
@@ -188,6 +212,15 @@
     "width": 1280,
     "height": 800,
     "clock": "2026-11-02T14:37:04"
+   },
+   {
+    "name": "light-alarm",
+    "theme": "light",
+    "clock": "2026-11-02T14:37:04",
+    "variables": {
+     "hr": 148
+    },
+    "duration": 1.1
    }
   ]
  },
@@ -199,16 +232,22 @@
   "TIM-04"
  ],
  "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 10519,
+  "bytes": 11809,
   "header": {
    "width": 800,
    "height": 480
   },
-  "op_count": 372,
+  "op_count": 472,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
    "ANIMATED_FLOAT": 170,
+   "COLOR_CONSTANT": 20,
+   "COLOR_EXPRESSIONS": 20,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
    "ConditionalOperations": 17,
@@ -225,18 +264,30 @@
    "LAYOUT_CANVAS": 1,
    "LAYOUT_ROOT": 1,
    "LayoutComponentContent": 1,
+   "LoopOperation": 20,
    "MODIFIER_HEIGHT": 1,
    "MODIFIER_WIDTH": 1,
-   "NAMED_VARIABLE": 8,
+   "NAMED_VARIABLE": 18,
    "PAINT_VALUES": 56,
    "PathExpression": 6,
+   "THEME": 30,
    "TextFromFloat": 12
   },
   "host_variables": [
    {
+    "name": "alarm",
+    "type": "color",
+    "value": "#FFFF3B3B"
+   },
+   {
     "name": "dia",
     "type": "float",
     "value": 76
+   },
+   {
+    "name": "ecg",
+    "type": "color",
+    "value": "#FF3CF07A"
    },
    {
     "name": "hr",
@@ -254,9 +305,49 @@
     "value": 50
    },
    {
+    "name": "ink",
+    "type": "color",
+    "value": "#FFEFF3F7"
+   },
+   {
+    "name": "inkMuted",
+    "type": "color",
+    "value": "#FF7A8696"
+   },
+   {
+    "name": "line",
+    "type": "color",
+    "value": "#FF1A232C"
+   },
+   {
+    "name": "onAlarm",
+    "type": "color",
+    "value": "#FFFFFFFF"
+   },
+   {
+    "name": "panel",
+    "type": "color",
+    "value": "#FF0C1218"
+   },
+   {
+    "name": "pleth",
+    "type": "color",
+    "value": "#FF2FD5FF"
+   },
+   {
+    "name": "resp",
+    "type": "color",
+    "value": "#FFFFD23F"
+   },
+   {
     "name": "rr",
     "type": "float",
     "value": 16
+   },
+   {
+    "name": "screen",
+    "type": "color",
+    "value": "#FF05080B"
    },
    {
     "name": "spo2",
@@ -277,11 +368,10 @@
   "render_findings": [],
   "audit": {
    "error": 0,
-   "warning": 2,
+   "warning": 1,
    "info": 1
   },
   "audit_findings": [
-   "warning: hardcoded_colors",
    "warning: text_in_canvas",
    "info: repaint_continuous"
   ],
@@ -294,6 +384,260 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 11557,
+    "component_modes": {},
+    "op_count": 429,
+    "host_variables": [
+     {
+      "name": "alarm",
+      "type": "color",
+      "value": "#FFFF3B3B"
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "dia",
+      "type": "float",
+      "value": 76
+     },
+     {
+      "name": "ecg",
+      "type": "color",
+      "value": "#FF3CF07A"
+     },
+     {
+      "name": "hr",
+      "type": "float",
+      "value": 72
+     },
+     {
+      "name": "hrHi",
+      "type": "float",
+      "value": 120
+     },
+     {
+      "name": "hrLo",
+      "type": "float",
+      "value": 50
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FFEFF3F7"
+     },
+     {
+      "name": "inkMuted",
+      "type": "color",
+      "value": "#FF7A8696"
+     },
+     {
+      "name": "line",
+      "type": "color",
+      "value": "#FF1A232C"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onAlarm",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "panel",
+      "type": "color",
+      "value": "#FF0C1218"
+     },
+     {
+      "name": "pleth",
+      "type": "color",
+      "value": "#FF2FD5FF"
+     },
+     {
+      "name": "resp",
+      "type": "color",
+      "value": "#FFFFD23F"
+     },
+     {
+      "name": "rr",
+      "type": "float",
+      "value": 16
+     },
+     {
+      "name": "screen",
+      "type": "color",
+      "value": "#FF05080B"
+     },
+     {
+      "name": "spo2",
+      "type": "float",
+      "value": 98
+     },
+     {
+      "name": "spo2Lo",
+      "type": "float",
+      "value": 90
+     },
+     {
+      "name": "sys",
+      "type": "float",
+      "value": 118
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 11557,
+    "component_modes": {},
+    "op_count": 429,
+    "host_variables": [
+     {
+      "name": "alarm",
+      "type": "color",
+      "value": "#FFDC1F2E"
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "dia",
+      "type": "float",
+      "value": 76
+     },
+     {
+      "name": "ecg",
+      "type": "color",
+      "value": "#FF07914A"
+     },
+     {
+      "name": "hr",
+      "type": "float",
+      "value": 72
+     },
+     {
+      "name": "hrHi",
+      "type": "float",
+      "value": 120
+     },
+     {
+      "name": "hrLo",
+      "type": "float",
+      "value": 50
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FF0F172A"
+     },
+     {
+      "name": "inkMuted",
+      "type": "color",
+      "value": "#FF5B6573"
+     },
+     {
+      "name": "line",
+      "type": "color",
+      "value": "#FFD9DEE5"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onAlarm",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "panel",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "pleth",
+      "type": "color",
+      "value": "#FF0272B0"
+     },
+     {
+      "name": "resp",
+      "type": "color",
+      "value": "#FFA86200"
+     },
+     {
+      "name": "rr",
+      "type": "float",
+      "value": 16
+     },
+     {
+      "name": "screen",
+      "type": "color",
+      "value": "#FFF2F4F7"
+     },
+     {
+      "name": "spo2",
+      "type": "float",
+      "value": 98
+     },
+     {
+      "name": "spo2Lo",
+      "type": "float",
+      "value": 90
+     },
+     {
+      "name": "sys",
+      "type": "float",
+      "value": 118
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "later": {
     "render": "render-later.png",
     "render_findings": []
@@ -342,14 +686,22 @@
     "audit_findings": [
      "info: repaint_continuous"
     ]
+   },
+   "light-alarm": {
+    "theme": "light",
+    "render": "render-light-alarm.png",
+    "render_findings": []
    }
   },
   "json_keys": [
+   "$if",
+   "alarm",
    "alpha",
    "apiLevel",
    "bottom",
    "canvas",
    "color",
+   "colors",
    "commands",
    "condition",
    "conditionalOperations",
@@ -357,6 +709,7 @@
    "count",
    "cx",
    "cy",
+   "dark",
    "decimal",
    "dia",
    "drawCircle",
@@ -366,6 +719,7 @@
    "drawRoundRect",
    "drawTextAnchored",
    "ecg",
+   "else",
    "end",
    "export",
    "expressionX",
@@ -378,13 +732,19 @@
    "hrHi",
    "hrLo",
    "id",
+   "ink",
+   "inkMuted",
    "left",
+   "light",
+   "line",
    "modifiers",
    "name",
+   "onAlarm",
    "ops",
    "paint",
    "panX",
    "panY",
+   "panel",
    "path",
    "pathExpression",
    "pleth",
@@ -397,6 +757,7 @@
    "rr",
    "rx",
    "ry",
+   "screen",
    "semantics",
    "spo2",
    "spo2Lo",
@@ -408,6 +769,7 @@
    "sys",
    "text",
    "textSize",
+   "then",
    "top",
    "type",
    "v1",
@@ -437,7 +799,8 @@
     "continuousSec"
    ],
    "host.variables": [
-    "export"
+    "export",
+    "colors"
    ],
    "data.array": [
     "floatArrays"
@@ -470,7 +833,7 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-02T18:48:48.625Z"
+  "built_at": "2026-11-02T20:23:18.379Z"
  },
  "snippets": [
   {

@@ -6,6 +6,18 @@
   "profiles": 513,
   "contentDescription": "HSV colour picker: a hue ring around a saturation and value square, a live swatch, the hex code and WCAG contrast against white and black text"
  },
+ "resources": {
+  "colors": {
+   "halo": {
+    "light": "#1F000000",
+    "dark": "#66000000"
+   },
+   "edge": {
+    "light": "#33000000",
+    "dark": "#33FFFFFF"
+   }
+  }
+ },
  "root": [
   {
    "variable": {
@@ -28,7 +40,10 @@
   {
    "box": {
     "modifiers": [
-     "fillMaxSize"
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     }
     ],
     "children": [
      {
@@ -400,7 +415,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF0E1014"
+            "color": "@colors.background"
            },
            {
             "style": "fill"
@@ -420,7 +435,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FFECEEF3"
+            "color": "@colors.onSurface"
            },
            {
             "textSize": 20
@@ -441,7 +456,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF8B93A5"
+            "color": "@colors.muted"
            },
            {
             "textSize": 12
@@ -462,7 +477,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF2A2F3A"
+            "color": "@colors.track"
            },
            {
             "style": "stroke"
@@ -488,187 +503,307 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": 1
-           },
-           {
-            "linearGradient": {
-             "x1": "@dotX - @hue * 2000",
-             "y1": 0,
-             "x2": "@dotX + (360 - @hue) * 2000",
-             "y2": 0,
-             "colors": [
-              "#FFFF0000",
-              "#FFFFFF00",
-              "#FF00FF00",
-              "#FF00FFFF",
-              "#FF0000FF",
-              "#FFFF00FF",
-              "#FFFF0000"
-             ]
-            }
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@dotX",
-          "cy": 38,
-          "radius": 10
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "shader": 0
-           },
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "alpha": "1 - @sat"
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@dotX",
-          "cy": 38,
-          "radius": 10
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF000000"
-           },
-           {
-            "alpha": "1 - @val"
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@dotX",
-          "cy": 38,
-          "radius": 10
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "alpha": 1
-           }
-          ]
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#33FFFFFF"
-           },
-           {
-            "style": "stroke"
-           },
-           {
-            "strokeWidth": 1
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@dotX",
-          "cy": 38,
-          "radius": 10.5
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#66000000"
-           },
-           {
-            "style": "stroke"
-           },
-           {
-            "strokeWidth": "@T + 6"
-           },
-           {
-            "shader": 0
-           }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@cx",
-          "cy": "@cy",
-          "radius": "@Rm"
-         }
-        },
-        {
-         "save": {
-          "commands": [
-           {
-            "rotate": {
-             "angle": -90,
-             "pivotX": "@cx",
-             "pivotY": "@cy"
-            }
-           },
-           {
-            "paint": {
-             "ops": [
-              {
-               "color": "#FFFFFFFF"
-              },
-              {
-               "style": "stroke"
-              },
-              {
-               "strokeWidth": "@T"
-              },
-              {
-               "sweepGradient": {
-                "centerX": "@cx",
-                "centerY": "@cy",
-                "colors": [
-                 "#FFFF0000",
-                 "#FFFFFF00",
-                 "#FF00FF00",
-                 "#FF00FFFF",
-                 "#FF0000FF",
-                 "#FFFF00FF",
-                 "#FFFF0000"
-                ]
-               }
+         "$if": "theme.mono",
+         "then": [],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "linearGradient": {
+               "x1": "@dotX - @hue * 2000",
+               "y1": 0,
+               "x2": "@dotX + (360 - @hue) * 2000",
+               "y2": 0,
+               "colors": [
+                "#FFFF0000",
+                "#FFFFFF00",
+                "#FF00FF00",
+                "#FF00FFFF",
+                "#FF0000FF",
+                "#FFFF00FF",
+                "#FFFF0000"
+               ]
               }
-             ]
-            }
-           },
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@dotX",
+            "cy": 38,
+            "radius": 10
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             },
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "alpha": "1 - @sat"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@dotX",
+            "cy": 38,
+            "radius": 10
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FF000000"
+             },
+             {
+              "alpha": "1 - @val"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@dotX",
+            "cy": 38,
+            "radius": 10
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.edge"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@dotX",
+            "cy": 38,
+            "radius": 10.5
+           }
+          }
+         ]
+        },
+        {
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@cx",
+            "cy": "@cy",
+            "radius": "@Ro"
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@cx",
+            "cy": "@cy",
+            "radius": "@Ro - @T"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "textSize": "max(9, @T * 0.5)"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "R",
+            "x": "@cx + @Rm * 0.0",
+            "y": "@cy - @Rm * 1.0",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Y",
+            "x": "@cx + @Rm * 0.86603",
+            "y": "@cy - @Rm * 0.5",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "G",
+            "x": "@cx + @Rm * 0.86602",
+            "y": "@cy - @Rm * -0.5",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "C",
+            "x": "@cx + @Rm * -0.0",
+            "y": "@cy - @Rm * -1.0",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "B",
+            "x": "@cx + @Rm * -0.86603",
+            "y": "@cy - @Rm * -0.5",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "M",
+            "x": "@cx + @Rm * -0.86602",
+            "y": "@cy - @Rm * 0.5",
+            "panX": 0,
+            "panY": 0
+           }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.halo"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": "@T + 6"
+             },
+             {
+              "shader": 0
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@cx",
+            "cy": "@cy",
+            "radius": "@Rm"
+           }
+          },
+          {
+           "save": {
+            "commands": [
+             {
+              "rotate": {
+               "angle": -90,
+               "pivotX": "@cx",
+               "pivotY": "@cy"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FFFFFFFF"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": "@T"
+                },
+                {
+                 "sweepGradient": {
+                  "centerX": "@cx",
+                  "centerY": "@cy",
+                  "colors": [
+                   "#FFFF0000",
+                   "#FFFFFF00",
+                   "#FF00FF00",
+                   "#FF00FFFF",
+                   "#FF0000FF",
+                   "#FFFF00FF",
+                   "#FFFF0000"
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@cx",
+               "cy": "@cy",
+               "radius": "@Rm"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "paint": {
+          "ops": [
            {
-            "drawCircle": {
-             "cx": "@cx",
-             "cy": "@cy",
-             "radius": "@Rm"
-            }
+            "style": "stroke"
            }
           ]
          }
@@ -680,7 +815,7 @@
             "shader": 0
            },
            {
-            "color": "#FF5A6273"
+            "color": "@colors.outline"
            },
            {
             "strokeWidth": 1.2
@@ -721,133 +856,235 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "linearGradient": {
-             "x1": "@cx - @hue * 2000",
-             "y1": 0,
-             "x2": "@cx + (360 - @hue) * 2000",
-             "y2": 0,
-             "colors": [
-              "#FFFF0000",
-              "#FFFFFF00",
-              "#FF00FF00",
-              "#FF00FFFF",
-              "#FF0000FF",
-              "#FFFF00FF",
-              "#FFFF0000"
-             ]
-            }
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.track"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@cx - @q",
-          "top": "@cy - @q",
-          "right": "@cx + @q",
-          "bottom": "@cy + @q",
-          "rx": 6,
-          "ry": 6
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "linearGradient": {
-             "x1": "@cx - @q",
-             "y1": 0,
-             "x2": "@cx + @q",
-             "y2": 0,
-             "colors": [
-              "#FFFFFFFF",
-              "#00FFFFFF"
-             ]
-            }
+          },
+          {
+           "loop": {
+            "index": "j",
+            "from": 1,
+            "until": 4,
+            "commands": [
+             {
+              "drawLine": {
+               "x1": "@cx - @q + @q * j * 0.5",
+               "y1": "@cy - @q",
+               "x2": "@cx - @q + @q * j * 0.5",
+               "y2": "@cy + @q"
+              }
+             },
+             {
+              "drawLine": {
+               "x1": "@cx - @q",
+               "y1": "@cy - @q + @q * j * 0.5",
+               "x2": "@cx + @q",
+               "y2": "@cy - @q + @q * j * 0.5"
+              }
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@cx - @q",
-          "top": "@cy - @q",
-          "right": "@cx + @q",
-          "bottom": "@cy + @q",
-          "rx": 6,
-          "ry": 6
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "linearGradient": {
-             "x1": 0,
-             "y1": "@cy - @q",
-             "x2": 0,
-             "y2": "@cy + @q",
-             "colors": [
-              "#00000000",
-              "#FF000000"
-             ]
-            }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "strokeWidth": 1.5
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@cx - @q",
-          "top": "@cy - @q",
-          "right": "@cx + @q",
-          "bottom": "@cy + @q",
-          "rx": 6,
-          "ry": 6
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "shader": 0
-           },
-           {
-            "color": "#26FFFFFF"
-           },
-           {
-            "style": "stroke"
-           },
-           {
-            "strokeWidth": 1
+          },
+          {
+           "drawRoundRect": {
+            "left": "@cx - @q",
+            "top": "@cy - @q",
+            "right": "@cx + @q",
+            "bottom": "@cy + @q",
+            "rx": 6,
+            "ry": 6
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@cx - @q",
-          "top": "@cy - @q",
-          "right": "@cx + @q",
-          "bottom": "@cy + @q",
-          "rx": 6,
-          "ry": 6
-         }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "textSize": 10
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "SATURATION",
+            "x": "@cx + @q - 4",
+            "y": "@cy + @q - 7",
+            "panX": 1,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "VALUE",
+            "x": "@cx - @q + 5",
+            "y": "@cy - @q + 12",
+            "panX": -1,
+            "panY": 0
+           }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "linearGradient": {
+               "x1": "@cx - @hue * 2000",
+               "y1": 0,
+               "x2": "@cx + (360 - @hue) * 2000",
+               "y2": 0,
+               "colors": [
+                "#FFFF0000",
+                "#FFFFFF00",
+                "#FF00FF00",
+                "#FF00FFFF",
+                "#FF0000FF",
+                "#FFFF00FF",
+                "#FFFF0000"
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@cx - @q",
+            "top": "@cy - @q",
+            "right": "@cx + @q",
+            "bottom": "@cy + @q",
+            "rx": 6,
+            "ry": 6
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "linearGradient": {
+               "x1": "@cx - @q",
+               "y1": 0,
+               "x2": "@cx + @q",
+               "y2": 0,
+               "colors": [
+                "#FFFFFFFF",
+                "#00FFFFFF"
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@cx - @q",
+            "top": "@cy - @q",
+            "right": "@cx + @q",
+            "bottom": "@cy + @q",
+            "rx": 6,
+            "ry": 6
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "linearGradient": {
+               "x1": 0,
+               "y1": "@cy - @q",
+               "x2": 0,
+               "y2": "@cy + @q",
+               "colors": [
+                "#00000000",
+                "#FF000000"
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@cx - @q",
+            "top": "@cy - @q",
+            "right": "@cx + @q",
+            "bottom": "@cy + @q",
+            "rx": 6,
+            "ry": 6
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             },
+             {
+              "color": "@colors.edge"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@cx - @q",
+            "top": "@cy - @q",
+            "right": "@cx + @q",
+            "bottom": "@cy + @q",
+            "rx": 6,
+            "ry": 6
+           }
+          }
+         ]
         },
         {
          "variable": {
@@ -862,16 +1099,50 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#40FFFFFF"
-           },
-           {
-            "strokeWidth": 1
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             },
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             },
+             {
+              "alpha": 0.5
+             }
+            ]
            }
-          ]
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             },
+             {
+              "color": "#40FFFFFF"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "drawLine": {
@@ -896,134 +1167,204 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": 1
-           },
-           {
-            "linearGradient": {
-             "x1": "@hx - @hue * 2000",
-             "y1": 0,
-             "x2": "@hx + (360 - @hue) * 2000",
-             "y2": 0,
-             "colors": [
-              "#FFFF0000",
-              "#FFFFFF00",
-              "#FF00FF00",
-              "#FF00FFFF",
-              "#FF0000FF",
-              "#FFFF00FF",
-              "#FFFF0000"
-             ]
-            }
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             },
+             {
+              "color": "@colors.background"
+             },
+             {
+              "style": "fill"
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@hx",
-          "cy": "@hy",
-          "radius": "@sr"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "shader": 0
-           },
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "alpha": "1 - @sat"
+          },
+          {
+           "drawCircle": {
+            "cx": "@hx",
+            "cy": "@hy",
+            "radius": "@sr"
            }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@hx",
-          "cy": "@hy",
-          "radius": "@sr"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF000000"
-           },
-           {
-            "alpha": "1 - @val"
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 2.5
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@hx",
-          "cy": "@hy",
-          "radius": "@sr"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "alpha": 1
+          },
+          {
+           "drawCircle": {
+            "cx": "@hx",
+            "cy": "@hy",
+            "radius": "@sr + 1"
            }
-          ]
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#80000000"
-           },
-           {
-            "style": "stroke"
-           },
-           {
-            "strokeWidth": 4
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@hx",
-          "cy": "@hy",
-          "radius": "@sr + 1"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "strokeWidth": 2.5
+          },
+          {
+           "drawCircle": {
+            "cx": "@hx",
+            "cy": "@hy",
+            "radius": 2.5
            }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@hx",
-          "cy": "@hy",
-          "radius": "@sr + 1"
-         }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "linearGradient": {
+               "x1": "@hx - @hue * 2000",
+               "y1": 0,
+               "x2": "@hx + (360 - @hue) * 2000",
+               "y2": 0,
+               "colors": [
+                "#FFFF0000",
+                "#FFFFFF00",
+                "#FF00FF00",
+                "#FF00FFFF",
+                "#FF0000FF",
+                "#FFFF00FF",
+                "#FFFF0000"
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@hx",
+            "cy": "@hy",
+            "radius": "@sr"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             },
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "alpha": "1 - @sat"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@hx",
+            "cy": "@hy",
+            "radius": "@sr"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FF000000"
+             },
+             {
+              "alpha": "1 - @val"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@hx",
+            "cy": "@hy",
+            "radius": "@sr"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             },
+             {
+              "color": "#80000000"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 4
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@hx",
+            "cy": "@hy",
+            "radius": "@sr + 1"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "strokeWidth": 2.5
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@hx",
+            "cy": "@hy",
+            "radius": "@sr + 1"
+           }
+          }
+         ]
         },
         {
          "variable": {
@@ -1050,83 +1391,159 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "linearGradient": {
-             "x1": "@rx - @hue * 2000",
-             "y1": 0,
-             "x2": "@rx + (360 - @hue) * 2000",
-             "y2": 0,
-             "colors": [
-              "#FFFF0000",
-              "#FFFFFF00",
-              "#FF00FF00",
-              "#FF00FFFF",
-              "#FF0000FF",
-              "#FFFF00FF",
-              "#FFFF0000"
-             ]
-            }
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             },
+             {
+              "color": "@colors.background"
+             },
+             {
+              "style": "fill"
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@rx",
-          "cy": "@ry",
-          "radius": "@rr"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "shader": 0
-           },
-           {
-            "color": "#80000000"
-           },
-           {
-            "style": "stroke"
-           },
-           {
-            "strokeWidth": 4
+          },
+          {
+           "drawCircle": {
+            "cx": "@rx",
+            "cy": "@ry",
+            "radius": "@rr"
            }
-          ]
-         }
-        },
-        {
-         "drawCircle": {
-          "cx": "@rx",
-          "cy": "@ry",
-          "radius": "@rr + 1"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "strokeWidth": 3
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 3
+             }
+            ]
            }
-          ]
-         }
+          },
+          {
+           "drawCircle": {
+            "cx": "@rx",
+            "cy": "@ry",
+            "radius": "@rr + 1"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@rx",
+            "cy": "@ry",
+            "radius": 2.5
+           }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "linearGradient": {
+               "x1": "@rx - @hue * 2000",
+               "y1": 0,
+               "x2": "@rx + (360 - @hue) * 2000",
+               "y2": 0,
+               "colors": [
+                "#FFFF0000",
+                "#FFFFFF00",
+                "#FF00FF00",
+                "#FF00FFFF",
+                "#FF0000FF",
+                "#FFFF00FF",
+                "#FFFF0000"
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@rx",
+            "cy": "@ry",
+            "radius": "@rr"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             },
+             {
+              "color": "#80000000"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 4
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@rx",
+            "cy": "@ry",
+            "radius": "@rr + 1"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "strokeWidth": 3
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@rx",
+            "cy": "@ry",
+            "radius": "@rr + 1"
+           }
+          }
+         ]
         },
         {
-         "drawCircle": {
-          "cx": "@rx",
-          "cy": "@ry",
-          "radius": "@rr + 1"
+         "variable": {
+          "name": "as",
+          "value": "26 + 8 * step(@sh, 80)"
          }
         },
         {
@@ -1142,229 +1559,285 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#33FFFFFF"
-           },
-           {
-            "style": "stroke"
-           },
-           {
-            "strokeWidth": 1
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             },
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "alpha": 1
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@px - 0.5",
-          "top": "@py - 0.5",
-          "right": "@pr + 0.5",
-          "bottom": "@py + @sh + 0.5",
-          "rx": 14,
-          "ry": 14
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": 1
-           },
-           {
-            "linearGradient": {
-             "x1": "@sm - @hue * 2000",
-             "y1": 0,
-             "x2": "@sm + (360 - @hue) * 2000",
-             "y2": 0,
-             "colors": [
-              "#FFFF0000",
-              "#FFFFFF00",
-              "#FF00FF00",
-              "#FF00FFFF",
-              "#FF0000FF",
-              "#FFFF00FF",
-              "#FFFF0000"
-             ]
-            }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px",
+            "top": "@py",
+            "right": "@pr",
+            "bottom": "@py + @sh",
+            "rx": 14,
+            "ry": 14
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@px",
-          "top": "@py",
-          "right": "@pr",
-          "bottom": "@py + @sh",
-          "rx": 14,
-          "ry": 14
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "shader": 0
-           },
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "alpha": "1 - @sat"
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "textSize": 12
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@px",
-          "top": "@py",
-          "right": "@pr",
-          "bottom": "@py + @sh",
-          "rx": 14,
-          "ry": 14
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF000000"
-           },
-           {
-            "alpha": "1 - @val"
+          },
+          {
+           "drawTextAnchored": {
+            "text": "No colour on this display: read the values below",
+            "x": "@sm",
+            "y": "@py + @sh / 2",
+            "panX": 0,
+            "panY": 0
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@px",
-          "top": "@py",
-          "right": "@pr",
-          "bottom": "@py + @sh",
-          "rx": 14,
-          "ry": 14
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "alpha": 1
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.edge"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "variable": {
-          "name": "as",
-          "value": "26 + 8 * step(@sh, 80)"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "textSize": "@as"
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px - 0.5",
+            "top": "@py - 0.5",
+            "right": "@pr + 0.5",
+            "bottom": "@py + @sh + 0.5",
+            "rx": 14,
+            "ry": 14
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "Aa",
-          "x": "@px + 20",
-          "y": "@py + @sh / 2 + @as * 0.36 - 8 * step(@sh, 80)",
-          "panX": -1,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF000000"
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "linearGradient": {
+               "x1": "@sm - @hue * 2000",
+               "y1": 0,
+               "x2": "@sm + (360 - @hue) * 2000",
+               "y2": 0,
+               "colors": [
+                "#FFFF0000",
+                "#FFFFFF00",
+                "#FF00FF00",
+                "#FF00FFFF",
+                "#FF0000FF",
+                "#FFFF00FF",
+                "#FFFF0000"
+               ]
+              }
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "Aa",
-          "x": "@pr - 20",
-          "y": "@py + @sh / 2 + @as * 0.36 - 8 * step(@sh, 80)",
-          "panX": 1,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#CCFFFFFF"
-           },
-           {
-            "textSize": 11
-           },
-           {
-            "alpha": "step(@sh, 80)"
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px",
+            "top": "@py",
+            "right": "@pr",
+            "bottom": "@py + @sh",
+            "rx": 14,
+            "ry": 14
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "WHITE TEXT",
-          "x": "@px + 21",
-          "y": "@py + @sh - 16",
-          "panX": -1,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#CC000000"
-           },
-           {
-            "alpha": "step(@sh, 80)"
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             },
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "alpha": "1 - @sat"
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "BLACK TEXT",
-          "x": "@pr - 21",
-          "y": "@py + @sh - 16",
-          "panX": 1,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "alpha": 1
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px",
+            "top": "@py",
+            "right": "@pr",
+            "bottom": "@py + @sh",
+            "rx": 14,
+            "ry": 14
            }
-          ]
-         }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FF000000"
+             },
+             {
+              "alpha": "1 - @val"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px",
+            "top": "@py",
+            "right": "@pr",
+            "bottom": "@py + @sh",
+            "rx": 14,
+            "ry": 14
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": "@as"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Aa",
+            "x": "@px + 20",
+            "y": "@py + @sh / 2 + @as * 0.36 - 8 * step(@sh, 80)",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FF000000"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Aa",
+            "x": "@pr - 20",
+            "y": "@py + @sh / 2 + @as * 0.36 - 8 * step(@sh, 80)",
+            "panX": 1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#CCFFFFFF"
+             },
+             {
+              "textSize": 11
+             },
+             {
+              "alpha": "step(@sh, 80)"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "WHITE TEXT",
+            "x": "@px + 21",
+            "y": "@py + @sh - 16",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#CC000000"
+             },
+             {
+              "alpha": "step(@sh, 80)"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "BLACK TEXT",
+            "x": "@pr - 21",
+            "y": "@py + @sh - 16",
+            "panX": 1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          }
+         ]
         },
         {
          "variable": {
@@ -1376,7 +1849,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FFECEEF3"
+            "color": "@colors.onSurface"
            },
            {
             "textSize": 28
@@ -1421,7 +1894,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF8B93A5"
+            "color": "@colors.muted"
            },
            {
             "textSize": 12
@@ -1442,7 +1915,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF5A6273"
+            "color": "@colors.outline"
            },
            {
             "textSize": 11
@@ -1463,7 +1936,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FFECEEF3"
+            "color": "@colors.onSurface"
            },
            {
             "textSize": 14
@@ -1494,7 +1967,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF5A6273"
+            "color": "@colors.outline"
            },
            {
             "textSize": 11
@@ -1515,7 +1988,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FFECEEF3"
+            "color": "@colors.onSurface"
            },
            {
             "textSize": 14
@@ -1546,7 +2019,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF5A6273"
+            "color": "@colors.outline"
            },
            {
             "textSize": 11
@@ -1567,7 +2040,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FFECEEF3"
+            "color": "@colors.onSurface"
            },
            {
             "textSize": 14
@@ -1598,7 +2071,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF8B93A5"
+            "color": "@colors.muted"
            },
            {
             "textSize": 12
@@ -1667,7 +2140,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF171A21"
+            "color": "@colors.surface"
            },
            {
             "style": "fill"
@@ -1686,129 +2159,182 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": 1
-           },
-           {
-            "linearGradient": {
-             "x1": "@px + 27 - @hue * 2000",
-             "y1": 0,
-             "x2": "@px + 27 + (360 - @hue) * 2000",
-             "y2": 0,
-             "colors": [
-              "#FFFF0000",
-              "#FFFFFF00",
-              "#FF00FF00",
-              "#FF00FFFF",
-              "#FF0000FF",
-              "#FFFF00FF",
-              "#FFFF0000"
-             ]
-            }
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.2
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@px + 8",
-          "top": "@y3 + 8",
-          "right": "@px + 46",
-          "bottom": "@y3 + 46",
-          "rx": 7,
-          "ry": 7
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "shader": 0
-           },
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "alpha": "1 - @sat"
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px + 8",
+            "top": "@y3 + 8",
+            "right": "@px + 46",
+            "bottom": "@y3 + 46",
+            "rx": 7,
+            "ry": 7
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@px + 8",
-          "top": "@y3 + 8",
-          "right": "@px + 46",
-          "bottom": "@y3 + 46",
-          "rx": 7,
-          "ry": 7
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF000000"
-           },
-           {
-            "alpha": "1 - @val"
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": 11
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@px + 8",
-          "top": "@y3 + 8",
-          "right": "@px + 46",
-          "bottom": "@y3 + 46",
-          "rx": 7,
-          "ry": 7
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "alpha": 1
+          },
+          {
+           "drawTextAnchored": {
+            "text": "W",
+            "x": "@px + 27",
+            "y": "@y3 + 27",
+            "panX": 0,
+            "panY": 0
            }
-          ]
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "textSize": 16
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "linearGradient": {
+               "x1": "@px + 27 - @hue * 2000",
+               "y1": 0,
+               "x2": "@px + 27 + (360 - @hue) * 2000",
+               "y2": 0,
+               "colors": [
+                "#FFFF0000",
+                "#FFFFFF00",
+                "#FF00FF00",
+                "#FF00FFFF",
+                "#FF0000FF",
+                "#FFFF00FF",
+                "#FFFF0000"
+               ]
+              }
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "Aa",
-          "x": "@px + 27",
-          "y": "@y3 + 27",
-          "panX": 0,
-          "panY": 0
-         }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px + 8",
+            "top": "@y3 + 8",
+            "right": "@px + 46",
+            "bottom": "@y3 + 46",
+            "rx": 7,
+            "ry": 7
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             },
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "alpha": "1 - @sat"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px + 8",
+            "top": "@y3 + 8",
+            "right": "@px + 46",
+            "bottom": "@y3 + 46",
+            "rx": 7,
+            "ry": 7
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FF000000"
+             },
+             {
+              "alpha": "1 - @val"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px + 8",
+            "top": "@y3 + 8",
+            "right": "@px + 46",
+            "bottom": "@y3 + 46",
+            "rx": 7,
+            "ry": 7
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "textSize": 16
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Aa",
+            "x": "@px + 27",
+            "y": "@y3 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          }
+         ]
         },
         {
          "paint": {
           "ops": [
            {
-            "color": "#FFECEEF3"
+            "color": "@colors.onSurface"
            },
            {
             "textSize": 13
@@ -1829,7 +2355,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF8B93A5"
+            "color": "@colors.muted"
            },
            {
             "textSize": 12
@@ -1872,7 +2398,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF2A2F3A"
+            "color": "@colors.track"
            },
            {
             "strokeWidth": 4
@@ -1901,64 +2427,91 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5484D"
-           },
-           {
-            "alpha": "1 - step(@cW, 3)"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "alpha": 1
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawLine": {
-          "x1": "@m0W",
-          "y1": "@y3 + 27",
-          "x2": "@mfW",
-          "y2": "@y3 + 27"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5A33A"
-           },
-           {
-            "alpha": "step(@cW, 3) * (1 - step(@cW, 4.5))"
+          },
+          {
+           "drawLine": {
+            "x1": "@m0W",
+            "y1": "@y3 + 27",
+            "x2": "@mfW",
+            "y2": "@y3 + 27"
            }
-          ]
-         }
-        },
-        {
-         "drawLine": {
-          "x1": "@m0W",
-          "y1": "@y3 + 27",
-          "x2": "@mfW",
-          "y2": "@y3 + 27"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF34C77B"
-           },
-           {
-            "alpha": "step(@cW, 4.5)"
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "alpha": "1 - step(@cW, 3)"
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawLine": {
-          "x1": "@m0W",
-          "y1": "@y3 + 27",
-          "x2": "@mfW",
-          "y2": "@y3 + 27"
-         }
+          },
+          {
+           "drawLine": {
+            "x1": "@m0W",
+            "y1": "@y3 + 27",
+            "x2": "@mfW",
+            "y2": "@y3 + 27"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.warning"
+             },
+             {
+              "alpha": "step(@cW, 3) * (1 - step(@cW, 4.5))"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": "@m0W",
+            "y1": "@y3 + 27",
+            "x2": "@mfW",
+            "y2": "@y3 + 27"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "alpha": "step(@cW, 4.5)"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": "@m0W",
+            "y1": "@y3 + 27",
+            "x2": "@mfW",
+            "y2": "@y3 + 27"
+           }
+          }
+         ]
         },
         {
          "paint": {
@@ -1967,7 +2520,7 @@
             "alpha": 1
            },
            {
-            "color": "#FF0E1014"
+            "color": "@colors.surface"
            },
            {
             "strokeWidth": 2
@@ -2003,175 +2556,340 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5484D"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": "0.18 * (1 - step(@cW, 3))"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "step(@cW, 4.5)"
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@pr - 82",
-          "top": "@y3 + 15",
-          "right": "@pr - 8",
-          "bottom": "@y3 + 39",
-          "rx": 12,
-          "ry": 12
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5A33A"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": "0.18 * (step(@cW, 3) * (1 - step(@cW, 4.5)))"
+          },
+          {
+           "drawRoundRect": {
+            "left": "@pr - 82",
+            "top": "@y3 + 15",
+            "right": "@pr - 8",
+            "bottom": "@y3 + 39",
+            "rx": 12,
+            "ry": 12
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@pr - 82",
-          "top": "@y3 + 15",
-          "right": "@pr - 8",
-          "bottom": "@y3 + 39",
-          "rx": 12,
-          "ry": 12
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF34C77B"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": "0.18 * (step(@cW, 4.5))"
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.2
+             },
+             {
+              "alpha": 1
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@pr - 82",
-          "top": "@y3 + 15",
-          "right": "@pr - 8",
-          "bottom": "@y3 + 39",
-          "rx": 12,
-          "ry": 12
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5484D"
-           },
-           {
-            "alpha": "1 - min(1, abs(@gW - 0))"
-           },
-           {
-            "textSize": 12
+          },
+          {
+           "drawRoundRect": {
+            "left": "@pr - 82",
+            "top": "@y3 + 15",
+            "right": "@pr - 8",
+            "bottom": "@y3 + 39",
+            "rx": 12,
+            "ry": 12
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "Fail",
-          "x": "@pr - 45",
-          "y": "@y3 + 27",
-          "panX": 0,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5A33A"
-           },
-           {
-            "alpha": "1 - min(1, abs(@gW - 1))"
-           },
-           {
-            "textSize": 12
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gW - 0))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "AA Large",
-          "x": "@pr - 45",
-          "y": "@y3 + 27",
-          "panX": 0,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF34C77B"
-           },
-           {
-            "alpha": "1 - min(1, abs(@gW - 2))"
-           },
-           {
-            "textSize": 12
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Fail",
+            "x": "@pr - 45",
+            "y": "@y3 + 27",
+            "panX": 0,
+            "panY": 0
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "AA",
-          "x": "@pr - 45",
-          "y": "@y3 + 27",
-          "panX": 0,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF34C77B"
-           },
-           {
-            "alpha": "1 - min(1, abs(@gW - 3))"
-           },
-           {
-            "textSize": 12
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gW - 1))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "AAA",
-          "x": "@pr - 45",
-          "y": "@y3 + 27",
-          "panX": 0,
-          "panY": 0
-         }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AA Large",
+            "x": "@pr - 45",
+            "y": "@y3 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.background"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gW - 2))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AA",
+            "x": "@pr - 45",
+            "y": "@y3 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.background"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gW - 3))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AAA",
+            "x": "@pr - 45",
+            "y": "@y3 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "0.18 * (1 - step(@cW, 3))"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@pr - 82",
+            "top": "@y3 + 15",
+            "right": "@pr - 8",
+            "bottom": "@y3 + 39",
+            "rx": 12,
+            "ry": 12
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.warning"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "0.18 * (step(@cW, 3) * (1 - step(@cW, 4.5)))"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@pr - 82",
+            "top": "@y3 + 15",
+            "right": "@pr - 8",
+            "bottom": "@y3 + 39",
+            "rx": 12,
+            "ry": 12
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "0.18 * (step(@cW, 4.5))"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@pr - 82",
+            "top": "@y3 + 15",
+            "right": "@pr - 8",
+            "bottom": "@y3 + 39",
+            "rx": 12,
+            "ry": 12
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gW - 0))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Fail",
+            "x": "@pr - 45",
+            "y": "@y3 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.warning"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gW - 1))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AA Large",
+            "x": "@pr - 45",
+            "y": "@y3 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gW - 2))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AA",
+            "x": "@pr - 45",
+            "y": "@y3 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gW - 3))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AAA",
+            "x": "@pr - 45",
+            "y": "@y3 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          }
+         ]
         },
         {
          "paint": {
@@ -2186,7 +2904,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF171A21"
+            "color": "@colors.surface"
            },
            {
             "style": "fill"
@@ -2205,129 +2923,182 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": 1
-           },
-           {
-            "linearGradient": {
-             "x1": "@px + 27 - @hue * 2000",
-             "y1": 0,
-             "x2": "@px + 27 + (360 - @hue) * 2000",
-             "y2": 0,
-             "colors": [
-              "#FFFF0000",
-              "#FFFFFF00",
-              "#FF00FF00",
-              "#FF00FFFF",
-              "#FF0000FF",
-              "#FFFF00FF",
-              "#FFFF0000"
-             ]
-            }
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.2
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@px + 8",
-          "top": "@y3 + 62 + 8",
-          "right": "@px + 46",
-          "bottom": "@y3 + 62 + 46",
-          "rx": 7,
-          "ry": 7
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "shader": 0
-           },
-           {
-            "color": "#FFFFFFFF"
-           },
-           {
-            "alpha": "1 - @sat"
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px + 8",
+            "top": "@y3 + 62 + 8",
+            "right": "@px + 46",
+            "bottom": "@y3 + 62 + 46",
+            "rx": 7,
+            "ry": 7
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@px + 8",
-          "top": "@y3 + 62 + 8",
-          "right": "@px + 46",
-          "bottom": "@y3 + 62 + 46",
-          "rx": 7,
-          "ry": 7
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF000000"
-           },
-           {
-            "alpha": "1 - @val"
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": 11
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@px + 8",
-          "top": "@y3 + 62 + 8",
-          "right": "@px + 46",
-          "bottom": "@y3 + 62 + 46",
-          "rx": 7,
-          "ry": 7
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "alpha": 1
+          },
+          {
+           "drawTextAnchored": {
+            "text": "B",
+            "x": "@px + 27",
+            "y": "@y3 + 62 + 27",
+            "panX": 0,
+            "panY": 0
            }
-          ]
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF000000"
-           },
-           {
-            "textSize": 16
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "linearGradient": {
+               "x1": "@px + 27 - @hue * 2000",
+               "y1": 0,
+               "x2": "@px + 27 + (360 - @hue) * 2000",
+               "y2": 0,
+               "colors": [
+                "#FFFF0000",
+                "#FFFFFF00",
+                "#FF00FF00",
+                "#FF00FFFF",
+                "#FF0000FF",
+                "#FFFF00FF",
+                "#FFFF0000"
+               ]
+              }
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "Aa",
-          "x": "@px + 27",
-          "y": "@y3 + 62 + 27",
-          "panX": 0,
-          "panY": 0
-         }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px + 8",
+            "top": "@y3 + 62 + 8",
+            "right": "@px + 46",
+            "bottom": "@y3 + 62 + 46",
+            "rx": 7,
+            "ry": 7
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "shader": 0
+             },
+             {
+              "color": "#FFFFFFFF"
+             },
+             {
+              "alpha": "1 - @sat"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px + 8",
+            "top": "@y3 + 62 + 8",
+            "right": "@px + 46",
+            "bottom": "@y3 + 62 + 46",
+            "rx": 7,
+            "ry": 7
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FF000000"
+             },
+             {
+              "alpha": "1 - @val"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@px + 8",
+            "top": "@y3 + 62 + 8",
+            "right": "@px + 46",
+            "bottom": "@y3 + 62 + 46",
+            "rx": 7,
+            "ry": 7
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "#FF000000"
+             },
+             {
+              "textSize": 16
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Aa",
+            "x": "@px + 27",
+            "y": "@y3 + 62 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          }
+         ]
         },
         {
          "paint": {
           "ops": [
            {
-            "color": "#FFECEEF3"
+            "color": "@colors.onSurface"
            },
            {
             "textSize": 13
@@ -2348,7 +3119,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF8B93A5"
+            "color": "@colors.muted"
            },
            {
             "textSize": 12
@@ -2391,7 +3162,7 @@
          "paint": {
           "ops": [
            {
-            "color": "#FF2A2F3A"
+            "color": "@colors.track"
            },
            {
             "strokeWidth": 4
@@ -2420,64 +3191,91 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5484D"
-           },
-           {
-            "alpha": "1 - step(@cB, 3)"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "alpha": 1
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawLine": {
-          "x1": "@m0B",
-          "y1": "@y3 + 62 + 27",
-          "x2": "@mfB",
-          "y2": "@y3 + 62 + 27"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5A33A"
-           },
-           {
-            "alpha": "step(@cB, 3) * (1 - step(@cB, 4.5))"
+          },
+          {
+           "drawLine": {
+            "x1": "@m0B",
+            "y1": "@y3 + 62 + 27",
+            "x2": "@mfB",
+            "y2": "@y3 + 62 + 27"
            }
-          ]
-         }
-        },
-        {
-         "drawLine": {
-          "x1": "@m0B",
-          "y1": "@y3 + 62 + 27",
-          "x2": "@mfB",
-          "y2": "@y3 + 62 + 27"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF34C77B"
-           },
-           {
-            "alpha": "step(@cB, 4.5)"
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "alpha": "1 - step(@cB, 3)"
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawLine": {
-          "x1": "@m0B",
-          "y1": "@y3 + 62 + 27",
-          "x2": "@mfB",
-          "y2": "@y3 + 62 + 27"
-         }
+          },
+          {
+           "drawLine": {
+            "x1": "@m0B",
+            "y1": "@y3 + 62 + 27",
+            "x2": "@mfB",
+            "y2": "@y3 + 62 + 27"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.warning"
+             },
+             {
+              "alpha": "step(@cB, 3) * (1 - step(@cB, 4.5))"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": "@m0B",
+            "y1": "@y3 + 62 + 27",
+            "x2": "@mfB",
+            "y2": "@y3 + 62 + 27"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "alpha": "step(@cB, 4.5)"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": "@m0B",
+            "y1": "@y3 + 62 + 27",
+            "x2": "@mfB",
+            "y2": "@y3 + 62 + 27"
+           }
+          }
+         ]
         },
         {
          "paint": {
@@ -2486,7 +3284,7 @@
             "alpha": 1
            },
            {
-            "color": "#FF0E1014"
+            "color": "@colors.surface"
            },
            {
             "strokeWidth": 2
@@ -2522,175 +3320,340 @@
          }
         },
         {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5484D"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": "0.18 * (1 - step(@cB, 3))"
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "step(@cB, 4.5)"
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@pr - 82",
-          "top": "@y3 + 62 + 15",
-          "right": "@pr - 8",
-          "bottom": "@y3 + 62 + 39",
-          "rx": 12,
-          "ry": 12
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5A33A"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": "0.18 * (step(@cB, 3) * (1 - step(@cB, 4.5)))"
+          },
+          {
+           "drawRoundRect": {
+            "left": "@pr - 82",
+            "top": "@y3 + 62 + 15",
+            "right": "@pr - 8",
+            "bottom": "@y3 + 62 + 39",
+            "rx": 12,
+            "ry": 12
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@pr - 82",
-          "top": "@y3 + 62 + 15",
-          "right": "@pr - 8",
-          "bottom": "@y3 + 62 + 39",
-          "rx": 12,
-          "ry": 12
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF34C77B"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": "0.18 * (step(@cB, 4.5))"
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.2
+             },
+             {
+              "alpha": 1
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawRoundRect": {
-          "left": "@pr - 82",
-          "top": "@y3 + 62 + 15",
-          "right": "@pr - 8",
-          "bottom": "@y3 + 62 + 39",
-          "rx": 12,
-          "ry": 12
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5484D"
-           },
-           {
-            "alpha": "1 - min(1, abs(@gB - 0))"
-           },
-           {
-            "textSize": 12
+          },
+          {
+           "drawRoundRect": {
+            "left": "@pr - 82",
+            "top": "@y3 + 62 + 15",
+            "right": "@pr - 8",
+            "bottom": "@y3 + 62 + 39",
+            "rx": 12,
+            "ry": 12
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "Fail",
-          "x": "@pr - 45",
-          "y": "@y3 + 62 + 27",
-          "panX": 0,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FFE5A33A"
-           },
-           {
-            "alpha": "1 - min(1, abs(@gB - 1))"
-           },
-           {
-            "textSize": 12
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gB - 0))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "AA Large",
-          "x": "@pr - 45",
-          "y": "@y3 + 62 + 27",
-          "panX": 0,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF34C77B"
-           },
-           {
-            "alpha": "1 - min(1, abs(@gB - 2))"
-           },
-           {
-            "textSize": 12
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Fail",
+            "x": "@pr - 45",
+            "y": "@y3 + 62 + 27",
+            "panX": 0,
+            "panY": 0
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "AA",
-          "x": "@pr - 45",
-          "y": "@y3 + 62 + 27",
-          "panX": 0,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "#FF34C77B"
-           },
-           {
-            "alpha": "1 - min(1, abs(@gB - 3))"
-           },
-           {
-            "textSize": 12
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gB - 1))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "AAA",
-          "x": "@pr - 45",
-          "y": "@y3 + 62 + 27",
-          "panX": 0,
-          "panY": 0
-         }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AA Large",
+            "x": "@pr - 45",
+            "y": "@y3 + 62 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.background"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gB - 2))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AA",
+            "x": "@pr - 45",
+            "y": "@y3 + 62 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "color": "@colors.background"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gB - 3))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AAA",
+            "x": "@pr - 45",
+            "y": "@y3 + 62 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "0.18 * (1 - step(@cB, 3))"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@pr - 82",
+            "top": "@y3 + 62 + 15",
+            "right": "@pr - 8",
+            "bottom": "@y3 + 62 + 39",
+            "rx": 12,
+            "ry": 12
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.warning"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "0.18 * (step(@cB, 3) * (1 - step(@cB, 4.5)))"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@pr - 82",
+            "top": "@y3 + 62 + 15",
+            "right": "@pr - 8",
+            "bottom": "@y3 + 62 + 39",
+            "rx": 12,
+            "ry": 12
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "0.18 * (step(@cB, 4.5))"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@pr - 82",
+            "top": "@y3 + 62 + 15",
+            "right": "@pr - 8",
+            "bottom": "@y3 + 62 + 39",
+            "rx": 12,
+            "ry": 12
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gB - 0))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Fail",
+            "x": "@pr - 45",
+            "y": "@y3 + 62 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.warning"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gB - 1))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AA Large",
+            "x": "@pr - 45",
+            "y": "@y3 + 62 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gB - 2))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AA",
+            "x": "@pr - 45",
+            "y": "@y3 + 62 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "alpha": "1 - min(1, abs(@gB - 3))"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "AAA",
+            "x": "@pr - 45",
+            "y": "@y3 + 62 + 27",
+            "panX": 0,
+            "panY": 0
+           }
+          }
+         ]
         },
         {
          "paint": {

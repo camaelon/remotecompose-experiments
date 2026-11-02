@@ -3,7 +3,7 @@
  "name": "kinetic-type-poster",
  "version": 1,
  "title": "A festival poster where the type moves",
- "summary": "A Swiss-style concert poster on one canvas: ECHO in huge letters that drop in one after another with an overshoot and then breathe, five red outline echoes trailing beneath them, a red disc beating inside a ring of text that turns, sound rings spreading past the edges, a sentence flowing along a moving sine wave, and a tilted black band with the dates scrolling. About 3.5 KB.",
+ "summary": "A Swiss-style concert poster on one canvas: ECHO in huge letters that drop in one after another with an overshoot and then breathe, five red outline echoes trailing beneath them, a red disc beating inside a ring of text that turns, sound rings spreading past the edges, a sentence flowing along a moving sine wave, and a tilted black band with the dates scrolling. Light (warm paper), a designed dark look (night paper, cream type) and two still mono looks. About 4.2 KB.",
  "prompt": "Make a typographic poster that moves, like a concert poster: a big headline whose letters animate in one after another, text running along a curve that flows, a scrolling band with the dates, and a strong graphic design.",
  "level": 4,
  "family": "SHW",
@@ -67,7 +67,8 @@
   "Text flowing along a moving wave: a pathExpression whose y uses animationTime(), so the path itself moves, and an hOffset of -((t * 38) % width) from textMeasure, so the words slide along it seamlessly",
   "The poster is laid out on a 360 x 640 sheet scaled to fit and centred; the paper, the rings, the wave and the tilted band run past the sheet to the screen edges, so a landscape tablet shows a wide composition, not a letterbox",
   "The band: rotate -5 degrees about its centre, a black bar wider than the screen, and the dates repeated ceil(width / measured) + 1 times, moving by the measured width modulo",
-  "Two clocks: animationTime() (from 0 when the poster appears) for the one-off entrance, continuousSec() for everything that loops. A canvas that reads only animationTime() is not repainted by the players (the inspector reports repaint idle); continuousSec() schedules every frame"
+  "Two clocks: animationTime() (from 0 when the poster appears) for the one-off entrance, continuousSec() for everything that loops. A canvas that reads only animationTime() is not repainted by the players (the inspector reports repaint idle); continuousSec() schedules every frame",
+  "Four looks from one document: themed colours (paper, ink, red, ringLine, band, bandText) for light and dark, and {\"$if\": \"theme.mono\"} forks for the mono looks: the red becomes onSurface or muted, the filled disc an outlined ring, the band two rules, and the clocks are pinned (animationTime 4, continuousSec 0, a still wave) so an always-on screen does not repaint"
  ],
  "pitfalls": [
   "Canvas text has no font weight in the JSON (paint has textSize and colour only): the headline is made heavy with fillAndStroke and a 3 px stroke",
@@ -109,54 +110,86 @@
   }
  ],
  "check": {
-  "describe": "Settled (t = 4 s): warm paper, grey concentric rings centred on a red disc at the top right, the disc inside a ring of small black text SOUND · LIGHT · MOTION · THREE NIGHTS · LISBOA · MMXXVI, N° 07 / LX FACTORY / LISBOA top left, ECHO in huge black letters across the middle with five red outline copies stepping down under it, a sentence (fourteen artists — three nights — one room full of noise) riding a sine wave, a two-line lineup, and a black band tilted up to the right with ECHO FESTIVAL 2026 — LISBON — 14 · 15 · 16 MAY in red. drop (t = 0.62 s): E and C landed or landing, H high up and O not yet in, no echoes yet. ring (t = 7.3 s): the ring text turned and the wave and band moved on. Landscape 1280x800: the sheet centred, rings, wave and band across the full width. Tablet portrait and a 300x300 square: the whole sheet scaled to fit.",
+  "describe": "Light, settled (t = 4 s): warm paper, grey concentric rings centred on a red disc at the top right, the disc inside a ring of small black text SOUND · LIGHT · MOTION · THREE NIGHTS · LISBOA · MMXXVI, N° 07 / LX FACTORY / LISBOA top left, ECHO in huge black letters across the middle with five red outline copies stepping down under it, a sentence (fourteen artists — three nights — one room full of noise) riding a sine wave, a two-line lineup, and a black band tilted up to the right with ECHO FESTIVAL 2026 — LISBON — 14 · 15 · 16 MAY in red. drop (t = 0.62 s): E and C landed or landing, H high up and O not yet in, no echoes yet. ring (t = 7.3 s): the ring text turned and the wave and band moved on. Landscape 1280x800: the sheet centred, rings, wave and band across the full width. Tablet portrait and a 300x300 square: the whole sheet scaled to fit. Dark: the same poster at night: near-black aubergine paper, cream type and ring text, faint lilac rings, the red disc and red echoes, a cream band with red dates. Mono dark and mono light: no red and no motion; the disc is an outlined record with a spindle hole, echoes in grey outline, the band two rules with the dates between, black on white or white on black.",
   "render": {
    "animation_time": 4,
-   "clock": "2026-11-02T20:30:00"
+   "clock": "2026-11-02T20:30:00",
+   "theme": "light"
   },
   "renders": [
    {
+    "name": "light",
+    "theme": "light",
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
     "name": "drop",
     "animation_time": 0.62,
-    "clock": "2026-11-02T20:30:00"
+    "clock": "2026-11-02T20:30:00",
+    "theme": "light"
    },
    {
     "name": "landing",
     "animation_time": 1.05,
-    "clock": "2026-11-02T20:30:00"
+    "clock": "2026-11-02T20:30:00",
+    "theme": "dark"
    },
    {
     "name": "later",
     "animation_time": 7.3,
-    "clock": "2026-11-02T20:30:03.3"
+    "clock": "2026-11-02T20:30:03.3",
+    "theme": "light"
    },
    {
     "name": "landscape",
     "width": 1280,
     "height": 800,
     "animation_time": 7.3,
-    "clock": "2026-11-02T20:30:03.3"
+    "clock": "2026-11-02T20:30:03.3",
+    "theme": "dark"
    },
    {
     "name": "landscape-drop",
     "width": 1280,
     "height": 800,
     "animation_time": 0.62,
-    "clock": "2026-11-02T20:30:00"
+    "clock": "2026-11-02T20:30:00",
+    "theme": "light"
    },
    {
     "name": "tablet",
     "width": 800,
     "height": 1280,
     "animation_time": 4,
-    "clock": "2026-11-02T20:30:00"
+    "clock": "2026-11-02T20:30:00",
+    "theme": "dark"
    },
    {
     "name": "square",
     "width": 300,
     "height": 300,
     "animation_time": 4,
-    "clock": "2026-11-02T20:30:00"
+    "clock": "2026-11-02T20:30:00",
+    "theme": "light"
    }
   ]
  },
@@ -168,15 +201,21 @@
   "SHW-27"
  ],
  "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 3473,
+  "bytes": 4248,
   "header": {
    "width": 360,
    "height": 640
   },
-  "op_count": 107,
+  "op_count": 167,
   "operations": {
    "ANIMATED_FLOAT": 35,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
    "DATA_TEXT": 12,
@@ -188,7 +227,7 @@
    "LAYOUT_CANVAS": 1,
    "LAYOUT_ROOT": 1,
    "LayoutComponentContent": 1,
-   "LoopOperation": 5,
+   "LoopOperation": 17,
    "MATRIX_RESTORE": 4,
    "MATRIX_ROTATE": 2,
    "MATRIX_SAVE": 4,
@@ -197,12 +236,45 @@
    "MODIFIER_BACKGROUND": 1,
    "MODIFIER_HEIGHT": 1,
    "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 6,
    "PAINT_VALUES": 12,
    "PathExpression": 2,
+   "THEME": 18,
    "TextMeasure": 2,
    "TextSubtext": 2
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "band",
+    "type": "color",
+    "value": "#FFF0EADC"
+   },
+   {
+    "name": "bandText",
+    "type": "color",
+    "value": "#FFE23B12"
+   },
+   {
+    "name": "ink",
+    "type": "color",
+    "value": "#FFF0EADC"
+   },
+   {
+    "name": "paper",
+    "type": "color",
+    "value": "#FF141118"
+   },
+   {
+    "name": "red",
+    "type": "color",
+    "value": "#FFFF5A2E"
+   },
+   {
+    "name": "ringLine",
+    "type": "color",
+    "value": "#FFB9A9C9"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
@@ -223,19 +295,147 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 3967,
+    "component_modes": {},
+    "op_count": 138,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "band",
+      "type": "color",
+      "value": "#FFF0EADC"
+     },
+     {
+      "name": "bandText",
+      "type": "color",
+      "value": "#FFE23B12"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FFF0EADC"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "paper",
+      "type": "color",
+      "value": "#FF141118"
+     },
+     {
+      "name": "red",
+      "type": "color",
+      "value": "#FFFF5A2E"
+     },
+     {
+      "name": "ringLine",
+      "type": "color",
+      "value": "#FFB9A9C9"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 3967,
+    "component_modes": {},
+    "op_count": 138,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "band",
+      "type": "color",
+      "value": "#FF141414"
+     },
+     {
+      "name": "bandText",
+      "type": "color",
+      "value": "#FFFF4A1C"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FF141414"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "paper",
+      "type": "color",
+      "value": "#FFF0EADC"
+     },
+     {
+      "name": "red",
+      "type": "color",
+      "value": "#FFFF4A1C"
+     },
+     {
+      "name": "ringLine",
+      "type": "color",
+      "value": "#FF141414"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "drop": {
+    "theme": "light",
     "render": "render-drop.png",
     "render_findings": []
    },
    "landing": {
+    "theme": "dark",
     "render": "render-landing.png",
     "render_findings": []
    },
    "later": {
+    "theme": "light",
     "render": "render-later.png",
     "render_findings": []
    },
    "landscape": {
+    "theme": "dark",
     "render": "render-landscape.png",
     "render_findings": [],
     "size": [
@@ -249,6 +449,7 @@
     ]
    },
    "landscape-drop": {
+    "theme": "light",
     "render": "render-landscape-drop.png",
     "render_findings": [],
     "size": [
@@ -262,6 +463,7 @@
     ]
    },
    "tablet": {
+    "theme": "dark",
     "render": "render-tablet.png",
     "render_findings": [],
     "size": [
@@ -275,6 +477,7 @@
     ]
    },
    "square": {
+    "theme": "light",
     "render": "render-square.png",
     "render_findings": [],
     "size": [
@@ -289,23 +492,30 @@
    }
   },
   "json_keys": [
+   "$if",
    "alpha",
    "angle",
    "apiLevel",
    "background",
+   "band",
+   "bandText",
    "bottom",
    "color",
+   "colors",
    "commands",
    "contentDescription",
    "count",
    "cx",
    "cy",
+   "dark",
    "drawCircle",
+   "drawLine",
    "drawRect",
    "drawTextAnchored",
    "drawTextOnPath",
    "dx",
    "dy",
+   "else",
    "end",
    "expressionX",
    "expressionY",
@@ -316,8 +526,10 @@
    "height",
    "id",
    "index",
+   "ink",
    "left",
    "len",
+   "light",
    "loop",
    "mode",
    "modifiers",
@@ -325,13 +537,17 @@
    "paint",
    "panX",
    "panY",
+   "paper",
    "path",
    "pathExpression",
    "pivotX",
    "pivotY",
    "profiles",
    "radius",
+   "red",
+   "resources",
    "right",
+   "ringLine",
    "root",
    "rotate",
    "save",
@@ -345,6 +561,7 @@
    "textMeasure",
    "textSize",
    "textSubtext",
+   "then",
    "top",
    "translate",
    "type",
@@ -355,7 +572,11 @@
    "variable",
    "width",
    "x",
-   "y"
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
   ],
   "evidence": {
    "text.path": [
@@ -400,7 +621,7 @@
     "min("
    ]
   },
-  "built_at": "2026-11-02T18:48:50.553Z"
+  "built_at": "2026-11-02T20:23:22.001Z"
  },
  "expect_findings": [
   "hardcoded_date"

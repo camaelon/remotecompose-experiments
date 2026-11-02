@@ -56,6 +56,7 @@
   "Collision response is an impulse J = (1 + e) / (4R²) * min(v · offset, 0), applied once (J resets on the step after it fires) plus a push-out P that removes the overlap; walls reflect vx with a guarded factor wl",
   "Tap to drop: onTouchDown records @tx, @ty and counts @drops; each marble compares @drops with the count it last saw, and the one whose index equals @slot respawns at the touch. Fifteen marbles auto-rain from the top, fifteen are reserved for taps",
   "Tilt: gravity is (−accelerationX(), accelerationY()) scaled to the screen, falling back to straight down when the sensor reads under 2 m/s² (no sensor, or the device lying flat)",
+  "Mono (always-on and e-ink): {\"$if\": \"theme.mono\"} forks swap the colour passes for five shape styles (solid, ring, solid with a hole, ring with a dot, ring with a big dot), drop the gradient and halos, and flash a bin by a short line instead of a glow; the physics is the same particle system in every look",
   "Colour per marble without colour expressions: five particlesComparison passes over index ranges [0, 6), [6, 12)… each paint the marbles of one colour; the peg they last hit flashes as a fading ring in that colour"
  ],
  "pitfalls": [
@@ -68,17 +69,17 @@
  ],
  "snippets": [
   {
-   "pointer": "/root/commands/41",
+   "pointer": "/root/commands/40",
    "shows": "fx.particles",
    "note": "30 marbles, 18 state variables each"
   },
   {
-   "pointer": "/root/commands/42",
+   "pointer": "/root/commands/41",
    "shows": "fx.physics",
    "note": "one sub-step: gravity, peg impulses, push-out, walls, spawning"
   },
   {
-   "pointer": "/root/commands/46",
+   "pointer": "/root/commands/45/else/0",
    "shows": "fx.particles",
    "note": "one colour pass over marbles 0..5: halo, body, highlight, peg flash, bin flash"
   },
@@ -93,7 +94,7 @@
    "note": "gravity follows the accelerometer"
   },
   {
-   "pointer": "/root/commands/40",
+   "pointer": "/root/commands/39",
    "shows": "data.loop",
    "note": "the peg lattice"
   },
@@ -110,6 +111,40 @@
    "seed": 3
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "duration": 6,
+    "seed": 3
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "duration": 6,
+    "seed": 3
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "duration": 6,
+    "seed": 3
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "duration": 6,
+    "seed": 3
+   },
+   {
+    "name": "tilt-light",
+    "theme": "light",
+    "duration": 7,
+    "seed": 3,
+    "system_variables": {
+     "17": -6,
+     "18": 7.5
+    }
+   },
    {
     "name": "early",
     "duration": 2,
@@ -221,16 +256,22 @@
   "TIM-06"
  ],
  "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 10389,
+  "bytes": 11806,
   "header": {
    "width": 360,
    "height": 640
   },
-  "op_count": 215,
+  "op_count": 326,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
    "ANIMATED_FLOAT": 108,
+   "COLOR_CONSTANT": 22,
+   "COLOR_EXPRESSIONS": 22,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
    "DATA_FLOAT": 3,
@@ -243,32 +284,89 @@
    "LAYOUT_CANVAS": 1,
    "LAYOUT_ROOT": 1,
    "LayoutComponentContent": 1,
-   "LoopOperation": 3,
+   "LoopOperation": 25,
    "MATRIX_RESTORE": 1,
    "MATRIX_SAVE": 1,
    "MATRIX_TRANSLATE": 1,
    "MODIFIER_HEIGHT": 1,
    "MODIFIER_TOUCH_DOWN": 1,
    "MODIFIER_WIDTH": 1,
-   "PAINT_VALUES": 37,
+   "NAMED_VARIABLE": 11,
+   "PAINT_VALUES": 38,
    "ParticlesCompare": 5,
    "ParticlesCreate": 1,
    "ParticlesLoop": 4,
+   "THEME": 33,
    "ValueFloatExpressionChangeActionOperation": 3
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "bg1",
+    "type": "color",
+    "value": "#FF0B0F1E"
+   },
+   {
+    "name": "bg2",
+    "type": "color",
+    "value": "#FF1A1035"
+   },
+   {
+    "name": "divider",
+    "type": "color",
+    "value": "#FF49D3FF"
+   },
+   {
+    "name": "m0",
+    "type": "color",
+    "value": "#FFFF4D8D"
+   },
+   {
+    "name": "m1",
+    "type": "color",
+    "value": "#FFFFB547"
+   },
+   {
+    "name": "m2",
+    "type": "color",
+    "value": "#FF4DE3A3"
+   },
+   {
+    "name": "m3",
+    "type": "color",
+    "value": "#FF4DB8FF"
+   },
+   {
+    "name": "m4",
+    "type": "color",
+    "value": "#FFB27CFF"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "peg",
+    "type": "color",
+    "value": "#FFB9C2E8"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
    "warning": 1,
-   "info": 5
+   "info": 4
   },
   "audit_findings": [
    "warning: dead_code",
    "info: repaint_continuous",
    "info: repeated_subtree",
    "info: repeated_subtree",
-   "info: hardcoded_colors",
    "info: expression_entries"
   ],
   "repaint": "continuous",
@@ -280,6 +378,165 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 10475,
+    "component_modes": {},
+    "op_count": 219,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "bg1",
+      "type": "color",
+      "value": "#FF0B0F1E"
+     },
+     {
+      "name": "bg2",
+      "type": "color",
+      "value": "#FF1A1035"
+     },
+     {
+      "name": "divider",
+      "type": "color",
+      "value": "#FF49D3FF"
+     },
+     {
+      "name": "m0",
+      "type": "color",
+      "value": "#FFFF4D8D"
+     },
+     {
+      "name": "m1",
+      "type": "color",
+      "value": "#FFFFB547"
+     },
+     {
+      "name": "m2",
+      "type": "color",
+      "value": "#FF4DE3A3"
+     },
+     {
+      "name": "m3",
+      "type": "color",
+      "value": "#FF4DB8FF"
+     },
+     {
+      "name": "m4",
+      "type": "color",
+      "value": "#FFB27CFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "peg",
+      "type": "color",
+      "value": "#FFB9C2E8"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "continuous",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 10475,
+    "component_modes": {},
+    "op_count": 219,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "bg1",
+      "type": "color",
+      "value": "#FFFBF8F1"
+     },
+     {
+      "name": "bg2",
+      "type": "color",
+      "value": "#FFE9E3F3"
+     },
+     {
+      "name": "divider",
+      "type": "color",
+      "value": "#FF4A5384"
+     },
+     {
+      "name": "m0",
+      "type": "color",
+      "value": "#FFE5306C"
+     },
+     {
+      "name": "m1",
+      "type": "color",
+      "value": "#FFEE8A00"
+     },
+     {
+      "name": "m2",
+      "type": "color",
+      "value": "#FF12A372"
+     },
+     {
+      "name": "m3",
+      "type": "color",
+      "value": "#FF1C7FE0"
+     },
+     {
+      "name": "m4",
+      "type": "color",
+      "value": "#FF8550E6"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "peg",
+      "type": "color",
+      "value": "#FF6A7194"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "continuous",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "tilt-light": {
+    "theme": "light",
+    "render": "render-tilt-light.png",
+    "render_findings": []
+   },
    "early": {
     "render": "render-early.png",
     "render_findings": []
@@ -333,8 +590,11 @@
    }
   },
   "json_keys": [
+   "$if",
    "alpha",
    "apiLevel",
+   "bg1",
+   "bg2",
    "bottom",
    "color",
    "colors",
@@ -345,6 +605,8 @@
    "createParticles",
    "cx",
    "cy",
+   "dark",
+   "divider",
    "drawCircle",
    "drawLine",
    "drawRect",
@@ -352,6 +614,7 @@
    "drops",
    "dx",
    "dy",
+   "else",
    "equations",
    "from",
    "header",
@@ -360,12 +623,20 @@
    "index",
    "initialValues",
    "left",
+   "light",
    "linearGradient",
    "loop",
+   "m0",
+   "m1",
+   "m2",
+   "m3",
+   "m4",
    "max",
    "min",
    "modifiers",
+   "muted",
    "name",
+   "onSurface",
    "onTouchDown",
    "ops",
    "paint",
@@ -373,6 +644,7 @@
    "panY",
    "particlesComparison",
    "particlesLoop",
+   "peg",
    "profiles",
    "radius",
    "resources",
@@ -390,6 +662,7 @@
    "target",
    "text",
    "textSize",
+   "then",
    "top",
    "translate",
    "tx",
@@ -447,6 +720,6 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-02T18:48:42.952Z"
+  "built_at": "2026-11-02T20:23:06.636Z"
  }
 }

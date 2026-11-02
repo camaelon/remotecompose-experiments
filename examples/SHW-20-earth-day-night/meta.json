@@ -65,7 +65,8 @@
   "Draw fixed points as one mesh: the 16 city dots are small octahedra merged into a single defineMesh3D (2.3 KB), because each drawMesh3D composites the whole window buffer (a loop of 16 sphere draws cost the TypeScript player about 68 ms a frame at 1080 x 1920, the merged mesh a few); lit from the anti-sun direction, they glow on the night side and are dim by day",
   "Label 3D points in 2D: project each city with the camera basis (right (cos s, 0, -sin s), up (-sin t sin s, cos t, -sin t cos s)) and F = (H/2)/tan(fov/2), and push the label off screen with step() when it is behind the limb",
   "Frame the globe in the free part of the window: the distance D = 1/sin(atan(r/F)) for a target radius r in px, and a 2D translate before the 3D moves the window-sized buffer to the free region",
-  "Draw line art on a sphere in mono with a mostly transparent texture (texels with alpha 0 are skipped and write no depth), then the hidden-line wireframe: its own depth prepass hides the back, and objects drawn after it (dots, the terminator ring) stay visible as long as no negative depthBias3D was active during the wireframe"
+  "Draw line art on a sphere in mono with a mostly transparent texture (texels with alpha 0 are skipped and write no depth), then the hidden-line wireframe: its own depth prepass hides the back, and objects drawn after it (dots, the terminator ring) stay visible as long as no negative depthBias3D was active during the wireframe",
+  "Keep labels readable over a globe and a page of either theme: draw every label first as a 3-px stroke in a dark halo colour (the background in mono), then the fill on top"
  ],
  "pitfalls": [
   "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players only",
@@ -75,8 +76,8 @@
   "The sun uses minute resolution (timeInMin()) and offsetToUtc(); with a wrong device time zone the terminator is wrong by the same amount",
   "The labels are 2D text projected by hand: they are not hidden by the city's own dot or clipped at the limb, only switched off a little before it",
   "The texture is stylised (land, ice, shelf, a 30° graticule from Natural Earth), not a satellite image",
-  "The colour version is a deliberate dark space piece with literal colours; mono follows the theme",
-  "A wireframe drawMesh3D fills the z-buffer with its front faces first; with a negative depthBias3D active it writes them biased toward the eye, so later parts close to the surface (city dots, a ring 0.004 above it) disappear. Draw the wireframe without a bias (its prepass already hides the back lines) when anything sits on the surface afterwards"
+  "A wireframe drawMesh3D fills the z-buffer with its front faces first; with a negative depthBias3D active it writes them biased toward the eye, so later parts close to the surface (city dots, a ring 0.004 above it) disappear. Draw the wireframe without a bias (its prepass already hides the back lines) when anything sits on the surface afterwards",
+  "The globe itself is the same in light and dark (the texture is a bitmap and the night side is physical); the page, text and stars follow the theme. The halo is a radial gradient of literal colours (gradients take no themed colours) chosen to read on both"
  ],
  "java_difference": "3D support has not landed in androidx yet (coming): the Java JSON parser does not know camera3D, lights3D, matrix3D, meshPrimitive3D or drawMesh3D; plays in the C++ and TypeScript players",
  "snippets": [
@@ -113,11 +114,31 @@
  ],
  "assets": "Texture generated for this example from assets/maps/maps.json (Natural Earth 1:50m land and 1:110m lakes, public domain): equirectangular 768 x 384, Greenwich at the left edge, quantised to 10 colours. The mono texture is the 1:110m coastline drawn as lines into a 512 x 256 RGBA PNG (6.6 KB), transparent elsewhere.",
  "check": {
-  "describe": "A dark starry screen with 'Earth, right now' and 'Sun overhead at 15.3° S, 34.1° W' (at 14:00 UTC on 2 Nov 2026) at the top; a globe with a faint blue halo, lit from the left: Africa and Europe in daylight, the terminator running through Arabia and the Indian Ocean, Asia on the night side where Mumbai, Beijing and the other cities glow gold; labels London, Mumbai, Cape Town next to their dots. Later in time the globe has turned east (the view drifts west). A drag turns it. In June at 06:00 UTC the north pole is in daylight; in December at 22:00 UTC the south pole is. Mono: a hidden-line graticule sphere with the coastlines as line art, the city dots and labels, and the terminator as a solid great circle; no shading, no motion.",
+  "describe": "Dark: a starry night-sky screen with 'Earth, right now' and 'Sun overhead at 15.3° S, 34.1° W' (at 14:00 UTC on 2 Nov 2026) at the top; a globe with a faint blue halo, lit from the left: Africa and Europe in daylight, the terminator running through Arabia and the Indian Ocean, Asia on the night side where Mumbai, Beijing and the other cities glow gold; labels London, Mumbai, Cape Town next to their dots. Later in time the globe has turned east (the view drifts west). A drag turns it. In June at 06:00 UTC the north pole is in daylight; in December at 22:00 UTC the south pole is. Light: the same globe on a pale blue-grey page (no stars, the blue halo kept as an atmosphere), dark ink text; the night half of the globe stays dark, the labels are white with a dark halo so they read on the globe and on the page. Mono: a hidden-line graticule sphere with the coastlines as line art, the city dots and labels, and the terminator as a solid great circle; no shading, no motion.",
   "render": {
    "clock": 1793628000000
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "clock": 1793628000000
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "clock": 1793628000000
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "clock": 1793628000000
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "clock": 1793628000000
+   },
    {
     "name": "later",
     "clock": 1793628030000
@@ -184,16 +205,6 @@
     "width": 170,
     "height": 170,
     "clock": 1793628000000
-   },
-   {
-    "name": "mono-dark",
-    "componentTheme": "mono-dark",
-    "clock": 1793628000000
-   },
-   {
-    "name": "mono-light",
-    "componentTheme": "mono-light",
-    "clock": 1793628000000
    }
   ]
  },
@@ -210,15 +221,17 @@
   "component_modes": {},
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 38404,
+  "bytes": 39703,
   "header": {
    "width": 360,
    "height": 640
   },
-  "op_count": 225,
+  "op_count": 290,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 1,
-   "ANIMATED_FLOAT": 112,
+   "ANIMATED_FLOAT": 128,
+   "COLOR_CONSTANT": 8,
+   "COLOR_EXPRESSIONS": 8,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
    "CoreText": 11,
@@ -227,7 +240,7 @@
    "DEFINE_MESH_3D": 1,
    "DRAW_CIRCLE": 2,
    "DRAW_MESH_3D": 2,
-   "DRAW_TEXT_ANCHOR": 8,
+   "DRAW_TEXT_ANCHOR": 16,
    "HEADER": 1,
    "LAYOUT_BOX": 3,
    "LAYOUT_CANVAS": 1,
@@ -235,7 +248,7 @@
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 1,
    "LayoutComponentContent": 15,
-   "LoopOperation": 1,
+   "LoopOperation": 9,
    "MATRIX_3D_OP": 2,
    "MATRIX_TRANSLATE": 1,
    "MESH_PRIMITIVE_3D": 1,
@@ -244,27 +257,50 @@
    "MODIFIER_PADDING": 2,
    "MODIFIER_VISIBILITY": 5,
    "MODIFIER_WIDTH": 4,
+   "NAMED_VARIABLE": 4,
    "PAINT_3D_STATE": 4,
-   "PAINT_VALUES": 6,
+   "PAINT_VALUES": 7,
    "SET_CAMERA_3D": 1,
    "SET_LIGHTS_3D": 2,
    "SET_TEXTURE_3D": 2,
+   "THEME": 12,
    "TextFromFloat": 2,
    "TouchExpression": 2
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "globe_bg",
+    "type": "color",
+    "value": "#FF03060F"
+   },
+   {
+    "name": "globe_ink",
+    "type": "color",
+    "value": "#FFEEF3FA"
+   },
+   {
+    "name": "globe_muted",
+    "type": "color",
+    "value": "#FF8B9BB4"
+   },
+   {
+    "name": "globe_star",
+    "type": "color",
+    "value": "#99C8D6F0"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
-   "warning": 0,
-   "info": 6
+   "warning": 1,
+   "info": 5
   },
   "audit_findings": [
+   "warning: text_in_canvas",
    "info: repaint_continuous",
    "info: deep_expressions",
    "info: size_dominated",
    "info: size_single_op",
-   "info: text_in_canvas",
    "info: expression_entries"
   ],
   "repaint": "continuous",
@@ -276,6 +312,100 @@
   },
   "java_identical": false,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 39012,
+    "component_modes": {},
+    "op_count": 250,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "globe_bg",
+      "type": "color",
+      "value": "#FF03060F"
+     },
+     {
+      "name": "globe_ink",
+      "type": "color",
+      "value": "#FFEEF3FA"
+     },
+     {
+      "name": "globe_muted",
+      "type": "color",
+      "value": "#FF8B9BB4"
+     },
+     {
+      "name": "globe_star",
+      "type": "color",
+      "value": "#99C8D6F0"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "scheduled",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 39012,
+    "component_modes": {},
+    "op_count": 250,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "globe_bg",
+      "type": "color",
+      "value": "#FFE8EEF5"
+     },
+     {
+      "name": "globe_ink",
+      "type": "color",
+      "value": "#FF142133"
+     },
+     {
+      "name": "globe_muted",
+      "type": "color",
+      "value": "#FF55657A"
+     },
+     {
+      "name": "globe_star",
+      "type": "color",
+      "value": "#00FFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "scheduled",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "later": {
     "render": "render-later.png",
     "render_findings": []
@@ -336,50 +466,6 @@
      "info: size_single_op",
      "info: expression_entries"
     ]
-   },
-   "mono-dark": {
-    "componentTheme": "mono-dark",
-    "bytes": 38129,
-    "component_modes": {},
-    "op_count": 217,
-    "host_variables": [
-     {
-      "name": "background",
-      "type": "color",
-      "value": "#FF000000"
-     },
-     {
-      "name": "onSurface",
-      "type": "color",
-      "value": "#FFFFFFFF"
-     }
-    ],
-    "java_identical": false,
-    "repaint": "scheduled",
-    "render": "render-mono-dark.png",
-    "render_findings": []
-   },
-   "mono-light": {
-    "componentTheme": "mono-light",
-    "bytes": 38129,
-    "component_modes": {},
-    "op_count": 217,
-    "host_variables": [
-     {
-      "name": "background",
-      "type": "color",
-      "value": "#FFFFFFFF"
-     },
-     {
-      "name": "onSurface",
-      "type": "color",
-      "value": "#FF000000"
-     }
-    ],
-    "java_identical": false,
-    "repaint": "scheduled",
-    "render": "render-mono-light.png",
-    "render_findings": []
    }
   },
   "json_keys": [
@@ -408,6 +494,7 @@
    "contentDescription",
    "cx",
    "cy",
+   "dark",
    "dec",
    "decD",
    "decimal",
@@ -432,6 +519,10 @@
    "fovY",
    "from",
    "full",
+   "globe_bg",
+   "globe_ink",
+   "globe_muted",
+   "globe_star",
    "header",
    "height",
    "id",
@@ -440,6 +531,7 @@
    "intensity",
    "land",
    "landmask",
+   "light",
    "lights",
    "lights3D",
    "loop",
@@ -481,6 +573,8 @@
    "specular",
    "stopMode",
    "stops",
+   "strokeJoin",
+   "strokeWidth",
    "style",
    "sx",
    "sy",
@@ -565,6 +659,6 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-02T18:48:33.311Z"
+  "built_at": "2026-11-02T20:22:43.636Z"
  }
 }

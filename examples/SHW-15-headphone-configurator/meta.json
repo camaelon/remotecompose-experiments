@@ -57,7 +57,10 @@
   "Label 3D parts from 2D: project each anchor with the same spin, tilt, distance and focal length (H / 2 / tan(fovY / 2)) in a loop over float arrays, and draw a dot, a leader line and textLookup's name after the meshes, faded in with exA",
   "Put labels on the nearer side: the right cup is nearer while sin(spin) < 0, so the anchors' x is multiplied by the sign of -sin(spin)",
   "Swap a phone and a tablet layout with a fitBox (a row with widthIn min 600 first, the column second), and let the 3D canvas behind them shift and reframe with step(componentWidth(), 599)",
-  "Draw a swatch row in one small canvas with a sliding selection ring (cx from an eased @selA) under a row of transparent tap boxes that carry the semantics and the onClick"
+  "Draw a swatch row in one small canvas with a sliding selection ring (cx from an eased @selA) under a row of transparent tap boxes that carry the semantics and the onClick",
+  "Give a 3D product a mono look with one {\"$if\": \"theme.mono\"} around the meshes and draws: fewer segments, three saturating axis lights, every part filled in @colors.background and then drawn again as an onSurface wireframe with a small negative depthBias3D, so nearer parts hide the lines behind them; no turntable, no autorotation, no easing",
+  "Show a colour choice without hue in mono: outlined circles, the chosen one filled and ringed, and its name in text",
+  "Use the library Button for the toggle (label from a textLookup variable, fill, surface @colors.surface): it brings its light, dark and mono faces"
  ],
  "pitfalls": [
   "3D support has not landed in androidx yet (coming): this plays in the C++ and TypeScript players only",
@@ -66,28 +69,34 @@
   "The 3D buffer is window-sized and drawn at the canvas origin: keep the 3D canvas fillMaxSize behind the layout and move the model with a 2D translate rather than placing the canvas in the layout",
   "rc-render with clock 0 (the epoch) freezes eased values in a touch simulation: pin a real date-time for interaction renders",
   "Continuous repaint: the turntable reads continuousSec() every frame while shown",
-  "A short side panel must degrade: its content is a collapsibleColumn whose price, specs, sentence and hint are fixed-height slots with collapsiblePriority (sentence first, then the hint, then the specs from the bottom), so 640x360 keeps the title, colour, swatches, button and two specs without overlap"
+  "A short side panel must degrade: its content is a collapsibleColumn whose price, specs, sentence and hint are fixed-height slots with collapsiblePriority (sentence first, then the hint, then the specs from the bottom), so 640x360 keeps the title, colour, swatches, button and two specs without overlap",
+  "The TypeScript player carries paint state (stroke style) from one canvas into the next: end a canvas that strokes with a fill paint, or a library component's canvas drawn after it comes out outlined"
  ],
  "snippets": [
   {
-   "pointer": "/root/2/box/children/1/canvas/commands/15",
+   "pointer": "/root/1/box/children/1/canvas/commands/15",
    "shows": "3d.scene",
    "note": "the orbiting camera: eye from spin and tilt"
   },
   {
-   "pointer": "/root/2/box/children/1/canvas/commands/16",
+   "pointer": "/root/1/box/children/1/canvas/commands/16/else/9",
    "shows": "3d.scene",
    "note": "lights turned with the camera"
   },
   {
-   "pointer": "/root/2/box/children/1/canvas/commands/22",
+   "pointer": "/root/1/box/children/1/canvas/commands/16/else/4",
    "shows": "3d.mesh",
-   "note": "the ear cup: a capped lathe profile"
+   "note": "the ear cup: a closed lathe profile, base to tip"
   },
   {
-   "pointer": "/root/2/box/children/1/canvas/commands/18",
+   "pointer": "/root/1/box/children/1/canvas/commands/16/else/0",
    "shows": "3d.mesh",
    "note": "the headband: an extruded arc"
+  },
+  {
+   "pointer": "/root/1/box/children/1/canvas/commands/16/then",
+   "shows": "3d.mesh",
+   "note": "mono: every part filled in the background, then hidden-line wireframes in onSurface"
   },
   {
    "pointer": "/resources/colors/shell",
@@ -95,23 +104,23 @@
    "note": "the shell colour cross-fades between swatches"
   },
   {
-   "pointer": "/root/2/box/children/1/canvas/commands/89",
+   "pointer": "/root/1/box/children/1/canvas/commands/20",
    "shows": "data.loop",
    "note": "five projected labels from float arrays"
   },
   {
-   "pointer": "/root/2/box/children/2/fitBox",
+   "pointer": "/root/1/box/children/2/fitBox",
    "shows": "layout.responsive",
    "note": "tablet row first, phone column second"
   },
   {
-   "pointer": "/root/1",
+   "pointer": "/root/0",
    "shows": "anim.value",
-   "note": "exA: the eased explode amount"
+   "note": "exA: the eased explode amount (instant in mono)"
   }
  ],
  "check": {
-  "describe": "Phone: 'Aura One' and $349 at the top, dark (Midnight) headphones on a pale turntable disc, the band's ends straight over the aluminium yokes, the cups solid domes, a card below with 'Colour Midnight', four swatches (the first ringed) and an Explode view button. Exploded: the band lifts, cups move out, cushions in, yokes and sliders up in line under the band's ends, the dark 40 mm drivers between cups and cushions; five labelled leader lines (Headband, Foam cushion, 40 mm driver, Aluminium yoke, Ear cup) on the nearer cup, and the button says Assemble. A swatch tap recolours shell and cushions. Tablet: model left, a side panel with title, price, colour, swatches, button, four specs and a sentence.",
+  "describe": "Phone: 'Aura One' and $349 at the top, dark (Midnight) headphones on a pale turntable disc, the band's ends straight over the aluminium yokes, the cups solid domes, a card below with 'Colour Midnight', four swatches (the first ringed) and an Explode view button. Exploded: the band lifts, cups move out, cushions in, yokes and sliders up in line under the band's ends, the dark 40 mm drivers between cups and cushions; five labelled leader lines (Headband, Foam cushion, 40 mm driver, Aluminium yoke, Ear cup) on the nearer cup, and the button says Assemble. A swatch tap recolours shell and cushions. Tablet: model left, a side panel with title, price, colour, swatches, button, four specs and a sentence. Mono dark / mono light: the headphones as white (black) hidden-line wireframes with no turntable, outlined colour circles with the chosen one filled, the Button in its mono face, cards outlined.",
   "render": {
    "clock": "2026-11-02T10:00:00"
   },
@@ -124,6 +133,16 @@
    {
     "name": "dark",
     "theme": "dark",
+    "clock": "2026-11-02T10:00:00"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "clock": "2026-11-02T10:00:00"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
     "clock": "2026-11-02T10:00:00"
    },
    {
@@ -257,29 +276,36 @@
   "LAY-09"
  ],
  "java_difference": "3D support has not landed in androidx yet (coming): the Java JSON parser does not know camera3D, lights3D, matrix3D, meshPrimitive3D or drawMesh3D; plays in the C++ and TypeScript players. Also json2rc-only: Java's addDataList drops the list id, so textLookup can't reach it (EXAMPLES_FINDINGS U4)",
+ "components": [
+  "Button"
+ ],
  "derived": {
-  "components": [],
-  "component_instances": 0,
-  "component_modes": {},
+  "components": [
+   "Button"
+  ],
+  "component_instances": 2,
+  "component_modes": {
+   "Button": "expand"
+  },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 11114,
+  "bytes": 11350,
   "header": {
    "width": 360,
    "height": 720
   },
-  "op_count": 643,
+  "op_count": 658,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 11,
    "ANIMATED_FLOAT": 65,
-   "COLOR_CONSTANT": 20,
+   "COLOR_CONSTANT": 21,
    "COLOR_EXPRESSIONS": 22,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 4,
    "CollapsibleColumnLayout": 1,
    "CoreText": 22,
    "DATA_FLOAT": 2,
-   "DATA_TEXT": 32,
+   "DATA_TEXT": 31,
    "DRAW_CIRCLE": 19,
    "DRAW_LINE": 1,
    "DRAW_MESH_3D": 15,
@@ -298,17 +324,18 @@
    "MATRIX_3D_OP": 40,
    "MATRIX_TRANSLATE": 1,
    "MESH_PRIMITIVE_3D": 9,
-   "MODIFIER_BACKGROUND": 5,
+   "MODIFIER_BACKGROUND": 7,
    "MODIFIER_CLICK": 10,
    "MODIFIER_COLLAPSIBLE_PRIORITY": 7,
    "MODIFIER_HEIGHT": 37,
-   "MODIFIER_PADDING": 13,
+   "MODIFIER_PADDING": 19,
+   "MODIFIER_RIPPLE": 2,
    "MODIFIER_WIDTH": 50,
    "MODIFIER_WIDTH_IN": 1,
-   "NAMED_VARIABLE": 24,
+   "NAMED_VARIABLE": 25,
    "PAINT_3D_STATE": 2,
-   "PAINT_VALUES": 20,
-   "RoundedClipRectModifierOperation": 4,
+   "PAINT_VALUES": 22,
+   "RoundedClipRectModifierOperation": 6,
    "SET_CAMERA_3D": 1,
    "SET_LIGHTS_3D": 1,
    "TEXT_LOOKUP": 3,
@@ -434,6 +461,11 @@
     "value": "#FFC4CAD2"
    },
    {
+    "name": "monoOutline",
+    "type": "color",
+    "value": "#00000000"
+   },
+   {
     "name": "muted",
     "type": "color",
     "value": "#FF8A94A6"
@@ -534,6 +566,406 @@
    "dark": {
     "theme": "dark",
     "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 11223,
+    "component_modes": {
+     "Button": "expand"
+    },
+    "op_count": 634,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "cuB",
+      "type": "float_array",
+      "value": [
+       0.125,
+       0.352999985,
+       0.282000005,
+       0.172999993
+      ]
+     },
+     {
+      "name": "cuG",
+      "type": "float_array",
+      "value": [
+       0.109999999,
+       0.430999994,
+       0.337000012,
+       0.203999996
+      ]
+     },
+     {
+      "name": "cuR",
+      "type": "float_array",
+      "value": [
+       0.101999998,
+       0.493999988,
+       0.277999997,
+       0.430999994
+      ]
+     },
+     {
+      "name": "cushion",
+      "type": "color",
+      "value": "#FF1A1C20"
+     },
+     {
+      "name": "driver",
+      "type": "color",
+      "value": "#FF3A3F47"
+     },
+     {
+      "name": "lax",
+      "type": "float_array",
+      "value": [
+       0,
+       0.720000029,
+       0.800000012,
+       0.920000017,
+       1
+      ]
+     },
+     {
+      "name": "lay",
+      "type": "float_array",
+      "value": [
+       1.08500004,
+       -0.430000007,
+       -0.550000012,
+       0.00999999978,
+       -0.379999995
+      ]
+     },
+     {
+      "name": "laz",
+      "type": "float_array",
+      "value": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "ldx",
+      "type": "float_array",
+      "value": [
+       0,
+       -0.200000003,
+       0.100000001,
+       0,
+       0.360000014
+      ]
+     },
+     {
+      "name": "ldy",
+      "type": "float_array",
+      "value": [
+       0.449999988,
+       0,
+       0,
+       0.150000006,
+       0
+      ]
+     },
+     {
+      "name": "lup",
+      "type": "float_array",
+      "value": [
+       -26,
+       52,
+       80,
+       -34,
+       -62
+      ]
+     },
+     {
+      "name": "metal",
+      "type": "color",
+      "value": "#FFC4CAD2"
+     },
+     {
+      "name": "monoOutline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "shB",
+      "type": "float_array",
+      "value": [
+       0.231000006,
+       0.675000012,
+       0.545000017,
+       0.344999999
+      ]
+     },
+     {
+      "name": "shG",
+      "type": "float_array",
+      "value": [
+       0.200000003,
+       0.776000023,
+       0.647000015,
+       0.426999986
+      ]
+     },
+     {
+      "name": "shR",
+      "type": "float_array",
+      "value": [
+       0.180000007,
+       0.847000003,
+       0.549000025,
+       0.885999978
+      ]
+     },
+     {
+      "name": "shell",
+      "type": "color",
+      "value": "#FF2E333B"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "turntable",
+      "type": "color",
+      "value": "#FF222C3D"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 11223,
+    "component_modes": {
+     "Button": "expand"
+    },
+    "op_count": 634,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "cuB",
+      "type": "float_array",
+      "value": [
+       0.125,
+       0.352999985,
+       0.282000005,
+       0.172999993
+      ]
+     },
+     {
+      "name": "cuG",
+      "type": "float_array",
+      "value": [
+       0.109999999,
+       0.430999994,
+       0.337000012,
+       0.203999996
+      ]
+     },
+     {
+      "name": "cuR",
+      "type": "float_array",
+      "value": [
+       0.101999998,
+       0.493999988,
+       0.277999997,
+       0.430999994
+      ]
+     },
+     {
+      "name": "cushion",
+      "type": "color",
+      "value": "#FF1A1C20"
+     },
+     {
+      "name": "driver",
+      "type": "color",
+      "value": "#FF2A2D33"
+     },
+     {
+      "name": "lax",
+      "type": "float_array",
+      "value": [
+       0,
+       0.720000029,
+       0.800000012,
+       0.920000017,
+       1
+      ]
+     },
+     {
+      "name": "lay",
+      "type": "float_array",
+      "value": [
+       1.08500004,
+       -0.430000007,
+       -0.550000012,
+       0.00999999978,
+       -0.379999995
+      ]
+     },
+     {
+      "name": "laz",
+      "type": "float_array",
+      "value": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     {
+      "name": "ldx",
+      "type": "float_array",
+      "value": [
+       0,
+       -0.200000003,
+       0.100000001,
+       0,
+       0.360000014
+      ]
+     },
+     {
+      "name": "ldy",
+      "type": "float_array",
+      "value": [
+       0.449999988,
+       0,
+       0,
+       0.150000006,
+       0
+      ]
+     },
+     {
+      "name": "lup",
+      "type": "float_array",
+      "value": [
+       -26,
+       52,
+       80,
+       -34,
+       -62
+      ]
+     },
+     {
+      "name": "metal",
+      "type": "color",
+      "value": "#FFB4BAC2"
+     },
+     {
+      "name": "monoOutline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "shB",
+      "type": "float_array",
+      "value": [
+       0.231000006,
+       0.675000012,
+       0.545000017,
+       0.344999999
+      ]
+     },
+     {
+      "name": "shG",
+      "type": "float_array",
+      "value": [
+       0.200000003,
+       0.776000023,
+       0.647000015,
+       0.426999986
+      ]
+     },
+     {
+      "name": "shR",
+      "type": "float_array",
+      "value": [
+       0.180000007,
+       0.847000003,
+       0.549000025,
+       0.885999978
+      ]
+     },
+     {
+      "name": "shell",
+      "type": "color",
+      "value": "#FF2E333B"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "turntable",
+      "type": "color",
+      "value": "#FFC2C8D2"
+     }
+    ],
+    "java_identical": false,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
     "render_findings": []
    },
    "exploded": {
@@ -644,6 +1076,8 @@
    }
   },
   "json_keys": [
+   "$if",
+   "Button",
    "addDataList",
    "alpha",
    "angle",
@@ -660,6 +1094,7 @@
    "center",
    "children",
    "clearDepth3D",
+   "clickable",
    "clip",
    "collapsibleColumn",
    "collapsiblePriority",
@@ -667,6 +1102,7 @@
    "colors",
    "column",
    "commands",
+   "constant",
    "contentDescription",
    "cuB",
    "cuG",
@@ -677,6 +1113,7 @@
    "dark",
    "defaultValue",
    "depth",
+   "depthBias3D",
    "dir",
    "drawCircle",
    "drawLine",
@@ -685,10 +1122,14 @@
    "driver",
    "dx",
    "dy",
+   "edges",
+   "else",
+   "enabled",
    "ex",
    "expression",
    "eye",
    "far",
+   "fill",
    "fitBox",
    "floatArrays",
    "fontSize",
@@ -703,6 +1144,7 @@
    "index",
    "innerRadius",
    "intensity",
+   "label",
    "lax",
    "lay",
    "laz",
@@ -718,6 +1160,7 @@
    "material3D",
    "matrix3D",
    "max",
+   "maxLines",
    "mesh",
    "meshPrimitive3D",
    "metal",
@@ -725,6 +1168,7 @@
    "minorRadius",
    "mode",
    "modifiers",
+   "monoOutline",
    "muted",
    "name",
    "near",
@@ -736,6 +1180,7 @@
    "orientation",
    "outerRadius",
    "outline",
+   "overflow",
    "padding",
    "paint",
    "panX",
@@ -760,6 +1205,7 @@
    "shell",
    "shininess",
    "size",
+   "slope",
    "specular",
    "startAngle",
    "stopMode",
@@ -771,6 +1217,7 @@
    "text",
    "textLookup",
    "textSize",
+   "then",
    "to",
    "touchExpression",
    "translate",
@@ -788,6 +1235,7 @@
    "weight",
    "width",
    "widthIn",
+   "wireframe",
    "x",
    "x1",
    "x2",
@@ -846,6 +1294,6 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-02T19:47:32.509Z"
+  "built_at": "2026-11-02T20:19:39.765Z"
  }
 }

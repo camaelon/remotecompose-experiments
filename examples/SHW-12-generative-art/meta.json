@@ -61,7 +61,8 @@
   "A flow field with no clumping: velocities from a stream function, vx = −k·sin(x·fx + k1)·sin(y·fy − k2), vy = −k·cos(x·fx + k1)·cos(y·fy − k2). This flow is divergence-free (Taylor-Green vortices). fx = 4π/W and fy = 4π/H make the field tile, so particles can wrap round the edges with %",
   "Particles that never pop: each one has its own life and age = (age + 1) % life. It respawns at a random point (ifElse(rand()·W, …, age − 0.5)) exactly when its alpha, square(sin(π·age/life)), is 0",
   "The glow is the same path stroked three times (7, 2.6 and 0.9 px at alpha 0.07, 0.22 and 0.9) with a sweep gradient. Eighteen beads ride the curve: the same formula evaluated in a loop at u = 75.4·fract(i/18 + T·0.003)",
-  "The AGSL background domain-warps uv three times with time-driven sines and mixes two cosine palettes. Its hue uniform is 0.62 + T·0.00004, so the colour drifts through the day. A vignette keeps the edges dark"
+  "The AGSL background domain-warps uv three times with time-driven sines and mixes two cosine palettes. Its hue uniform is 0.62 + T·0.00004, so the colour drifts through the day. A vignette keeps the edges dark",
+  "Four looks. Dark is the nebula with pastel lines. Light lays a themed cream wash (@colors.wash: 84% cream in light, transparent in dark) over the same shader, so it reads as tinted paper, and the lines, sparks, beads and caption switch to deep inks through themed colours: the sweep gradient takes @colors refs. Mono ({\"$if\": \"theme.mono\"}) drops the shader, particles and glow: the figure is one hairline in onSurface with six dots, its phases from the minute (p1m = m·0.9), so an always-on screen repaints once a minute"
  ],
  "pitfalls": [
   "Shader support: the AGSL nebula plays on Android 13+ (AGSL), in the C++/Skia player (SkRuntimeEffect) and in the TypeScript web player in a browser (transpiled to WebGL2). The headless TypeScript render (players/typescript/render.mjs) has no WebGL, so it stops at the shader with 'document is not defined'. Check the TypeScript side in a browser page instead (package_web)",
@@ -69,26 +70,28 @@
   "Particle initialValues cannot read another particle variable (\"rand() * @life\" is refused: unknown token): give each its own expression",
   "Keep each expression within Android's 32 entries: the figure formula is 26, so the frequencies and phases (nA, d, p1, p2) are separate named variables",
   "rc-inspect's audit reports dead_code for k1, k2, fx, fy and the shader's hue uniform. They are read only by particle equations and a shader uniform, which the inspector does not count as reads (I18). The renders show them working",
-  "The ratio label switches figure at the middle of the crossfade (ifElse(nA, nB, fade − 0.5))"
+  "The ratio label switches figure at the middle of the crossfade (ifElse(nA, nB, fade − 0.5))",
+  "Resource variables are always written, even if only one look uses them (unlike canvas `variable`s, which are written at first use). The look-specific ones (T, fade, p1, k1, nB…) are declared at the top of the light/dark branch, so the mono documents carry no continuousSec() and do not repaint every frame",
+  "A paint `alpha` after a `color` replaces that colour's own alpha. Set a translucent themed colour without a following alpha op"
  ],
  "snippets": [
   {
-   "pointer": "/root/commands/8",
+   "pointer": "/root/commands/8/else/8",
    "shows": "draw.shader",
    "note": "AGSL nebula: three domain warps, two cosine palettes, vignette; uniforms iResolution, iTime = @T, uHue"
   },
   {
-   "pointer": "/root/commands/13",
+   "pointer": "/root/commands/8/else/14",
    "shows": "fx.particles",
    "note": "180 fireflies: per-particle life and age, a divergence-free vortex field, wrap round and respawn at alpha 0"
   },
   {
-   "pointer": "/root/commands/14",
+   "pointer": "/root/commands/8/else/15",
    "shows": "draw.path",
    "note": "the harmonograph of the current minute, 900 points"
   },
   {
-   "pointer": "/resources/variables/fade",
+   "pointer": "/root/commands/8/else/1",
    "shows": "time.clock",
    "note": "crossfade over the last ten seconds of each minute"
   },
@@ -96,6 +99,11 @@
    "pointer": "/resources/variables/nA",
    "shows": "data.random",
    "note": "figure picked by seed(minute)"
+  },
+  {
+   "pointer": "/root/commands/8/then",
+   "shows": "draw.path",
+   "note": "mono: the figure as one hairline in onSurface with six dots, its phases moving once a minute"
   }
  ],
  "inputs": {
@@ -104,13 +112,37 @@
   "touch": false
  },
  "check": {
-  "describe": "Dark nebula (violet, blue, teal or rose depending on the hour) with a glowing pastel harmonograph in the centre, beads on it, and warm firefly sparks drifting in swirls; a small centred caption 'Nº 0848 · 7-fold' at the bottom (edition = minute of the day + 1, and the figure's symmetry). 14:08 shows a different figure (3-fold); at :56 both figures are visible mid-crossfade; at 21:42 the figure and hue differ again. Resized, the figure stays centred at 0.4 × the short side and the particles fill the whole box.",
+  "describe": "Dark nebula (violet, blue, teal or rose depending on the hour) with a glowing pastel harmonograph in the centre, beads on it, and warm firefly sparks drifting in swirls; a small centred caption 'Nº 0848 · 7-fold' at the bottom (edition = minute of the day + 1, and the figure's symmetry). 14:08 shows a different figure (3-fold); at :56 both figures are visible mid-crossfade; at 21:42 the figure and hue differ again. Resized, the figure stays centred at 0.4 × the short side and the particles fill the whole box. Light: cream paper with a faint tint of the nebula, deep-ink lines (indigo, teal, rose, ochre) and dark sparks. Mono-dark: a white hairline rose on black with a grey caption, no particles. Mono-light: the same in black on white.",
   "render": {
    "clock": "2026-11-02T14:07:17",
    "duration": 4,
    "seed": 3
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "clock": "2026-11-02T14:07:17",
+    "duration": 4,
+    "seed": 3
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "clock": "2026-11-02T14:07:17",
+    "duration": 4,
+    "seed": 3
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "clock": "2026-11-02T14:07:17"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "clock": "2026-11-02T14:07:17"
+   },
    {
     "name": "next-minute",
     "clock": "2026-11-02T14:08:17",
@@ -164,15 +196,21 @@
   "SHW-22"
  ],
  "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 4156,
+  "bytes": 5338,
   "header": {
    "width": 360,
    "height": 360
   },
-  "op_count": 88,
+  "op_count": 179,
   "operations": {
    "ANIMATED_FLOAT": 33,
+   "COLOR_CONSTANT": 18,
+   "COLOR_EXPRESSIONS": 18,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
    "ConditionalOperations": 1,
@@ -180,25 +218,73 @@
    "DRAW_CIRCLE": 2,
    "DRAW_LINE": 1,
    "DRAW_PATH": 6,
-   "DRAW_RECT": 1,
+   "DRAW_RECT": 2,
    "DRAW_TEXT_ANCHOR": 1,
    "HEADER": 1,
    "LAYOUT_CANVAS": 1,
    "LAYOUT_ROOT": 1,
    "LayoutComponentContent": 1,
-   "LoopOperation": 1,
+   "LoopOperation": 19,
    "MODIFIER_BACKGROUND": 1,
    "MODIFIER_HEIGHT": 1,
    "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 9,
    "PAINT_VALUES": 16,
    "ParticlesCreate": 1,
    "ParticlesLoop": 1,
    "PathExpression": 2,
    "SHADER_DATA": 1,
+   "THEME": 27,
    "TextFromFloat": 2,
    "TextMerge": 4
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "bead",
+    "type": "color",
+    "value": "#FFFFF4DC"
+   },
+   {
+    "name": "ink",
+    "type": "color",
+    "value": "#FFF4EEE6"
+   },
+   {
+    "name": "line1",
+    "type": "color",
+    "value": "#FFFFE3B3"
+   },
+   {
+    "name": "line2",
+    "type": "color",
+    "value": "#FFB8E8FF"
+   },
+   {
+    "name": "line3",
+    "type": "color",
+    "value": "#FFFFC2DA"
+   },
+   {
+    "name": "line4",
+    "type": "color",
+    "value": "#FFD9FFE8"
+   },
+   {
+    "name": "paper",
+    "type": "color",
+    "value": "#FF07060D"
+   },
+   {
+    "name": "spark",
+    "type": "color",
+    "value": "#FFFFE7B8"
+   },
+   {
+    "name": "wash",
+    "type": "color",
+    "value": "#00000000"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
@@ -219,6 +305,150 @@
   },
   "java_identical": false,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 1667,
+    "component_modes": {},
+    "op_count": 63,
+    "host_variables": [
+     {
+      "name": "bead",
+      "type": "color",
+      "value": "#FFFFF4DC"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "line1",
+      "type": "color",
+      "value": "#FFFFE3B3"
+     },
+     {
+      "name": "line2",
+      "type": "color",
+      "value": "#FFB8E8FF"
+     },
+     {
+      "name": "line3",
+      "type": "color",
+      "value": "#FFFFC2DA"
+     },
+     {
+      "name": "line4",
+      "type": "color",
+      "value": "#FFD9FFE8"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "paper",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "spark",
+      "type": "color",
+      "value": "#FFFFE7B8"
+     },
+     {
+      "name": "wash",
+      "type": "color",
+      "value": "#00000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 1667,
+    "component_modes": {},
+    "op_count": 63,
+    "host_variables": [
+     {
+      "name": "bead",
+      "type": "color",
+      "value": "#FF2B2340"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "line1",
+      "type": "color",
+      "value": "#FF3A3F9E"
+     },
+     {
+      "name": "line2",
+      "type": "color",
+      "value": "#FF0F7A86"
+     },
+     {
+      "name": "line3",
+      "type": "color",
+      "value": "#FFB0366A"
+     },
+     {
+      "name": "line4",
+      "type": "color",
+      "value": "#FFB9741A"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "paper",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "spark",
+      "type": "color",
+      "value": "#FF7A4A1E"
+     },
+     {
+      "name": "wash",
+      "type": "color",
+      "value": "#D6F6F1E6"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "next-minute": {
     "render": "render-next-minute.png",
     "render_findings": []
@@ -272,11 +502,12 @@
    }
   },
   "json_keys": [
-   "T",
+   "$if",
    "agsl",
    "alpha",
    "apiLevel",
    "background",
+   "bead",
    "bottom",
    "centerX",
    "centerY",
@@ -290,18 +521,18 @@
    "createParticles",
    "cx",
    "cy",
-   "d",
+   "dark",
    "decimal",
    "drawCircle",
    "drawLine",
    "drawPath",
    "drawRect",
    "drawTextAnchored",
+   "else",
    "end",
    "equations",
    "expressionX",
    "expressionY",
-   "fade",
    "flags",
    "from",
    "header",
@@ -313,21 +544,25 @@
    "id2",
    "index",
    "initialValues",
-   "k1",
-   "k2",
+   "ink",
    "left",
+   "light",
+   "line1",
+   "line2",
+   "line3",
+   "line4",
    "loop",
    "m",
    "modifiers",
+   "mono-dark",
+   "mono-light",
    "nA",
-   "nB",
    "name",
    "ops",
-   "p1",
-   "p2",
    "paint",
    "panX",
    "panY",
+   "paper",
    "particlesLoop",
    "path",
    "pathExpression",
@@ -337,6 +572,7 @@
    "right",
    "root",
    "shader",
+   "spark",
    "start",
    "strokeCap",
    "strokeJoin",
@@ -346,6 +582,7 @@
    "system",
    "text",
    "textSize",
+   "then",
    "top",
    "type",
    "uHue",
@@ -356,6 +593,7 @@
    "value",
    "variable",
    "variables",
+   "wash",
    "whole",
    "width",
    "x",
@@ -408,7 +646,7 @@
     "textMerge"
    ]
   },
-  "built_at": "2026-11-02T18:46:17.711Z"
+  "built_at": "2026-11-02T20:19:03.142Z"
  },
  "java_difference": "json2rc writes 8 bytes fewer: after a paint with an AGSL runtime shader, {\"shader\": 0} becomes one PaintBundle SHADER 0 in json2rc and two in Java's parser (a minimal case: Java 249 B, json2rc 241 B). Both clear the shader, so the documents behave the same"
 }

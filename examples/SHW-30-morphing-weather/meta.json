@@ -64,6 +64,7 @@
   "Blend colours without colour expressions: draw the morphing path (and the sky rectangle) once per condition, each with its own gradient and paint alpha k_i, the same chain values: layer i over the previous ones leaves exactly weight w_i of its colour",
   "Details that belong to one condition (rays, drops, flakes, bolt) are drawn always with alpha w_i, so they fade with the morph; loops over 7 to 12 items with fract(t * speed + i * 0.382) phases make the rain and snow",
   "The temperature, high/low and stats are anim'd values ({value, anim: 0.9}) printed with textFromFloat: the number counts to the new value",
+  "Four looks: the skies are themed colours (light: pale daylight skies under dark ink text; dark: deep dusk skies under white text); text uses the theme tokens onSurface/muted/track, overridden with the art's own light/dark values, so the mono palettes remap them. In mono ({\"$if\": \"theme.mono\"} forks) there is no sky and no fill: the same morphing path is stroked in onSurface, rays, drops and flakes are onSurface strokes and dots, the strip and its selection are outlines, and t = 0 holds every ambient motion still (repaint idle) while the morph itself still runs",
   "One canvas does both layouts: wide = max(step(W / heroHeight, 1.6), step(400, heroHeight)) picks the widget arrangement (icon left, text right) over the phone one, and the two text blocks are scaled by wide and 1 - wide",
   "The forecast strip is drawn in the canvas; its tap targets are five transparent weighted boxes over it in a column, each with semantics and valueFloatChange sel = i"
  ],
@@ -72,6 +73,7 @@
   "pathTween tweens linearly; the easing comes from the weights, which are anim'd values (the default anim easing). An anim on the condition index itself would morph through the intermediate shapes (sun to storm via cloud, rain and snow)",
   "Paint alpha is reset by a following color op in the same paint: set alpha in every paint that sets a colour",
   "Expressions are capped at 32 entries on Android: the chain weights are split into ws, k1..k4",
+  "A paint's alpha op overrides the alpha of its colour: a translucent themed colour (#33FFFFFF) drawn with alpha 1 in the same paint comes out opaque. Set the alpha in an earlier paint, then the colour",
   "The clickable boxes get the player's press feedback (a light disc at the tap point for a few frames, in both players), drawn over the canvas",
   "The TS harness in players/typescript/render.mjs pins the clock without advancing it; to see the morph frames in TS use the inspector (interact) or advance the clock per frame"
  ],
@@ -200,12 +202,49 @@
   "touch": true
  },
  "check": {
-  "describe": "Clock pinned to Monday 2 November 2026. 360x640: Lyon, Monday · 2 November, a sun with 12 rays on a blue sky, 12°, Sunny, H 14° L 4°, wind/humidity/rain, and a strip Now Tue Wed Thu Fri with mini icons and highs. condition 2/3/4: the same screen with a rain cloud and falling drops on a dark slate sky, a snow cloud with flakes, a dark anvil with a yellow bolt on a near-black sky. morph: 0.3 s after tapping Wed the disc is half-way to the rain cloud, rays shrinking, drops appearing, sky darkening, the number counting down. tapped-storm: Thursday selected, storm icon, 10°. Widgets 360x180 and 400x200: icon left, big temperature and condition, city/day/high-low right, the strip below. 300x300 uses the widget arrangement; 412x915 the phone one.",
+  "describe": "Looks: light = pale skies with dark text (rain shown), dark = deep skies with white text (storm shown), mono-dark = white line drawing of the rain cloud on black with outlined strip, mono-light = black line drawing on white caught mid-morph to the storm after tapping Thu. Clock pinned to Monday 2 November 2026. 360x640: Lyon, Monday · 2 November, a sun with 12 rays on a blue sky, 12°, Sunny, H 14° L 4°, wind/humidity/rain, and a strip Now Tue Wed Thu Fri with mini icons and highs. condition 2/3/4: the same screen with a rain cloud and falling drops on a dark slate sky, a snow cloud with flakes, a dark anvil with a yellow bolt on a near-black sky. morph: 0.3 s after tapping Wed the disc is half-way to the rain cloud, rays shrinking, drops appearing, sky darkening, the number counting down. tapped-storm: Thursday selected, storm icon, 10°. Widgets 360x180 and 400x200: icon left, big temperature and condition, city/day/high-low right, the strip below. 300x300 uses the widget arrangement; 412x915 the phone one.",
   "render": {
    "clock": "2026-11-02T10:00:00",
    "duration": 1
   },
   "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "variables": {
+     "condition": 2
+    },
+    "duration": 1.5
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "variables": {
+     "condition": 4
+    },
+    "duration": 1.5
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "variables": {
+     "condition": 2
+    },
+    "duration": 1.5
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "touch_events": [
+     {
+      "t": 0.3,
+      "type": "tap",
+      "x": 252,
+      "y": 600
+     }
+    ],
+    "duration": 0.62
+   },
    {
     "name": "cloud",
     "variables": {
@@ -326,23 +365,29 @@
   "WeatherIcon"
  ],
  "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 17646,
+  "bytes": 18826,
   "header": {
    "width": 360,
    "height": 640
   },
-  "op_count": 547,
+  "op_count": 707,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 7,
-   "ANIMATED_FLOAT": 176,
+   "ANIMATED_FLOAT": 140,
+   "COLOR_CONSTANT": 50,
+   "COLOR_EXPRESSIONS": 50,
    "COMPONENT_VALUE": 2,
    "CanvasContent": 1,
    "DATA_FLOAT": 3,
-   "DATA_TEXT": 29,
+   "DATA_TEXT": 30,
    "DRAW_CIRCLE": 2,
    "DRAW_LINE": 3,
-   "DRAW_PATH": 37,
+   "DRAW_PATH": 13,
    "DRAW_RECT": 6,
    "DRAW_ROUND_RECT": 2,
    "DRAW_TEXT_ANCHOR": 26,
@@ -354,27 +399,48 @@
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 1,
    "LayoutComponentContent": 4,
-   "LoopOperation": 3,
-   "MATRIX_RESTORE": 9,
+   "LoopOperation": 54,
+   "MATRIX_RESTORE": 5,
    "MATRIX_ROTATE": 1,
-   "MATRIX_SAVE": 9,
-   "MATRIX_SCALE": 8,
-   "MATRIX_TRANSLATE": 7,
+   "MATRIX_SAVE": 5,
+   "MATRIX_SCALE": 4,
+   "MATRIX_TRANSLATE": 3,
    "MODIFIER_BACKGROUND": 1,
    "MODIFIER_CLICK": 5,
    "MODIFIER_HEIGHT": 10,
    "MODIFIER_PADDING": 1,
    "MODIFIER_WIDTH": 10,
-   "NAMED_VARIABLE": 18,
-   "PAINT_VALUES": 68,
+   "NAMED_VARIABLE": 43,
+   "PAINT_VALUES": 52,
    "PATH_DATA": 6,
    "PATH_TWEEN": 4,
+   "THEME": 75,
    "TextFromFloat": 15,
    "TextMerge": 34,
    "TextSubtext": 9,
    "ValueFloatExpressionChangeActionOperation": 5
   },
   "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF123E7A"
+   },
+   {
+    "name": "bolt",
+    "type": "color",
+    "value": "#FFFFE066"
+   },
+   {
+    "name": "chip",
+    "type": "color",
+    "value": "#1FFFFFFF"
+   },
+   {
+    "name": "chipSel",
+    "type": "color",
+    "value": "#40FFFFFF"
+   },
    {
     "name": "city",
     "type": "string",
@@ -434,6 +500,16 @@
     ]
    },
    {
+    "name": "drop",
+    "type": "color",
+    "value": "#FF9AD0FF"
+   },
+   {
+    "name": "edge",
+    "type": "color",
+    "value": "#2EFFFFFF"
+   },
+   {
     "name": "fc",
     "type": "float_array",
     "value": [
@@ -442,6 +518,11 @@
      4,
      3
     ]
+   },
+   {
+    "name": "flake",
+    "type": "color",
+    "value": "#FFFFFFFF"
    },
    {
     "name": "hi",
@@ -475,6 +556,31 @@
      3,
      -2
     ]
+   },
+   {
+    "name": "mini0",
+    "type": "color",
+    "value": "#FFFFD54F"
+   },
+   {
+    "name": "mini1",
+    "type": "color",
+    "value": "#FFFFFFFF"
+   },
+   {
+    "name": "mini2",
+    "type": "color",
+    "value": "#FFC4CFDB"
+   },
+   {
+    "name": "mini3",
+    "type": "color",
+    "value": "#FFFFFFFF"
+   },
+   {
+    "name": "mini4",
+    "type": "color",
+    "value": "#FF8A86A3"
    },
    {
     "name": "mname_n",
@@ -513,6 +619,16 @@
     ]
    },
    {
+    "name": "muted",
+    "type": "color",
+    "value": "#CCFFFFFF"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFFFFFFF"
+   },
+   {
     "name": "rain",
     "type": "float_array",
     "value": [
@@ -527,6 +643,56 @@
     "name": "sel",
     "type": "float",
     "value": 0
+   },
+   {
+    "name": "sky0a",
+    "type": "color",
+    "value": "#FF123E7A"
+   },
+   {
+    "name": "sky0b",
+    "type": "color",
+    "value": "#FF3F7DC0"
+   },
+   {
+    "name": "sky1a",
+    "type": "color",
+    "value": "#FF263546"
+   },
+   {
+    "name": "sky1b",
+    "type": "color",
+    "value": "#FF4E6278"
+   },
+   {
+    "name": "sky2a",
+    "type": "color",
+    "value": "#FF0E1824"
+   },
+   {
+    "name": "sky2b",
+    "type": "color",
+    "value": "#FF2E4256"
+   },
+   {
+    "name": "sky3a",
+    "type": "color",
+    "value": "#FF243448"
+   },
+   {
+    "name": "sky3b",
+    "type": "color",
+    "value": "#FF5B7290"
+   },
+   {
+    "name": "sky4a",
+    "type": "color",
+    "value": "#FF07080F"
+   },
+   {
+    "name": "sky4b",
+    "type": "color",
+    "value": "#FF2A2540"
    },
    {
     "name": "temp",
@@ -560,6 +726,11 @@
     ]
    },
    {
+    "name": "track",
+    "type": "color",
+    "value": "#33FFFFFF"
+   },
+   {
     "name": "wind",
     "type": "float_array",
     "value": [
@@ -574,11 +745,10 @@
   "render_findings": [],
   "audit": {
    "error": 0,
-   "warning": 2,
+   "warning": 1,
    "info": 2
   },
   "audit_findings": [
-   "warning: hardcoded_colors",
    "warning: text_in_canvas",
    "info: repaint_continuous",
    "info: expression_entries"
@@ -592,6 +762,682 @@
   },
   "java_identical": true,
   "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 15245,
+    "component_modes": {},
+    "motion_removed": 12,
+    "op_count": 472,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "bolt",
+      "type": "color",
+      "value": "#FFFFE066"
+     },
+     {
+      "name": "chip",
+      "type": "color",
+      "value": "#1FFFFFFF"
+     },
+     {
+      "name": "chipSel",
+      "type": "color",
+      "value": "#40FFFFFF"
+     },
+     {
+      "name": "city",
+      "type": "string",
+      "value": "Lyon"
+     },
+     {
+      "name": "cname_n",
+      "type": "float_array",
+      "value": [
+       5,
+       6,
+       4,
+       4,
+       12
+      ]
+     },
+     {
+      "name": "cname_s",
+      "type": "float_array",
+      "value": [
+       0,
+       5,
+       11,
+       15,
+       19
+      ]
+     },
+     {
+      "name": "condition",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "dname_n",
+      "type": "float_array",
+      "value": [
+       6,
+       7,
+       9,
+       8,
+       6,
+       8,
+       6
+      ]
+     },
+     {
+      "name": "dname_s",
+      "type": "float_array",
+      "value": [
+       0,
+       6,
+       13,
+       22,
+       30,
+       36,
+       44
+      ]
+     },
+     {
+      "name": "drop",
+      "type": "color",
+      "value": "#FF9AD0FF"
+     },
+     {
+      "name": "edge",
+      "type": "color",
+      "value": "#2EFFFFFF"
+     },
+     {
+      "name": "fc",
+      "type": "float_array",
+      "value": [
+       1,
+       2,
+       4,
+       3
+      ]
+     },
+     {
+      "name": "flake",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "hi",
+      "type": "float_array",
+      "value": [
+       14,
+       11,
+       9,
+       10,
+       2
+      ]
+     },
+     {
+      "name": "hum",
+      "type": "float_array",
+      "value": [
+       58,
+       71,
+       88,
+       84,
+       79
+      ]
+     },
+     {
+      "name": "lo",
+      "type": "float_array",
+      "value": [
+       4,
+       6,
+       5,
+       3,
+       -2
+      ]
+     },
+     {
+      "name": "mini0",
+      "type": "color",
+      "value": "#FFFFD54F"
+     },
+     {
+      "name": "mini1",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "mini2",
+      "type": "color",
+      "value": "#FFC4CFDB"
+     },
+     {
+      "name": "mini3",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "mini4",
+      "type": "color",
+      "value": "#FF8A86A3"
+     },
+     {
+      "name": "mname_n",
+      "type": "float_array",
+      "value": [
+       7,
+       8,
+       5,
+       5,
+       3,
+       4,
+       4,
+       6,
+       9,
+       7,
+       8,
+       8
+      ]
+     },
+     {
+      "name": "mname_s",
+      "type": "float_array",
+      "value": [
+       0,
+       7,
+       15,
+       20,
+       25,
+       28,
+       32,
+       36,
+       42,
+       51,
+       58,
+       66
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "rain",
+      "type": "float_array",
+      "value": [
+       0,
+       10,
+       90,
+       70,
+       60
+      ]
+     },
+     {
+      "name": "sel",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "sky0a",
+      "type": "color",
+      "value": "#FF123E7A"
+     },
+     {
+      "name": "sky0b",
+      "type": "color",
+      "value": "#FF3F7DC0"
+     },
+     {
+      "name": "sky1a",
+      "type": "color",
+      "value": "#FF263546"
+     },
+     {
+      "name": "sky1b",
+      "type": "color",
+      "value": "#FF4E6278"
+     },
+     {
+      "name": "sky2a",
+      "type": "color",
+      "value": "#FF0E1824"
+     },
+     {
+      "name": "sky2b",
+      "type": "color",
+      "value": "#FF2E4256"
+     },
+     {
+      "name": "sky3a",
+      "type": "color",
+      "value": "#FF243448"
+     },
+     {
+      "name": "sky3b",
+      "type": "color",
+      "value": "#FF5B7290"
+     },
+     {
+      "name": "sky4a",
+      "type": "color",
+      "value": "#FF07080F"
+     },
+     {
+      "name": "sky4b",
+      "type": "color",
+      "value": "#FF2A2540"
+     },
+     {
+      "name": "temp",
+      "type": "float",
+      "value": 12
+     },
+     {
+      "name": "tname_n",
+      "type": "float_array",
+      "value": [
+       6,
+       7,
+       9,
+       8,
+       6,
+       8,
+       6
+      ]
+     },
+     {
+      "name": "tname_s",
+      "type": "float_array",
+      "value": [
+       0,
+       6,
+       13,
+       22,
+       30,
+       36,
+       44
+      ]
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "wind",
+      "type": "float_array",
+      "value": [
+       8,
+       14,
+       22,
+       31,
+       12
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 15245,
+    "component_modes": {},
+    "motion_removed": 12,
+    "op_count": 472,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "bolt",
+      "type": "color",
+      "value": "#FFFFC107"
+     },
+     {
+      "name": "chip",
+      "type": "color",
+      "value": "#9EFFFFFF"
+     },
+     {
+      "name": "chipSel",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "city",
+      "type": "string",
+      "value": "Lyon"
+     },
+     {
+      "name": "cname_n",
+      "type": "float_array",
+      "value": [
+       5,
+       6,
+       4,
+       4,
+       12
+      ]
+     },
+     {
+      "name": "cname_s",
+      "type": "float_array",
+      "value": [
+       0,
+       5,
+       11,
+       15,
+       19
+      ]
+     },
+     {
+      "name": "condition",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "dname_n",
+      "type": "float_array",
+      "value": [
+       6,
+       7,
+       9,
+       8,
+       6,
+       8,
+       6
+      ]
+     },
+     {
+      "name": "dname_s",
+      "type": "float_array",
+      "value": [
+       0,
+       6,
+       13,
+       22,
+       30,
+       36,
+       44
+      ]
+     },
+     {
+      "name": "drop",
+      "type": "color",
+      "value": "#FF3D7FCC"
+     },
+     {
+      "name": "edge",
+      "type": "color",
+      "value": "#4016202C"
+     },
+     {
+      "name": "fc",
+      "type": "float_array",
+      "value": [
+       1,
+       2,
+       4,
+       3
+      ]
+     },
+     {
+      "name": "flake",
+      "type": "color",
+      "value": "#FF7F98B5"
+     },
+     {
+      "name": "hi",
+      "type": "float_array",
+      "value": [
+       14,
+       11,
+       9,
+       10,
+       2
+      ]
+     },
+     {
+      "name": "hum",
+      "type": "float_array",
+      "value": [
+       58,
+       71,
+       88,
+       84,
+       79
+      ]
+     },
+     {
+      "name": "lo",
+      "type": "float_array",
+      "value": [
+       4,
+       6,
+       5,
+       3,
+       -2
+      ]
+     },
+     {
+      "name": "mini0",
+      "type": "color",
+      "value": "#FFFFB300"
+     },
+     {
+      "name": "mini1",
+      "type": "color",
+      "value": "#FF98A8BA"
+     },
+     {
+      "name": "mini2",
+      "type": "color",
+      "value": "#FF6E8299"
+     },
+     {
+      "name": "mini3",
+      "type": "color",
+      "value": "#FFAFC3D8"
+     },
+     {
+      "name": "mini4",
+      "type": "color",
+      "value": "#FF6E6A85"
+     },
+     {
+      "name": "mname_n",
+      "type": "float_array",
+      "value": [
+       7,
+       8,
+       5,
+       5,
+       3,
+       4,
+       4,
+       6,
+       9,
+       7,
+       8,
+       8
+      ]
+     },
+     {
+      "name": "mname_s",
+      "type": "float_array",
+      "value": [
+       0,
+       7,
+       15,
+       20,
+       25,
+       28,
+       32,
+       36,
+       42,
+       51,
+       58,
+       66
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "rain",
+      "type": "float_array",
+      "value": [
+       0,
+       10,
+       90,
+       70,
+       60
+      ]
+     },
+     {
+      "name": "sel",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "sky0a",
+      "type": "color",
+      "value": "#FF7DBDF7"
+     },
+     {
+      "name": "sky0b",
+      "type": "color",
+      "value": "#FFE6F3FF"
+     },
+     {
+      "name": "sky1a",
+      "type": "color",
+      "value": "#FFA9B8C9"
+     },
+     {
+      "name": "sky1b",
+      "type": "color",
+      "value": "#FFEDF1F5"
+     },
+     {
+      "name": "sky2a",
+      "type": "color",
+      "value": "#FF8296AE"
+     },
+     {
+      "name": "sky2b",
+      "type": "color",
+      "value": "#FFD8E1EA"
+     },
+     {
+      "name": "sky3a",
+      "type": "color",
+      "value": "#FFB3C6DA"
+     },
+     {
+      "name": "sky3b",
+      "type": "color",
+      "value": "#FFF4F8FC"
+     },
+     {
+      "name": "sky4a",
+      "type": "color",
+      "value": "#FF7F7A99"
+     },
+     {
+      "name": "sky4b",
+      "type": "color",
+      "value": "#FFC9C5D6"
+     },
+     {
+      "name": "temp",
+      "type": "float",
+      "value": 12
+     },
+     {
+      "name": "tname_n",
+      "type": "float_array",
+      "value": [
+       6,
+       7,
+       9,
+       8,
+       6,
+       8,
+       6
+      ]
+     },
+     {
+      "name": "tname_s",
+      "type": "float_array",
+      "value": [
+       0,
+       6,
+       13,
+       22,
+       30,
+       36,
+       44
+      ]
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "wind",
+      "type": "float_array",
+      "value": [
+       8,
+       14,
+       22,
+       31,
+       12
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
    "cloud": {
     "render": "render-cloud.png",
     "render_findings": []
@@ -686,6 +1532,7 @@
    }
   },
   "json_keys": [
+   "$if",
    "alpha",
    "angle",
    "anim",
@@ -698,6 +1545,8 @@
    "centerX",
    "centerY",
    "children",
+   "chip",
+   "chipSel",
    "clickable",
    "cname_n",
    "cname_s",
@@ -709,6 +1558,7 @@
    "contentDescription",
    "cx",
    "cy",
+   "dark",
    "decimal",
    "dname_n",
    "dname_s",
@@ -718,11 +1568,15 @@
    "drawRect",
    "drawRoundRect",
    "drawTextAnchored",
+   "drop",
    "dx",
    "dy",
+   "edge",
+   "else",
    "export",
    "fc",
    "flags",
+   "flake",
    "floatArrays",
    "from",
    "header",
@@ -735,14 +1589,22 @@
    "index",
    "left",
    "len",
+   "light",
    "linearGradient",
    "lo",
    "loop",
+   "mini0",
+   "mini1",
+   "mini2",
+   "mini3",
+   "mini4",
    "mname_n",
    "mname_s",
    "modifiers",
+   "muted",
    "name",
    "onClick",
+   "onSurface",
    "ops",
    "padding",
    "paint",
@@ -776,8 +1638,19 @@
    "sel",
    "semantics",
    "shader",
+   "sky0a",
+   "sky0b",
+   "sky1a",
+   "sky1b",
+   "sky2a",
+   "sky2b",
+   "sky3a",
+   "sky3b",
+   "sky4a",
+   "sky4b",
    "start",
    "strokeCap",
+   "strokeJoin",
    "strokeWidth",
    "style",
    "sx",
@@ -787,9 +1660,11 @@
    "text",
    "textSize",
    "textSubtext",
+   "then",
    "tname_n",
    "tname_s",
    "top",
+   "track",
    "translate",
    "tween",
    "type",
@@ -861,6 +1736,6 @@
     "semantics"
    ]
   },
-  "built_at": "2026-11-02T18:49:03.416Z"
+  "built_at": "2026-11-02T20:23:47.692Z"
  }
 }

@@ -1,0 +1,1033 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 440,
+  "profiles": 513,
+  "contentDescription": "Orbit catcher, a one-tap game: a dot orbits a planet; tap to reverse it, catch the stars before their timer ring runs out and dodge the red comet."
+ },
+ "resources": {
+  "variables": {
+   "dir": 1,
+   "taps": 0
+  },
+  "colors": {
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "sky1": {
+    "light": "#FFF4F1FF",
+    "dark": "#FF16204A"
+   },
+   "sky2": {
+    "light": "#FFD9E2F7",
+    "dark": "#FF070A18"
+   },
+   "dust": {
+    "light": "#FF8E9BC4",
+    "dark": "#FFDDE4FF"
+   },
+   "halo": {
+    "light": "#FF2FB3A8",
+    "dark": "#FF40E0D0"
+   },
+   "planet1": {
+    "light": "#FF7FE3D2",
+    "dark": "#FF8CF2E0"
+   },
+   "planet2": {
+    "light": "#FF2C7FD0",
+    "dark": "#FF3487D6"
+   },
+   "planet3": {
+    "light": "#FF1E2D78",
+    "dark": "#FF22307A"
+   },
+   "ring": {
+    "light": "#FF34406E",
+    "dark": "#FFFFFFFF"
+   },
+   "orbit": {
+    "light": "#FF5B6AA0",
+    "dark": "#FFA8B8FF"
+   },
+   "star": {
+    "light": "#FFE09A00",
+    "dark": "#FFFFD36B"
+   },
+   "starCore": {
+    "light": "#FFFFF3C2",
+    "dark": "#FFFFF6D8"
+   },
+   "comet": {
+    "light": "#FFE53935",
+    "dark": "#FFFF5A4E"
+   },
+   "cometCore": {
+    "light": "#FFFFD5CC",
+    "dark": "#FFFFC4B0"
+   },
+   "player": {
+    "light": "#FF0E9FB8",
+    "dark": "#FF7DF9FF"
+   },
+   "playerCore": {
+    "light": "#FFFFFFFF",
+    "dark": "#FFFFFFFF"
+   },
+   "score": {
+    "light": "#FFFFFFFF",
+    "dark": "#FFF2F5FF"
+   },
+   "veil": {
+    "light": "#FFF4F1FF",
+    "dark": "#FF070A18"
+   },
+   "accent": {
+    "light": "#FFB86E00",
+    "dark": "#FFFFD36B"
+   }
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "onTouchDown": [
+     {
+      "type": "valueFloatExpressionChange",
+      "target": "@dir",
+      "value": "0 - @dir"
+     },
+     {
+      "type": "valueFloatExpressionChange",
+      "target": "@taps",
+      "value": "@taps + 1"
+     }
+    ]
+   },
+   {
+    "semantics": {
+     "contentDescription": "Orbit catcher game. Tap anywhere to start, and to reverse the orbiting dot."
+    }
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "W",
+     "value": "componentWidth()"
+    }
+   },
+   {
+    "variable": {
+     "name": "H",
+     "value": "componentHeight()"
+    }
+   },
+   {
+    "variable": {
+     "name": "u",
+     "value": "min(@W, @H)"
+    }
+   },
+   {
+    "variable": {
+     "name": "cx",
+     "value": "@W / 2"
+    }
+   },
+   {
+    "variable": {
+     "name": "cy",
+     "value": "@H / 2 + @u * 0.04"
+    }
+   },
+   {
+    "variable": {
+     "name": "Ro",
+     "value": "@u * 0.31"
+    }
+   },
+   {
+    "variable": {
+     "name": "dt",
+     "value": "min(deltaTime(), 0.05)"
+    }
+   },
+   {
+    "variable": {
+     "name": "t",
+     "value": "continuousSec()"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "radialGradient": {
+        "centerX": "@cx",
+        "centerY": "@cy",
+        "radius": "max(@W, @H) * 0.75",
+        "colors": [
+         "@colors.sky1",
+         "@colors.sky2"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   {
+    "drawRect": {
+     "left": 0,
+     "top": 0,
+     "right": "@W",
+     "bottom": "@H"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "shader": 0
+      },
+      {
+       "color": "@colors.dust"
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "i",
+     "from": 0,
+     "until": 70,
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": "0.25 + 0.25 * sin(@t * (1 + i % 3) + i)"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "fract(sin(i * 12.9898) * 43758.547) * @W",
+        "cy": "fract(sin(i * 78.233) * 12543.31) * @H",
+        "radius": "0.6 + (i % 4) * 0.35"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.halo"
+      },
+      {
+       "alpha": 0.16
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@cx",
+     "cy": "@cy",
+     "radius": "@Ro * 0.56"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": 1
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "radialGradient": {
+        "centerX": "@cx - @Ro * 0.14",
+        "centerY": "@cy - @Ro * 0.16",
+        "radius": "@Ro * 0.5",
+        "colors": [
+         "@colors.planet1",
+         "@colors.planet2",
+         "@colors.planet3"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@cx",
+     "cy": "@cy",
+     "radius": "@Ro * 0.44"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "shader": 0
+      },
+      {
+       "color": "@colors.ring"
+      },
+      {
+       "alpha": 0.35
+      },
+      {
+       "style": "stroke"
+      },
+      {
+       "strokeWidth": "@u * 0.006"
+      }
+     ]
+    }
+   },
+   {
+    "drawOval": {
+     "left": "@cx - @Ro * 0.72",
+     "top": "@cy - @Ro * 0.12",
+     "right": "@cx + @Ro * 0.72",
+     "bottom": "@cy + @Ro * 0.12"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.orbit"
+      },
+      {
+       "alpha": 0.45
+      },
+      {
+       "strokeWidth": "@u * 0.004"
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@cx",
+     "cy": "@cy",
+     "radius": "@Ro"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "alpha": 1
+      }
+     ]
+    }
+   },
+   {
+    "createParticles": {
+     "id": "game",
+     "count": 1,
+     "variables": [
+      "th",
+      "sa",
+      "c",
+      "score",
+      "lf",
+      "ha",
+      "hd",
+      "hit",
+      "alive",
+      "dT",
+      "seen",
+      "rs",
+      "best",
+      "ct",
+      "pa"
+     ],
+     "initialValues": [
+      "-1.5708",
+      "0.9",
+      "0",
+      "0",
+      "1",
+      "1.5708",
+      "1",
+      "0",
+      "0",
+      "9",
+      "0",
+      "0",
+      "0",
+      "9",
+      "0"
+     ]
+    }
+   },
+   {
+    "particlesLoop": {
+     "system": "@game",
+     "equations": [
+      "th + @dir * (1.8 + min(score, 24) * 0.045) * @dt * alive",
+      "ifElse(ifElse(sa, th + 1.4 + fract(sin(score * 91.7 + 3.1) * 437.5) * 3.5, c), th + 2.2 + fract(@taps * 0.618) * 1.9, rs)",
+      "alive * step(cos(th - sa), 0.988) * (1 - c)",
+      "ifElse(score + c, 0, rs)",
+      "ifElse(ifElse(lf - @dt * alive / max(1.6, 3.6 - score * 0.08), 1, c), 1, rs)",
+      "ifElse(ha + hd * (0.55 + min(score, 20) * 0.02) * @dt * alive, th + 3.14159, rs)",
+      "ifElse(ifElse(hd, 0 - hd, c * step(fract(sin(score * 13.7) * 91.3), 0.5)), 1, rs)",
+      "alive * step(cos(th - ha), 0.9935)",
+      "ifElse(alive * (1 - hit) * step(lf, 0), 1, rs)",
+      "ifElse(dT + @dt, 0, alive)",
+      "ifElse(seen, @taps, max(alive, step(0.7, dT)))",
+      "(1 - alive) * step(@taps, seen + 0.5) * (1 - rs)",
+      "max(best, score)",
+      "ifElse(ct + @dt, 0, c)",
+      "ifElse(pa, sa, c)"
+     ],
+     "commands": []
+    }
+   },
+   {
+    "variable": {
+     "name": "sx",
+     "value": "@cx + @Ro * cos(sa)"
+    }
+   },
+   {
+    "variable": {
+     "name": "sy",
+     "value": "@cy + @Ro * sin(sa)"
+    }
+   },
+   {
+    "variable": {
+     "name": "px",
+     "value": "@cx + @Ro * cos(th)"
+    }
+   },
+   {
+    "variable": {
+     "name": "py",
+     "value": "@cy + @Ro * sin(th)"
+    }
+   },
+   {
+    "variable": {
+     "name": "hx",
+     "value": "@cx + @Ro * cos(ha)"
+    }
+   },
+   {
+    "variable": {
+     "name": "hy",
+     "value": "@cy + @Ro * sin(ha)"
+    }
+   },
+   {
+    "variable": {
+     "name": "qx",
+     "value": "@cx + @Ro * cos(pa)"
+    }
+   },
+   {
+    "variable": {
+     "name": "qy",
+     "value": "@cy + @Ro * sin(pa)"
+    }
+   },
+   {
+    "variable": {
+     "name": "play",
+     "value": "step(alive, 0.5)"
+    }
+   },
+   {
+    "variable": {
+     "name": "sr",
+     "value": "@u * 0.026"
+    }
+   },
+   {
+    "variable": {
+     "name": "over",
+     "value": "(1 - @play) * step(@taps, 0.5)"
+    }
+   },
+   {
+    "variable": {
+     "name": "start",
+     "value": "(1 - @play) * step(0.5, @taps)"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.star"
+      },
+      {
+       "alpha": "0.18 * @play + 0.08"
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@sx",
+     "cy": "@sy",
+     "radius": "@sr * 2.4"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": 1
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@sx",
+     "cy": "@sy",
+     "radius": "@sr * (1 + 0.12 * sin(@t * (6 + 14 * (1 - lf))))"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.starCore"
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@sx",
+     "cy": "@sy",
+     "radius": "@sr * 0.45"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.star"
+      },
+      {
+       "style": "stroke"
+      },
+      {
+       "strokeWidth": "@u * 0.007"
+      },
+      {
+       "strokeCap": "round"
+      },
+      {
+       "alpha": "0.9 * @play"
+      }
+     ]
+    }
+   },
+   {
+    "drawArc": {
+     "left": "@sx - @sr * 1.9",
+     "top": "@sy - @sr * 1.9",
+     "right": "@sx + @sr * 1.9",
+     "bottom": "@sy + @sr * 1.9",
+     "startAngle": -90,
+     "sweepAngle": "360 * lf"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": "max(0, 1 - ct * 2.5)"
+      },
+      {
+       "strokeWidth": "@u * 0.006"
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@qx",
+     "cy": "@qy",
+     "radius": "@sr + ct * @u * 0.25"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "textSize": "@u * 0.05"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "+1",
+     "x": "@qx",
+     "y": "@qy - @u * 0.05 - ct * @u * 0.12",
+     "panX": 0,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.comet"
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "j",
+     "from": 1,
+     "until": 10,
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": "0.5 - j * 0.05"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@cx + @Ro * cos(ha - hd * j * 0.05)",
+        "cy": "@cy + @Ro * sin(ha - hd * j * 0.05)",
+        "radius": "@sr * (0.9 - j * 0.08)"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": 0.25
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@hx",
+     "cy": "@hy",
+     "radius": "@sr * 1.9"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": 1
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@hx",
+     "cy": "@hy",
+     "radius": "@sr * 0.95"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.cometCore"
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@hx - @sr * 0.25",
+     "cy": "@hy - @sr * 0.25",
+     "radius": "@sr * 0.35"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.player"
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "j",
+     "from": 1,
+     "until": 12,
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": "(0.55 - j * 0.045) * @play"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@cx + @Ro * cos(th - @dir * j * 0.035)",
+        "cy": "@cy + @Ro * sin(th - @dir * j * 0.035)",
+        "radius": "@sr * (0.8 - j * 0.05)"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": 0.25
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@px",
+     "cy": "@py",
+     "radius": "@sr * 2"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": 1
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@px",
+     "cy": "@py",
+     "radius": "@sr * 0.9"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.playerCore"
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@px",
+     "cy": "@py",
+     "radius": "@sr * 0.45"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.score"
+      },
+      {
+       "textSize": "@u * 0.11"
+      },
+      {
+       "alpha": "@play"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textFromFloat",
+      "value": "score",
+      "whole": 4,
+      "decimal": 0,
+      "flags": 5
+     },
+     "x": "@cx",
+     "y": "@cy",
+     "panX": 0,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.muted"
+      },
+      {
+       "textSize": "@u * 0.04"
+      },
+      {
+       "alpha": 1
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": "BEST ",
+      "id2": {
+       "type": "textFromFloat",
+       "value": "best",
+       "whole": 4,
+       "decimal": 0,
+       "flags": 5
+      }
+     },
+     "x": "@cx",
+     "y": "@u * 0.08",
+     "panX": 0,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": "@play * 0.9"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Tap to reverse",
+     "x": "@cx",
+     "y": "@H - @u * 0.06",
+     "panX": 0,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.veil"
+      },
+      {
+       "alpha": "(1 - @play) * 0.7"
+      }
+     ]
+    }
+   },
+   {
+    "drawRect": {
+     "left": 0,
+     "top": 0,
+     "right": "@W",
+     "bottom": "@H"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.onSurface"
+      },
+      {
+       "textSize": "@u * 0.085"
+      },
+      {
+       "alpha": "@start"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Orbit catcher",
+     "x": "@cx",
+     "y": "@cy - @u * 0.06",
+     "panX": 0,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.muted"
+      },
+      {
+       "textSize": "@u * 0.042"
+      },
+      {
+       "alpha": "@start"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Catch the stars before their ring runs out.",
+     "x": "@cx",
+     "y": "@cy + @u * 0.03",
+     "panX": 0,
+     "panY": 0
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Dodge the comet. Tap to reverse.",
+     "x": "@cx",
+     "y": "@cy + @u * 0.09",
+     "panX": 0,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.accent"
+      },
+      {
+       "textSize": "@u * 0.05"
+      },
+      {
+       "alpha": "@start * (0.7 + 0.3 * sin(@t * 4))"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Tap to start",
+     "x": "@cx",
+     "y": "@cy + @u * 0.2",
+     "panX": 0,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.onSurface"
+      },
+      {
+       "textSize": "@u * 0.085"
+      },
+      {
+       "alpha": "@over"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Game over",
+     "x": "@cx",
+     "y": "@cy - @u * 0.08",
+     "panX": 0,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.muted"
+      },
+      {
+       "textSize": "@u * 0.05"
+      },
+      {
+       "alpha": "@over"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": "Score ",
+      "id2": {
+       "type": "textFromFloat",
+       "value": "score",
+       "whole": 4,
+       "decimal": 0,
+       "flags": 5
+      }
+     },
+     "x": "@cx",
+     "y": "@cy + @u * 0.02",
+     "panX": 0,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.accent"
+      },
+      {
+       "alpha": "@over * step(dT, 0.7) * (0.7 + 0.3 * sin(@t * 4))"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Tap to play again",
+     "x": "@cx",
+     "y": "@cy + @u * 0.14",
+     "panX": 0,
+     "panY": 0
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,1619 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 780,
+  "profiles": 513,
+  "contentDescription": "A landscape whose sky follows the time of day, with the sun or moon on its arc, stars at night, and rain or snow from the weather"
+ },
+ "resources": {
+  "variables": {
+   "weather": {
+    "value": 0,
+    "export": true
+   },
+   "temp": {
+    "value": 9,
+    "export": true
+   },
+   "sunrise": {
+    "value": 7.3,
+    "export": true
+   },
+   "sunset": {
+    "value": 17.3,
+    "export": true
+   }
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "muted": "#FF616161",
+   "onSurface": "#FF000000",
+   "sceneBg": "#FFFFFFFF",
+   "ink": "#FF000000",
+   "inkShadow": "#00000000",
+   "card": "#00000000",
+   "scrim": "#00000000",
+   "scrimMid": "#00000000"
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "@colors.sceneBg"
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "h",
+     "value": "timeInMin() / 60"
+    }
+   },
+   {
+    "variable": {
+     "name": "t",
+     "value": "continuousSec()"
+    }
+   },
+   {
+    "variable": {
+     "name": "T",
+     "value": "timeInHr() * 3600 + continuousSec()"
+    }
+   },
+   {
+    "variable": {
+     "name": "dl",
+     "value": "@sunset - @sunrise"
+    }
+   },
+   {
+    "variable": {
+     "name": "s",
+     "value": "(@h - @sunrise) / @dl"
+    }
+   },
+   {
+    "variable": {
+     "name": "q",
+     "value": "((@h - @sunset + 24) % 24) / (24 - @dl)"
+    }
+   },
+   {
+    "variable": {
+     "name": "isDay",
+     "value": "step(@s, 0) * step(1, @s)"
+    }
+   },
+   {
+    "variable": {
+     "name": "el",
+     "value": "ifElse(-sin(3.1416 * @q), sin(3.1416 * @s), @isDay - 0.5)"
+    }
+   },
+   {
+    "variable": {
+     "name": "dayA",
+     "value": "smooth_step(@el, 0.32, -0.02)"
+    }
+   },
+   {
+    "variable": {
+     "name": "tw",
+     "value": "clamp(0, 1, 1 - abs(@el + 0.02) / 0.2)"
+    }
+   },
+   {
+    "variable": {
+     "name": "morning",
+     "value": "step(12.5, @h)"
+    }
+   },
+   {
+    "variable": {
+     "name": "wet",
+     "value": "min(@weather, 1)"
+    }
+   },
+   {
+    "variable": {
+     "name": "starA",
+     "value": "smooth_step(-@el, 0.25, 0.03) * (1 - 0.85 * @wet)"
+    }
+   },
+   {
+    "variable": {
+     "name": "moonA",
+     "value": "smooth_step(-@el, 0.12, -0.05) * (1 - 0.8 * @wet)"
+    }
+   },
+   {
+    "variable": {
+     "name": "sunA",
+     "value": "(1 - 0.75 * @wet) * smooth_step(@el, 0.05, -0.15)"
+    }
+   },
+   {
+    "variable": {
+     "name": "lampA",
+     "value": "smooth_step(-@el, 0.1, -0.08)"
+    }
+   },
+   {
+    "variable": {
+     "name": "cloudA",
+     "value": "(0.82 + 0.12 * @wet) * (0.16 + 0.84 * max(@dayA, @tw))"
+    }
+   },
+   {
+    "variable": {
+     "name": "clouds",
+     "value": "3 + 4 * @wet"
+    }
+   },
+   {
+    "variable": {
+     "name": "mp",
+     "value": "(((year() - 2000) * 365.25 + dayOfYear() + @h / 24 - 6.76) % 29.5306) / 29.5306"
+    }
+   },
+   {
+    "variable": {
+     "name": "mk",
+     "value": "-cos(6.2832 * @mp)"
+    }
+   },
+   {
+    "variable": {
+     "name": "msg",
+     "value": "ifElse(-1, 1, 0.5 - @mp)"
+    }
+   },
+   {
+    "variable": {
+     "name": "nextH",
+     "value": "ifElse(@sunrise, @sunset, @isDay - 0.5)"
+    }
+   },
+   {
+    "variable": {
+     "name": "W",
+     "value": "componentWidth()"
+    }
+   },
+   {
+    "variable": {
+     "name": "H",
+     "value": "componentHeight()"
+    }
+   },
+   {
+    "variable": {
+     "name": "hz",
+     "value": "@H * 0.70"
+    }
+   },
+   {
+    "variable": {
+     "name": "S",
+     "value": "min(@W, @H * 1.2)"
+    }
+   },
+   {
+    "variable": {
+     "name": "sr",
+     "value": "clamp(9, 20, @S * 0.05)"
+    }
+   },
+   {
+    "variable": {
+     "name": "mr",
+     "value": "clamp(8, 16, @S * 0.04)"
+    }
+   },
+   {
+    "variable": {
+     "name": "sx",
+     "value": "@W * (0.08 + 0.84 * @s)"
+    }
+   },
+   {
+    "variable": {
+     "name": "sy",
+     "value": "@hz - @hz * 0.62 * sin(3.1416 * @s)"
+    }
+   },
+   {
+    "variable": {
+     "name": "mx",
+     "value": "@W * (0.08 + 0.84 * @q)"
+    }
+   },
+   {
+    "variable": {
+     "name": "my",
+     "value": "@hz - @hz * 0.72 * sin(3.1416 * @q)"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.onSurface"
+      },
+      {
+       "style": "fill"
+      },
+      {
+       "alpha": "step(-@el, 0.08)"
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "i",
+     "from": 0,
+     "until": 40,
+     "commands": [
+      {
+       "drawCircle": {
+        "cx": "@W * seed(i + 1, rand())",
+        "cy": "@hz * 0.9 * square(seed(i + 101, rand()))",
+        "radius": "0.6 + 0.9 * square(seed(i + 201, rand()))"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "k",
+     "from": 0,
+     "until": "@clouds",
+     "commands": [
+      {
+       "variable": {
+        "name": "cs",
+        "value": "@S * (0.06 + 0.05 * seed(k + 41, rand()))"
+       }
+      },
+      {
+       "variable": {
+        "name": "cspan",
+        "value": "@W + 6 * @cs"
+       }
+      },
+      {
+       "variable": {
+        "name": "cxk",
+        "value": "seed(k + 11, rand()) * @W"
+       }
+      },
+      {
+       "variable": {
+        "name": "cyk",
+        "value": "@hz * (0.30 + 0.32 * seed(k + 31, rand()))"
+       }
+      },
+      {
+       "variable": {
+        "name": "cph",
+        "value": "seed(k + 51, rand()) * 3"
+       }
+      },
+      {
+       "pathExpression": {
+        "id": "cloudM",
+        "expressionX": "@cxk + 2.3 * @cs * cos(a[0]) * (0.9 + 0.1 * abs(sin(a[0] * 3 + @cph)))",
+        "expressionY": "@cyk - @cs * sin(a[0]) * ifElse(0.3, 1 + 0.45 * abs(sin(a[0] * 3.5 + @cph)), sin(a[0]))",
+        "start": 0,
+        "end": 6.2832,
+        "count": 56,
+        "flags": 1
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         },
+         {
+          "color": "@colors.background"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "cloudM"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "stroke"
+         },
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "strokeJoin": "round"
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "cloudM"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "color": "@colors.onSurface"
+      },
+      {
+       "alpha": "@isDay"
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@sx",
+     "cy": "@sy",
+     "radius": "@sr"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "stroke"
+      },
+      {
+       "color": "@colors.muted"
+      },
+      {
+       "alpha": "@isDay"
+      },
+      {
+       "strokeWidth": 1
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@sx",
+     "cy": "@sy",
+     "radius": "@sr * 1.7"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": "1 - @isDay"
+      }
+     ]
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "@mx",
+     "cy": "@my",
+     "radius": "@mr"
+    }
+   },
+   {
+    "pathExpression": {
+     "id": "litM",
+     "expressionX": "@mx + @mr * sin(a[0]) * ifElse(@mk, 1, 3.1416 - a[0]) * @msg",
+     "expressionY": "@my - @mr * cos(a[0])",
+     "start": 0,
+     "end": 6.2832,
+     "count": 64,
+     "flags": 1
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "color": "@colors.onSurface"
+      },
+      {
+       "alpha": "1 - @isDay"
+      }
+     ]
+    }
+   },
+   {
+    "drawPath": {
+     "path": "litM"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": 1
+      }
+     ]
+    }
+   },
+   {
+    "pathCreate": {
+     "id": "farM",
+     "x": -8,
+     "y": "@H + 8"
+    }
+   },
+   {
+    "pathAppendLineTo": {
+     "path": "farM",
+     "x": -8,
+     "y": "@hz + @H * (-0.05 + 0.035 * (0.6 * sin(0 * 0.21 + 1.3) + 0.4 * sin(0 * 0.53 + 1.3 * 2)))"
+    }
+   },
+   {
+    "loop": {
+     "index": "j",
+     "from": 0,
+     "until": 49,
+     "commands": [
+      {
+       "pathAppendLineTo": {
+        "path": "farM",
+        "x": "@W * j / 48",
+        "y": "@hz + @H * (-0.05 + 0.035 * (0.6 * sin(j * 0.21 + 1.3) + 0.4 * sin(j * 0.53 + 1.3 * 2)))"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "pathAppendLineTo": {
+     "path": "farM",
+     "x": "@W + 8",
+     "y": "@hz + @H * (-0.05 + 0.035 * (0.6 * sin(48 * 0.21 + 1.3) + 0.4 * sin(48 * 0.53 + 1.3 * 2)))"
+    }
+   },
+   {
+    "pathAppendLineTo": {
+     "path": "farM",
+     "x": "@W + 8",
+     "y": "@H + 8"
+    }
+   },
+   {
+    "pathAppendClose": {
+     "path": "farM"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "color": "@colors.background"
+      },
+      {
+       "alpha": 1
+      }
+     ]
+    }
+   },
+   {
+    "drawPath": {
+     "path": "farM"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "stroke"
+      },
+      {
+       "color": "@colors.muted"
+      },
+      {
+       "strokeWidth": 1.2
+      },
+      {
+       "strokeJoin": "round"
+      }
+     ]
+    }
+   },
+   {
+    "drawPath": {
+     "path": "farM"
+    }
+   },
+   {
+    "pathCreate": {
+     "id": "midM",
+     "x": -8,
+     "y": "@H + 8"
+    }
+   },
+   {
+    "pathAppendLineTo": {
+     "path": "midM",
+     "x": -8,
+     "y": "@hz + @H * (0.03 + 0.03 * (0.6 * sin(0 * 0.17 + 4.1) + 0.4 * sin(0 * 0.41 + 4.1 * 2)))"
+    }
+   },
+   {
+    "loop": {
+     "index": "j",
+     "from": 0,
+     "until": 49,
+     "commands": [
+      {
+       "pathAppendLineTo": {
+        "path": "midM",
+        "x": "@W * j / 48",
+        "y": "@hz + @H * (0.03 + 0.03 * (0.6 * sin(j * 0.17 + 4.1) + 0.4 * sin(j * 0.41 + 4.1 * 2)))"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "pathAppendLineTo": {
+     "path": "midM",
+     "x": "@W + 8",
+     "y": "@hz + @H * (0.03 + 0.03 * (0.6 * sin(48 * 0.17 + 4.1) + 0.4 * sin(48 * 0.41 + 4.1 * 2)))"
+    }
+   },
+   {
+    "pathAppendLineTo": {
+     "path": "midM",
+     "x": "@W + 8",
+     "y": "@H + 8"
+    }
+   },
+   {
+    "pathAppendClose": {
+     "path": "midM"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "color": "@colors.background"
+      },
+      {
+       "alpha": 1
+      }
+     ]
+    }
+   },
+   {
+    "drawPath": {
+     "path": "midM"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "stroke"
+      },
+      {
+       "color": "@colors.muted"
+      },
+      {
+       "strokeWidth": 1.2
+      },
+      {
+       "strokeJoin": "round"
+      }
+     ]
+    }
+   },
+   {
+    "drawPath": {
+     "path": "midM"
+    }
+   },
+   {
+    "pathCreate": {
+     "id": "nearM",
+     "x": -8,
+     "y": "@H + 8"
+    }
+   },
+   {
+    "pathAppendLineTo": {
+     "path": "nearM",
+     "x": -8,
+     "y": "@hz + @H * (0.13 + 0.025 * (0.6 * sin(0 * 0.12 + 2.2) + 0.4 * sin(0 * 0.33 + 2.2 * 2)))"
+    }
+   },
+   {
+    "loop": {
+     "index": "j",
+     "from": 0,
+     "until": 49,
+     "commands": [
+      {
+       "pathAppendLineTo": {
+        "path": "nearM",
+        "x": "@W * j / 48",
+        "y": "@hz + @H * (0.13 + 0.025 * (0.6 * sin(j * 0.12 + 2.2) + 0.4 * sin(j * 0.33 + 2.2 * 2)))"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "pathAppendLineTo": {
+     "path": "nearM",
+     "x": "@W + 8",
+     "y": "@hz + @H * (0.13 + 0.025 * (0.6 * sin(48 * 0.12 + 2.2) + 0.4 * sin(48 * 0.33 + 2.2 * 2)))"
+    }
+   },
+   {
+    "pathAppendLineTo": {
+     "path": "nearM",
+     "x": "@W + 8",
+     "y": "@H + 8"
+    }
+   },
+   {
+    "pathAppendClose": {
+     "path": "nearM"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "color": "@colors.background"
+      },
+      {
+       "alpha": 1
+      }
+     ]
+    }
+   },
+   {
+    "drawPath": {
+     "path": "nearM"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "stroke"
+      },
+      {
+       "color": "@colors.onSurface"
+      },
+      {
+       "strokeWidth": 1.2
+      },
+      {
+       "strokeJoin": "round"
+      }
+     ]
+    }
+   },
+   {
+    "drawPath": {
+     "path": "nearM"
+    }
+   },
+   {
+    "loop": {
+     "index": "p",
+     "from": 0,
+     "until": 11,
+     "commands": [
+      {
+       "variable": {
+        "name": "jj",
+        "value": "48 * (0.04 + 0.92 * seed(p + 61, rand()))"
+       }
+      },
+      {
+       "variable": {
+        "name": "tx",
+        "value": "@W * @jj / 48"
+       }
+      },
+      {
+       "variable": {
+        "name": "ty",
+        "value": "@hz + @H * (0.13 + 0.025 * (0.6 * sin(@jj * 0.12 + 2.2) + 0.4 * sin(@jj * 0.33 + 4.4))) + 2"
+       }
+      },
+      {
+       "variable": {
+        "name": "th",
+        "value": "@S * (0.07 + 0.05 * seed(p + 71, rand()))"
+       }
+      },
+      {
+       "pathCreate": {
+        "id": "pineM",
+        "x": "@tx",
+        "y": "@ty - @th"
+       }
+      },
+      {
+       "pathAppendLineTo": {
+        "path": "pineM",
+        "x": "@tx + @th * 0.28",
+        "y": "@ty"
+       }
+      },
+      {
+       "pathAppendLineTo": {
+        "path": "pineM",
+        "x": "@tx - @th * 0.28",
+        "y": "@ty"
+       }
+      },
+      {
+       "pathAppendClose": {
+        "path": "pineM"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         },
+         {
+          "color": "@colors.background"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "pineM"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "stroke"
+         },
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "strokeJoin": "round"
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "pineM"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "variable": {
+     "name": "jj",
+     "value": "48 * 0.70"
+    }
+   },
+   {
+    "variable": {
+     "name": "bx",
+     "value": "@W * 0.70"
+    }
+   },
+   {
+    "variable": {
+     "name": "by",
+     "value": "@hz + @H * (0.13 + 0.025 * (0.6 * sin(@jj * 0.12 + 2.2) + 0.4 * sin(@jj * 0.33 + 4.4))) + 3"
+    }
+   },
+   {
+    "variable": {
+     "name": "bw",
+     "value": "@S * 0.075"
+    }
+   },
+   {
+    "pathCreate": {
+     "id": "roofM",
+     "x": "@bx - @bw * 1.25",
+     "y": "@by - @bw * 1.05"
+    }
+   },
+   {
+    "pathAppendLineTo": {
+     "path": "roofM",
+     "x": "@bx",
+     "y": "@by - @bw * 1.9"
+    }
+   },
+   {
+    "pathAppendLineTo": {
+     "path": "roofM",
+     "x": "@bx + @bw * 1.25",
+     "y": "@by - @bw * 1.05"
+    }
+   },
+   {
+    "pathAppendClose": {
+     "path": "roofM"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "color": "@colors.background"
+      }
+     ]
+    }
+   },
+   {
+    "drawRect": {
+     "left": "@bx - @bw",
+     "top": "@by - @bw * 1.1",
+     "right": "@bx + @bw",
+     "bottom": "@by"
+    }
+   },
+   {
+    "drawPath": {
+     "path": "roofM"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "stroke"
+      },
+      {
+       "color": "@colors.onSurface"
+      },
+      {
+       "strokeWidth": 1.2
+      }
+     ]
+    }
+   },
+   {
+    "drawRect": {
+     "left": "@bx - @bw",
+     "top": "@by - @bw * 1.1",
+     "right": "@bx + @bw",
+     "bottom": "@by"
+    }
+   },
+   {
+    "drawPath": {
+     "path": "roofM"
+    }
+   },
+   {
+    "drawRect": {
+     "left": "@bx - @bw * 0.55",
+     "top": "@by - @bw * 0.75",
+     "right": "@bx - @bw * 0.1",
+     "bottom": "@by - @bw * 0.35"
+    }
+   },
+   {
+    "drawRect": {
+     "left": "@bx + @bw * 0.15",
+     "top": "@by - @bw * 0.75",
+     "right": "@bx + @bw * 0.6",
+     "bottom": "@by - @bw * 0.35"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "alpha": "step(@lampA, 0.5)"
+      }
+     ]
+    }
+   },
+   {
+    "drawRect": {
+     "left": "@bx - @bw * 0.55",
+     "top": "@by - @bw * 0.75",
+     "right": "@bx - @bw * 0.1",
+     "bottom": "@by - @bw * 0.35"
+    }
+   },
+   {
+    "drawRect": {
+     "left": "@bx + @bw * 0.15",
+     "top": "@by - @bw * 0.75",
+     "right": "@bx + @bw * 0.6",
+     "bottom": "@by - @bw * 0.35"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": 1
+      }
+     ]
+    }
+   },
+   {
+    "conditionalOperations": {
+     "condition": "eq",
+     "v1": "@weather",
+     "v2": 1,
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "strokeCap": "round"
+         }
+        ]
+       }
+      },
+      {
+       "loop": {
+        "index": "r",
+        "from": 0,
+        "until": 60,
+        "commands": [
+         {
+          "variable": {
+           "name": "rxm",
+           "value": "@W * seed(r + 701, rand())"
+          }
+         },
+         {
+          "variable": {
+           "name": "rym",
+           "value": "@H * seed(r + 501, rand())"
+          }
+         },
+         {
+          "drawLine": {
+           "x1": "@rxm",
+           "y1": "@rym",
+           "x2": "@rxm + 3",
+           "y2": "@rym - 12"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   {
+    "conditionalOperations": {
+     "condition": "eq",
+     "v1": "@weather",
+     "v2": 2,
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "loop": {
+        "index": "f",
+        "from": 0,
+        "until": 60,
+        "commands": [
+         {
+          "drawCircle": {
+           "cx": "@W * seed(f + 1001, rand())",
+           "cy": "@H * seed(f + 801, rand())",
+           "radius": "1 + 1.4 * square(seed(f + 1201, rand()))"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   {
+    "variable": {
+     "name": "pad",
+     "value": "clamp(14, 24, @W * 0.06)"
+    }
+   },
+   {
+    "variable": {
+     "name": "big",
+     "value": "clamp(34, 96, min(@H * 0.095, @W * 0.2))"
+    }
+   },
+   {
+    "variable": {
+     "name": "sm",
+     "value": "clamp(12, 24, @big * 0.25)"
+    }
+   },
+   {
+    "variable": {
+     "name": "bigY",
+     "value": "@pad + @big * 0.42"
+    }
+   },
+   {
+    "variable": {
+     "name": "ci",
+     "value": "@weather + 3 * step(@starA, 0.3) * (1 - @wet)"
+    }
+   },
+   {
+    "variable": {
+     "name": "code",
+     "value": "@isDay + 2 * step(@H, 300)"
+    }
+   },
+   {
+    "variable": {
+     "name": "cardW",
+     "value": "max(@big * 2.3, @sm * ifElse(3.8, 12.6, step(@H, 300))) + 18"
+    }
+   },
+   {
+    "variable": {
+     "name": "cardB",
+     "value": "@bigY + @big * 0.62 + @sm * 2.3"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "shader": 0
+      },
+      {
+       "style": "fill"
+      },
+      {
+       "color": "@colors.card"
+      }
+     ]
+    }
+   },
+   {
+    "drawRoundRect": {
+     "left": "@pad - 10",
+     "top": "@pad - 8",
+     "right": "@pad - 10 + @cardW",
+     "bottom": "@cardB",
+     "rx": 16,
+     "ry": 16
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "radialGradient": {
+        "centerX": "@pad",
+        "centerY": "@pad",
+        "radius": "@big * 3.2",
+        "colors": [
+         "@colors.scrim",
+         "@colors.scrimMid",
+         "#00000000"
+        ],
+        "stops": [
+         0,
+         0.5,
+         1
+        ]
+       }
+      }
+     ]
+    }
+   },
+   {
+    "drawRect": {
+     "left": 0,
+     "top": 0,
+     "right": "@pad + @big * 3.2",
+     "bottom": "@pad + @big * 3.2"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "shader": 0
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "color": "@colors.inkShadow"
+      },
+      {
+       "textSize": "@big"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textFromFloat",
+       "value": "round(@temp)",
+       "whole": 3,
+       "decimal": 0,
+       "flags": 5
+      },
+      "id2": "°"
+     },
+     "x": "@pad + 1",
+     "y": "@bigY + 1",
+     "panX": -1,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "textSize": "@sm"
+      }
+     ]
+    }
+   },
+   {
+    "conditionalOperations": {
+     "condition": "eq",
+     "v1": "@ci",
+     "v2": 0,
+     "commands": [
+      {
+       "drawTextAnchored": {
+        "text": "Clear",
+        "x": "@pad + 1 + 2",
+        "y": "@bigY + @big * 0.62 + 1",
+        "panX": -1,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "conditionalOperations": {
+     "condition": "eq",
+     "v1": "@ci",
+     "v2": 1,
+     "commands": [
+      {
+       "drawTextAnchored": {
+        "text": "Rain",
+        "x": "@pad + 1 + 2",
+        "y": "@bigY + @big * 0.62 + 1",
+        "panX": -1,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "conditionalOperations": {
+     "condition": "eq",
+     "v1": "@ci",
+     "v2": 2,
+     "commands": [
+      {
+       "drawTextAnchored": {
+        "text": "Snow",
+        "x": "@pad + 1 + 2",
+        "y": "@bigY + @big * 0.62 + 1",
+        "panX": -1,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "conditionalOperations": {
+     "condition": "eq",
+     "v1": "@ci",
+     "v2": 3,
+     "commands": [
+      {
+       "drawTextAnchored": {
+        "text": "Clear night",
+        "x": "@pad + 1 + 2",
+        "y": "@bigY + @big * 0.62 + 1",
+        "panX": -1,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "color": "@colors.ink"
+      },
+      {
+       "textSize": "@big"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textFromFloat",
+       "value": "round(@temp)",
+       "whole": 3,
+       "decimal": 0,
+       "flags": 5
+      },
+      "id2": "°"
+     },
+     "x": "@pad + 0",
+     "y": "@bigY + 0",
+     "panX": -1,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "textSize": "@sm"
+      }
+     ]
+    }
+   },
+   {
+    "conditionalOperations": {
+     "condition": "eq",
+     "v1": "@ci",
+     "v2": 0,
+     "commands": [
+      {
+       "drawTextAnchored": {
+        "text": "Clear",
+        "x": "@pad + 0 + 2",
+        "y": "@bigY + @big * 0.62 + 0",
+        "panX": -1,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "conditionalOperations": {
+     "condition": "eq",
+     "v1": "@ci",
+     "v2": 1,
+     "commands": [
+      {
+       "drawTextAnchored": {
+        "text": "Rain",
+        "x": "@pad + 0 + 2",
+        "y": "@bigY + @big * 0.62 + 0",
+        "panX": -1,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "conditionalOperations": {
+     "condition": "eq",
+     "v1": "@ci",
+     "v2": 2,
+     "commands": [
+      {
+       "drawTextAnchored": {
+        "text": "Snow",
+        "x": "@pad + 0 + 2",
+        "y": "@bigY + @big * 0.62 + 0",
+        "panX": -1,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "conditionalOperations": {
+     "condition": "eq",
+     "v1": "@ci",
+     "v2": 3,
+     "commands": [
+      {
+       "drawTextAnchored": {
+        "text": "Clear night",
+        "x": "@pad + 0 + 2",
+        "y": "@bigY + @big * 0.62 + 0",
+        "panX": -1,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": "0.72 * step(2, @code)"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textFromFloat",
+       "value": "timeInHr()",
+       "whole": 2,
+       "decimal": 0,
+       "flags": 12
+      },
+      "id2": {
+       "type": "textMerge",
+       "id1": ":",
+       "id2": {
+        "type": "textFromFloat",
+        "value": "timeInMin() % 60",
+        "whole": 2,
+        "decimal": 0,
+        "flags": 12
+       }
+      }
+     },
+     "x": "@pad + 0 + 2",
+     "y": "@bigY + @big * 0.62 + @sm * 1.45 + 0",
+     "panX": -1,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": "0.72 * (1 - min(1, abs(@code - 2)))"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textMerge",
+       "id1": {
+        "type": "textFromFloat",
+        "value": "timeInHr()",
+        "whole": 2,
+        "decimal": 0,
+        "flags": 12
+       },
+       "id2": {
+        "type": "textMerge",
+        "id1": ":",
+        "id2": {
+         "type": "textFromFloat",
+         "value": "timeInMin() % 60",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 12
+        }
+       }
+      },
+      "id2": {
+       "type": "textMerge",
+       "id1": "  ·  Sunrise ",
+       "id2": {
+        "type": "textMerge",
+        "id1": {
+         "type": "textFromFloat",
+         "value": "floor(@nextH)",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 12
+        },
+        "id2": {
+         "type": "textMerge",
+         "id1": ":",
+         "id2": {
+          "type": "textFromFloat",
+          "value": "floor((@nextH % 1) * 60)",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 12
+         }
+        }
+       }
+      }
+     },
+     "x": "@pad + 0 + 2",
+     "y": "@bigY + @big * 0.62 + @sm * 1.45 + 0",
+     "panX": -1,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": "0.72 * step(@code, 2.5)"
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textMerge",
+       "id1": {
+        "type": "textFromFloat",
+        "value": "timeInHr()",
+        "whole": 2,
+        "decimal": 0,
+        "flags": 12
+       },
+       "id2": {
+        "type": "textMerge",
+        "id1": ":",
+        "id2": {
+         "type": "textFromFloat",
+         "value": "timeInMin() % 60",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 12
+        }
+       }
+      },
+      "id2": {
+       "type": "textMerge",
+       "id1": "  ·  Sunset ",
+       "id2": {
+        "type": "textMerge",
+        "id1": {
+         "type": "textFromFloat",
+         "value": "floor(@nextH)",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 12
+        },
+        "id2": {
+         "type": "textMerge",
+         "id1": ":",
+         "id2": {
+          "type": "textFromFloat",
+          "value": "floor((@nextH % 1) * 60)",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 12
+         }
+        }
+       }
+      }
+     },
+     "x": "@pad + 0 + 2",
+     "y": "@bigY + @big * 0.62 + @sm * 1.45 + 0",
+     "panX": -1,
+     "panY": 0
+    }
+   }
+  ]
+ }
+}

@@ -1,0 +1,566 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 360,
+  "profiles": 513,
+  "contentDescription": "Generative art: a slowly turning harmonograph over a drifting nebula, with sparks carried by a flow field; the figure changes every minute"
+ },
+ "resources": {
+  "variables": {
+   "m": "timeInMin()",
+   "nA": "(2 + floor(5 * seed(@m * 3 + 1, rand()))) * (2 * step(seed(@m * 3 + 2, rand()), 0.35) - 1)"
+  },
+  "colors": {
+   "paper": {
+    "light": "#FFF4EFE4",
+    "dark": "#FF07060D"
+   },
+   "wash": {
+    "light": "#D6F6F1E6",
+    "dark": "#00000000"
+   },
+   "spark": {
+    "light": "#FF7A4A1E",
+    "dark": "#FFFFE7B8"
+   },
+   "bead": {
+    "light": "#FF2B2340",
+    "dark": "#FFFFF4DC"
+   },
+   "ink": {
+    "light": "#FF2B2340",
+    "dark": "#FFF4EEE6"
+   },
+   "line1": {
+    "light": "#FF3A3F9E",
+    "dark": "#FFFFE3B3"
+   },
+   "line2": {
+    "light": "#FF0F7A86",
+    "dark": "#FFB8E8FF"
+   },
+   "line3": {
+    "light": "#FFB0366A",
+    "dark": "#FFFFC2DA"
+   },
+   "line4": {
+    "light": "#FFB9741A",
+    "dark": "#FFD9FFE8"
+   }
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "@colors.paper"
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "W",
+     "value": "componentWidth()"
+    }
+   },
+   {
+    "variable": {
+     "name": "H",
+     "value": "componentHeight()"
+    }
+   },
+   {
+    "variable": {
+     "name": "S",
+     "value": "min(@W, @H)"
+    }
+   },
+   {
+    "variable": {
+     "name": "cx",
+     "value": "@W / 2"
+    }
+   },
+   {
+    "variable": {
+     "name": "cy",
+     "value": "@H / 2"
+    }
+   },
+   {
+    "variable": {
+     "name": "R",
+     "value": "@S * 0.4"
+    }
+   },
+   {
+    "variable": {
+     "name": "fx",
+     "value": "12.566 / @W"
+    }
+   },
+   {
+    "variable": {
+     "name": "fy",
+     "value": "12.566 / @H"
+    }
+   },
+   {
+    "variable": {
+     "name": "T",
+     "value": "timeInHr() * 3600 + continuousSec()"
+    }
+   },
+   {
+    "variable": {
+     "name": "fade",
+     "value": "smooth_step(continuousSec() % 60, 60, 50)"
+    }
+   },
+   {
+    "variable": {
+     "name": "d",
+     "value": "0.035 + 0.02 * sin(@T * 0.01)"
+    }
+   },
+   {
+    "variable": {
+     "name": "p1",
+     "value": "@T * 0.11"
+    }
+   },
+   {
+    "variable": {
+     "name": "p2",
+     "value": "@T * 0.07"
+    }
+   },
+   {
+    "variable": {
+     "name": "k1",
+     "value": "@T * 0.05"
+    }
+   },
+   {
+    "variable": {
+     "name": "k2",
+     "value": "@T * 0.037"
+    }
+   },
+   {
+    "variable": {
+     "name": "nB",
+     "value": "(2 + floor(5 * seed(@m * 3 + 4, rand()))) * (2 * step(seed(@m * 3 + 5, rand()), 0.35) - 1)"
+    }
+   },
+   {
+    "paint": {
+     "shader": {
+      "agsl": "uniform float2 iResolution;\nuniform float iTime;\nuniform float uHue;\nhalf4 main(float2 p) {\n  float2 uv = (p - 0.5 * iResolution) / min(iResolution.x, iResolution.y);\n  float t = iTime;\n  float2 q = uv;\n  q += 0.30 * float2(sin(q.y * 3.1 + t * 0.21), cos(q.x * 2.7 - t * 0.17));\n  q += 0.18 * float2(sin(q.y * 5.3 - t * 0.13), cos(q.x * 4.9 + t * 0.19));\n  q += 0.10 * float2(sin(q.y * 9.1 + t * 0.11), cos(q.x * 8.3 - t * 0.09));\n  float v = 0.5 + 0.5 * sin(q.x * 3.0 + q.y * 2.0 + t * 0.10);\n  float w = 0.5 + 0.5 * sin(length(q) * 7.0 - t * 0.23);\n  float3 a = 0.5 + 0.5 * cos(6.2832 * (uHue + 0.30 * v + float3(0.0, 0.33, 0.67)));\n  float3 b = 0.5 + 0.5 * cos(6.2832 * (uHue + 0.18 + 0.20 * w + float3(0.0, 0.33, 0.67)));\n  float r = length(uv);\n  float3 col = mix(a, b, w);\n  col = mix(float3(dot(col, float3(0.3, 0.5, 0.2))), col, 0.7) * (0.06 + 0.30 * v * v);\n  col += a * 0.10 * exp(-4.0 * r * r);\n  col *= clamp(1.25 - 1.1 * r * r, 0.0, 1.0);\n  col += float3(0.012, 0.010, 0.025);\n  return half4(half3(col), 1.0);\n}",
+      "uniforms": {
+       "iResolution": [
+        "componentWidth()",
+        "componentHeight()"
+       ],
+       "iTime": "@T",
+       "uHue": "0.62 + @T * 0.00004"
+      }
+     }
+    }
+   },
+   {
+    "drawRect": {
+     "left": 0,
+     "top": 0,
+     "right": "@W",
+     "bottom": "@H"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "shader": 0
+      },
+      {
+       "color": "@colors.wash"
+      }
+     ]
+    }
+   },
+   {
+    "drawRect": {
+     "left": 0,
+     "top": 0,
+     "right": "@W",
+     "bottom": "@H"
+    }
+   },
+   {
+    "createParticles": {
+     "id": "sparks",
+     "count": 180,
+     "variables": [
+      "life",
+      "age",
+      "vx",
+      "vy",
+      "px",
+      "py"
+     ],
+     "initialValues": [
+      "150 + rand() * 150",
+      "rand() * 150",
+      "0",
+      "0",
+      "rand() * @W",
+      "rand() * @H"
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.spark"
+      },
+      {
+       "style": "stroke"
+      },
+      {
+       "strokeWidth": 1.8
+      },
+      {
+       "strokeCap": "round"
+      }
+     ]
+    }
+   },
+   {
+    "particlesLoop": {
+     "system": "@sparks",
+     "equations": [
+      "life",
+      "(age + 1) % life",
+      "-1.4 * sin(px * @fx + @k1) * sin(py * @fy - @k2)",
+      "-1.4 * cos(px * @fx + @k1) * cos(py * @fy - @k2)",
+      "ifElse(rand() * @W, (px + vx + @W) % @W, age - 0.5)",
+      "ifElse(rand() * @H, (py + vy + @H) % @H, age - 0.5)"
+     ],
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": "0.85 * square(sin(3.1416 * age / life))"
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "px",
+        "y1": "py",
+        "x2": "px - 4 * vx",
+        "y2": "py - 4 * vy"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "pathExpression": {
+     "id": "curveA",
+     "expressionX": "@cx + @R * exp(-0.02 * a[0]) * (0.62 * cos(a[0] + @p1) + 0.38 * cos(a[0] * (@nA + @d) + @p2))",
+     "expressionY": "@cy + @R * exp(-0.02 * a[0]) * (0.62 * sin(a[0] + @p1) + 0.38 * sin(a[0] * (@nA + @d) + @p2))",
+     "start": 0,
+     "end": 75.4,
+     "count": 900
+    }
+   },
+   {
+    "pathExpression": {
+     "id": "curveB",
+     "expressionX": "@cx + @R * exp(-0.02 * a[0]) * (0.62 * cos(a[0] + @p1) + 0.38 * cos(a[0] * (@nB + @d) + @p2))",
+     "expressionY": "@cy + @R * exp(-0.02 * a[0]) * (0.62 * sin(a[0] + @p1) + 0.38 * sin(a[0] * (@nB + @d) + @p2))",
+     "start": 0,
+     "end": 75.4,
+     "count": 900
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "sweepGradient": {
+        "centerX": "@cx",
+        "centerY": "@cy",
+        "colors": [
+         "@colors.line1",
+         "@colors.line2",
+         "@colors.line3",
+         "@colors.line4",
+         "@colors.line1"
+        ]
+       }
+      },
+      {
+       "style": "stroke"
+      },
+      {
+       "strokeJoin": "round"
+      },
+      {
+       "strokeCap": "round"
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "strokeWidth": 7
+      },
+      {
+       "alpha": "0.07 * (1 - @fade)"
+      }
+     ]
+    }
+   },
+   {
+    "drawPath": {
+     "path": "curveA"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "strokeWidth": 2.6
+      },
+      {
+       "alpha": "0.22 * (1 - @fade)"
+      }
+     ]
+    }
+   },
+   {
+    "drawPath": {
+     "path": "curveA"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "strokeWidth": 0.9
+      },
+      {
+       "alpha": "0.9 * (1 - @fade)"
+      }
+     ]
+    }
+   },
+   {
+    "drawPath": {
+     "path": "curveA"
+    }
+   },
+   {
+    "conditionalOperations": {
+     "condition": "gt",
+     "v1": "@fade",
+     "v2": 0,
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "strokeWidth": 7
+         },
+         {
+          "alpha": "0.07 * @fade"
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "curveB"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "strokeWidth": 2.6
+         },
+         {
+          "alpha": "0.22 * @fade"
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "curveB"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "strokeWidth": 0.9
+         },
+         {
+          "alpha": "0.9 * @fade"
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "curveB"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "shader": 0
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "style": "fill"
+      },
+      {
+       "color": "@colors.bead"
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "i",
+     "from": 0,
+     "until": 18,
+     "commands": [
+      {
+       "variable": {
+        "name": "u",
+        "value": "75.4 * fract(i / 18 + @T * 0.003)"
+       }
+      },
+      {
+       "variable": {
+        "name": "bx",
+        "value": "@cx + @R * exp(-0.02 * @u) * (0.62 * cos(@u + @p1) + 0.38 * cos(@u * (@nA + @d) + @p2))"
+       }
+      },
+      {
+       "variable": {
+        "name": "by",
+        "value": "@cy + @R * exp(-0.02 * @u) * (0.62 * sin(@u + @p1) + 0.38 * sin(@u * (@nA + @d) + @p2))"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": "0.16 * (1 - @fade)"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@bx",
+        "cy": "@by",
+        "radius": 6
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": "0.95 * (1 - @fade)"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@bx",
+        "cy": "@by",
+        "radius": 1.8
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "alpha": 0.62
+      },
+      {
+       "color": "@colors.ink"
+      },
+      {
+       "textSize": 11
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textMerge",
+       "id1": "Nº ",
+       "id2": {
+        "type": "textFromFloat",
+        "value": "@m + 1",
+        "whole": 4,
+        "decimal": 0,
+        "flags": 13
+       }
+      },
+      "id2": {
+       "type": "textMerge",
+       "id1": "   ·   ",
+       "id2": {
+        "type": "textMerge",
+        "id1": {
+         "type": "textFromFloat",
+         "value": "abs(ifElse(@nA, @nB, @fade - 0.5) - 1)",
+         "whole": 1,
+         "decimal": 0,
+         "flags": 5
+        },
+        "id2": "-fold"
+       }
+      }
+     },
+     "x": "@cx",
+     "y": "@H - 22",
+     "panX": 0,
+     "panY": 0
+    }
+   }
+  ]
+ }
+}

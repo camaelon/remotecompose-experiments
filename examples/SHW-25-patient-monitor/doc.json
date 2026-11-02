@@ -32,7 +32,7 @@
      0.004,
      0.001,
      0.0,
-     -0.0,
+     0.0,
      -0.006,
      -0.02,
      0.018,
@@ -46,8 +46,8 @@
      -0.076,
      -0.019,
      -0.003,
-     -0.0,
-     -0.0,
+     0.0,
+     0.0,
      0.0,
      0.0,
      0.0,
@@ -110,7 +110,7 @@
      0.0,
      0.0,
      0.0,
-     0
+     0.0
     ],
     "export": false
    },
@@ -191,6 +191,48 @@
     "export": false
    }
   },
+  "colors": {
+   "screen": {
+    "light": "#FFF2F4F7",
+    "dark": "#FF05080B"
+   },
+   "panel": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF0C1218"
+   },
+   "line": {
+    "light": "#FFD9DEE5",
+    "dark": "#FF1A232C"
+   },
+   "ink": {
+    "light": "#FF0F172A",
+    "dark": "#FFEFF3F7"
+   },
+   "inkMuted": {
+    "light": "#FF5B6573",
+    "dark": "#FF7A8696"
+   },
+   "ecg": {
+    "light": "#FF07914A",
+    "dark": "#FF3CF07A"
+   },
+   "pleth": {
+    "light": "#FF0272B0",
+    "dark": "#FF2FD5FF"
+   },
+   "resp": {
+    "light": "#FFA86200",
+    "dark": "#FFFFD23F"
+   },
+   "alarm": {
+    "light": "#FFDC1F2E",
+    "dark": "#FFFF3B3B"
+   },
+   "onAlarm": {
+    "light": "#FFFFFFFF",
+    "dark": "#FFFFFFFF"
+   }
+  },
   "variables": {
    "hr": {
     "value": 72,
@@ -250,10 +292,23 @@
      }
     },
     {
-     "variable": {
-      "name": "T",
-      "value": "continuousSec()"
-     }
+     "$if": "theme.mono",
+     "then": [
+      {
+       "variable": {
+        "name": "T",
+        "value": "timeInSec()"
+       }
+      }
+     ],
+     "else": [
+      {
+       "variable": {
+        "name": "T",
+        "value": "continuousSec()"
+       }
+      }
+     ]
     },
     {
      "variable": {
@@ -346,10 +401,23 @@
      }
     },
     {
-     "variable": {
-      "name": "blink",
-      "value": "ifElse(0, 1, 0.5 - fract(@T * 2))"
-     }
+     "$if": "theme.mono",
+     "then": [
+      {
+       "variable": {
+        "name": "blink",
+        "value": "ifElse(0, 1, 0.5 - fract(@T / 2))"
+       }
+      }
+     ],
+     "else": [
+      {
+       "variable": {
+        "name": "blink",
+        "value": "ifElse(0, 1, 0.5 - fract(@T * 2))"
+       }
+      }
+     ]
     },
     {
      "variable": {
@@ -364,16 +432,35 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF05080B"
-       },
-       {
-        "style": "fill"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.background"
+         },
+         {
+          "style": "fill"
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.screen"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawRect": {
@@ -384,19 +471,41 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF6B7785"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 13
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 13
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.inkMuted"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 13
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -420,19 +529,41 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FFEFF3F7"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 15
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 15
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.ink"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 15
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -474,16 +605,35 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF1A232C"
-       },
-       {
-        "style": "stroke"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.line"
+         },
+         {
+          "style": "stroke"
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "paint": {
@@ -509,19 +659,41 @@
       "v2": 0.5,
       "commands": [
        {
-        "paint": {
-         "ops": [
-          {
-           "style": "fill"
-          },
-          {
-           "color": "#FFFF3B3B"
-          },
-          {
-           "alpha": "0.35 + 0.65 * @blink"
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "style": "fill"
+            },
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "alpha": 1
+            }
+           ]
           }
-         ]
-        }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "style": "fill"
+            },
+            {
+             "color": "@colors.alarm"
+            },
+            {
+             "alpha": "0.35 + 0.65 * @blink"
+            }
+           ]
+          }
+         }
+        ]
        },
        {
         "drawRoundRect": {
@@ -534,19 +706,41 @@
         }
        },
        {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFEFF3F7"
-          },
-          {
-           "alpha": 1
-          },
-          {
-           "textSize": 14
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.background"
+            },
+            {
+             "alpha": 1
+            },
+            {
+             "textSize": 14
+            }
+           ]
           }
-         ]
-        }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onAlarm"
+            },
+            {
+             "alpha": 1
+            },
+            {
+             "textSize": 14
+            }
+           ]
+          }
+         }
+        ]
        },
        {
         "conditionalOperations": {
@@ -609,19 +803,41 @@
       "v2": 0.5,
       "commands": [
        {
-        "paint": {
-         "ops": [
-          {
-           "style": "fill"
-          },
-          {
-           "color": "#FFFF3B3B"
-          },
-          {
-           "alpha": "0.35 + 0.65 * @blink"
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "style": "fill"
+            },
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "alpha": 1
+            }
+           ]
           }
-         ]
-        }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "style": "fill"
+            },
+            {
+             "color": "@colors.alarm"
+            },
+            {
+             "alpha": "0.35 + 0.65 * @blink"
+            }
+           ]
+          }
+         }
+        ]
        },
        {
         "drawRoundRect": {
@@ -634,19 +850,41 @@
         }
        },
        {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFEFF3F7"
-          },
-          {
-           "alpha": 1
-          },
-          {
-           "textSize": 14
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.background"
+            },
+            {
+             "alpha": 1
+            },
+            {
+             "textSize": 14
+            }
+           ]
           }
-         ]
-        }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onAlarm"
+            },
+            {
+             "alpha": 1
+            },
+            {
+             "textSize": 14
+            }
+           ]
+          }
+         }
+        ]
        },
        {
         "drawTextAnchored": {
@@ -676,22 +914,47 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF3CF07A"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 12
-       },
-       {
-        "alpha": 0.85
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 12
+         },
+         {
+          "alpha": 0.85
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.ecg"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 12
+         },
+         {
+          "alpha": 0.85
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -703,22 +966,47 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF1A232C"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeWidth": 1
-       },
-       {
-        "alpha": 1
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.line"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawLine": {
@@ -729,22 +1017,47 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF2FD5FF"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 12
-       },
-       {
-        "alpha": 0.85
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 12
+         },
+         {
+          "alpha": 0.85
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.pleth"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 12
+         },
+         {
+          "alpha": 0.85
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -756,22 +1069,47 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF1A232C"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeWidth": 1
-       },
-       {
-        "alpha": 1
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.line"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawLine": {
@@ -782,22 +1120,47 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FFFFD23F"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 12
-       },
-       {
-        "alpha": 0.85
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 12
+         },
+         {
+          "alpha": 0.85
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.resp"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 12
+         },
+         {
+          "alpha": 0.85
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -879,71 +1242,108 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF3CF07A"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeJoin": "round"
-       },
-       {
-        "strokeCap": "round"
-       },
-       {
-        "strokeWidth": 4.8
-       },
-       {
-        "alpha": 0.16
+     "$if": "theme.mono",
+     "then": [],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.ecg"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeWidth": 4.8
+         },
+         {
+          "alpha": 0.16
+         }
+        ]
        }
-      ]
-     }
+      },
+      {
+       "drawPath": {
+        "path": "w0p1"
+       }
+      },
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@w0z - @w0s",
+        "v2": 1,
+        "commands": [
+         {
+          "drawPath": {
+           "path": "w0p2"
+          }
+         }
+        ]
+       }
+      }
+     ]
     },
     {
-     "drawPath": {
-      "path": "w0p1"
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@w0z - @w0s",
-      "v2": 1,
-      "commands": [
-       {
-        "drawPath": {
-         "path": "w0p2"
-        }
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeWidth": 2
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF3CF07A"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeJoin": "round"
-       },
-       {
-        "strokeCap": "round"
-       },
-       {
-        "strokeWidth": 2
-       },
-       {
-        "alpha": 1
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.ecg"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeWidth": 2
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ]
     },
     {
      "drawPath": {
@@ -1070,71 +1470,108 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF2FD5FF"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeJoin": "round"
-       },
-       {
-        "strokeCap": "round"
-       },
-       {
-        "strokeWidth": 4.8
-       },
-       {
-        "alpha": 0.16
+     "$if": "theme.mono",
+     "then": [],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.pleth"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeWidth": 4.8
+         },
+         {
+          "alpha": 0.16
+         }
+        ]
        }
-      ]
-     }
+      },
+      {
+       "drawPath": {
+        "path": "w1p1"
+       }
+      },
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@w1z - @w1s",
+        "v2": 2,
+        "commands": [
+         {
+          "drawPath": {
+           "path": "w1p2"
+          }
+         }
+        ]
+       }
+      }
+     ]
     },
     {
-     "drawPath": {
-      "path": "w1p1"
-     }
-    },
-    {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@w1z - @w1s",
-      "v2": 2,
-      "commands": [
-       {
-        "drawPath": {
-         "path": "w1p2"
-        }
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeWidth": 2
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
-    },
-    {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF2FD5FF"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeJoin": "round"
-       },
-       {
-        "strokeCap": "round"
-       },
-       {
-        "strokeWidth": 2
-       },
-       {
-        "alpha": 1
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.pleth"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeWidth": 2
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ]
     },
     {
      "drawPath": {
@@ -1261,28 +1698,59 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FFFFD23F"
-       },
-       {
-        "style": "stroke"
-       },
-       {
-        "strokeJoin": "round"
-       },
-       {
-        "strokeCap": "round"
-       },
-       {
-        "strokeWidth": 1.6
-       },
-       {
-        "alpha": 1
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeWidth": 1.6
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.resp"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeWidth": 1.6
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawPath": {
@@ -1381,19 +1849,41 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF0C1218"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "alpha": 1
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.background"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.panel"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawRoundRect": {
@@ -1404,6 +1894,37 @@
       "rx": 10,
       "ry": 10
      }
+    },
+    {
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "@hrX + 0.5",
+        "top": "@hrY + 0.5",
+        "right": "@hrR - 0.5",
+        "bottom": "@hrB - 0.5",
+        "rx": 10,
+        "ry": 10
+       }
+      }
+     ],
+     "else": []
     },
     {
      "variable": {
@@ -1442,19 +1963,41 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF0C1218"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "alpha": 1
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.background"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.panel"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawRoundRect": {
@@ -1465,6 +2008,37 @@
       "rx": 10,
       "ry": 10
      }
+    },
+    {
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "@spX + 0.5",
+        "top": "@spY + 0.5",
+        "right": "@spR - 0.5",
+        "bottom": "@spB - 0.5",
+        "rx": 10,
+        "ry": 10
+       }
+      }
+     ],
+     "else": []
     },
     {
      "variable": {
@@ -1503,19 +2077,41 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF0C1218"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "alpha": 1
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.background"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.panel"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawRoundRect": {
@@ -1526,6 +2122,37 @@
       "rx": 10,
       "ry": 10
      }
+    },
+    {
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "@rrX + 0.5",
+        "top": "@rrY + 0.5",
+        "right": "@rrR - 0.5",
+        "bottom": "@rrB - 0.5",
+        "rx": 10,
+        "ry": 10
+       }
+      }
+     ],
+     "else": []
     },
     {
      "variable": {
@@ -1564,19 +2191,41 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF0C1218"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "alpha": 1
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.background"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.panel"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawRoundRect": {
@@ -1589,84 +2238,259 @@
      }
     },
     {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@hrA",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFFF3B3B"
-          },
-          {
-           "alpha": "0.2 + 0.8 * @blink"
-          }
-         ]
-        }
-       },
-       {
-        "drawRoundRect": {
-         "left": "@hrX",
-         "top": "@hrY",
-         "right": "@hrR",
-         "bottom": "@hrB",
-         "rx": 10,
-         "ry": 10
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "alpha": 1
-          }
-         ]
-        }
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         }
+        ]
        }
-      ]
-     }
+      },
+      {
+       "drawRoundRect": {
+        "left": "@bpX + 0.5",
+        "top": "@bpY + 0.5",
+        "right": "@bpR - 0.5",
+        "bottom": "@bpB - 0.5",
+        "rx": 10,
+        "ry": 10
+       }
+      }
+     ],
+     "else": []
     },
     {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@spA",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFFF3B3B"
-          },
-          {
-           "alpha": "0.2 + 0.8 * @blink"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@hrA",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 4
+            },
+            {
+             "alpha": 1
+            }
+           ]
           }
-         ]
-        }
-       },
-       {
-        "drawRoundRect": {
-         "left": "@spX",
-         "top": "@spY",
-         "right": "@spR",
-         "bottom": "@spB",
-         "rx": 10,
-         "ry": 10
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "alpha": 1
+         },
+         {
+          "drawRoundRect": {
+           "left": "@hrX + 2",
+           "top": "@hrY + 2",
+           "right": "@hrR - 2",
+           "bottom": "@hrB - 2",
+           "rx": 9,
+           "ry": 9
           }
-         ]
-        }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         }
+        ]
        }
-      ]
-     }
+      },
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@hrA * @blink",
+        "v2": 0.5,
+        "commands": [
+         {
+          "drawRoundRect": {
+           "left": "@hrX",
+           "top": "@hrY",
+           "right": "@hrR",
+           "bottom": "@hrB",
+           "rx": 10,
+           "ry": 10
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "else": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@hrA",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.alarm"
+            },
+            {
+             "alpha": "0.2 + 0.8 * @blink"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@hrX",
+           "top": "@hrY",
+           "right": "@hrR",
+           "bottom": "@hrB",
+           "rx": 10,
+           "ry": 10
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "$if": "theme.mono",
+     "then": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@spA",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 4
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@spX + 2",
+           "top": "@spY + 2",
+           "right": "@spR - 2",
+           "bottom": "@spB - 2",
+           "rx": 9,
+           "ry": 9
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@spA * @blink",
+        "v2": 0.5,
+        "commands": [
+         {
+          "drawRoundRect": {
+           "left": "@spX",
+           "top": "@spY",
+           "right": "@spR",
+           "bottom": "@spB",
+           "rx": 10,
+           "ry": 10
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "else": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@spA",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.alarm"
+            },
+            {
+             "alpha": "0.2 + 0.8 * @blink"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@spX",
+           "top": "@spY",
+           "right": "@spR",
+           "bottom": "@spB",
+           "rx": 10,
+           "ry": 10
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "variable": {
@@ -1675,40 +2499,90 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF3CF07A"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 14
-       },
-       {
-        "alpha": 1
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 14
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.ecg"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 14
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     },
     {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@hrA",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFEFF3F7"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@hrA * @blink",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.background"
+            }
+           ]
           }
-         ]
-        }
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@hrA",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onAlarm"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -1720,34 +2594,78 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF6B7785"
-       },
-       {
-        "textSize": 11
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "textSize": 11
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.inkMuted"
+         },
+         {
+          "textSize": 11
+         }
+        ]
+       }
+      }
+     ]
     },
     {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@hrA",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFEFF3F7"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@hrA * @blink",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.background"
+            }
+           ]
           }
-         ]
-        }
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@hrA",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onAlarm"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -1789,34 +2707,78 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF3CF07A"
-       },
-       {
-        "textSize": "@hrF"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "textSize": "@hrF"
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.ecg"
+         },
+         {
+          "textSize": "@hrF"
+         }
+        ]
+       }
+      }
+     ]
     },
     {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@hrA",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFEFF3F7"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@hrA * @blink",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.background"
+            }
+           ]
           }
-         ]
-        }
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@hrA",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onAlarm"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -1840,16 +2802,35 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF3CF07A"
-       },
-       {
-        "alpha": "0.15 + 0.85 * @beat"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.ecg"
+         },
+         {
+          "alpha": "0.15 + 0.85 * @beat"
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawCircle": {
@@ -1874,40 +2855,90 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF2FD5FF"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 14
-       },
-       {
-        "alpha": 1
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 14
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.pleth"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 14
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     },
     {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@spA",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFEFF3F7"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@spA * @blink",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.background"
+            }
+           ]
           }
-         ]
-        }
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@spA",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onAlarm"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -1919,34 +2950,78 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF6B7785"
-       },
-       {
-        "textSize": 11
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "textSize": 11
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.inkMuted"
+         },
+         {
+          "textSize": 11
+         }
+        ]
+       }
+      }
+     ]
     },
     {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@spA",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFEFF3F7"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@spA * @blink",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.background"
+            }
+           ]
           }
-         ]
-        }
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@spA",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onAlarm"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -1988,34 +3063,78 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF2FD5FF"
-       },
-       {
-        "textSize": "@spF"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "textSize": "@spF"
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.pleth"
+         },
+         {
+          "textSize": "@spF"
+         }
+        ]
+       }
+      }
+     ]
     },
     {
-     "conditionalOperations": {
-      "condition": "gt",
-      "v1": "@spA",
-      "v2": 0.5,
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "#FFEFF3F7"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@spA * @blink",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.background"
+            }
+           ]
           }
-         ]
-        }
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "conditionalOperations": {
+        "condition": "gt",
+        "v1": "@spA",
+        "v2": 0.5,
+        "commands": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onAlarm"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -2039,13 +3158,29 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF1A232C"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.line"
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawRoundRect": {
@@ -2058,13 +3193,29 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF2FD5FF"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.pleth"
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawRoundRect": {
@@ -2083,22 +3234,47 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FFFFD23F"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 14
-       },
-       {
-        "alpha": 1
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 14
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.resp"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 14
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -2110,16 +3286,35 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF6B7785"
-       },
-       {
-        "textSize": 11
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "textSize": 11
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.inkMuted"
+         },
+         {
+          "textSize": 11
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -2131,16 +3326,35 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FFFFD23F"
-       },
-       {
-        "textSize": "@rrF"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "textSize": "@rrF"
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.resp"
+         },
+         {
+          "textSize": "@rrF"
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -2164,22 +3378,47 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FFEFF3F7"
-       },
-       {
-        "style": "fill"
-       },
-       {
-        "textSize": 14
-       },
-       {
-        "alpha": 1
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 14
+         },
+         {
+          "alpha": 1
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.ink"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 14
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -2191,16 +3430,35 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF6B7785"
-       },
-       {
-        "textSize": 11
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "textSize": 11
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.inkMuted"
+         },
+         {
+          "textSize": 11
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -2212,16 +3470,35 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FFEFF3F7"
-       },
-       {
-        "textSize": "@bpF"
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "textSize": "@bpF"
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.ink"
+         },
+         {
+          "textSize": "@bpF"
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
@@ -2263,16 +3540,35 @@
      }
     },
     {
-     "paint": {
-      "ops": [
-       {
-        "color": "#FF6B7785"
-       },
-       {
-        "textSize": 12
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "textSize": 12
+         }
+        ]
        }
-      ]
-     }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.inkMuted"
+         },
+         {
+          "textSize": 12
+         }
+        ]
+       }
+      }
+     ]
     },
     {
      "drawTextAnchored": {
