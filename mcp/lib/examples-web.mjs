@@ -15,6 +15,9 @@
 //   GET <base>/play/<id>/<name>/  the same for a render with a document of its own
 //                               (meta.check.renders with a componentTheme: doc.<name>.rc)
 //   GET <base>/img/<id>.png     its render.png
+//   GET <base>/thumb/<id>[/<name>].png?w=120|240|480|960  a render scaled down for the grids,
+//                               made once and cached on disk (lib/thumbs.mjs). Grid image URLs
+//                               carry ?v=<file mtime>, so they are cached for a year.
 //   GET <base>/img/<id>/<name>.png  one of its other renders (render-<name>.png: light, dark, mono-dark,
 //                               mono-light)
 //   GET <base>/json/<id>.json   its doc.json (and /json/<id>.expanded.json, /json/<id>.mono-dark.expanded.json,
@@ -22,7 +25,7 @@
 // <base> is wherever the reverse proxy mounts the server (/examples/ on the VPS); every link is
 // relative, so the pages work under any prefix.
 
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { brotliCompressSync, gzipSync, constants as zlibConstants } from "node:zlib";
 import path from "node:path";
@@ -32,6 +35,7 @@ import { playerBundle } from "./web-player.mjs";
 import { MONO_VAR, monoPalettes, usesComponents } from "./components.mjs";
 import { compileComponents, jsonToRc } from "./json2rc.mjs";
 import { STRUCTURES } from "./structures.mjs";
+import { thumbnail } from "./thumbs.mjs";
 
 const WEB_SETTABLE = new Set(["float", "int", "color", "string", "float_array"]);
 const HEADERS = {
@@ -330,14 +334,17 @@ function sizeBadge(bytes) {
 
 function card({ e, base, text, desc, tags, links, build, bytes = 0 }) {
     const id = encodeURIComponent(e.id);
-    const main = `${base}img/${id}.png`, play = `${base}play/${id}/`;
+    // Thumbnails, versioned by the render's mtime so the browser keeps them until a rebuild.
+    const ver = (name) => { try { return statSync(path.join(EXAMPLES_DIR, e.folder, name ? `render-${name}.png` : "render.png")).mtimeMs.toString(36).replace(".", ""); } catch { return "0"; } };
+    const thumb = (name, w) => `${base}thumb/${id}${name ? "/" + encodeURIComponent(name) : ""}.png?w=${w}&amp;v=${ver(name)}`;
+    const main = thumb("", 480), play = `${base}play/${id}/`;
     const img = existsSync(path.join(EXAMPLES_DIR, e.folder, "render.png"))
         ? `<img src="${main}" data-main="${main}" alt="" loading="lazy">` : `<span>no render</span>`;
     const modes = e.folder && existsSync(path.join(EXAMPLES_DIR, e.folder)) ? renders(e) : [];
     const strip = modes.length ? `<div class="modes">${modes.map((m) => {
-        const src = `${base}img/${id}/${encodeURIComponent(m.name)}.png`;
+        const src = thumb(m.name, 480), small = thumb(m.name, 120);
         const href = m.own ? `${play}${encodeURIComponent(m.name)}/` : m.theme ? `${play}#t=${m.theme}` : play;
-        return `<button type="button" data-mode="${esc(m.name)}" data-src="${src}" data-play="${href}" aria-pressed="false" title="Show the ${esc(m.name)} render"><img src="${src}" alt="" loading="lazy">${esc(m.name)}</button>`;
+        return `<button type="button" data-mode="${esc(m.name)}" data-src="${src}" data-play="${href}" aria-pressed="false" title="Show the ${esc(m.name)} render"><img src="${small}" alt="" loading="lazy">${esc(m.name)}</button>`;
     }).join("")}</div>` : "";
     const tag = (t) => typeof t === "object" ? `<span class="${t.cls}" title="${esc(t.title)}">${esc(t.text)}</span>` : `<span>${esc(t)}</span>`;
     return `<a class="card" href="${play}" data-play="${play}" data-family="${esc(e.family ?? "")}" data-kind="${esc(build?.kinds ?? "")}" data-bytes="${bytes}" data-text="${esc(text.toLowerCase())}">
@@ -434,12 +441,37 @@ function structuresPage() {
             links: starts.length ? `<span>Start from ${starts.map((x) => `${esc(x.id)} <b>${esc(formatBytes(x.derived?.bytes ?? 0))}</b>`).join(", ")}</span>` : "<span>no example yet</span>",
         });
         // (The card links to its first example's playground; its id and image are that example's.)
-        return first ? c.replaceAll(`play/${encodeURIComponent(st.id)}/`, `play/${encodeURIComponent(first.id)}/`).replaceAll(`img/${encodeURIComponent(st.id)}`, `img/${encodeURIComponent(first.id)}`) : c;
+        return first ? c.replaceAll(`play/${encodeURIComponent(st.id)}/`, `play/${encodeURIComponent(first.id)}/`).replaceAll(`img/${encodeURIComponent(st.id)}`, `img/${encodeURIComponent(first.id)}`).replaceAll(`thumb/${encodeURIComponent(st.id)}`, `thumb/${encodeURIComponent(first.id)}`) : c;
     });
     return page({
         title: "Screen structures", current: "structures", families: [], cards,
         sub: `${STRUCTURES.length} recurring screen shapes, whatever their subject. build_kit guesses one from a request (or takes it as its structure parameter) and starts from its examples. Each card opens the structure's first example in the playground.`,
-    }).replaceAll('href="play/', 'href="../play/').replaceAll('data-play="play/', 'data-play="../play/').replaceAll('src="img/', 'src="../img/').replaceAll('data-main="img/', 'data-main="../img/').replaceAll('data-src="img/', 'data-src="../img/');
+    }).replaceAll('href="play/', 'href="../play/').replaceAll('data-play="play/', 'data-play="../play/').replaceAll('src="img/', 'src="../img/').replaceAll('data-main="img/', 'data-main="../img/').replaceAll('data-src="img/', 'data-src="../img/')
+        .replaceAll('src="thumb/', 'src="../thumb/').replaceAll('data-main="thumb/', 'data-main="../thumb/').replaceAll('data-src="thumb/', 'data-src="../thumb/');
+}
+
+// The grid thumbnails, made in the background after the first page request (one render per
+// tick, so requests are not held up), so later visitors get them from the disk cache.
+let warming = false;
+function warmThumbs() {
+    if (warming) return;
+    warming = true;
+    const C = loadCatalog();
+    const folders = [...C.examples.map((e) => e.folder), ...[...C.demos.values()].map((e) => e.folder)].filter(Boolean);
+    const jobs = [];
+    for (const f of folders) {
+        const dir = path.join(EXAMPLES_DIR, f);
+        let names = [];
+        try { names = readdirSync(dir).filter((n) => /^render(-[a-z0-9-]+)?\.png$/.test(n)); } catch {}
+        for (const n of names) { jobs.push([path.join(dir, n), 480]); if (n !== "render.png") jobs.push([path.join(dir, n), 120]); }
+    }
+    const step = () => {
+        const j = jobs.shift();
+        if (!j) return;
+        try { thumbnail(j[0], j[1]); } catch {}
+        setImmediate(step);
+    };
+    setImmediate(step);
 }
 
 /** lib/mcp-server.mjs publicRoute: true when it answered the request. */
@@ -451,13 +483,14 @@ export async function publicRoute(req, url, res) {
         if (pm[1] !== player.name) return send(req, res, 404, "text/plain", "not found\n");
         return send(req, res, 200, "text/javascript; charset=utf-8", player.code, { "Cache-Control": "public, max-age=31536000, immutable" });
     }
-    const known = p === "/" || p === "" || /^\/(components|structures|examples|play|img|json)(\/|$)/.test(p);
+    const known = p === "/" || p === "" || /^\/(components|structures|examples|play|img|thumb|json)(\/|$)/.test(p);
     if (!known) return false;
     if (req.method !== "GET" && req.method !== "HEAD") {
         res.writeHead(405, { Allow: "GET, HEAD" });
         res.end();
         return true;
     }
+    if (/^\/(|components\/|structures\/|examples\/)$/.test(p)) warmThumbs();
     // Components first: the landing page. Examples have their own page; /components/ (its old
     // address) still goes to the components.
     if (p === "/" || p === "") return send(req, res, 200, "text/html; charset=utf-8", componentsPage());
@@ -491,12 +524,18 @@ export async function publicRoute(req, url, res) {
         if (!m[3]) { res.writeHead(301, { Location: `${m[2]}/${url.search}` }); res.end(); return true; }
         return send(req, res, 200, "text/html; charset=utf-8", await playground(e, m[2]));
     }
-    m = /^\/img\/([^/]+)(?:\/([a-z][\w-]*))?\.png$/.exec(p);
+    m = /^\/(img|thumb)\/([^/]+)(?:\/([a-z][\w-]*))?\.png$/.exec(p);
     if (m) {
-        const e = entry(decodeURIComponent(m[1]));
-        const file = e && path.join(EXAMPLES_DIR, e.folder, m[2] ? `render-${m[2]}.png` : "render.png");
+        const e = entry(decodeURIComponent(m[2]));
+        const file = e && path.join(EXAMPLES_DIR, e.folder, m[3] ? `render-${m[3]}.png` : "render.png");
         if (!file || !existsSync(file)) return send(req, res, 404, "text/plain", "not found\n");
-        return send(req, res, 200, "image/png", readFileSync(file));
+        // A versioned URL (?v=<mtime>) names one exact file: cache it for a year.
+        const cache = url.searchParams.has("v") ? { "Cache-Control": "public, max-age=31536000, immutable" } : {};
+        if (m[1] === "thumb") {
+            const w = [120, 240, 480, 960].find((x) => x >= Number(url.searchParams.get("w") ?? 480)) ?? 960;
+            return send(req, res, 200, "image/png", thumbnail(file, w), cache);
+        }
+        return send(req, res, 200, "image/png", readFileSync(file), cache);
     }
     m = /^\/json\/([^/.]+?)(\.expanded|\.component|\.[a-z][\w-]*\.expanded)?\.json$/.exec(p);
     if (m) {
