@@ -4126,6 +4126,18 @@ void ConditionalOp::apply(RemoteContext& context) {
         for (auto& child : mChildren) {
             child->apply(context);
         }
+    } else {
+        // A false branch still runs its definitions, in DATA mode so nothing draws. The writer
+        // emits an expression or a TEXT_FROM_FLOAT once, where it is first used, and later
+        // uses elsewhere refer to that id; when the first use sits in this branch, skipping
+        // it froze the value for every other branch. The reference never has this problem:
+        // its expressions update through variable listeners, not through the paint walk.
+        // Seen as a status bar reading 0 % in the landscape layout of a document whose
+        // portrait layout (the false branch) came first.
+        const ContextMode mode = context.getMode();
+        context.setMode(ContextMode::DATA);
+        for (auto& child : mChildren) child->apply(context);
+        context.setMode(mode);
     }
 }
 
