@@ -39,8 +39,10 @@ NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 
 # npm installs esbuild, which builds the web player. Debian ships it separately from node;
 # NodeSource's node includes it (and conflicts with the Debian package), hence the check.
 command -v npm >/dev/null || apt-get install -y -qq npm
-if (( NODE_MAJOR < 18 )); then
-    echo "node $NODE_MAJOR is too old (need 18+). Install a current one, e.g.:" >&2
+# Accounts live in SQLite through node:sqlite, built in from Node 22.13 (no npm package).
+if ! node -e 'const [a,b]=process.versions.node.split(".").map(Number); process.exit(a>22||(a===22&&b>=13)?0:1)' 2>/dev/null \
+   || ! node -e 'require("node:sqlite")' 2>/dev/null; then
+    echo "node $(node -v 2>/dev/null || echo '(none)') is too old (need 22.13+, for node:sqlite: accounts and usage). Install a current one, e.g.:" >&2
     echo "  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs" >&2
     exit 1
 fi
@@ -90,6 +92,17 @@ RC2IMAGE=$DEST/players/cpp/build/tools/rc2image/rc2image
 EOF
     chmod 600 /etc/rcmcp/common.env
 fi
+# Accounts (lib/accounts.mjs): people register at /examples/account/ and get their own token;
+# every server checks tokens against, and records usage in, the one database. Added to an
+# existing common.env too (each line only if missing, so local edits stay).
+add_env() { grep -q "^$1=" /etc/rcmcp/common.env || echo "$1=$2" >> /etc/rcmcp/common.env; }
+add_env RC_ACCOUNTS 1
+add_env RC_DB /var/lib/rcmcp/rc.db
+add_env RC_ACCOUNT_URL "https://$DOMAIN/examples/account/"
+add_env RC_MCP_URL "https://$DOMAIN/mcp"
+# (RC_SIGNUP=closed stops registration; RC_ADMIN_EMAILS=a@b,c@d makes those accounts admins.)
+# The database is the service user's: every server unit writes it (ReadWritePaths=/var/lib/rcmcp).
+for f in /var/lib/rcmcp/rc.db /var/lib/rcmcp/rc.db-wal /var/lib/rcmcp/rc.db-shm; do [[ -e $f ]] && chown rcmcp:rcmcp "$f"; done
 echo "MCP_HTTP_PORT=8808" > /etc/rcmcp/json2rc.env
 # rc-render returns public links to its renders under its own public base.
 printf 'MCP_HTTP_PORT=8809\nMCP_PUBLIC_URL=https://%s/rc-render\n' "$DOMAIN" > /etc/rcmcp/rc-render.env
@@ -143,7 +156,9 @@ The single-purpose servers are still there:
   https://$DOMAIN/inspect/mcp
   https://$DOMAIN/examples/mcp     example catalog and component library
   https://$DOMAIN/examples/        browse the components, layouts, structures, showcases and demos, public
-Token (keep secret): $TOKEN
+Accounts:     https://$DOMAIN/examples/account/   register, get a token, see usage and published pages
+              (also at https://$DOMAIN/account/; RC_SIGNUP=closed in /etc/rcmcp/common.env stops sign-ups)
+Admin token (MCP_TOKEN, keep secret; works everywhere as an admin key): $TOKEN
 
 Claude Code:  claude mcp add --transport http remotecompose https://$DOMAIN/mcp --header "Authorization: Bearer $TOKEN"
               (or a single-purpose one: https://$DOMAIN/rc-render/mcp, /json2rc/, /guide/, ...)

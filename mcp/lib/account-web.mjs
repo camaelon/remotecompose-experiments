@@ -1,0 +1,339 @@
+// The account pages of the website (served by rc-examples next to its catalog pages, so at
+// /examples/account/ on the VPS, and by the front door at /account/). Every link is relative.
+//
+//   GET  account/                    signed out: register / sign in with a token; signed in:
+//                                    tokens, usage, published pages (admins: every account)
+//   POST account/register            email, name -> an account, its first token (shown once), a session
+//   POST account/signin              token -> a session
+//   POST account/signout
+//   POST account/tokens              label -> a new token, shown once with connection instructions
+//   POST account/tokens/<id>/revoke
+//   POST account/admin/<id>/disable | enable      (admins)
+//
+// Sessions: a random id in an HttpOnly, SameSite=Lax cookie on Path=/ (so the deploy server's
+// /pages/ index sees it too), Secure when the request came over https, 30 days, stored hashed.
+// POSTs must come from this origin (Origin, else Referer), and signed-in forms carry a
+// per-session token too. Register and sign-in are rate-limited per address. The MCP endpoints
+// ignore cookies: they take the token.
+
+import { accounts, accountsEnabled, csrfFor, RateLimiter, readCookie, SESSION_COOKIE, signupOpen } from "./accounts.mjs";
+import { escapeHtml } from "./web-page.mjs";
+
+const esc = (s) => escapeHtml(s ?? "");
+const MAX_FORM = 16 << 10;
+const registerLimit = new RateLimiter(Number(process.env.RC_REGISTER_PER_HOUR ?? 5), 3600_000);
+const signinLimit = new RateLimiter(Number(process.env.RC_SIGNIN_PER_15MIN ?? 20), 900_000);
+
+const isHttps = (req) => String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim() === "https" || !!req.socket?.encrypted;
+const selfOrigin = (req) => `${isHttps(req) ? "https" : "http"}://${req.headers.host ?? "localhost"}`;
+const clientIp = (req) => String(req.headers["x-forwarded-for"] ?? req.socket?.remoteAddress ?? "").split(",")[0].trim();
+
+/** A POST from a page of this site: its Origin (or, without one, its Referer) is this origin. */
+export function sameOrigin(req) {
+    const self = selfOrigin(req);
+    if (req.headers.origin) return req.headers.origin === self;
+    try { return new URL(String(req.headers.referer)).origin === self; } catch { return false; }
+}
+
+async function readForm(req) {
+    const chunks = [];
+    let size = 0;
+    for await (const c of req) {
+        size += c.length;
+        if (size > MAX_FORM) throw Object.assign(new Error("form too large"), { status: 413 });
+        chunks.push(c);
+    }
+    return new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
+}
+
+function cookie(req, value, maxAge) {
+    return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${isHttps(req) ? "; Secure" : ""}`;
+}
+
+const HEADERS = {
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+    // Not no-referrer: with it a browser sends "Origin: null" on a form POST, and the CSRF check needs the origin.
+    "Referrer-Policy": "same-origin",
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+};
+
+function html(res, status, body, extra = {}) {
+    const buf = Buffer.from(body);
+    res.writeHead(status, { "Content-Type": "text/html; charset=utf-8", "Content-Length": buf.length, ...HEADERS, ...extra });
+    res.end(buf);
+    return true;
+}
+
+function redirect(res, to, extra = {}) {
+    res.writeHead(303, { Location: to, ...HEADERS, ...extra });
+    res.end();
+    return true;
+}
+
+const ACCOUNT_CSS = `
+main.acct { display:block; }
+main.acct a { color:var(--accent); text-decoration:none; font-weight:500; }
+main.acct a:hover { text-decoration:underline; }
+.panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:0 0 16px; }
+.panel h2 { font-size:16px; margin:0 0 10px; }
+.panel p { margin:0 0 10px; }
+.muted { color:var(--muted); }
+.cols { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+form.stack { display:flex; flex-direction:column; gap:10px; }
+form.inline { display:inline; }
+label.f { display:flex; flex-direction:column; gap:4px; font-size:13px; color:var(--muted); }
+input[type=text], input[type=email], input[type=password] { padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--ink); font:inherit; }
+button.btn { align-self:flex-start; padding:7px 14px; border:1px solid var(--accent); border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+button.link { padding:3px 10px; border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--ink); font:inherit; font-size:12px; cursor:pointer; }
+button.link.danger { color:#d0453a; }
+.row { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
+.row label.f { flex:1 1 200px; }
+.wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+td.w { white-space:normal; overflow-wrap:anywhere; }
+th { color:var(--muted); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+.n { text-align:right; font-variant-numeric:tabular-nums; }
+code, pre { font:12px/1.5 ui-monospace,Menlo,monospace; }
+pre { background:var(--chip); border-radius:8px; padding:10px 12px; margin:4px 0 12px; overflow-x:auto; white-space:pre-wrap; word-break:break-all; }
+.fresh { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+.token { font:600 14px ui-monospace,Menlo,monospace; background:var(--chip); padding:8px 12px; border-radius:8px; word-break:break-all; display:block; margin:6px 0 12px; }
+.note { background:color-mix(in srgb, #d08a00 14%, transparent); border-radius:8px; padding:8px 12px; margin:0 0 12px; }
+.err { background:color-mix(in srgb, #d0453a 16%, transparent); border-radius:8px; padding:8px 12px; margin:0 0 16px; }
+.pill { font-size:11px; padding:1px 8px; border-radius:999px; background:var(--chip); color:var(--muted); }
+.pill.off { color:#d0453a; }
+.stats { display:flex; gap:24px; flex-wrap:wrap; margin:0 0 8px; }
+.stats b { font-size:20px; display:block; }
+svg.bars { width:100%; height:auto; display:block; margin:4px 0 12px; }
+svg.bars .b { fill:var(--accent); }
+svg.bars .e { fill:#d0453a; }
+svg.bars text { fill:var(--muted); font:10px system-ui,sans-serif; }
+svg.bars line { stroke:var(--line); }
+h3 { font-size:13px; margin:14px 0 6px; color:var(--muted); font-weight:600; }
+.who { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+`;
+
+const COPY_SCRIPT = `
+for (const b of document.querySelectorAll("[data-copy]")) b.addEventListener("click", () => {
+  const el = document.getElementById(b.dataset.copy);
+  navigator.clipboard?.writeText(el.textContent.trim()).then(() => { b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1500); });
+});
+`;
+
+function shell({ css, nav, title, sub, body }) {
+    return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>${esc(title)}</title><style>${css}${ACCOUNT_CSS}</style></head>
+<body>
+<header>
+<nav>${nav}</nav>
+<h1>${esc(title)}</h1>
+<p class="sub">${sub}</p>
+</header>
+<main class="acct">${body}</main>
+<script>${COPY_SCRIPT}</script>
+</body></html>`;
+}
+
+/** The MCP endpoint people connect to: RC_MCP_URL, else the front door at this site's root. */
+const mcpUrl = (req) => (process.env.RC_MCP_URL ?? `${selfOrigin(req)}/mcp`).replace(/\/+$/, "");
+
+let snippetId = 0;
+const snippet = (text) => {
+    const id = `s${++snippetId}`;
+    return `<div class="row" style="align-items:center;justify-content:space-between"><span></span><button type="button" class="link" data-copy="${id}">Copy</button></div><pre id="${id}">${esc(text)}</pre>`;
+};
+
+/** The just-made token, once, with what to paste where. */
+function freshToken(req, fresh) {
+    const url = mcpUrl(req);
+    const t = fresh.token;
+    return `<section class="panel fresh">
+<h2>Your new token${fresh.label ? `: ${esc(fresh.label)}` : ""}</h2>
+<p class="note">Copy it now: it is shown only this once. Only a hash of it is kept, so it cannot be shown again; if you lose it, make a new one and revoke this one.</p>
+<code class="token" id="tok">${esc(t)}</code>
+<button type="button" class="link" data-copy="tok">Copy</button>
+<h3>Claude Code</h3>
+${snippet(`claude mcp add --transport http remotecompose ${url} --header "Authorization: Bearer ${t}"`)}
+<h3>claude.ai (Settings → Connectors → Add custom connector) and ChatGPT (Settings → Apps &amp; Connectors, developer mode → Create; authentication: none)</h3>
+<p class="muted">These take only a URL: the token goes in its last segment. Treat the URL like a password.</p>
+${snippet(`${url}/${t}`)}
+<h3>curl</h3>
+${snippet(`curl -s ${url} -H "Authorization: Bearer ${t}" -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'`)}
+<p class="muted">The single-purpose servers (…/rc-render/mcp, …/json2rc/mcp, …/examples/mcp, …) take the same token.</p>
+</section>`;
+}
+
+const day = (iso) => (iso ? String(iso).replace("T", " ").slice(0, 16) : "–");
+
+/** Calls per day as inline SVG bars (errors stacked in red), with the first and last date. */
+function bars(byDay) {
+    const W = 600, H = 110, top = 8, base = 92, n = byDay.length;
+    const max = Math.max(1, ...byDay.map((d) => d.calls));
+    const bw = W / n;
+    const rects = byDay.map((d, i) => {
+        const h = (d.calls / max) * (base - top), eh = (d.errors / max) * (base - top);
+        const x = (i * bw + 1).toFixed(1), w = Math.max(1, bw - 2).toFixed(1);
+        return `<g><title>${esc(d.day)}: ${d.calls} call${d.calls === 1 ? "" : "s"}${d.errors ? `, ${d.errors} error${d.errors === 1 ? "" : "s"}` : ""}</title>` +
+            `<rect class="b" x="${x}" y="${(base - h).toFixed(1)}" width="${w}" height="${h.toFixed(1)}" rx="1.5"/>` +
+            (eh ? `<rect class="e" x="${x}" y="${(base - eh).toFixed(1)}" width="${w}" height="${eh.toFixed(1)}"/>` : "") + `</g>`;
+    }).join("");
+    return `<svg class="bars" viewBox="0 0 ${W} ${H}" role="img" aria-label="Calls per day over the last ${n} days, at most ${max}">
+<line x1="0" y1="${base}" x2="${W}" y2="${base}"/><text x="0" y="${top + 2}">${max}</text>${rects}
+<text x="0" y="${H - 2}">${esc(byDay[0]?.day)}</text><text x="${W}" y="${H - 2}" text-anchor="end">${esc(byDay[n - 1]?.day)}</text></svg>`;
+}
+
+function groupTable(rows, head) {
+    if (!rows.length) return "";
+    return `<div class="wrap"><table><thead><tr><th>${head}</th><th class="n">Calls</th><th class="n">Errors</th><th class="n">Avg ms</th></tr></thead><tbody>
+${rows.map((r) => `<tr><td class="w">${esc(r.name)}</td><td class="n">${r.calls}</td><td class="n">${r.errors || ""}</td><td class="n">${r.avg_ms}</td></tr>`).join("\n")}
+</tbody></table></div>`;
+}
+
+function accountPage(req, { store, acct, sid, fresh, error }) {
+    const csrf = `<input type="hidden" name="csrf" value="${csrfFor(sid)}">`;
+    const tokens = store.listTokens(acct.id);
+    const usage = store.usage(acct.id, 30);
+    const pages = store.pagesOf(acct.id);
+    const live = tokens.filter((t) => !t.revoked);
+    const tokenRows = tokens.map((t) => `<tr><td class="w">${esc(t.label)}</td><td><code>${esc(t.prefix)}…</code></td><td>${esc(day(t.created))}</td><td>${esc(day(t.last_used))}</td>
+<td>${t.revoked ? `<span class="pill off">revoked ${esc(day(t.revoked))}</span>` : `<form class="inline" method="post" action="tokens/${t.id}/revoke">${csrf}<button class="link danger" type="submit">Revoke</button></form>`}</td></tr>`).join("\n");
+    const body = [
+        error ? `<p class="err">${esc(error)}</p>` : "",
+        fresh ? freshToken(req, fresh) : "",
+        `<section class="panel"><div class="who"><div><b>${esc(acct.name || acct.email)}</b> <span class="muted">${esc(acct.email)}</span>
+${acct.admin ? ' <span class="pill">admin</span>' : ""}<br><span class="muted">Member since ${esc(day(acct.created).slice(0, 10))}</span></div>
+<form class="inline" method="post" action="signout">${csrf}<button class="link" type="submit">Sign out</button></form></div></section>`,
+        `<section class="panel"><h2>Tokens</h2>
+<p class="muted">Each token connects one client (Claude Code, claude.ai, ChatGPT, a script) to the MCP servers. ${live.length} active.</p>
+${tokens.length ? `<div class="wrap"><table><thead><tr><th>Label</th><th>Token</th><th>Created (UTC)</th><th>Last used</th><th></th></tr></thead><tbody>${tokenRows}</tbody></table></div>` : ""}
+<form class="row" method="post" action="tokens" style="margin-top:12px">${csrf}<label class="f">New token's label<input type="text" name="label" maxlength="60" placeholder="e.g. laptop, claude.ai" required></label><button class="btn" type="submit">Create token</button></form>
+</section>`,
+        `<section class="panel"><h2>Usage, last ${usage.days} days</h2>
+<div class="stats"><div><b>${usage.total}</b><span class="muted">tool calls</span></div><div><b>${usage.errorCount}</b><span class="muted">errors</span></div><div><b>${usage.byTool.length}</b><span class="muted">tools used</span></div></div>
+${usage.total ? bars(usage.byDay) : ""}
+${usage.total ? `<div class="cols"><div><h3>Per tool</h3>${groupTable(usage.byTool, "Server · tool")}</div><div><h3>Per server</h3>${groupTable(usage.byServer, "Server")}</div></div>` : `<p class="muted">No calls yet. Connect a client with one of your tokens and they show up here.</p>`}
+${usage.errors.length ? `<h3>Recent errors</h3><div class="wrap"><table><thead><tr><th>When (UTC)</th><th>Tool</th><th>Error</th></tr></thead><tbody>
+${usage.errors.map((e) => `<tr><td>${esc(day(e.ts))}</td><td>${esc(e.server)} · ${esc(e.tool)}</td><td class="w">${esc(e.error)}</td></tr>`).join("\n")}</tbody></table></div>` : ""}
+</section>`,
+        `<section class="panel"><h2>Your published pages</h2>
+${pages.length ? `<div class="wrap"><table><thead><tr><th>Title</th><th>Id</th><th>Published (UTC)</th></tr></thead><tbody>
+${pages.map((p) => `<tr><td class="w">${p.url ? `<a href="${esc(p.url)}">${esc(p.title || p.id)}</a>` : esc(p.title || p.id)}</td><td><code>${esc(p.id)}</code></td><td>${esc(day(p.created))}</td></tr>`).join("\n")}
+</tbody></table></div><p class="muted" style="margin-top:8px">Anyone with a page's link can open it; the links are unguessable and listed only here. Take one down with the pages / unpublish_page tool.</p>`
+            : `<p class="muted">None yet. Pages you publish with the publish (or package_web) tool are listed here.</p>`}
+</section>`,
+        acct.admin ? adminPanel(store, csrf) : "",
+    ].join("\n");
+    return body;
+}
+
+function adminPanel(store, csrf) {
+    const rows = store.listAccounts(7).map((a) => `<tr><td class="w">${esc(a.email)}${a.admin ? ' <span class="pill">admin</span>' : ""}</td><td class="w">${esc(a.name)}</td><td>${esc(day(a.created))}</td>
+<td class="n">${a.tokens}</td><td class="n">${a.calls}</td><td>${a.status === "active" ? '<span class="pill">active</span>' : '<span class="pill off">disabled</span>'}</td>
+<td><form class="inline" method="post" action="admin/${a.id}/${a.status === "active" ? "disable" : "enable"}">${csrf}<button class="link${a.status === "active" ? " danger" : ""}" type="submit">${a.status === "active" ? "Disable" : "Enable"}</button></form></td></tr>`).join("\n");
+    return `<section class="panel"><h2>Accounts (admin)</h2>
+<div class="wrap"><table><thead><tr><th>Email</th><th>Name</th><th>Created (UTC)</th><th class="n">Tokens</th><th class="n">Calls, 7 days</th><th>Status</th><th></th></tr></thead><tbody>
+${rows}</tbody></table></div><p class="muted" style="margin-top:8px">Disabling an account refuses its tokens and ends its sessions; enabling it restores them.</p></section>`;
+}
+
+function signedOutPage({ error, values = {} }) {
+    const open = signupOpen();
+    return [
+        error ? `<p class="err">${esc(error)}</p>` : "",
+        `<div class="cols">`,
+        `<section class="panel"><h2>Create an account</h2>
+${open ? `<p class="muted">You get a token for the MCP servers right away. Your email is not verified yet: it is how you are known here, nothing is sent to it.</p>
+<form class="stack" method="post" action="register">
+<label class="f">Email<input type="email" name="email" maxlength="254" required autocomplete="email" value="${esc(values.email)}"></label>
+<label class="f">Name<input type="text" name="name" maxlength="80" autocomplete="name" value="${esc(values.name)}"></label>
+<button class="btn" type="submit">Create account</button></form>`
+            : `<p class="note">Registration is closed on this server for now. If you already have a token, sign in with it.</p>`}
+</section>`,
+        `<section class="panel"><h2>Sign in with your token</h2>
+<p class="muted">Paste any active token of your account (it starts with <code>rc_</code>). The site then remembers you in this browser for 30 days.</p>
+<form class="stack" method="post" action="signin">
+<label class="f">Token<input type="password" name="token" maxlength="100" required autocomplete="off" spellcheck="false"></label>
+<button class="btn" type="submit">Sign in</button></form>
+</section>`,
+        `</div>`,
+    ].join("\n");
+}
+
+/**
+ * Handles <base>/account and below; false for anything else. site: {css, nav(current)} from
+ * the examples pages, so the account pages look like the rest of the site.
+ */
+export async function accountRoute(req, url, res, site) {
+    const p = url.pathname;
+    if (!/^\/account(\/|$)/.test(p)) return false;
+    if (!accountsEnabled()) return false;
+    if (p === "/account") return redirect(res, `account/${url.search}`);
+    const store = await accounts();
+    const render = (status, opts, extra) => html(res, status, shell({
+        css: site.css, nav: site.nav("account"),
+        title: opts.acct ? "Your account" : "Account",
+        sub: opts.acct ? "Your tokens for the RemoteCompose MCP servers, what you used them for, and the pages you published."
+            : "An account gives you your own token for the RemoteCompose MCP servers, and shows what you used it for and the pages you published.",
+        body: opts.acct ? accountPage(req, { store, ...opts }) : signedOutPage(opts),
+    }), extra);
+
+    const sid = readCookie(req);
+    const acct = sid ? store.sessionAccount(sid) : null;
+
+    if (p === "/account/") {
+        if (req.method !== "GET" && req.method !== "HEAD") { res.writeHead(405, { Allow: "GET, HEAD" }); res.end(); return true; }
+        // A stale cookie (expired, signed out elsewhere, account disabled) is cleared.
+        return render(200, { acct, sid }, sid && !acct ? { "Set-Cookie": cookie(req, "", 0) } : {});
+    }
+    if (req.method !== "POST") { res.writeHead(405, { Allow: "POST" }); res.end(); return true; }
+    if (!sameOrigin(req)) return html(res, 403, "<!doctype html><p>Refused: this form must be sent from this site's own pages.</p>");
+    let form;
+    try { form = await readForm(req); } catch (e) { return html(res, e.status ?? 400, "<!doctype html><p>Bad request.</p>"); }
+
+    if (p === "/account/register") {
+        const values = { email: form.get("email") ?? "", name: form.get("name") ?? "" };
+        if (!signupOpen()) return render(403, { error: "Registration is closed on this server." });
+        if (!registerLimit.hit(clientIp(req))) return render(429, { error: "Too many new accounts from your address: try again in an hour.", values });
+        let created;
+        try { created = store.createAccount(values); } catch (e) { return render(400, { error: e.message, values }); }
+        const fresh = store.issueToken(created.id, "first token");
+        const newSid = store.createSession(created.id);
+        return render(200, { acct: created, sid: newSid, fresh }, { "Set-Cookie": cookie(req, newSid, 30 * 86400) });
+    }
+    if (p === "/account/signin") {
+        if (!signinLimit.hit(clientIp(req))) return render(429, { error: "Too many sign-in attempts from your address: try again in a few minutes." });
+        const found = store.authenticate(String(form.get("token") ?? "").trim());
+        if (!found?.account) return render(401, { error: found?.disabled ? "This account is disabled." : "That token is not valid (wrong, or revoked)." });
+        const a = store.refreshAdmin(found.account);
+        const newSid = store.createSession(a.id);
+        return redirect(res, "./", { "Set-Cookie": cookie(req, newSid, 30 * 86400) });
+    }
+    // Everything below needs the session, and the form's token tied to it.
+    if (!acct) return redirect(res, p.split("/").length > 3 ? "../../" : "./", sid ? { "Set-Cookie": cookie(req, "", 0) } : {});
+    if (form.get("csrf") !== csrfFor(sid)) return html(res, 403, "<!doctype html><p>Refused: the form is stale. Go back, reload the page and try again.</p>");
+    if (p === "/account/signout") {
+        store.deleteSession(sid);
+        return redirect(res, "./", { "Set-Cookie": cookie(req, "", 0) });
+    }
+    if (p === "/account/tokens") {
+        const label = String(form.get("label") ?? "").trim();
+        if (store.listTokens(acct.id).filter((t) => !t.revoked).length >= 20) return render(400, { acct, sid, error: "You have 20 active tokens: revoke one first." });
+        const fresh = store.issueToken(acct.id, label);
+        return render(200, { acct, sid, fresh });
+    }
+    let m = /^\/account\/tokens\/(\d+)\/revoke$/.exec(p);
+    if (m) {
+        store.revokeToken(acct.id, Number(m[1]));
+        return redirect(res, "../../");
+    }
+    m = /^\/account\/admin\/(\d+)\/(disable|enable)$/.exec(p);
+    if (m) {
+        if (!acct.admin) return html(res, 403, "<!doctype html><p>Admins only.</p>");
+        if (Number(m[1]) === acct.id && m[2] === "disable") return render(400, { acct, sid, error: "You cannot disable your own account." });
+        store.setStatus(Number(m[1]), m[2] === "disable" ? "disabled" : "active");
+        return redirect(res, "../../");
+    }
+    return html(res, 404, "<!doctype html><p>Not found.</p>");
+}

@@ -123,6 +123,14 @@ Anyone who has that URL can use the server, so treat it like a password.
 **What HTTP mode enforces:**
 - **Token.** `MCP_TOKEN` is required and must be at least 24 characters. Without one the
   server refuses to start, unless `MCP_ALLOW_NO_AUTH=1` is set.
+- **Accounts.** With `RC_ACCOUNTS=1` (setup.sh sets it), people register at
+  `/examples/account/` and get their own token (`rc_...`), accepted the same two ways;
+  `MCP_TOKEN` then works as an admin key. Accounts, hashed tokens, sessions, per-call usage
+  and page ownership live in one SQLite file, `RC_DB` (default `MCP_ROOT/rc.db`, Node 22.13+
+  for `node:sqlite`). Each account sees only its own published pages (`list_pages`,
+  `unpublish_page`, the `/pages/` index when signed in; `MCP_PAGE_INDEX=public` keeps the
+  old public list). `RC_SIGNUP=closed` stops registration, `RC_ADMIN_EMAILS` names admins.
+  See `lib/accounts.mjs` and `lib/account-web.mjs`.
 - **Workspace.** `MCP_ROOT` is required. Every path a tool takes is resolved inside it,
   and anything that leads outside it (`..`, an absolute path, a symlink) is refused.
   Paths you get back are relative to it.

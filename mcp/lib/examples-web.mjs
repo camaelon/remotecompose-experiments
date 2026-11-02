@@ -24,6 +24,8 @@
 //                               mono-light)
 //   GET <base>/json/<id>.json   its doc.json (and /json/<id>.expanded.json, /json/<id>.mono-dark.expanded.json,
 //                               /json/<Name>.component.json)
+//   GET|POST <base>/account/...  accounts, tokens, usage, published pages (lib/account-web.mjs),
+//                               when accounts are on (lib/accounts.mjs)
 // <base> is wherever the reverse proxy mounts the server (/examples/ on the VPS); every link is
 // relative, so the pages work under any prefix.
 
@@ -38,6 +40,8 @@ import { MONO_VAR, monoPalettes, usesComponents } from "./components.mjs";
 import { compileComponents, jsonToRc } from "./json2rc.mjs";
 import { STRUCTURES } from "./structures.mjs";
 import { thumbnail } from "./thumbs.mjs";
+import { accountRoute } from "./account-web.mjs";
+import { accountsEnabled } from "./accounts.mjs";
 
 const WEB_SETTABLE = new Set(["float", "int", "color", "string", "float_array"]);
 const HEADERS = {
@@ -304,14 +308,21 @@ for (const b of chips) b.addEventListener("click", () => {
 });
 `;
 
+/** The site's sections; the components page is at the root, every other one a folder below it. */
+function siteNav(current) {
+    const items = [["components", "Components", ""], ["layouts", "Layouts", "layouts/"], ["structures", "Structures", "structures/"],
+        ["showcases", "Showcases", "showcases/"], ["demos", "Demos", "demos/"], ...(accountsEnabled() ? [["account", "Account", "account/"]] : [])];
+    return items.map(([k, label, href]) =>
+        `<a href="${current === "components" ? (href || "./") : "../" + (href || "")}"${current === k ? ' aria-current="page"' : ""}${k === "account" ? ' style="float:right;margin-right:0"' : ""}>${label}</a>`).join("");
+}
+
 function page({ title, sub, current, families, cards, modes = false, generated = 0, kinds = false, sizes = false }) {
     return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title><style>${CSS}</style></head>
 <body>
 <header>
-<nav>${[["components", "Components", ""], ["layouts", "Layouts", "layouts/"], ["structures", "Structures", "structures/"], ["showcases", "Showcases", "showcases/"], ["demos", "Demos", "demos/"]].map(([k, label, href]) =>
-    `<a href="${current === "components" ? (href || "./") : "../" + (href || "")}"${current === k ? ' aria-current="page"' : ""}>${label}</a>`).join("")}</nav>
+<nav>${siteNav(current)}</nav>
 <h1>${esc(title)}</h1>
 <p class="sub">${sub}</p>
 <div class="bar"><input id="q" type="search" placeholder="Filter by name, tag or keyword" aria-label="Filter">
@@ -505,6 +516,7 @@ export async function publicRoute(req, url, res) {
         if (pm[1] !== player.name) return send(req, res, 404, "text/plain", "not found\n");
         return send(req, res, 200, "text/javascript; charset=utf-8", player.code, { "Cache-Control": "public, max-age=31536000, immutable" });
     }
+    if (await accountRoute(req, url, res, { css: CSS, nav: siteNav })) return true;
     const known = p === "/" || p === "" || /^\/(components|layouts|structures|showcases|demos|examples|play|img|thumb|json)(\/|$)/.test(p);
     if (!known) return false;
     if (req.method !== "GET" && req.method !== "HEAD") {

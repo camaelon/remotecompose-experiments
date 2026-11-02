@@ -8,8 +8,13 @@
 // https://mcp.example.com/deploy). Pages are then served WITHOUT auth at
 // <MCP_PUBLIC_URL>/pages/<id>/ — the id is 128 random bits, so a page is reachable by
 // whoever has its link and by nobody else. They live in MCP_ROOT/pages until unpublished.
-// Unless MCP_PAGE_INDEX=0, <MCP_PUBLIC_URL>/pages/ is also a public index of every page,
-// which makes them all discoverable: the ids then no longer keep anything private.
+// Unless MCP_PAGE_INDEX=0, <MCP_PUBLIC_URL>/pages/ is also an index of the pages. Without
+// accounts it is public and lists every page, which makes them all discoverable. With accounts
+// (lib/accounts.mjs) each page belongs to the account that published it (meta.json "owner",
+// and the pages table): list_pages and unpublish_page see only the caller's own (the admin
+// key and admin accounts: all), and the index shows a signed-in visitor (the website's session
+// cookie) their own pages, a signed-out one a link to sign in. MCP_PAGE_INDEX=public keeps the
+// public list of every page.
 
 import { createHash, randomBytes } from "node:crypto";
 import { brotliCompressSync, gzipSync, constants as zlibConstants } from "node:zlib";
@@ -18,7 +23,8 @@ import path from "node:path";
 import { loadLibrary, usesComponents } from "./lib/components.mjs";
 import { DOCUMENT_PROPS, prepareDocument } from "./lib/document.mjs";
 import { compileComponents, jsonToRc } from "./lib/json2rc.mjs";
-import { isMain, serve } from "./lib/mcp-server.mjs";
+import { currentCall, isMain, serve } from "./lib/mcp-server.mjs";
+import { accounts, accountsEnabled, requestAccount } from "./lib/accounts.mjs";
 import { checkReport } from "./lib/rc2image.mjs";
 import { buildPage, formatBytes } from "./lib/web-page.mjs";
 import { blockingFindings } from "./lib/design-audit.mjs";
@@ -69,6 +75,16 @@ const CAN_PUBLISH = HTTP_MODE && Boolean(PUBLIC_URL) && Boolean(workspaceRoot())
 const PAGES_DIR = workspaceRoot() ? path.join(workspaceRoot(), "pages") : null;
 const PAGE_ID = /^[A-Za-z0-9_-]{22}$/;
 const PAGE_INDEX = process.env.MCP_PAGE_INDEX !== "0";
+const ACCOUNTS = accountsEnabled();
+// The index lists every page to anyone: without accounts, or when asked to (MCP_PAGE_INDEX=public).
+const INDEX_PUBLIC = PAGE_INDEX && (!ACCOUNTS || process.env.MCP_PAGE_INDEX === "public");
+// Where the sign-in page is: RC_ACCOUNT_URL, else the front door's, beside /pages/.
+const ACCOUNT_URL = process.env.RC_ACCOUNT_URL || "../account/";
+
+/** The caller's account in a tool call (null without accounts, or over stdio). */
+const caller = () => (ACCOUNTS ? currentCall()?.account ?? null : null);
+/** May this account see (and unpublish) the page? Everyone may without accounts. */
+const owns = (account, meta) => !account || account.admin || (meta?.owner != null && meta.owner === account.id);
 
 const pageUrl = (id) => `${PUBLIC_URL}/pages/${id}/`;
 
@@ -112,7 +128,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
 
 function kb(n) { return n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.round(n / 1e3)} KB`; }
 
-function indexHtml(pages) {
+function indexHtml(pages, { who = null, signedOut = false } = {}) {
     const rows = pages.map((p) => `<tr>
   <td><a href="${esc(p.url)}">${esc(p.title || p.id)}</a></td>
   <td>${esc(p.source)}</td>
@@ -147,8 +163,9 @@ function indexHtml(pages) {
 </head>
 <body>
 <main>
-<h1>Published pages</h1>
-<p>${pages.length} page${pages.length === 1 ? "" : "s"} published with rc-deploy, newest first.</p>
+<h1>${who && !who.admin ? "Your published pages" : "Published pages"}</h1>
+${signedOut ? `<p>Published pages are listed for the account that published them. <a href="${esc(ACCOUNT_URL)}">Sign in</a> to see yours. (Each page's own link works for anyone who has it.)</p>`
+    : `<p>${pages.length} page${pages.length === 1 ? "" : "s"} published with rc-deploy${who ? (who.admin ? ", every account's (you are an admin)" : ` by ${esc(who.email)}`) : ""}, newest first.${who ? ` <a href="${esc(ACCOUNT_URL)}">Your account</a>` : ""}</p>`}
 ${pages.length ? `<div class="wrap"><table>
 <thead><tr><th>Title</th><th>Source</th><th>Kind</th><th class="n">Document</th><th class="n">Page</th><th class="n">Published (UTC)</th></tr></thead>
 <tbody>
@@ -198,7 +215,7 @@ function sendFile(req, res, file, type, cache) {
     return true;
 }
 
-function publicRoute(req, url, res) {
+async function publicRoute(req, url, res) {
     // The shared player script: named by its hash, so it never changes and caches for good.
     const pm = /^\/pages\/_player\/([0-9a-f]{16}\.js)$/.exec(url.pathname);
     if (pm && PAGES_DIR) {
@@ -219,11 +236,18 @@ function publicRoute(req, url, res) {
             res.end();
             return true;
         }
-        const body = Buffer.from(indexHtml(publishedPages()));
+        let html;
+        if (INDEX_PUBLIC) html = indexHtml(publishedPages());
+        else {
+            const who = await requestAccount(req);
+            html = who ? indexHtml(publishedPages().filter((p) => owns(who, p)), { who }) : indexHtml([], { signedOut: true });
+        }
+        const body = Buffer.from(html);
         res.writeHead(200, {
             "Content-Type": "text/html; charset=utf-8",
             "Content-Length": body.length,
-            "Cache-Control": "no-cache",
+            "Cache-Control": INDEX_PUBLIC ? "no-cache" : "private, no-store",
+            ...(INDEX_PUBLIC ? {} : { "Vary": "Cookie" }),
             "X-Content-Type-Options": "nosniff",
             "Referrer-Policy": "no-referrer",
             "X-Robots-Tag": "noindex",
@@ -320,7 +344,7 @@ const PACKAGE_WEB_PROPS = {
         type: "boolean",
         description: CAN_PUBLISH
             ? "Host the page at a public URL on this server (default true). Anyone with the link can open it" +
-              (PAGE_INDEX ? `, and it is listed in the public index at ${PUBLIC_URL}/pages/.` : ".")
+              (INDEX_PUBLIC ? `, and it is listed in the public index at ${PUBLIC_URL}/pages/.` : ".")
             : "Host the page at a public URL. Not available on this server (needs HTTP mode and MCP_PUBLIC_URL).",
     },
 };
@@ -377,7 +401,7 @@ export const definition = {
         "Packages RemoteCompose documents (.rc or JSON) for delivery. package_web builds a single " +
         "self-contained HTML page (TypeScript player + document inlined)" +
         (CAN_PUBLISH ? " and publishes it at a public URL" +
-         (PAGE_INDEX ? `, listed in a public index at ${PUBLIC_URL}/pages/` : ", unguessable and unlisted") +
+         (INDEX_PUBLIC ? `, listed in a public index at ${PUBLIC_URL}/pages/` : ACCOUNTS ? ", unguessable, listed only for the account that published it" : ", unguessable and unlisted") +
          "; list_pages and unpublish_page manage those." : ".") +
         " The page uses the TypeScript engine, which can differ from rc-render's C++ engine: " +
         "check the page itself, not only a render_rc picture.",
@@ -407,7 +431,7 @@ export const definition = {
             "variables, and whether ?name=value in the URL may override them. " +
             (CAN_PUBLISH
                 ? "By default the page is also published at a public URL on this server, which is returned" +
-                  (PAGE_INDEX ? ` (and listed at ${PUBLIC_URL}/pages/).` : " (unguessable, unlisted).")
+                  (INDEX_PUBLIC ? ` (and listed at ${PUBLIC_URL}/pages/).` : ACCOUNTS ? " (unguessable; listed on your account's page)." : " (unguessable, unlisted).")
                 : "Returns the HTML file's path.") +
             (workspaceRoot() ? " Paths are relative to the server's workspace." : ""),
         inputSchema: { type: "object", properties: PACKAGE_WEB_PROPS },
@@ -515,10 +539,13 @@ export const definition = {
                     mkdirSync(dir, { recursive: true });
                     writeFileSync(path.join(dir, "index.html"), html);
                     if (shared) for (const j of json) writeFileSync(path.join(dir, j.file), j.text);
+                    const owner = caller();
                     writeFileSync(path.join(dir, "meta.json"), JSON.stringify({
                         id, title, created: new Date().toISOString(), bytes: result.bytes, rc_bytes: rcBytes.length, controls,
                         source: source ?? (a.json !== undefined ? "inline json" : "inline rc"),
+                        ...(owner ? { owner: owner.id } : {}),
                     }));
+                    if (owner) (await accounts())?.recordPage({ id, accountId: owner.id, title, url: pageUrl(id) });
                     result.page_id = id;
                     result.url = pageUrl(id);
                     const names = Object.keys(own);
@@ -539,12 +566,14 @@ export const definition = {
     }, {
         name: "list_pages",
         annotations: { title: "List published pages", readOnlyHint: true, openWorldHint: false },
-        description: "List the pages this server has published: id, title, URL, source, size and when" +
-            (CAN_PUBLISH && PAGE_INDEX ? `; the same list is public at ${PUBLIC_URL}/pages/.` : "."),
+        description: (ACCOUNTS ? "List the pages you have published" : "List the pages this server has published") +
+            ": id, title, URL, source, size and when" +
+            (CAN_PUBLISH && INDEX_PUBLIC ? `; the same list is public at ${PUBLIC_URL}/pages/.` : "."),
         inputSchema: { type: "object", properties: {} },
         handler: async () => {
             if (!CAN_PUBLISH) return [{ type: "text", text: "This server does not publish pages (needs HTTP mode and MCP_PUBLIC_URL)." }];
-            const result = { pages: publishedPages() };
+            const who = caller();
+            const result = { pages: publishedPages().filter((p) => owns(who, p)) };
             if (PAGE_INDEX) result.index_url = `${PUBLIC_URL}/pages/`;
             return [{ type: "text", text: JSON.stringify(result, null, 1) }];
         },
@@ -562,7 +591,10 @@ export const definition = {
             const dir = PAGE_ID.test(String(page_id)) ? path.join(PAGES_DIR, page_id) : null;
             if (!dir || !existsSync(dir) || !statSync(dir).isDirectory()) throw new Error(`no published page ${page_id}`);
             const meta = readMeta(page_id);
+            // Someone else's page reads as no page at all: its id is not revealed to exist.
+            if (!owns(caller(), meta)) throw new Error(`no published page ${page_id} of yours`);
             rmSync(dir, { recursive: true, force: true });
+            if (ACCOUNTS) (await accounts())?.deletePage(page_id);
             return [{ type: "text", text: `Unpublished ${page_id}${meta?.title ? ` (${meta.title})` : ""}.` }];
         },
     }],

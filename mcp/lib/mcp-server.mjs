@@ -6,18 +6,42 @@
 // Hand-rolled rather than built on @modelcontextprotocol/sdk so the servers run from a bare
 // checkout with nothing but `node` — no npm install, same on macOS and Linux.
 
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createServer } from "node:http";
 import { createInterface } from "node:readline";
 import { workspaceRoot } from "./workspace.mjs";
-import { callDetails } from "./calllog.mjs";
+import { callDetails, summarizeArgs, summarizeResult } from "./calllog.mjs";
+import { ADMIN_KEY_ACCOUNT, accounts, accountsEnabled } from "./accounts.mjs";
 
 const DEFAULT_PROTOCOL = "2025-06-18";
 const MAX_BODY = 32 << 20;   // inline JSON documents and base64 .rc files can be large
 
 const log = (...a) => console.error(new Date().toISOString(), ...a);
+
+// The call being handled, for code deep inside a tool (rc-deploy's page ownership, the front
+// door's wrappers around other servers' handlers) that is not handed ctx: {client, ua, account}.
+// This is also where per-account behaviour (a kit tailored to the caller) would read it from.
+const callStore = new AsyncLocalStorage();
+export const currentCall = () => callStore.getStore() ?? null;
+
+/** The usage row's summary: what was asked and got back, in short (never the token). */
+function usageSummary(args, content) {
+    try { return JSON.stringify({ args: summarizeArgs(args), ...(content ? { result: summarizeResult(content) } : {}) }).slice(0, 1000); }
+    catch { return null; }
+}
+
+/** One row in the calls table for a tools/call made with an account (or the admin key). */
+async function recordUsage(server, ctx, tool, ms, ok, error, args, content) {
+    if (!ctx.account) return;
+    try {
+        const store = await accounts();
+        store?.recordCall({ accountId: ctx.account.id, tokenId: ctx.account.tokenId ?? null, server, tool, ms, ok,
+            error: error == null ? null : String(error?.message ?? error), summary: usageSummary(args, content) });
+    } catch (e) { log(`usage not recorded: ${e?.message ?? e}`); }
+}
 
 /**
  * tools: [{name, description, inputSchema, handler: async (args) => content[]}]
@@ -32,7 +56,9 @@ function createHandler({ name, version, instructions, tools }) {
     const err = (id, code, message) => ({ jsonrpc: "2.0", id, error: { code, message } });
 
     // ctx: {client} — who is calling (a short id per address + user agent over HTTP, "stdio"),
-    // so the log lines of one session can be followed.
+    // so the log lines of one session can be followed; with accounts on, {account}: whose
+    // token it is ({id, email, admin, tokenId}; the admin key is account 0). Handlers get it as
+    // their second argument, and currentCall() returns it anywhere below them.
     return async function handle(msg, ctx = {}) {
         if (!msg || typeof msg !== "object" || msg.jsonrpc !== "2.0") {
             return err(msg?.id ?? null, -32600, "invalid request");
@@ -61,12 +87,16 @@ function createHandler({ name, version, instructions, tools }) {
                 if (!tool) return err(id, -32602, `unknown tool: ${params?.name}`);
                 const started = Date.now();
                 try {
-                    const content = await tool.handler(params.arguments ?? {});
-                    log(`${tool.name} ok ${Date.now() - started}ms` + callDetails({ client: ctx.client, args: params.arguments, content }));
+                    const content = await callStore.run(ctx, () => tool.handler(params.arguments ?? {}, ctx));
+                    const ms = Date.now() - started;
+                    log(`${tool.name} ok ${ms}ms` + callDetails({ client: ctx.client, args: params.arguments, content }));
+                    await recordUsage(name, ctx, tool.name, ms, true, null, params.arguments, content);
                     return ok(id, { content });
                 } catch (e) {
-                    log(`${tool.name} error ${Date.now() - started}ms: ${String(e?.message ?? e).split("\n")[0]}` +
+                    const ms = Date.now() - started;
+                    log(`${tool.name} error ${ms}ms: ${String(e?.message ?? e).split("\n")[0]}` +
                         callDetails({ client: ctx.client, args: params.arguments, error: e?.message ?? e }));
+                    await recordUsage(name, ctx, tool.name, ms, false, e, params.arguments, null);
                     return ok(id, {
                         content: [{ type: "text", text: String(e?.message ?? e) }],
                         isError: true,
@@ -121,10 +151,14 @@ function serveStdio(handle) {
  * reply (the spec allows JSON in place of an SSE stream). No server-initiated messages, so
  * GET has nothing to stream and answers 405, as the spec says such a server should.
  *
- * Auth is a shared secret, accepted two ways because clients differ in what they can send:
- *   Authorization: Bearer <MCP_TOKEN>      Claude Code, curl, most SDK clients
- *   POST <MCP_HTTP_PATH>/<MCP_TOKEN>       clients that only take a URL (claude.ai's
+ * Auth is a token, accepted two ways because clients differ in what they can send:
+ *   Authorization: Bearer <token>          Claude Code, curl, most SDK clients
+ *   POST <MCP_HTTP_PATH>/<token>           clients that only take a URL (claude.ai's
  *                                          custom-connector form has no header field)
+ * The token is the shared secret MCP_TOKEN or, with accounts on (lib/accounts.mjs: RC_ACCOUNTS=1
+ * or the database present), an account's own token from the website ("rc_..."), as long as
+ * it is not revoked and the account is active. MCP_TOKEN then acts as an admin key. Each
+ * tools/call made with one is a row in the calls table. Cookies play no part here.
  *
  * Env: MCP_HTTP_PORT (default 8808), MCP_HTTP_HOST (default 127.0.0.1 — put TLS in front),
  * MCP_HTTP_PATH (default /mcp), MCP_TOKEN (required unless MCP_ALLOW_NO_AUTH=1),
@@ -143,8 +177,9 @@ function serveHttp(def, handle, port) {
     const token = process.env.MCP_TOKEN ?? "";
     const origins = (process.env.MCP_ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
-    if (!token && process.env.MCP_ALLOW_NO_AUTH !== "1") {
-        log("refusing to start: set MCP_TOKEN (or MCP_ALLOW_NO_AUTH=1 for a trusted network)");
+    const withAccounts = accountsEnabled();
+    if (!token && !withAccounts && process.env.MCP_ALLOW_NO_AUTH !== "1") {
+        log("refusing to start: set MCP_TOKEN (or RC_ACCOUNTS=1 for account tokens, or MCP_ALLOW_NO_AUTH=1 for a trusted network)");
         process.exit(1);
     }
     if (token && token.length < 24) {
@@ -159,6 +194,11 @@ function serveHttp(def, handle, port) {
     const digest = (s) => createHash("sha256").update(s).digest();
     const tokenDigest = digest(token);
     const matches = (s) => timingSafeEqual(digest(s), tokenDigest);
+    const accountUrl = process.env.RC_ACCOUNT_URL || "";
+    if (withAccounts) {
+        // Open (and migrate) the database now, so a missing node:sqlite stops the start, not a call.
+        accounts().then(() => log(`${name}: accounts on`), (e) => { log(`refusing to start: ${e.message}`); process.exit(1); });
+    }
 
     const reply = (res, status, body, headers = {}) => {
         const text = body === undefined ? "" : typeof body === "string" ? body : JSON.stringify(body);
@@ -182,8 +222,9 @@ function serveHttp(def, handle, port) {
             }
         }
 
-        let authed = !token;
+        let authed = !token && !withAccounts;   // (MCP_ALLOW_NO_AUTH: no token at all)
         let given = "";
+        let account = null;
         if (url.pathname === base) {
             const m = /^Bearer\s+(.*)$/i.exec(req.headers.authorization ?? "");
             given = m ? m[1].trim() : "";
@@ -192,12 +233,21 @@ function serveHttp(def, handle, port) {
         } else {
             return reply(res, 404, "not found\n");
         }
-        if (token && given && matches(given)) authed = true;
+        let disabled = false;
+        if (token && given && matches(given)) { authed = true; if (withAccounts) account = ADMIN_KEY_ACCOUNT; }
+        else if (withAccounts && given) {
+            const found = (await accounts())?.authenticate(given);
+            if (found?.account) { authed = true; account = { ...found.account, tokenId: found.tokenId }; }
+            else if (found?.disabled) disabled = true;
+        }
+        if (!authed && !given && !token && withAccounts && process.env.MCP_ALLOW_NO_AUTH === "1") authed = true;
         if (!authed) {
             // Say which of the two went wrong: an empty token is nearly always an unset shell
             // variable or a missing header, not a wrong secret.
-            const why = given ? "wrong token"
-                : `no token: send "Authorization: Bearer <token>" or put it after ${base}/`;
+            const get = withAccounts && accountUrl ? ` (get one at ${accountUrl})` : "";
+            const why = disabled ? "this account is disabled"
+                : given ? `wrong${withAccounts ? " or revoked" : ""} token${get}`
+                : `no token: send "Authorization: Bearer <token>" or put it after ${base}/${get}`;
             return reply(res, 401, { error: `unauthorized: ${why}` }, { "WWW-Authenticate": 'Bearer realm="mcp"' });
         }
         const origin = req.headers.origin;
@@ -231,7 +281,8 @@ function serveHttp(def, handle, port) {
         const session = isInit ? randomUUID() : sent;
         const addr = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "").split(",")[0].trim();
         const ua = String(req.headers["user-agent"] ?? "").slice(0, 80);
-        const ctx = { client: session ? session.slice(0, 8) : "~" + createHash("sha1").update((req.headers.authorization ? String(req.headers.authorization) : addr) + "|" + ua).digest("hex").slice(0, 6), ua };   // (a proxying client changes address call to call; its token does not, and only a hash of it is logged)
+        const ctx = { client: session ? session.slice(0, 8) : "~" + createHash("sha1").update((req.headers.authorization ? String(req.headers.authorization) : addr) + "|" + ua).digest("hex").slice(0, 6), ua,
+            ...(account ? { account: { id: account.id, email: account.email, admin: account.admin, tokenId: account.tokenId ?? null } } : {}) };   // (a proxying client changes address call to call; its token does not, and only a hash of it is logged)
         const out = (await Promise.all(msgs.map((m) => handle(m, ctx)))).filter(Boolean);
         const headers = isInit ? { "Mcp-Session-Id": session } : {};
         if (!out.length) return reply(res, 202, undefined, headers);   // only notifications / responses
