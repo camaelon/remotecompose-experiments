@@ -20,7 +20,7 @@ import { definition as inspect } from "./inspect-server.mjs";
 import { definition as deploy } from "./deploy-server.mjs";
 import { definition as examples } from "./examples-server.mjs";
 import { serve, isMain } from "./lib/mcp-server.mjs";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { outputFile, displayPath, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
 import { compileComponents } from "./lib/json2rc.mjs";
 import { loadLibrary } from "./lib/components.mjs";
@@ -863,6 +863,12 @@ async function inspectionNotes(kept, sizes, faultLines = []) {
     } catch (e) { return [{ type: "text", text: `(inspection summary unavailable: ${errorLine(e)})` }]; }
 }
 
+/** Removes the contact sheets an earlier clean check left beside a document. */
+function removeFinalSheets(kept) {
+    const file = resolveIn(kept), dir = path.dirname(file), stem = path.basename(file).replace(/\.json$/i, "") + "-final-sheet";
+    for (const f of readdirSync(dir)) if (f.startsWith(stem) && f.endsWith(".png")) rmSync(path.join(dir, f), { force: true });
+}
+
 /** A clean check: say so, and write the full contact sheet so no further render is needed. */
 async function finishNote(kept) {
     const rendered = await tools.find((x) => x.name === "render").handler({ json_path: kept, again: true, show_all: true, output_path: kept.replace(/\.json$/i, "") + "-final.png" });
@@ -1052,6 +1058,8 @@ const tools = [
                 // (dead_code is often inside a library component, out of the author's reach: it costs a few bytes
                 // and shows nothing, so it is reported without holding up the verdict.)
                 const clean = /, 0 warning\(s\)/.test(summary) && ![...findings.keys()].some((c) => c !== "dead_code") && !faultLines.length;
+                // (A sheet from an earlier clean check must not pass for this version, nor an extra page outlive a smaller check.)
+                removeFinalSheets(kept);
                 const finish = clean ? await finishNote(kept) : [];
                 // (The design warnings are already in json2rc's result.)
                 return [...out, ...hint, ...shown.filter((c) => !(c.type === "text" && c.text.startsWith("Design warnings"))), { type: "text", text: audit }, ...inspected, ...finish];

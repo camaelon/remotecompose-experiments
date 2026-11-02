@@ -151,7 +151,7 @@ export function analyze(report, { simulated = false, tapped = false, log = "" } 
 
     // A long text left with a few characters says nothing ("Oc…"): an ellipsis by design, in
     // the wrong place. Give it its own line or a weight, whatever the data.
-    const barely = (tx?.examples ?? []).filter((e) => e.kind === "ellipsized" && e.shown !== undefined && e.shown <= 4 && [...e.text].length >= 8);
+    const barely = (tx?.examples ?? []).filter((e) => e.kind === "ellipsized" && e.shown !== undefined && (e.shown <= 4 && [...e.text].length >= 8 || e.shown <= 2 && [...e.text].length >= 3));
     if (barely.length) add("warning", "text_barely_shown", `${barely.map((e) => `${JSON.stringify(e.text)} shows only ${e.shown} characters`).slice(0, 3).join("; ")}. Too short to read: give it its own line, or a weight so it takes the room, and drop something else at this size.`);
 
     // A round screen hides everything outside its inscribed circle.

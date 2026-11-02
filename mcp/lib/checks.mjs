@@ -132,14 +132,16 @@ export function setVariables(doc, set) {
 export function visibleLeaves(tree) {
     const out = [];
     // (Under a graphics layer a text may be faded out: pager pages stack in one place.)
-    const walk = (n, layered = false) => {
+    // (Under a scroll a box may run past the window on purpose.)
+    const walk = (n, layered = false, scrolled = false) => {
         if (n.hidden) return;
         const kids = n.children ?? [];
         const under = layered || (n.modifiers ?? []).some((m) => /graphicslayer/i.test(m));
+        const inScroll = scrolled || (n.modifiers ?? []).some((m) => /scroll/i.test(m)) || /scroll|marquee/i.test(n.component ?? "");
         const drawing = /canvas/i.test(n.component ?? "") && !/content/i.test(n.component ?? "");
-        if (n.text !== undefined && n.text !== null && n.text !== "") out.push({ id: n.id, text: String(n.text), box: n.bounds, layered: under });
+        if (n.text !== undefined && n.text !== null && n.text !== "") out.push({ id: n.id, text: String(n.text), box: n.bounds, layered: under, scrolled: inScroll });
         else if (drawing && n.bounds.w > 0 && n.bounds.h > 0) out.push({ id: n.id, drawing: true, box: n.bounds });
-        kids.forEach((k) => walk(k, under));
+        kids.forEach((k) => walk(k, under, inScroll));
     };
     tree.forEach((n) => walk(n));
     return out;
@@ -150,6 +152,9 @@ const overlapShare = (a, b) => {
     if (w <= 0 || h <= 0) return 0;
     return (w * h) / Math.min(a.w * a.h, b.w * b.h);
 };
+
+/** A number no one would write: float noise (38.400002), E notation (0.23E-40), money with one decimal ($0.3). */
+export const oddNumber = (t) => /\d\.\d{5,}/.test(t) || /\d\.?\d*E-?\d/.test(t) || /[$€£¥]\s?\d[\d,]*\.\d(?!\d)/.test(t);
 
 /**
  * What looking at the pictures would find, compared across sizes ([{size, leaves, targets}]):
@@ -175,10 +180,17 @@ export function layoutFaults(perSize) {
                 if (!l.drawing || !small) continue;
                 const was = Math.min(l.box.w, l.box.h), now = Math.min(small.box.w, small.box.h);
                 // (A bar or a line is thin on purpose: it has to be small both ways.)
+                // A chart that had room and is now a sliver: wide still, but no longer readable.
+                if (was >= 48 && now < 24 && Math.max(small.box.w, small.box.h) >= 48) warnings.push(`warning: [squashed_content] at ${here} a drawing is ${Math.round(small.box.w)}×${Math.round(small.box.h)}, ${Math.round(was)} at its smallest side in the largest size. Hide it at this size, or give it the room by dropping something else.`);
                 if (now < 24 && Math.max(small.box.w, small.box.h) < 48 && was >= now * 3) warnings.push(`warning: [shrunk_content] at ${here} a drawing is ${Math.round(small.box.w)}×${Math.round(small.box.h)} dp (${Math.round(l.box.w)}×${Math.round(l.box.h)} at ${big.size.join("×")}): too small to read. Hide it at this size or give it room.`);
             }
         }
         const texts = s.leaves.filter((l) => l.text !== undefined && !l.layered);
+        // Past the window with no scroll to reach it: cut off whatever the layout thinks.
+        const cut = texts.filter((l) => !l.scrolled && l.box.w > 0 && l.box.h > 0 && (l.box.y + l.box.h > s.size[1] + 1 || l.box.x + l.box.w > s.size[0] + 1));
+        if (cut.length) warnings.push(`warning: [cut_by_window] at ${here}: ${cut.slice(0, 3).map(name).join(", ")} runs past the edge of the window, and nothing scrolls to it.`);
+        const odd = [...new Set(texts.map((l) => l.text).filter(oddNumber))];
+        if (odd.length) warnings.push(`warning: [odd_number] at ${here}: ${odd.slice(0, 3).map((t) => JSON.stringify(t)).join(", ")}: float noise, E notation or money with one decimal. textFromFloat flags decide padding: 7 keeps the trailing zero of $0.30.`);
         const hit = [];
         for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) {
             // (Starting at exactly one point they are alternatives stacked on purpose: two faces of a

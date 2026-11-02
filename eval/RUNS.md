@@ -1014,3 +1014,20 @@ Solar, why it rose (eval/run-trace.py, RC_TRACE, RC_HIDE_VERTICALS). Same prompt
 | current | 19.8, 19.9, 21.6, 22.2, 22.3 | 21.2K | 5.0K | 7.5K | 8.7K | 2.6 |
 
 The rise was not caused by the verticals: the old commit itself now costs 23.9K against the 15.4K and 17.0K first measured. The brief also differs: these runs and the verticals runs used a new wording, not the baseline's, so none of them can be compared with the 16.1K baseline. Compare only runs with one brief, in the same batch. Baseline runs here used today's rc2image, icons and player bundle, and had no rc2layout, so no engines check. Phase splits are unreliable where a small test convert counts as the first build (hid1, hid5).
+
+Baseline again at 5f558b16, original brief (eval/baseline.md), output tokens, two runs each:
+
+| prompt | b1cf728e | 5f558b16 | change in the mean |
+| :-- | --: | --: | --: |
+| notifications | 8.3K, 6.8K | 6.4K, 4.9K | -25% |
+| solar | 15.4K, 17.0K | 12.9K, 12.3K | -22% |
+| music player | 20.5K, 15.2K | 8.1K, 6.6K | -59% |
+| calorie tracker | 17.1K, 11.5K | 4.4K, 4.3K | -70% |
+| tip calculator | 16.3K, 15.7K | 18.1K, 13.7K | 0% |
+| recipe | 13.2K, 17.7K | 18.7K, 18.0K | +19% |
+| binary search | 28.0K, 22.3K | 30.7K, 28.3K | +17% |
+| watch tile | 16.7K, 15.8K | 13.1K, 16.4K | -9% |
+
+Mean 16.1K to 13.6K. Music and calorie give all of it, and their examples were shaped by these prompts (both music runs shipped CMP-19 unchanged, Equalizer included); the other six stay at 16.1K. Solar on the same code cost 12.6K with this brief and 21.2K with the stricter one, so the brief explains the earlier rise. New vocabulary added false matches: "next" to TransportControls (watch), "steps" to Steps and GoalBar (recipe). Found twice: Stepper decimals:2 drops a trailing zero (64.5), Card refuses a missing title, RowList drops requested icons at 160, "power" brings EXP-02.
+
+Checks added after that baseline, not yet measured: squashed_content (a chart with room reduced to a sliver), cut_by_window (text past the window with no scroll), odd_number (float noise, E notation, money with one decimal), text_barely_shown also for short texts ("AAPL" as ".."). A failed check now removes the old final sheets. Across all 155 examples at 360x640, 640x360, 320x160 and 160x160: squashed_content and odd_number fire on none, cut_by_window on 25, nearly all galleries at widget sizes they were not designed for, and at the phone sizes only CMP-11 and LAY-13 at 640x360, both unjudged. Not caught still: requested content dropped on purpose (RowList icons at 160), text touching a drawing, wrong logic that renders tidily (a reversed ifElse). Also: Stepper keeps trailing zeros when decimals is set; "next", "previous", "skip" no longer reach TransportControls, "steps" no longer GoalBar, "power" no longer expr.math.

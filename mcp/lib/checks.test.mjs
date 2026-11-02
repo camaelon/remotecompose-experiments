@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { layoutFaults, visibleLeaves, dragEvents, changedCells, compareExpected, findTapTarget, fitsSize, imageHash, loadPlan, normalizeAction, planPathOf, setVariables, savePlan, splitSample, summarizeInspection, tapEvents, targetWords } from "./checks.mjs";
+import { layoutFaults, oddNumber, visibleLeaves, dragEvents, changedCells, compareExpected, findTapTarget, fitsSize, imageHash, loadPlan, normalizeAction, planPathOf, setVariables, savePlan, splitSample, summarizeInspection, tapEvents, targetWords } from "./checks.mjs";
 
 test("planPathOf: one plan for a document's json and rc", () => {
     assert.equal(planPathOf("out/a.json"), "out/a.checks.json");
@@ -119,3 +119,20 @@ test("layoutFaults reports what would need looking at", () => {
     assert.deepEqual(layoutFaults([big]).warnings, []);
 });
 
+test("layoutFaults reports a squashed chart, text past the window and odd numbers", () => {
+    const box = (x, y, w, h) => ({ x, y, w, h });
+    const big = { size: [360, 480], leaves: [{ id: 1, drawing: true, box: box(0, 0, 360, 200) }, { id: 2, drawing: true, box: box(0, 210, 360, 4) }], targets: [] };
+    const small = { size: [200, 100], leaves: [{ id: 1, drawing: true, box: box(0, 0, 200, 3) }, { id: 2, drawing: true, box: box(0, 5, 200, 4) },
+        { id: 3, text: "$4.98", box: box(0, 90, 50, 20) }, { id: 4, text: "behind a scroll", box: box(0, 200, 50, 20), scrolled: true }, { id: 5, text: "$0.3", box: box(60, 0, 40, 20) }], targets: [] };
+    const w = layoutFaults([big, small]).warnings.join("\n");
+    assert.match(w, /\[squashed_content\] at 200×100 a drawing is 200×3/);
+    assert.equal((w.match(/squashed_content/g) ?? []).length, 1);   // (a bar thin at both sizes is not squashed)
+    assert.match(w, /\[cut_by_window\] at 200×100: "\$4.98"/);
+    assert.doesNotMatch(w, /behind a scroll/);
+    assert.match(w, /\[odd_number\] at 200×100: "\$0.3"/);
+});
+
+test("oddNumber tells noise from ordinary numbers", () => {
+    for (const t of ["38.400002M", "0.23E-40", "$0.3", "€12.5 saved"]) assert.ok(oddNumber(t), t);
+    for (const t of ["$0.30", "$1,234.50", "3.14", "12.5 km", "E10", "$5", "v1.2.3"]) assert.ok(!oddNumber(t), t);
+});
