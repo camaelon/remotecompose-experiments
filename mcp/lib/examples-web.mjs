@@ -1,9 +1,11 @@
 // Public web pages of the example catalog, served by rc-examples (examples-server.mjs) next to
 // its MCP endpoint, without auth (the catalog is public content):
-//   GET <base>/                 every library component as a grid of renders, filterable (first:
-//                               components and structures are where a document starts)
+//   GET <base>/                 the leaf library components (placed inside a layout), as a grid
+//                               of renders, filterable
+//   GET <base>/layouts/         the components that arrange other components (ListDetail, NavShell...)
 //   GET <base>/structures/      the screen structures, each opening its first example
-//   GET <base>/examples/        every example the same way, with its .rc size up front
+//   GET <base>/showcases/       the SHW showcases
+//   GET <base>/demos/           every other example (/examples/ redirects here), .rc size up front
 //   GET <base>/play/<id>/       a playground for one example or component demo: the deploy
 //                               server's page (lib/web-page.mjs), built on demand; #t=light
 //                               or #t=dark opens it in that theme, #t=mono-dark or
@@ -308,7 +310,7 @@ function page({ title, sub, current, families, cards, modes = false, generated =
 <title>${esc(title)}</title><style>${CSS}</style></head>
 <body>
 <header>
-<nav>${[["components", "Components", ""], ["structures", "Structures", "structures/"], ["examples", "Examples", "examples/"]].map(([k, label, href]) =>
+<nav>${[["components", "Components", ""], ["layouts", "Layouts", "layouts/"], ["structures", "Structures", "structures/"], ["showcases", "Showcases", "showcases/"], ["demos", "Demos", "demos/"]].map(([k, label, href]) =>
     `<a href="${current === "components" ? (href || "./") : "../" + (href || "")}"${current === k ? ' aria-current="page"' : ""}>${label}</a>`).join("")}</nav>
 <h1>${esc(title)}</h1>
 <p class="sub">${sub}</p>
@@ -316,7 +318,7 @@ function page({ title, sub, current, families, cards, modes = false, generated =
 ${families.map((f) => `<button type="button" data-family="${esc(f)}" aria-pressed="false">${esc(f)}</button>`).join("")}
 ${kinds ? `<select id="kind" aria-label="How it is built"><option value="">Any build</option><option value="library">Uses library components</option><option value="own">Defines its own components</option><option value="plain">Plain JSON, no components</option></select>` : ""}
 ${generated ? `<label class="gen"><input id="gen" type="checkbox"> ${generated} generated (eval runs)</label>` : ""}
-${sizes ? `<select id="sort" aria-label="Order"><option value="">${current === "examples" ? "Showcases first" : "By name"}</option><option value="small">Smallest first</option><option value="large">Largest first</option></select>` : ""}
+${sizes ? `<select id="sort" aria-label="Order"><option value="">${current === "demos" || current === "showcases" ? "By id" : "By name"}</option><option value="small">Smallest first</option><option value="large">Largest first</option></select>` : ""}
 ${modes ? `<select id="mode" aria-label="Render"><option value="">Default render</option><option value="light">Light</option><option value="dark">Dark</option><option value="mono-dark">Mono dark (always-on, OLED)</option><option value="mono-light">Mono light (e-ink)</option></select>` : ""}</div>
 </header>
 <main>${cards.join("\n")}<p id="none" class="empty" hidden>Nothing matches.</p></main>
@@ -340,7 +342,11 @@ function card({ e, base, text, desc, tags, links, build, bytes = 0 }) {
     const main = thumb("", 480), play = `${base}play/${id}/`;
     const img = existsSync(path.join(EXAMPLES_DIR, e.folder, "render.png"))
         ? `<img src="${main}" data-main="${main}" alt="" loading="lazy">` : `<span>no render</span>`;
-    const modes = e.folder && existsSync(path.join(EXAMPLES_DIR, e.folder)) ? renders(e) : [];
+    // The strip under a card: the four looks when the document has them all (other sizes and
+    // states are in the playground), otherwise its first six renders.
+    const all = e.folder && existsSync(path.join(EXAMPLES_DIR, e.folder)) ? renders(e) : [];
+    const LOOKS = ["light", "dark", "mono-dark", "mono-light"];
+    const modes = LOOKS.every((n) => all.some((m) => m.name === n)) ? LOOKS.map((n) => all.find((m) => m.name === n)) : all.slice(0, 6);
     const strip = modes.length ? `<div class="modes">${modes.map((m) => {
         const src = thumb(m.name, 480), small = thumb(m.name, 120);
         const href = m.own ? `${play}${encodeURIComponent(m.name)}/` : m.theme ? `${play}#t=${m.theme}` : play;
@@ -369,12 +375,11 @@ function buildKind(e, lib) {
     return { kinds: "plain", cls: "plain", label: "Plain JSON", title: "Written directly in RemoteCompose JSON: no components, even where it looks like one" };
 }
 
-function examplesPage() {
+/** The showcases (SHW) or every other example (the demos), by id. */
+function examplesPage(showcases = false) {
     const C = loadCatalog();
-    // Showcases (SHW) first: they show what the format can do; then the rest by id.
-    const first = (e) => (e.family === "SHW" ? 0 : 1);
-    const list = [...C.examples].sort((a, b) => first(a) - first(b) || a.id.localeCompare(b.id, "en", { numeric: true }));
-    const families = [...new Set(list.map((e) => e.family))].sort((a, b) => (a === "SHW" ? -1 : b === "SHW" ? 1 : a.localeCompare(b)));
+    const list = C.examples.filter((e) => (e.family === "SHW") === showcases).sort((a, b) => a.id.localeCompare(b.id, "en", { numeric: true }));
+    const families = showcases ? [] : [...new Set(list.map((e) => e.family))].sort();
     const lib = new Set(C.library.components.keys());
     const cards = list.map((e) => { const b = buildKind(e, lib); return card({
         e, base: "../", build: b, bytes: e.derived?.bytes ?? 0,
@@ -386,7 +391,7 @@ function examplesPage() {
         links: "",
     }); });
     // The generated corpus, behind its toggle: one document per eval prompt, built with the tools.
-    const gen = loadGenerated().filter((g) => existsSync(path.join(EXAMPLES_DIR, g.folder, "doc.json")));
+    const gen = showcases ? [] : loadGenerated().filter((g) => existsSync(path.join(EXAMPLES_DIR, g.folder, "doc.json")));
     for (const g of gen) cards.push(card({
         e: { ...g, family: "GEN" }, base: "../", bytes: g.bytes ?? 0,
         text: [g.id, g.title, g.prompt, ...(g.keywords ?? []), ...(g.components ?? []), "generated"].join(" "),
@@ -395,31 +400,48 @@ function examplesPage() {
         links: g.run ? `<span>${g.run.calls} calls</span>` : "",
     }));
     if (gen.length && !families.includes("GEN")) families.push("GEN");
+    const badge = "The badge is the size of the .rc document a device downloads (green under 8 KB, amber under 24 KB, red above). Click one to open it in the playground.";
     return page({
-        title: "RemoteCompose examples", current: "examples", families, cards, modes: list.some((e) => e.derived?.renders), generated: gen.length, kinds: true, sizes: true,
-        sub: `${list.length} verified examples, each byte-identical to the Java parser's output. The badge is the size of the .rc document a device downloads (green under 8 KB, amber under 24 KB, red above). Click one to open it in the playground.`,
+        title: showcases ? "RemoteCompose showcases" : "RemoteCompose demos", current: showcases ? "showcases" : "demos", families, cards,
+        modes: list.some((e) => e.derived?.renders), generated: gen.length, kinds: !showcases, sizes: true,
+        sub: showcases
+            ? `${list.length} showcases: what the format can do (3D, shaders, particles, physics, morphing, live data), each in light, dark and both monochrome looks. ${badge}`
+            : `${list.length} focused demos, one technique or screen each, every one byte-identical to the Java parser's output. ${badge}`,
     });
 }
 
-function componentsPage() {
+// Components that arrange other components (a screen or a section, content through slots):
+// the structure templates, plus these. A component.json can say "layout": true as well.
+const LAYOUT_EXTRAS = ["StepExplainer", "InputsResult", "AdaptiveSplit", "TwoColumns", "Pager", "Walkthrough", "SwipeStack"];
+function isLayout(name, def) {
+    return def?.layout === true || LAYOUT_EXTRAS.includes(name) || STRUCTURES.some((s) => s.template === name);
+}
+
+/** The leaf components, or (layouts) the ones that arrange other components. */
+function componentsPage(layouts = false) {
     const C = loadCatalog();
-    const names = [...C.library.components.keys()].sort();
+    const names = [...C.library.components.keys()].filter((n) => isLayout(n, C.library.components.get(n)) === layouts).sort();
+    const base = layouts ? "../" : "";
     const cards = names.map((name) => {
         const def = C.library.components.get(name);
         const demo = C.demos.get(name);
         const e = demo ?? { id: name, title: name, family: "COMP", folder: `components/${name}` };
         const gallery = C.examples.find((x) => x.kind === "gallery" && (x.derived?.components ?? []).includes(name));
         return card({
-            e, base: "", bytes: demo?.derived?.bytes ?? 0,
+            e, base, bytes: demo?.derived?.bytes ?? 0,
             text: [name, def.summary, demo?.prompt, ...(demo?.keywords ?? []), ...(C.vocab.components?.[name]?.synonyms ?? []), ...(def.capabilities ?? [])].join(" "),
             desc: def.summary,
             tags: Object.keys(def.params ?? {}).slice(0, 6),
             links: (gallery ? `<span>in ${esc(gallery.id)}</span>` : "") + (demo ? "" : "<span>no demo yet</span>"),
         });
     });
+    const structuresOf = (n) => STRUCTURES.filter((s) => s.template === n).map((s) => s.id);
+    if (layouts) cards.forEach((c, i) => { const st = structuresOf(names[i]); if (st.length) cards[i] = c.replace('<span class="links">', `<span class="links"><span>structure: ${esc(st.join(", "))}</span>`); });
     return page({
-        title: "RemoteCompose components", current: "components", families: [], cards, modes: true, sizes: true,
-        sub: `${names.length} reusable components, each in a light, dark and two monochrome versions: mono dark (light on black, for always-on displays) and mono light (dark on white, for e-ink). Call one by name in any document ({"Gauge": {"value": "@cpu"}}); every tool expands it. Click one to open its demo in the playground.`,
+        title: layouts ? "RemoteCompose layouts" : "RemoteCompose components", current: layouts ? "layouts" : "components", families: [], cards, modes: true, sizes: true,
+        sub: layouts
+            ? `${names.length} layout components: they arrange other components into a screen or a section and own its adaptation (phone, tablet, wide, short), taking your content through slots and data. Each is in light, dark and both monochrome looks. Click one to open its demo in the playground.`
+            : `${names.length} reusable components to place inside your layouts, each in a light, dark and two monochrome versions: mono dark (light on black, for always-on displays) and mono light (dark on white, for e-ink). Call one by name in any document ({"Gauge": {"value": "@cpu"}}); every tool expands it. Click one to open its demo in the playground.`,
     });
 }
 
@@ -483,20 +505,24 @@ export async function publicRoute(req, url, res) {
         if (pm[1] !== player.name) return send(req, res, 404, "text/plain", "not found\n");
         return send(req, res, 200, "text/javascript; charset=utf-8", player.code, { "Cache-Control": "public, max-age=31536000, immutable" });
     }
-    const known = p === "/" || p === "" || /^\/(components|structures|examples|play|img|thumb|json)(\/|$)/.test(p);
+    const known = p === "/" || p === "" || /^\/(components|layouts|structures|showcases|demos|examples|play|img|thumb|json)(\/|$)/.test(p);
     if (!known) return false;
     if (req.method !== "GET" && req.method !== "HEAD") {
         res.writeHead(405, { Allow: "GET, HEAD" });
         res.end();
         return true;
     }
-    if (/^\/(|components\/|structures\/|examples\/)$/.test(p)) warmThumbs();
+    if (/^\/(|components\/|layouts\/|structures\/|showcases\/|demos\/)$/.test(p)) warmThumbs();
     // Components first: the landing page. Examples have their own page; /components/ (its old
     // address) still goes to the components.
     if (p === "/" || p === "") return send(req, res, 200, "text/html; charset=utf-8", componentsPage());
     if (p === "/components" || p === "/components/") { res.writeHead(301, { Location: `${p.endsWith("/") ? "../" : "./"}${url.search}` }); res.end(); return true; }
-    if (p === "/examples") { res.writeHead(301, { Location: `examples/${url.search}` }); res.end(); return true; }
-    if (p === "/examples/") return send(req, res, 200, "text/html; charset=utf-8", examplesPage());
+    // (/examples/ was the demos' address: it redirects.)
+    if (p === "/examples" || p === "/examples/") { res.writeHead(301, { Location: `${p.endsWith("/") ? "../" : ""}demos/${url.search}` }); res.end(); return true; }
+    for (const [route, render] of [["layouts", () => componentsPage(true)], ["showcases", () => examplesPage(true)], ["demos", () => examplesPage(false)]]) {
+        if (p === `/${route}`) { res.writeHead(301, { Location: `${route}/${url.search}` }); res.end(); return true; }
+        if (p === `/${route}/`) return send(req, res, 200, "text/html; charset=utf-8", render());
+    }
     if (p === "/structures") { res.writeHead(301, { Location: `structures/${url.search}` }); res.end(); return true; }
     if (p === "/structures/") return send(req, res, 200, "text/html; charset=utf-8", structuresPage());
     // The looks' old names (mono, mono-inverted) in links made before the rename.

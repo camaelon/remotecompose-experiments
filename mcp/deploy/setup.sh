@@ -142,7 +142,7 @@ The single-purpose servers are still there:
   https://$DOMAIN/deploy/mcp      published pages: https://$DOMAIN/pages
   https://$DOMAIN/inspect/mcp
   https://$DOMAIN/examples/mcp     example catalog and component library
-  https://$DOMAIN/examples/        browse the components, then /examples/structures/ and /examples/examples/, public
+  https://$DOMAIN/examples/        browse the components, layouts, structures, showcases and demos, public
 Token (keep secret): $TOKEN
 
 Claude Code:  claude mcp add --transport http remotecompose https://$DOMAIN/mcp --header "Authorization: Bearer $TOKEN"
