@@ -1637,11 +1637,14 @@ export class CanvasPaintContext extends PaintContext {
             for (const v of vals) if (typeof v === 'number' && isFinite(v) && v > 0) return v;
             return 0;
         };
+        // A font height never falls back to the ink box: "Home" has no descender and a short
+        // ink box, so a line laid out from it overlaps the next (node-canvas has no font box).
+        // Without a font box it is the estimate below, which is proportional like a font's.
         let ascent = wantFontBox
-            ? pick(metrics.fontBoundingBoxAscent, metrics.actualBoundingBoxAscent)
+            ? pick(metrics.fontBoundingBoxAscent)
             : pick(metrics.actualBoundingBoxAscent, metrics.fontBoundingBoxAscent);
         let descent = wantFontBox
-            ? pick(metrics.fontBoundingBoxDescent, metrics.actualBoundingBoxDescent)
+            ? pick(metrics.fontBoundingBoxDescent)
             : pick(metrics.actualBoundingBoxDescent, metrics.fontBoundingBoxDescent);
         if (ascent <= 0 && descent <= 0) {
             // Calibrated against a device: text size 18 measured a ~20.8px line there,

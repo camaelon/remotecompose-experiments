@@ -70,6 +70,8 @@ export class MeshExpression extends PaintOperation implements VariableSupport {
     // array mixes literals, variable ids and operator ids, and the latter two are NaNs whose
     // payload does not survive becoming a JS number (see WireBuffer.readFloat).
     private mOutParams: Int32Array;
+    // The same params read as floats (a view over mOutParams' bits), for numeric use.
+    private mOutParamsF: Float32Array;
     private mOutPos: Int32Array[];
     private mOutNormal: Int32Array[];
     private mOutUv: Int32Array[];
@@ -99,6 +101,8 @@ export class MeshExpression extends PaintOperation implements VariableSupport {
     ) {
         super();
         this.mOutParams = mParams.slice();
+        this.mOutParamsF = new Float32Array(this.mOutParams.buffer,
+            this.mOutParams.byteOffset, this.mOutParams.length);
         this.mOutPos = mPos.map((e) => e.slice());
         this.mOutNormal = mNormal.map((e) => e.slice());
         this.mOutUv = mUv.map((e) => e.slice());
@@ -211,19 +215,19 @@ export class MeshExpression extends PaintOperation implements VariableSupport {
     private gridCount(axis: number): number {
         switch (this.mType) {
             case SURFACE_HEIGHT_FIELD:
-                return Math.trunc(this.mOutParams[axis === 0 ? 2 : 5]);
+                return Math.trunc(this.mOutParamsF[axis === 0 ? 2 : 5]);
             case SURFACE_SPHERE:
-                return Math.trunc(this.mOutParams[axis === 0 ? 1 : 2]);
+                return Math.trunc(this.mOutParamsF[axis === 0 ? 1 : 2]);
             case SURFACE_CYLINDER:
-                return Math.trunc(this.mOutParams[axis === 0 ? 2 : 3]);
+                return Math.trunc(this.mOutParamsF[axis === 0 ? 2 : 3]);
             default:
-                return Math.trunc(this.mOutParams[axis === 0 ? 2 : 5]);
+                return Math.trunc(this.mOutParamsF[axis === 0 ? 2 : 5]);
         }
     }
 
     /** The (a,b) expression parameters for grid fractions (fu,fv), per surface type. */
     private paramsFor(fu: number, fv: number): void {
-        const p = this.mOutParams;
+        const p = this.mOutParamsF;
         switch (this.mType) {
             case SURFACE_HEIGHT_FIELD:
                 this.mLastA = lerp(p[0], p[1], fu);      // x
@@ -252,8 +256,8 @@ export class MeshExpression extends PaintOperation implements VariableSupport {
         switch (this.mType) {
             case SURFACE_HEIGHT_FIELD: {
                 let h = this.eval(this.mOutPos[0], a, b, ca);
-                const yMin = this.mOutParams[6];
-                const yMax = this.mOutParams[7];
+                const yMin = this.mOutParamsF[6];
+                const yMax = this.mOutParamsF[7];
                 if (h < yMin) { h = yMin; }
                 if (h > yMax) { h = yMax; }
                 this.mVerts[off] = a;
@@ -262,7 +266,7 @@ export class MeshExpression extends PaintOperation implements VariableSupport {
                 break;
             }
             case SURFACE_SPHERE: {
-                const r = Math.fround(this.mOutParams[0] + this.eval(this.mOutPos[0], a, b, ca));
+                const r = Math.fround(this.mOutParamsF[0] + this.eval(this.mOutPos[0], a, b, ca));
                 const sinV = Math.fround(Math.sin(b));
                 this.mVerts[off] = Math.fround(Math.fround(r * sinV) * Math.fround(Math.cos(a)));
                 this.mVerts[off + 1] = Math.fround(r * Math.fround(Math.cos(b)));
@@ -271,7 +275,7 @@ export class MeshExpression extends PaintOperation implements VariableSupport {
                 break;
             }
             case SURFACE_CYLINDER: {
-                const r = Math.fround(this.mOutParams[0] + this.eval(this.mOutPos[0], a, b, ca));
+                const r = Math.fround(this.mOutParamsF[0] + this.eval(this.mOutPos[0], a, b, ca));
                 this.mVerts[off] = Math.fround(r * Math.fround(Math.cos(a)));
                 this.mVerts[off + 1] = b;
                 this.mVerts[off + 2] = Math.fround(r * Math.fround(Math.sin(a)));
