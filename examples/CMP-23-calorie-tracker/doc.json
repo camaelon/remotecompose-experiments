@@ -1,0 +1,180 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Calorie tracker: calories eaten against the daily target as a ring, with carbs, protein and fat as bars. It rearranges from phone to landscape, widget and watch."
+ },
+ "resources": {
+  "variables": {
+   "eaten": {
+    "value": 1640,
+    "export": true
+   },
+   "target": {
+    "value": 2000,
+    "export": true
+   },
+   "carbs": {
+    "value": 200,
+    "export": true
+   },
+   "carbsGoal": {
+    "value": 250,
+    "export": true
+   },
+   "protein": {
+    "value": 102,
+    "export": true
+   },
+   "proteinGoal": {
+    "value": 115,
+    "export": true
+   },
+   "fat": {
+    "value": 48,
+    "export": true
+   },
+   "fatGoal": {
+    "value": 60,
+    "export": true
+   },
+   "W": "windowWidth()",
+   "H": "windowHeight()",
+   "pad": "ifElse(ifElse(8, 12, step(min(@W, @H), 199)), 16, step(min(@W, @H), 300))",
+   "iw": "@W - 2 * @pad",
+   "ih": "@H - 2 * @pad",
+   "hasT": "step(@H, 420)",
+   "tH": "@hasT * 40",
+   "bodyH": "@ih - @tH"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "day",
+    "vtype": "string",
+    "value": "Today",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "horizontalAlignment": "center",
+    "verticalAlignment": "center",
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.surface"
+     }
+    ],
+    "children": [
+     {
+      "column": {
+       "modifiers": [
+        {
+         "width": "@iw"
+        },
+        {
+         "height": "@ih"
+        }
+       ],
+       "children": [
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": "@tH"
+           },
+           {
+            "visibility": "@hasT"
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              },
+              {
+               "padding": {
+                "end": 8
+               }
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "@day",
+                "fontSize": "@theme.text_lg",
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "overflow": "ellipsis"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "Calories",
+             "fontSize": "@theme.text_sm",
+             "color": "@colors.muted",
+             "maxLines": 1
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": "@bodyH"
+           }
+          ],
+          "children": [
+           {
+            "MeterBreakdown": {
+             "value": "@eaten",
+             "target": "@target",
+             "unit": "kcal",
+             "label": "Eaten",
+             "parts": [
+              {
+               "label": "Carbs",
+               "value": "@carbs",
+               "target": "@carbsGoal",
+               "unit": "g"
+              },
+              {
+               "label": "Protein",
+               "value": "@protein",
+               "target": "@proteinGoal",
+               "unit": "g"
+              },
+              {
+               "label": "Fat",
+               "value": "@fat",
+               "target": "@fatGoal",
+               "unit": "g"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

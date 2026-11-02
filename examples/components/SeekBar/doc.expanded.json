@@ -1,0 +1,1152 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 180,
+  "profiles": 513,
+  "contentDescription": "SeekBar: a track at 1:23 of 3:45, and an audiobook at 1:02:03 of 9:30:00"
+ },
+ "resources": {
+  "variables": {
+   "pos": {
+    "value": 83,
+    "export": true
+   },
+   "dur": {
+    "value": 225,
+    "export": true
+   },
+   "bookPos": {
+    "value": 3723,
+    "export": true
+   },
+   "seekbar1_drag": 0,
+   "seekbar1_touch": 0,
+   "seekbar1_shown": 0,
+   "seekbar1_x0": 0,
+   "seekbar1_tx": 0,
+   "seekbar1_cy": 0,
+   "seekbar1_el": 0,
+   "seekbar1_rem": 0,
+   "seekbar1_hostEl": "floor(clamp(0, @dur, @pos))",
+   "seekbar1_has": "step(@dur, 0)",
+   "seekbar1_none": "1 - @seekbar1_has",
+   "seekbar1_long": "step(@dur, 3599.5)",
+   "seekbar1_short": "@seekbar1_has * (1 - @seekbar1_long)",
+   "seekbar2_drag": 0,
+   "seekbar2_touch": 0,
+   "seekbar2_shown": 0,
+   "seekbar2_x0": 0,
+   "seekbar2_tx": 0,
+   "seekbar2_cy": 0,
+   "seekbar2_el": 0,
+   "seekbar2_rem": 0,
+   "seekbar2_hostEl": "floor(clamp(0, 34200, @bookPos))",
+   "vis_1": 1,
+   "vis_0": 0
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   },
+   "secondary": {
+    "light": "#FF6B3FD9",
+    "dark": "#FF7C4DFF"
+   },
+   "track": {
+    "light": "#FFB0B8C4",
+    "dark": "#FF2A3342"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 0
+    }
+   ],
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "variable": {
+         "name": "seekbar1_p",
+         "value": {
+          "value": "@seekbar1_drag",
+          "anim": 0.15
+         }
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 48
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 48
+             },
+             {
+              "visibility": "@seekbar1_has"
+             },
+             {
+              "onTouchDown": {
+               "type": "valueFloatChange",
+               "target": "@seekbar1_drag",
+               "value": 1
+              }
+             },
+             {
+              "onTouchUp": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@pos",
+                "value": "clamp(0, @dur, (touchX() - @seekbar1_x0 - 8) / (componentWidth() - 16) * @dur)"
+               },
+               {
+                "type": "valueFloatChange",
+                "target": "@seekbar1_drag",
+                "value": 0
+               },
+               {
+                "type": "hostNamedAction",
+                "name": "seek",
+                "value": "@pos",
+                "valueType": "float",
+                "actionType": 0
+               }
+              ]
+             },
+             {
+              "onTouchCancel": {
+               "type": "valueFloatChange",
+               "target": "@seekbar1_drag",
+               "value": 0
+              }
+             }
+            ],
+            "commands": [
+             {
+              "componentValue": {
+               "id": "@seekbar1_x0",
+               "valueType": 4
+              }
+             },
+             {
+              "touchExpression": {
+               "name": "seekbar1_touch",
+               "defaultValue": "@pos",
+               "min": 0,
+               "max": "@dur",
+               "expression": [
+                "(touchX() - @seekbar1_x0 - 8) / (componentWidth() - 16) * @dur"
+               ],
+               "touchMode": 6
+              }
+             },
+             {
+              "variable": {
+               "name": "seekbar1_shown",
+               "flush": true,
+               "value": "ifElse(@pos, @seekbar1_touch, @seekbar1_drag)"
+              }
+             },
+             {
+              "variable": {
+               "name": "seekbar1_tx",
+               "flush": true,
+               "value": "8 + (componentWidth() - 16) * clamp(0, 1, @seekbar1_shown / @dur)"
+              }
+             },
+             {
+              "variable": {
+               "name": "seekbar1_cy",
+               "flush": true,
+               "value": "componentHeight() / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "seekbar1_el",
+               "flush": true,
+               "value": "floor(clamp(0, max(@dur, @pos), @seekbar1_shown))"
+              }
+             },
+             {
+              "variable": {
+               "name": "seekbar1_rem",
+               "flush": true,
+               "value": "max(0, floor(@dur) - @seekbar1_el)"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": "4 + 2 * @seekbar1_p"
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 8,
+               "y1": "@seekbar1_cy",
+               "x2": "componentWidth() - 8",
+               "y2": "@seekbar1_cy"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 8,
+               "y1": "@seekbar1_cy",
+               "x2": "@seekbar1_tx",
+               "y2": "@seekbar1_cy"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "0.22 * @seekbar1_p"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@seekbar1_tx",
+               "cy": "@seekbar1_cy",
+               "radius": "20 * @seekbar1_p"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@seekbar1_tx",
+               "cy": "@seekbar1_cy",
+               "radius": "7 + 3 * @seekbar1_p"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 48
+             },
+             {
+              "visibility": "@seekbar1_none"
+             }
+            ],
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 4
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 8,
+               "y1": "componentHeight() / 2",
+               "x2": "componentWidth() - 8",
+               "y2": "componentHeight() / 2"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 48
+             },
+             {
+              "semantics": {
+               "contentDescription": "Seek",
+               "stateDescription": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "floor(@seekbar1_hostEl / 60)",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": ":"
+                  },
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "@seekbar1_hostEl % 60",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 12
+                  }
+                 },
+                 "id2": " of "
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "floor(floor(@dur) / 60)",
+                   "whole": 3,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": ":"
+                 },
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "floor(@dur) % 60",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 12
+                 }
+                }
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "padding": [
+            8,
+            0
+           ]
+          }
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "floor(@seekbar1_el / 60)",
+               "whole": 3,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": ":"
+             },
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@seekbar1_el % 60",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 12
+             }
+            },
+            "color": "@colors.muted",
+            "fontSize": 12,
+            "modifiers": [
+             {
+              "visibility": "@seekbar1_short"
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "floor(@seekbar1_el / 3600)",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": ":"
+               },
+               "id2": {
+                "type": "textFromFloat",
+                "value": "floor(@seekbar1_el / 60) % 60",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 12
+               }
+              },
+              "id2": ":"
+             },
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@seekbar1_el % 60",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 12
+             }
+            },
+            "color": "@colors.muted",
+            "fontSize": 12,
+            "modifiers": [
+             {
+              "visibility": "@seekbar1_long"
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "horizontalWeight": 1
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "-",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "floor(@seekbar1_rem / 60)",
+                "whole": 3,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": ":"
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@seekbar1_rem % 60",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 12
+              }
+             }
+            },
+            "color": "@colors.muted",
+            "fontSize": 12,
+            "modifiers": [
+             {
+              "visibility": "@seekbar1_short"
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "-",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "floor(@seekbar1_rem / 3600)",
+                  "whole": 3,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": ":"
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "floor(@seekbar1_rem / 60) % 60",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 12
+                }
+               },
+               "id2": ":"
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@seekbar1_rem % 60",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 12
+              }
+             }
+            },
+            "color": "@colors.muted",
+            "fontSize": 12,
+            "modifiers": [
+             {
+              "visibility": "@seekbar1_long"
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": "--:--",
+            "color": "@colors.muted",
+            "fontSize": 12,
+            "modifiers": [
+             {
+              "visibility": "@seekbar1_none"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "variable": {
+         "name": "seekbar2_p",
+         "value": {
+          "value": "@seekbar2_drag",
+          "anim": 0.15
+         }
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 48
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 48
+             },
+             {
+              "visibility": "@vis_1"
+             },
+             {
+              "onTouchDown": {
+               "type": "valueFloatChange",
+               "target": "@seekbar2_drag",
+               "value": 1
+              }
+             },
+             {
+              "onTouchUp": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@bookPos",
+                "value": "clamp(0, 34200, (touchX() - @seekbar2_x0 - 8) / (componentWidth() - 16) * 34200)"
+               },
+               {
+                "type": "valueFloatChange",
+                "target": "@seekbar2_drag",
+                "value": 0
+               },
+               {
+                "type": "hostNamedAction",
+                "name": "seekBook",
+                "value": "@bookPos",
+                "valueType": "float",
+                "actionType": 0
+               }
+              ]
+             },
+             {
+              "onTouchCancel": {
+               "type": "valueFloatChange",
+               "target": "@seekbar2_drag",
+               "value": 0
+              }
+             }
+            ],
+            "commands": [
+             {
+              "componentValue": {
+               "id": "@seekbar2_x0",
+               "valueType": 4
+              }
+             },
+             {
+              "touchExpression": {
+               "name": "seekbar2_touch",
+               "defaultValue": "@bookPos",
+               "min": 0,
+               "max": 34200,
+               "expression": [
+                "(touchX() - @seekbar2_x0 - 8) / (componentWidth() - 16) * 34200"
+               ],
+               "touchMode": 6
+              }
+             },
+             {
+              "variable": {
+               "name": "seekbar2_shown",
+               "flush": true,
+               "value": "ifElse(@bookPos, @seekbar2_touch, @seekbar2_drag)"
+              }
+             },
+             {
+              "variable": {
+               "name": "seekbar2_tx",
+               "flush": true,
+               "value": "8 + (componentWidth() - 16) * clamp(0, 1, @seekbar2_shown / 34200)"
+              }
+             },
+             {
+              "variable": {
+               "name": "seekbar2_cy",
+               "flush": true,
+               "value": "componentHeight() / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "seekbar2_el",
+               "flush": true,
+               "value": "floor(clamp(0, max(34200, @bookPos), @seekbar2_shown))"
+              }
+             },
+             {
+              "variable": {
+               "name": "seekbar2_rem",
+               "flush": true,
+               "value": "max(0, floor(34200) - @seekbar2_el)"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": "4 + 2 * @seekbar2_p"
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 8,
+               "y1": "@seekbar2_cy",
+               "x2": "componentWidth() - 8",
+               "y2": "@seekbar2_cy"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 8,
+               "y1": "@seekbar2_cy",
+               "x2": "8 + (componentWidth() - 16) * clamp(0, 1, 6000 / max(34200, 1))",
+               "y2": "@seekbar2_cy"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.secondary"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 8,
+               "y1": "@seekbar2_cy",
+               "x2": "@seekbar2_tx",
+               "y2": "@seekbar2_cy"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "0.22 * @seekbar2_p"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@seekbar2_tx",
+               "cy": "@seekbar2_cy",
+               "radius": "20 * @seekbar2_p"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@seekbar2_tx",
+               "cy": "@seekbar2_cy",
+               "radius": "7 + 3 * @seekbar2_p"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 48
+             },
+             {
+              "visibility": "@vis_0"
+             }
+            ],
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 4
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 8,
+               "y1": "componentHeight() / 2",
+               "x2": "componentWidth() - 8",
+               "y2": "componentHeight() / 2"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 48
+             },
+             {
+              "semantics": {
+               "contentDescription": "Seek in book",
+               "stateDescription": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "floor(@seekbar2_hostEl / 60)",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": ":"
+                  },
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "@seekbar2_hostEl % 60",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 12
+                  }
+                 },
+                 "id2": " of "
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "floor(floor(34200) / 60)",
+                   "whole": 3,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": ":"
+                 },
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "floor(34200) % 60",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 12
+                 }
+                }
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "padding": [
+            8,
+            0
+           ]
+          }
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "floor(@seekbar2_el / 60)",
+               "whole": 3,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": ":"
+             },
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@seekbar2_el % 60",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 12
+             }
+            },
+            "color": "@colors.muted",
+            "fontSize": 12,
+            "modifiers": [
+             {
+              "visibility": "@vis_0"
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "floor(@seekbar2_el / 3600)",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": ":"
+               },
+               "id2": {
+                "type": "textFromFloat",
+                "value": "floor(@seekbar2_el / 60) % 60",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 12
+               }
+              },
+              "id2": ":"
+             },
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@seekbar2_el % 60",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 12
+             }
+            },
+            "color": "@colors.muted",
+            "fontSize": 12,
+            "modifiers": [
+             {
+              "visibility": "@vis_1"
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "horizontalWeight": 1
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "-",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "floor(@seekbar2_rem / 60)",
+                "whole": 3,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": ":"
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@seekbar2_rem % 60",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 12
+              }
+             }
+            },
+            "color": "@colors.muted",
+            "fontSize": 12,
+            "modifiers": [
+             {
+              "visibility": "@vis_0"
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "-",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "floor(@seekbar2_rem / 3600)",
+                  "whole": 3,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": ":"
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "floor(@seekbar2_rem / 60) % 60",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 12
+                }
+               },
+               "id2": ":"
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@seekbar2_rem % 60",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 12
+              }
+             }
+            },
+            "color": "@colors.muted",
+            "fontSize": 12,
+            "modifiers": [
+             {
+              "visibility": "@vis_1"
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": "--:--",
+            "color": "@colors.muted",
+            "fontSize": 12,
+            "modifiers": [
+             {
+              "visibility": "@vis_0"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

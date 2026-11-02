@@ -1,0 +1,746 @@
+{
+ "component": "CoverArt",
+ "version": 1,
+ "summary": "Album, podcast or video art that always looks designed: a generated cover from the theme (overlapping discs and rings, turned by a seed so covers differ, with a large symbol or the title's initial) that fills its box, with a slot on top for real art. In mono it is a ring cover, visible on black and on white.",
+ "params": {
+  "title": {
+   "type": "string",
+   "doc": "The title, literal or \"@title\": its first letter replaces the symbol. Omitted: the symbol"
+  },
+  "symbol": {
+   "type": "string",
+   "default": "music_note",
+   "static": true,
+   "doc": "Material Symbols name of the symbol: music_note, podcasts, movie, headphones, auto_stories"
+  },
+  "seed": {
+   "type": "float",
+   "default": 0,
+   "doc": "Any number (a track or album number, a variable): turns the composition so covers differ"
+  },
+  "size": {
+   "type": "float",
+   "static": true,
+   "doc": "Width and height in dp. Omitted: it fills its parent's box, whatever the shape"
+  },
+  "radius": {
+   "type": "float",
+   "default": 14,
+   "static": true,
+   "doc": "Corner radius in dp"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "The cover's colour (secondary, or a colour the app sets from the album)"
+  },
+  "label": {
+   "type": "string",
+   "default": "Cover art",
+   "doc": "Accessibility label: the album or title"
+  },
+  "imageShown": {
+   "type": "float",
+   "doc": "With the image slot: a declared 0/1 variable, 1 when the image should show (0 falls back to the placeholder). Omitted: it always shows"
+  }
+ },
+ "slots": {
+  "image": {
+   "optional": true,
+   "doc": "What goes over the placeholder when there is real art, sized fillMaxSize: it sits inside the corners. See the pitfall: json2rc cannot draw a bitmap today"
+  }
+ },
+ "locals": {
+  "s": 0,
+  "u": 0,
+  "cx": 0,
+  "cy": 0,
+  "bx": "26 + 22 * cos(@seed * 2.4)",
+  "by": "26 + 22 * sin(@seed * 2.4)"
+ },
+ "capabilities": [
+  "draw.shapes",
+  "image.icon",
+  "layout.decoration",
+  "a11y.labels"
+ ],
+ "call": {
+  "CoverArt": {
+   "size": 160
+  }
+ },
+ "body": {
+  "box": {
+   "modifiers": [
+    {
+     "$if": "size",
+     "then": {
+      "size": "@size"
+     },
+     "else": "fillMaxSize"
+    },
+    {
+     "clip": {
+      "roundedRect": "@radius"
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "then": {
+      "background": "@colors.monoOutline"
+     },
+     "else": {
+      "background": "@color"
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "then": {
+      "padding": 1.5
+     }
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label"
+     }
+    }
+   ],
+   "children": [
+    {
+     "$if": "theme.mono",
+     "then": {
+      "box": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "clip": {
+          "roundedRect": "@radius - 1.5"
+         }
+        },
+        {
+         "background": "@colors.background"
+        }
+       ],
+       "children": [
+        {
+         "canvas": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "commands": [
+           {
+            "variable": {
+             "name": {
+              "$name": "s"
+             },
+             "flush": true,
+             "value": "min(componentWidth(), componentHeight())"
+            }
+           },
+           {
+            "variable": {
+             "name": {
+              "$name": "u"
+             },
+             "flush": true,
+             "value": "max(componentWidth(), componentHeight()) / 100"
+            }
+           },
+           {
+            "variable": {
+             "name": {
+              "$name": "cx"
+             },
+             "flush": true,
+             "value": "componentWidth() / 2"
+            }
+           },
+           {
+            "variable": {
+             "name": {
+              "$name": "cy"
+             },
+             "flush": true,
+             "value": "componentHeight() / 2"
+            }
+           },
+           {
+            "save": [
+             {
+              "$if": "theme.mono",
+              "then": [
+               {
+                "translate": {
+                 "dx": "@cx",
+                 "dy": "@cy"
+                }
+               },
+               {
+                "scale": {
+                 "sx": "@s / 100",
+                 "sy": "@s / 100"
+                }
+               },
+               {
+                "translate": {
+                 "dx": -50,
+                 "dy": -50
+                }
+               }
+              ],
+              "else": [
+               {
+                "scale": {
+                 "sx": "@u",
+                 "sy": "@u"
+                }
+               }
+              ]
+             },
+             {
+              "$if": "theme.mono",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.outline"
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 0.9
+                  },
+                  {
+                   "alpha": 1
+                  }
+                 ]
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": 50,
+                 "cy": 50,
+                 "radius": 46
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": 50,
+                 "cy": 50,
+                 "radius": 38
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": 50,
+                 "cy": 50,
+                 "radius": 30
+                }
+               }
+              ],
+              "else": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onPrimary"
+                  },
+                  {
+                   "style": "fill"
+                  },
+                  {
+                   "alpha": 0.1
+                  }
+                 ]
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": "@bx",
+                 "cy": "@by",
+                 "radius": 62
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "alpha": 0.1
+                  }
+                 ]
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": "100 - @bx",
+                 "cy": "100 - @by",
+                 "radius": 40
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 1.2
+                  },
+                  {
+                   "alpha": 0.28
+                  }
+                 ]
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": "100 - @bx",
+                 "cy": "100 - @by",
+                 "radius": 52
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": "100 - @bx",
+                 "cy": "100 - @by",
+                 "radius": 64
+                }
+               },
+               {
+                "drawCircle": {
+                 "cx": "100 - @bx",
+                 "cy": "100 - @by",
+                 "radius": 76
+                }
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "$if": "title",
+            "then": [
+             {
+              "textSubtext": {
+               "text": "@title",
+               "start": 0,
+               "len": 1,
+               "varName": "caInitial"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": {
+                  "$if": "theme.mono",
+                  "then": "@colors.onSurface",
+                  "else": "@colors.onPrimary"
+                 }
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "textSize": "@s * 0.46"
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "@caInitial",
+               "x": "@cx",
+               "y": "@cy",
+               "panX": 0,
+               "panY": 0
+              }
+             }
+            ],
+            "else": [
+             {
+              "save": [
+               {
+                "translate": {
+                 "dx": "@cx - @s * 0.24",
+                 "dy": "@cy - @s * 0.24"
+                }
+               },
+               {
+                "scale": {
+                 "sx": "@s * 0.48 / 960",
+                 "sy": "@s * 0.48 / 960"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": {
+                    "$if": "theme.mono",
+                    "then": "@colors.onSurface",
+                    "else": "@colors.onPrimary"
+                   }
+                  },
+                  {
+                   "style": "fill"
+                  },
+                  {
+                   "alpha": 1
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": {
+                  "$icon": {
+                   "name": "@symbol",
+                   "style": "rounded",
+                   "filled": true
+                  }
+                 }
+                }
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     "else": {
+      "canvas": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "commands": [
+        {
+         "variable": {
+          "name": {
+           "$name": "s"
+          },
+          "flush": true,
+          "value": "min(componentWidth(), componentHeight())"
+         }
+        },
+        {
+         "variable": {
+          "name": {
+           "$name": "u"
+          },
+          "flush": true,
+          "value": "max(componentWidth(), componentHeight()) / 100"
+         }
+        },
+        {
+         "variable": {
+          "name": {
+           "$name": "cx"
+          },
+          "flush": true,
+          "value": "componentWidth() / 2"
+         }
+        },
+        {
+         "variable": {
+          "name": {
+           "$name": "cy"
+          },
+          "flush": true,
+          "value": "componentHeight() / 2"
+         }
+        },
+        {
+         "save": [
+          {
+           "$if": "theme.mono",
+           "then": [
+            {
+             "translate": {
+              "dx": "@cx",
+              "dy": "@cy"
+             }
+            },
+            {
+             "scale": {
+              "sx": "@s / 100",
+              "sy": "@s / 100"
+             }
+            },
+            {
+             "translate": {
+              "dx": -50,
+              "dy": -50
+             }
+            }
+           ],
+           "else": [
+            {
+             "scale": {
+              "sx": "@u",
+              "sy": "@u"
+             }
+            }
+           ]
+          },
+          {
+           "$if": "theme.mono",
+           "then": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.outline"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": 0.9
+               },
+               {
+                "alpha": 1
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": 50,
+              "cy": 50,
+              "radius": 46
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": 50,
+              "cy": 50,
+              "radius": 38
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": 50,
+              "cy": 50,
+              "radius": 30
+             }
+            }
+           ],
+           "else": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onPrimary"
+               },
+               {
+                "style": "fill"
+               },
+               {
+                "alpha": 0.1
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "@bx",
+              "cy": "@by",
+              "radius": 62
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "alpha": 0.1
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "100 - @bx",
+              "cy": "100 - @by",
+              "radius": 40
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": 1.2
+               },
+               {
+                "alpha": 0.28
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "100 - @bx",
+              "cy": "100 - @by",
+              "radius": 52
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "100 - @bx",
+              "cy": "100 - @by",
+              "radius": 64
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": "100 - @bx",
+              "cy": "100 - @by",
+              "radius": 76
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "$if": "title",
+         "then": [
+          {
+           "textSubtext": {
+            "text": "@title",
+            "start": 0,
+            "len": 1,
+            "varName": "caInitial"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.onPrimary"
+              }
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "textSize": "@s * 0.46"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "@caInitial",
+            "x": "@cx",
+            "y": "@cy",
+            "panX": 0,
+            "panY": 0
+           }
+          }
+         ],
+         "else": [
+          {
+           "save": [
+            {
+             "translate": {
+              "dx": "@cx - @s * 0.24",
+              "dy": "@cy - @s * 0.24"
+             }
+            },
+            {
+             "scale": {
+              "sx": "@s * 0.48 / 960",
+              "sy": "@s * 0.48 / 960"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": {
+                 "$if": "theme.mono",
+                 "then": "@colors.onSurface",
+                 "else": "@colors.onPrimary"
+                }
+               },
+               {
+                "style": "fill"
+               },
+               {
+                "alpha": 1
+               }
+              ]
+             }
+            },
+            {
+             "drawPath": {
+              "path": {
+               "$icon": {
+                "name": "@symbol",
+                "style": "rounded",
+                "filled": true
+               }
+              }
+             }
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    {
+     "$if": "image",
+     "then": {
+      "$if": "imageShown",
+      "then": {
+       "box": {
+        "modifiers": [
+         "fillMaxSize",
+         {
+          "visibility": "@imageShown"
+         }
+        ],
+        "children": [
+         {
+          "$slot": "image"
+         }
+        ]
+       }
+      },
+      "else": {
+       "$slot": "image"
+      }
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "It fills its box: inside a column or row, give the box a size or pass size. A canvas with nothing to measure against is 0 dp",
+  "The composition covers the box like an image (cropped to the long side); the symbol or initial stays centred at 45% of the short side",
+  "The initial is the first letter as the app sends it, not uppercased: send a capital. An empty host title shows the discs with nothing on them",
+  "Real images: the format has drawBitmap and the Java parser reads it, but json2rc refuses it today (no image node, no drawBitmap, no drawScaledBitmap), so through these tools a document cannot show album art. Until then the placeholder is the art: send a colour taken from the album through color and the track number through seed"
+ ]
+}

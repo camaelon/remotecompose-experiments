@@ -1,0 +1,482 @@
+{
+ "component": "TrendSparkline",
+ "version": 1,
+ "summary": "A word-sized trend for a row or a tile: a line through a float array that is green when it ended up, red when it ended down and grey when flat, with a dot on the latest value, a faint wash and an optional dashed baseline. A flat series sits in the middle, and tiny moves stay small.",
+ "params": {
+  "values": {
+   "type": "float",
+   "required": true,
+   "doc": "A float array, \"@name\" of resources.floatArrays; any length of 1 or more, any range"
+  },
+  "baseline": {
+   "type": "float",
+   "doc": "What up and down mean, such as previous close: dashed line, and the colour compares the latest value with it. Default: the first value, with no line"
+  },
+  "invert": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "A rise is bad (costs, latency): red up, green down"
+  },
+  "minRange": {
+   "type": "float",
+   "default": 0.005,
+   "doc": "The line spans its height only for moves above this fraction of the value, so 0.01% noise does not look like a cliff. 0 always fills"
+  },
+  "area": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "A faint wash under the line (never in mono)"
+  },
+  "width": {
+   "type": "float",
+   "default": 64,
+   "static": true,
+   "doc": "Width in dp (ignored with fill)"
+  },
+  "height": {
+   "type": "float",
+   "default": 28,
+   "static": true,
+   "doc": "Height in dp (ignored with fill)"
+  },
+  "fill": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Fill the parent instead"
+  },
+  "thickness": {
+   "type": "float",
+   "default": 1.5,
+   "static": true,
+   "doc": "Line width"
+  },
+  "label": {
+   "type": "string",
+   "default": "Trend",
+   "doc": "Spoken for the chart: \"AAPL, 5 days\". The direction is not spoken: a Delta beside it says that"
+  }
+ },
+ "locals": {
+  "n": "arrayLength(@values)",
+  "li": "max(@n - 1, 1)",
+  "last": "arrayGet(@values, @n - 1)",
+  "hi": {
+   "$if": "baseline",
+   "then": "max(arrayMax(@values), @baseline)",
+   "else": {
+    "$if": "baseline != 'undefined'",
+    "then": "max(arrayMax(@values), @baseline)",
+    "else": "arrayMax(@values)"
+   }
+  },
+  "lo": {
+   "$if": "baseline",
+   "then": "min(arrayMin(@values), @baseline)",
+   "else": {
+    "$if": "baseline != 'undefined'",
+    "then": "min(arrayMin(@values), @baseline)",
+    "else": "arrayMin(@values)"
+   }
+  },
+  "mid": "(@hi + @lo) / 2",
+  "rng": "max(@hi - @lo, max(@minRange * abs(@mid), 0.000001))",
+  "ref": {
+   "$if": "baseline",
+   "then": "@baseline",
+   "else": {
+    "$if": "baseline != 'undefined'",
+    "then": "@baseline",
+    "else": "arrayGet(@values, 0)"
+   }
+  },
+  "up": "step(@last, @ref)",
+  "dn": "step(@ref, @last)",
+  "fl": "1 - @up - @dn"
+ },
+ "capabilities": [
+  "data.array",
+  "draw.path",
+  "a11y.labels",
+  "data.condition"
+ ],
+ "call": {
+  "TrendSparkline": {
+   "values": "@week"
+  }
+ },
+ "pitfalls": [
+  "Sparkline is a plain trend in one colour, scaled to min and max. Use this one when up or down means something: stocks, sales, usage",
+  "Colour compares the latest value with the baseline, or with the first value: it answers 'did this end higher', not 'is the line going up now'",
+  "In mono both directions are one colour: put a Delta beside it for the direction; the dot still marks the end",
+  "Each call costs about 1 KB: fine for a watchlist of ten, heavy beyond that"
+ ],
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "$if": "fill",
+     "then": "fillMaxSize",
+     "else": {
+      "size": [
+       "@width",
+       "@height"
+      ]
+     }
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label"
+     }
+    }
+   ],
+   "commands": [
+    {
+     "variable": {
+      "name": "W",
+      "value": "componentWidth()"
+     }
+    },
+    {
+     "variable": {
+      "name": "H",
+      "value": "componentHeight()"
+     }
+    },
+    {
+     "variable": {
+      "name": "cy",
+      "value": "@H / 2"
+     }
+    },
+    {
+     "variable": {
+      "name": "ky",
+      "value": "(@H - 8) / @rng"
+     }
+    },
+    {
+     "variable": {
+      "name": "kx",
+      "value": "(@W - 8) / @li"
+     }
+    },
+    {
+     "$if": "baseline",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "loop": {
+        "index": "i",
+        "from": 0,
+        "until": "floor(@W / 5)",
+        "commands": [
+         {
+          "drawLine": {
+           "x1": "i * 5",
+           "y1": "@cy - (@baseline - @mid) * @ky",
+           "x2": "i * 5 + 2.5",
+           "y2": "@cy - (@baseline - @mid) * @ky"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "pathExpression": {
+      "id": "sl",
+      "expressionX": "4 + u * @kx",
+      "expressionY": "@cy - (arrayGet(@values, round(u)) - @mid) * @ky",
+      "start": 0,
+      "end": "@n - 1",
+      "count": "@n",
+      "flags": 4
+     }
+    },
+    {
+     "$if": "area",
+     "then": {
+      "$if": "!theme.mono",
+      "then": [
+       {
+        "pathExpression": {
+         "id": "su",
+         "expressionX": "4 + clamp(0, @li, u) * @kx",
+         "expressionY": "ifElse(@cy - (arrayGet(@values, round(clamp(0, @li, u))) - @mid) * @ky, @H, step(abs(u - @li / 2), @li / 2 + 0.5))",
+         "start": -1,
+         "end": "@n",
+         "count": "@n + 2",
+         "flags": 4
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": {
+            "$if": "invert",
+            "then": "@colors.error",
+            "else": "@colors.success"
+           }
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": "@up * 0.16"
+          }
+         ]
+        }
+       },
+       {
+        "drawPath": {
+         "path": "su"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": {
+            "$if": "invert",
+            "then": "@colors.success",
+            "else": "@colors.error"
+           }
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": "@dn * 0.16"
+          }
+         ]
+        }
+       },
+       {
+        "drawPath": {
+         "path": "su"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@thickness"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "sl"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@W - 4",
+        "cy": "@cy - (@last - @mid) * @ky",
+        "radius": "@thickness + 0.5"
+       }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": {
+           "$if": "invert",
+           "then": "@colors.error",
+           "else": "@colors.success"
+          }
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@thickness"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "alpha": "@up"
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "sl"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@W - 4",
+        "cy": "@cy - (@last - @mid) * @ky",
+        "radius": "@thickness + 0.5"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": {
+           "$if": "invert",
+           "then": "@colors.success",
+           "else": "@colors.error"
+          }
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@thickness"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "alpha": "@dn"
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "sl"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@W - 4",
+        "cy": "@cy - (@last - @mid) * @ky",
+        "radius": "@thickness + 0.5"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@thickness"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "alpha": "@fl"
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "sl"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@W - 4",
+        "cy": "@cy - (@last - @mid) * @ky",
+        "radius": "@thickness + 0.5"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

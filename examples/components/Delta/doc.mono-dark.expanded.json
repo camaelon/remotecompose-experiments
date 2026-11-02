@@ -1,0 +1,1729 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 220,
+  "profiles": 513,
+  "contentDescription": "Changes with arrows"
+ },
+ "resources": {
+  "variables": {
+   "chg": {
+    "value": 2.4,
+    "export": true
+   },
+   "amt": {
+    "value": 3.18,
+    "export": true
+   },
+   "wait": {
+    "value": -4,
+    "export": true
+   },
+   "delta1_mag": "round(abs(@chg) * 100) / 100",
+   "delta1_up": "step(@chg, 0.004999)",
+   "delta1_dn": "step(0 - @chg, 0.004999)",
+   "delta1_fl": "1 - @delta1_up - @delta1_dn",
+   "delta2_mag": "round(abs(@chg) * 100) / 100",
+   "delta2_up": "step(@chg, 0.004999)",
+   "delta2_dn": "step(0 - @chg, 0.004999)",
+   "delta2_fl": "1 - @delta2_up - @delta2_dn",
+   "delta3_mag": "round(abs(@chg) * 100) / 100",
+   "delta3_amt": "round(abs(@amt) * 100) / 100",
+   "delta3_up": "step(@chg, 0.004999)",
+   "delta3_dn": "step(0 - @chg, 0.004999)",
+   "delta3_fl": "1 - @delta3_up - @delta3_dn",
+   "delta4_mag": "round(abs(@wait) * 1) / 1",
+   "delta4_up": "step(@wait, 0.4999)",
+   "delta4_dn": "step(0 - @wait, 0.4999)",
+   "delta4_fl": "1 - @delta4_up - @delta4_dn",
+   "delta5_mag": "round(abs(0.001) * 100) / 100",
+   "vis_0": 0,
+   "vis_1": 1
+  },
+  "colors": {
+   "error": "#FFFFFFFF",
+   "muted": "#FF9E9E9E",
+   "success": "#FFFFFFFF",
+   "surface": "#FF000000"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.surface"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 12
+    }
+   ],
+   "children": [
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Today",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "delta1_ms",
+               "vtype": "string",
+               "commit": true,
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@delta1_mag",
+                 "whole": 9,
+                 "decimal": 2,
+                 "flags": 23
+                },
+                "id2": "%"
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "delta1_sp",
+               "vtype": "string",
+               "commit": true,
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@delta1_mag",
+                 "whole": 9,
+                 "decimal": 2,
+                 "flags": 23
+                },
+                "id2": " percent"
+               }
+              }
+             },
+             {
+              "pathExpression": {
+               "id": "delta1_tri",
+               "expressionX": "u * 9.52 / 2",
+               "expressionY": "7.84 / 2 + (@delta1_up - @delta1_dn) * (7.84 * abs(u - 1) - 7.84 / 2)",
+               "start": 0,
+               "end": 2,
+               "count": 3,
+               "flags": 4
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta1_up"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "delta1_tri"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "+",
+                "id2": "@delta1_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.success",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "up ",
+                   "id2": "@delta1_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta1_dn"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.error"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "delta1_tri"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "−",
+                "id2": "@delta1_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.error",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "down ",
+                   "id2": "@delta1_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta1_fl"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 0,
+                  "top": 2.92,
+                  "right": 9.52,
+                  "bottom": 4.92,
+                  "rx": 1,
+                  "ry": 1
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "",
+                "id2": "@delta1_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "unchanged, ",
+                   "id2": "@delta1_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Pill",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "delta2_ms",
+               "vtype": "string",
+               "commit": true,
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@delta2_mag",
+                 "whole": 9,
+                 "decimal": 2,
+                 "flags": 23
+                },
+                "id2": "%"
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "delta2_sp",
+               "vtype": "string",
+               "commit": true,
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@delta2_mag",
+                 "whole": 9,
+                 "decimal": 2,
+                 "flags": 23
+                },
+                "id2": " percent"
+               }
+              }
+             },
+             {
+              "pathExpression": {
+               "id": "delta2_tri",
+               "expressionX": "u * 9.52 / 2",
+               "expressionY": "7.84 / 2 + (@delta2_up - @delta2_dn) * (7.84 * abs(u - 1) - 7.84 / 2)",
+               "start": 0,
+               "end": 2,
+               "count": 3,
+               "flags": 4
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta2_up"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "delta2_tri"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "+",
+                "id2": "@delta2_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.success",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "up ",
+                   "id2": "@delta2_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta2_dn"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.error"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "delta2_tri"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "−",
+                "id2": "@delta2_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.error",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "down ",
+                   "id2": "@delta2_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta2_fl"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 0,
+                  "top": 2.92,
+                  "right": 9.52,
+                  "bottom": 4.92,
+                  "rx": 1,
+                  "ry": 1
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "",
+                "id2": "@delta2_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "unchanged, ",
+                   "id2": "@delta2_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "With amount",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "delta3_ms1",
+               "vtype": "string",
+               "commit": true,
+               "value": {
+                "type": "textMerge",
+                "id1": "$",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@delta3_amt",
+                 "whole": 9,
+                 "decimal": 2,
+                 "flags": 23
+                }
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "delta3_ms",
+               "vtype": "string",
+               "commit": true,
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@delta3_mag",
+                 "whole": 9,
+                 "decimal": 2,
+                 "flags": 23
+                },
+                "id2": "%"
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "delta3_sp",
+               "vtype": "string",
+               "commit": true,
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@delta3_mag",
+                 "whole": 9,
+                 "decimal": 2,
+                 "flags": 23
+                },
+                "id2": " percent"
+               }
+              }
+             },
+             {
+              "pathExpression": {
+               "id": "delta3_tri",
+               "expressionX": "u * 9.52 / 2",
+               "expressionY": "7.84 / 2 + (@delta3_up - @delta3_dn) * (7.84 * abs(u - 1) - 7.84 / 2)",
+               "start": 0,
+               "end": 2,
+               "count": 3,
+               "flags": 4
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta3_up"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "delta3_tri"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": "+",
+                    "id2": "@delta3_ms1"
+                   },
+                   "id2": " ("
+                  },
+                  "id2": "+"
+                 },
+                 "id2": "@delta3_ms"
+                },
+                "id2": ")"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.success",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "up ",
+                     "id2": "@delta3_ms1"
+                    },
+                    "id2": ", "
+                   },
+                   "id2": "@delta3_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta3_dn"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.error"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "delta3_tri"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": "−",
+                    "id2": "@delta3_ms1"
+                   },
+                   "id2": " ("
+                  },
+                  "id2": "−"
+                 },
+                 "id2": "@delta3_ms"
+                },
+                "id2": ")"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.error",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "down ",
+                     "id2": "@delta3_ms1"
+                    },
+                    "id2": ", "
+                   },
+                   "id2": "@delta3_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta3_fl"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 0,
+                  "top": 2.92,
+                  "right": 9.52,
+                  "bottom": 4.92,
+                  "rx": 1,
+                  "ry": 1
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": "",
+                    "id2": "@delta3_ms1"
+                   },
+                   "id2": " ("
+                  },
+                  "id2": ""
+                 },
+                 "id2": "@delta3_ms"
+                },
+                "id2": ")"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "unchanged, ",
+                     "id2": "@delta3_ms1"
+                    },
+                    "id2": ", "
+                   },
+                   "id2": "@delta3_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Wait, fall is good",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "delta4_ms",
+               "vtype": "string",
+               "commit": true,
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@delta4_mag",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                },
+                "id2": " min"
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "delta4_sp",
+               "vtype": "string",
+               "commit": true,
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@delta4_mag",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                },
+                "id2": " minutes"
+               }
+              }
+             },
+             {
+              "pathExpression": {
+               "id": "delta4_tri",
+               "expressionX": "u * 9.52 / 2",
+               "expressionY": "7.84 / 2 + (@delta4_up - @delta4_dn) * (7.84 * abs(u - 1) - 7.84 / 2)",
+               "start": 0,
+               "end": 2,
+               "count": 3,
+               "flags": 4
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta4_up"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.error"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "delta4_tri"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "+",
+                "id2": "@delta4_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.error",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "up ",
+                   "id2": "@delta4_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta4_dn"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "delta4_tri"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "−",
+                "id2": "@delta4_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.success",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "down ",
+                   "id2": "@delta4_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@delta4_fl"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 0,
+                  "top": 2.92,
+                  "right": 9.52,
+                  "bottom": 4.92,
+                  "rx": 1,
+                  "ry": 1
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "",
+                "id2": "@delta4_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "unchanged, ",
+                   "id2": "@delta4_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Flat",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "delta5_ms",
+               "vtype": "string",
+               "commit": true,
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@delta5_mag",
+                 "whole": 9,
+                 "decimal": 2,
+                 "flags": 23
+                },
+                "id2": "%"
+               }
+              }
+             },
+             {
+              "variable": {
+               "name": "delta5_sp",
+               "vtype": "string",
+               "commit": true,
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@delta5_mag",
+                 "whole": 9,
+                 "decimal": 2,
+                 "flags": 23
+                },
+                "id2": " percent"
+               }
+              }
+             },
+             {
+              "pathExpression": {
+               "id": "delta5_tri",
+               "expressionX": "u * 9.52 / 2",
+               "expressionY": "7.84 / 2 + (0 - 0) * (7.84 * abs(u - 1) - 7.84 / 2)",
+               "start": 0,
+               "end": 2,
+               "count": 3,
+               "flags": 4
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@vis_0"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "delta5_tri"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "+",
+                "id2": "@delta5_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.success",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "up ",
+                   "id2": "@delta5_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@vis_0"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.error"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "delta5_tri"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "−",
+                "id2": "@delta5_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.error",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "down ",
+                   "id2": "@delta5_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@vis_1"
+             },
+             {
+              "spacedBy": 4.2
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "size": [
+                  9.52,
+                  7.84
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 0,
+                  "top": 2.92,
+                  "right": 9.52,
+                  "bottom": 4.92,
+                  "rx": 1,
+                  "ry": 1
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "",
+                "id2": "@delta5_ms"
+               },
+               "fontSize": 14,
+               "fontWeight": 500,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "unchanged, ",
+                   "id2": "@delta5_sp"
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

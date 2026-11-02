@@ -1,6 +1,6 @@
 {
  "component": "Slider",
- "version": 1,
+ "version": 2,
  "summary": "A horizontal slider: dragging or tapping the track sets its variable between min and max (the thumb jumps under the finger and follows it); it can show the value at its end, and onRelease runs actions with the released level (a host action sends it to the app). A screen reader hears the label and the current value.",
  "params": {
   "value": {
@@ -108,26 +108,32 @@
         "$if": "onRelease",
         "then": [
          {
-          "onTouchUp": {
-           "type": "valueFloatExpressionChange",
-           "target": "@value",
-           "value": {
-            "$if": "min",
-            "then": {
-             "$if": "step",
-             "then": "clamp(@min, @max, @min + round((touchX() - @x0 - 12) / (componentWidth() - @trk) * @span / @step) * @step)",
-             "else": "clamp(@min, @max, @min + (touchX() - @x0 - 12) / (componentWidth() - @trk) * @span)"
-            },
-            "else": {
-             "$if": "step",
-             "then": "clamp(0, @max, round((touchX() - @x0 - 12) / (componentWidth() - @trk) * @span / @step) * @step)",
-             "else": "clamp(0, @max, (touchX() - @x0 - 12) / (componentWidth() - @trk) * @span)"
-            }
-           }
-          }
+          "onTouchDown": []
          },
          {
-          "onTouchUp": "@onRelease"
+          "onTouchUp": [
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@value",
+            "value": {
+             "$if": "min",
+             "then": {
+              "$if": "step",
+              "then": "clamp(@min, @max, @min + round((touchX() - @x0 - 12) / (componentWidth() - @trk) * @span / @step) * @step)",
+              "else": "clamp(@min, @max, @min + (touchX() - @x0 - 12) / (componentWidth() - @trk) * @span)"
+             },
+             "else": {
+              "$if": "step",
+              "then": "clamp(0, @max, round((touchX() - @x0 - 12) / (componentWidth() - @trk) * @span / @step) * @step)",
+              "else": "clamp(0, @max, (touchX() - @x0 - 12) / (componentWidth() - @trk) * @span)"
+             }
+            }
+           },
+           {
+            "$if": "onRelease",
+            "then": "@onRelease"
+           }
+          ]
          }
         ]
        }
@@ -362,12 +368,13 @@
  },
  "pitfalls": [
   "The drag is a touchExpression in absolute mode (touchMode 6) named after the bound variable: from the slider on, \"@volume\" is the touch value (it starts at the variable's own value and keeps where the finger left it). LIVE values derived from it (a preview, a time, a status) must be computed AFTER the slider in the tree: a text or canvas expression placed after it, or a tree `variable` command after it. resources.variables are written before the tree and keep the bound variable, which changes only on release (with onRelease): computed there, a value updates when the finger lifts",
-  "onRelease: the canvas carries two onTouchUp modifiers, which come BEFORE the touchExpression in the document, so there \"@volume\" still names the bound (resources) variable, not the touch value. The first modifier therefore recomputes the level from where the finger lifted (valueFloatExpressionChange: clamp(min, max, the touch expression's own formula)) into the bound variable; the second runs the caller's actions, which read it. A plain tap ends the same way. About 120 B per call with one host action (measured: 1040 -> 1162 B)",
+  "onRelease: the canvas carries an empty onTouchDown (without it Java never registers the canvas, so a drag runs no onTouchUp at all) and one onTouchUp list, in order (Java runs separate onTouchUp modifiers last first). The list recomputes the level from where the finger lifted into the bound variable, because modifiers come BEFORE the touchExpression and \"@volume\" there still names the bound (resources) variable; then it runs the caller's actions, which read it. A plain tap ends the same way. About 120 B per call with one host action",
   "touchX() is in document coordinates, so the slider measures where it sits (componentValue POS_ROOT_X into a local) and subtracts it: it works anywhere in the layout, scrolled or padded",
   "Inside a scrolling container, onRelease also fires for the last child wherever the finger lifts, and the dragged slider's own may not fire: the reference player does this, so a device does too. There, tell the app from the exported value instead of onRelease, or keep the slider outside the scroll. A plain Slider without onRelease is safe in a scroll",
   "step snaps the value (round to multiples of step from min) in the drag and on release; without it the value is continuous (the notch stop modes need touchSpec, which the Java parser ignores, U8)",
   "It fills the width it is given (fillMaxWidth) and is 40 dp tall: in a row, give it a weight or a box with a width",
   "No easing on the value: the thumb follows the finger frame for frame (an animated value would trail it). In mono it looks the same, a thin grey track, a thicker white active part and a smaller thumb",
-  "Accessibility: a transparent box over the track carries the label and the value as its state (textFromFloat of the live value: `decimals` digits, at least 2 when max - min is under 1.5, so 0..1 reads 0.7, not 0; stateText replaces it, e.g. a time \"16:30\"). It comes after the canvas because only from the touchExpression on does the name read the dragged value; it takes no touch, so the drag still works. No role (the JSON semantics has no role key), and no adjust actions: a screen reader announces the value but cannot step it. About 85 B per call"
+  "Accessibility: a transparent box over the track carries the label and the value as its state (textFromFloat of the live value: `decimals` digits, at least 2 when max - min is under 1.5, so 0..1 reads 0.7, not 0; stateText replaces it, e.g. a time \"16:30\"). It comes after the canvas because only from the touchExpression on does the name read the dragged value; it takes no touch, so the drag still works. No role (the JSON semantics has no role key), and no adjust actions: a screen reader announces the value but cannot step it. About 85 B per call",
+  "A slider does not follow the app after a drag: the touch value wins from the first drag on. For a position the app keeps writing (a seek bar) use SeekBar"
  ]
 }

@@ -6,7 +6,7 @@
   "progress": {
    "type": "float",
    "required": true,
-   "doc": "0..1: a number, a \"@variable\" or an expression. Not clamped: keep it in range; a change eases over 0.3 s (the bar or arc; a literal costs nothing)"
+   "doc": "0..1: a number, a \"@variable\" or an expression. The drawing does not wrap or run a lap: past 1 the ring is simply full, while the label keeps counting (134), and below 0 the arc runs backwards. To show a value past its target, use ActivityRings or MeterBreakdown (a second lap). A change eases over 0.3 s (the arc; a literal costs nothing)"
   },
   "color": {
    "type": "color",
@@ -43,6 +43,7 @@
   }
  },
  "pitfalls": [
+  "Not a meter for overshoot: a progress of 1.34 draws the same full ring as 1, with 134 as its label. Use ActivityRings or MeterBreakdown when passing a target must show",
   "A literal progress costs nothing at run time: \"@progress * 360\" folds to a number when the component expands. Wrapping it in clamp() would turn it back into an expression",
   "If you do clamp a live value, clamp takes (min, max, value): clamp(0, 1, @p). clamp(@p, 0, 1) is always 0",
   "The label is textFromFloat with flags 5 (no padding): the default flags pad the number with spaces, which pushes it off centre",

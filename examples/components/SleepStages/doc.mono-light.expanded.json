@@ -1,0 +1,1129 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 300,
+  "profiles": 513,
+  "contentDescription": "SleepStages: a hypnogram of one night in four lanes"
+ },
+ "resources": {
+  "floatArrays": {
+   "night": {
+    "value": [
+     0,
+     2,
+     2,
+     3,
+     3,
+     3,
+     2,
+     2,
+     1,
+     1,
+     2,
+     3,
+     3,
+     2,
+     2,
+     1,
+     1,
+     0,
+     2,
+     2,
+     3,
+     2,
+     1,
+     1,
+     1,
+     2,
+     2,
+     0,
+     2,
+     1,
+     1,
+     0
+    ],
+    "export": true
+   }
+  },
+  "colors": {
+   "muted": "#FF616161",
+   "onSurface": "#FF000000",
+   "surface": "#FFFFFFFF",
+   "track": "#FF616161"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.surface"
+    },
+    {
+     "padding": 16
+    }
+   ],
+   "children": [
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "sleepstages1_W",
+            "value": "componentWidth()"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_H",
+            "value": "componentHeight()"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_hasX",
+            "value": "step(@sleepstages1_H, 95)"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_axis",
+            "value": "@sleepstages1_hasX * 18"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_top",
+            "value": 2
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_lane",
+            "value": "(@sleepstages1_H - @sleepstages1_axis - 4) / 4"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_ts",
+            "value": "clamp(11, 14, @sleepstages1_lane * 0.34)"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_two",
+            "value": "step(@sleepstages1_lane, 33)"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_gut",
+            "value": "step(@sleepstages1_W, 199) * clamp(52, 84, @sleepstages1_W * 0.2)"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_n",
+            "value": "arrayLength(@night)"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_bar",
+            "value": "clamp(4, 9, @sleepstages1_lane * 0.28)"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_x0",
+            "value": "@sleepstages1_gut + @sleepstages1_bar / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_dx",
+            "value": "(@sleepstages1_W - @sleepstages1_gut - @sleepstages1_bar) / max(@sleepstages1_n, 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_sm_0",
+            "value": 24
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_say_0",
+            "vtype": "string",
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "Awake",
+               "id2": " "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "round(@sleepstages1_sm_0)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              }
+             },
+             "id2": " minutes. "
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_ly_0",
+            "value": "@sleepstages1_top + (0 + 0.5) * @sleepstages1_lane"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.track"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 0.75
+             },
+             {
+              "alpha": 0.5
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": "@sleepstages1_gut",
+            "y1": "@sleepstages1_ly_0",
+            "x2": "@sleepstages1_W",
+            "y2": "@sleepstages1_ly_0"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0)"
+             },
+             {
+              "textSize": "@sleepstages1_ts"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Awake",
+            "x": 0,
+            "y": "@sleepstages1_ly_0 - @sleepstages1_two * @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0) * @sleepstages1_two * step(@sleepstages1_sm_0, 59.5)"
+             },
+             {
+              "textSize": "@sleepstages1_ts * 0.9"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "round(floor(@sleepstages1_sm_0 / 60))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               },
+               "id2": "h "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "round(@sleepstages1_sm_0 % 60)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              }
+             },
+             "id2": "m"
+            },
+            "x": 0,
+            "y": "@sleepstages1_ly_0 + @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0) * @sleepstages1_two * (1 - step(@sleepstages1_sm_0, 59.5))"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "round(@sleepstages1_sm_0)",
+              "whole": 9,
+              "decimal": 0,
+              "flags": 23
+             },
+             "id2": "m"
+            },
+            "x": 0,
+            "y": "@sleepstages1_ly_0 + @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_sm_1",
+            "value": 95
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_say_1",
+            "vtype": "string",
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "REM",
+               "id2": " "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "round(@sleepstages1_sm_1)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              }
+             },
+             "id2": " minutes. "
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_ly_1",
+            "value": "@sleepstages1_top + (1 + 0.5) * @sleepstages1_lane"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.track"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 0.75
+             },
+             {
+              "alpha": 0.5
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": "@sleepstages1_gut",
+            "y1": "@sleepstages1_ly_1",
+            "x2": "@sleepstages1_W",
+            "y2": "@sleepstages1_ly_1"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0)"
+             },
+             {
+              "textSize": "@sleepstages1_ts"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "REM",
+            "x": 0,
+            "y": "@sleepstages1_ly_1 - @sleepstages1_two * @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0) * @sleepstages1_two * step(@sleepstages1_sm_1, 59.5)"
+             },
+             {
+              "textSize": "@sleepstages1_ts * 0.9"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "round(floor(@sleepstages1_sm_1 / 60))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               },
+               "id2": "h "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "round(@sleepstages1_sm_1 % 60)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              }
+             },
+             "id2": "m"
+            },
+            "x": 0,
+            "y": "@sleepstages1_ly_1 + @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0) * @sleepstages1_two * (1 - step(@sleepstages1_sm_1, 59.5))"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "round(@sleepstages1_sm_1)",
+              "whole": 9,
+              "decimal": 0,
+              "flags": 23
+             },
+             "id2": "m"
+            },
+            "x": 0,
+            "y": "@sleepstages1_ly_1 + @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_sm_2",
+            "value": 232
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_say_2",
+            "vtype": "string",
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "Light",
+               "id2": " "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "round(@sleepstages1_sm_2)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              }
+             },
+             "id2": " minutes. "
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_ly_2",
+            "value": "@sleepstages1_top + (2 + 0.5) * @sleepstages1_lane"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.track"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 0.75
+             },
+             {
+              "alpha": 0.5
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": "@sleepstages1_gut",
+            "y1": "@sleepstages1_ly_2",
+            "x2": "@sleepstages1_W",
+            "y2": "@sleepstages1_ly_2"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0)"
+             },
+             {
+              "textSize": "@sleepstages1_ts"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Light",
+            "x": 0,
+            "y": "@sleepstages1_ly_2 - @sleepstages1_two * @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0) * @sleepstages1_two * step(@sleepstages1_sm_2, 59.5)"
+             },
+             {
+              "textSize": "@sleepstages1_ts * 0.9"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "round(floor(@sleepstages1_sm_2 / 60))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               },
+               "id2": "h "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "round(@sleepstages1_sm_2 % 60)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              }
+             },
+             "id2": "m"
+            },
+            "x": 0,
+            "y": "@sleepstages1_ly_2 + @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0) * @sleepstages1_two * (1 - step(@sleepstages1_sm_2, 59.5))"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "round(@sleepstages1_sm_2)",
+              "whole": 9,
+              "decimal": 0,
+              "flags": 23
+             },
+             "id2": "m"
+            },
+            "x": 0,
+            "y": "@sleepstages1_ly_2 + @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_sm_3",
+            "value": 79
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_say_3",
+            "vtype": "string",
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "Deep",
+               "id2": " "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "round(@sleepstages1_sm_3)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              }
+             },
+             "id2": " minutes. "
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "sleepstages1_ly_3",
+            "value": "@sleepstages1_top + (3 + 0.5) * @sleepstages1_lane"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.track"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 0.75
+             },
+             {
+              "alpha": 0.5
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": "@sleepstages1_gut",
+            "y1": "@sleepstages1_ly_3",
+            "x2": "@sleepstages1_W",
+            "y2": "@sleepstages1_ly_3"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0)"
+             },
+             {
+              "textSize": "@sleepstages1_ts"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Deep",
+            "x": 0,
+            "y": "@sleepstages1_ly_3 - @sleepstages1_two * @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0) * @sleepstages1_two * step(@sleepstages1_sm_3, 59.5)"
+             },
+             {
+              "textSize": "@sleepstages1_ts * 0.9"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "round(floor(@sleepstages1_sm_3 / 60))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               },
+               "id2": "h "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "round(@sleepstages1_sm_3 % 60)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              }
+             },
+             "id2": "m"
+            },
+            "x": 0,
+            "y": "@sleepstages1_ly_3 + @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": "step(@sleepstages1_gut, 0) * @sleepstages1_two * (1 - step(@sleepstages1_sm_3, 59.5))"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "round(@sleepstages1_sm_3)",
+              "whole": 9,
+              "decimal": 0,
+              "flags": 23
+             },
+             "id2": "m"
+            },
+            "x": 0,
+            "y": "@sleepstages1_ly_3 + @sleepstages1_ts * 0.6",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "strokeCap": "round"
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 1,
+            "until": "@sleepstages1_n",
+            "commands": [
+             {
+              "variable": {
+               "name": "sleepstages1_p",
+               "value": "arrayGet(@night, i - 1)"
+              }
+             },
+             {
+              "variable": {
+               "name": "sleepstages1_c",
+               "value": "arrayGet(@night, i)"
+              }
+             },
+             {
+              "drawLine": {
+               "x1": "@sleepstages1_x0 + i * @sleepstages1_dx",
+               "y1": "@sleepstages1_top + (@sleepstages1_p + 0.5) * @sleepstages1_lane",
+               "x2": "@sleepstages1_x0 + i * @sleepstages1_dx",
+               "y2": "@sleepstages1_top + (@sleepstages1_c + 0.5) * @sleepstages1_lane"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "@sleepstages1_n",
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeCap": "round"
+                },
+                {
+                 "strokeWidth": "@sleepstages1_bar"
+                },
+                {
+                 "alpha": "1 - step(abs(arrayGet(@night, i) - 0), 0.5)"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": "@sleepstages1_x0 + i * @sleepstages1_dx",
+               "y1": "@sleepstages1_ly_0",
+               "x2": "@sleepstages1_x0 + (i + 1) * @sleepstages1_dx",
+               "y2": "@sleepstages1_ly_0"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "@sleepstages1_n",
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeCap": "round"
+                },
+                {
+                 "strokeWidth": "@sleepstages1_bar"
+                },
+                {
+                 "alpha": "1 - step(abs(arrayGet(@night, i) - 1), 0.5)"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": "@sleepstages1_x0 + i * @sleepstages1_dx",
+               "y1": "@sleepstages1_ly_1",
+               "x2": "@sleepstages1_x0 + (i + 1) * @sleepstages1_dx",
+               "y2": "@sleepstages1_ly_1"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "@sleepstages1_n",
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeCap": "round"
+                },
+                {
+                 "strokeWidth": "@sleepstages1_bar"
+                },
+                {
+                 "alpha": "1 - step(abs(arrayGet(@night, i) - 2), 0.5)"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": "@sleepstages1_x0 + i * @sleepstages1_dx",
+               "y1": "@sleepstages1_ly_2",
+               "x2": "@sleepstages1_x0 + (i + 1) * @sleepstages1_dx",
+               "y2": "@sleepstages1_ly_2"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "@sleepstages1_n",
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeCap": "round"
+                },
+                {
+                 "strokeWidth": "@sleepstages1_bar"
+                },
+                {
+                 "alpha": "1 - step(abs(arrayGet(@night, i) - 3), 0.5)"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": "@sleepstages1_x0 + i * @sleepstages1_dx",
+               "y1": "@sleepstages1_ly_3",
+               "x2": "@sleepstages1_x0 + (i + 1) * @sleepstages1_dx",
+               "y2": "@sleepstages1_ly_3"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "@sleepstages1_hasX"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "23:10",
+            "x": "@sleepstages1_gut",
+            "y": "@sleepstages1_H - 8",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "06:50",
+            "x": "@sleepstages1_W",
+            "y": "@sleepstages1_H - 8",
+            "panX": 1,
+            "panY": 0
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": "Sleep stages",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": " from ",
+                    "id2": "23:10"
+                   }
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " to ",
+                   "id2": "06:50"
+                  }
+                 },
+                 "id2": ". "
+                },
+                "id2": "@sleepstages1_say_0"
+               },
+               "id2": "@sleepstages1_say_1"
+              },
+              "id2": "@sleepstages1_say_2"
+             },
+             "id2": "@sleepstages1_say_3"
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

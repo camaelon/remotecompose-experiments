@@ -993,3 +993,24 @@ Baseline (eval/baseline.md, commit b1cf728e; output tokens and minutes, two runs
 
 Mean 16.1K, spread between repeats 20% on average. A change on one prompt in one run tells little below about 40%; judge across the set.
 
+Verticals (media, charts/finance, health): 14 components, CMP-19 to CMP-24. Output tokens against the baseline, two runs each, not committed yet:
+
+| prompt | before | with the verticals | after the kit fix |
+| :-- | --: | --: | --: |
+| music player | 20.5K, 15.2K | 14.7K, 20.1K | |
+| calorie tracker | 17.1K, 11.5K | 6.8K, 11.1K | |
+| solar (control) | 15.4K, 17.0K | 31.6K, 20.5K | 22.7K, 25.6K |
+| 14 stocks | 27.5K, 18.3K (earlier runs, not the baseline set) | 22.5K, 20.2K | 18.1K, 18.9K |
+| 36 fitness | none | 18.3K, 19.2K | |
+
+Music and calorie have a matching example, and they were shaped by these prompts: they show the gain when one exists, not in general. Solar stayed above its baseline after CMP-17 was restored as its start, cause not established. Agents took components well beyond their vertical (PriceChart and GoalBar for heart rate). Most runs reported a fault found only by looking, after NO FAULTS FOUND (clipped bars, squashed charts, QuoteRow symbol reduced to dots, $0.0116).
+
+Solar, why it rose (eval/run-trace.py, RC_TRACE, RC_HIDE_VERTICALS). Same prompt, five runs per condition, output tokens:
+
+| condition | runs | mean | orient | first build | revise | convert calls |
+| :-- | :-- | --: | --: | --: | --: | --: |
+| baseline commit b1cf728e | 20.1, 21.3, 23.0, 26.8, 28.3 | 23.9K | 4.9K | 9.0K | 9.9K | 3.2 |
+| current, verticals hidden | 18.3, 19.3, 20.0, 20.3, 22.3 | 20.0K | 3.1K | 5.6K | 11.4K | 3.6 |
+| current | 19.8, 19.9, 21.6, 22.2, 22.3 | 21.2K | 5.0K | 7.5K | 8.7K | 2.6 |
+
+The rise was not caused by the verticals: the old commit itself now costs 23.9K against the 15.4K and 17.0K first measured. The brief also differs: these runs and the verticals runs used a new wording, not the baseline's, so none of them can be compared with the 16.1K baseline. Compare only runs with one brief, in the same batch. Baseline runs here used today's rc2image, icons and player bundle, and had no rc2layout, so no engines check. Phase splits are unreliable where a small test convert counts as the first build (hid1, hid5).

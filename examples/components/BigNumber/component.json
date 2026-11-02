@@ -87,7 +87,7 @@
   },
   "label": {
    "type": "string",
-   "doc": "What a screen reader says instead of the built description, literal text"
+   "doc": "What a screen reader says in place of the caption, literal text: the value and the change are still spoken after it (\"Sales today, $1,234, up 4.2 percent\")"
   }
  },
  "locals": {
@@ -137,7 +137,11 @@
    "else": 0
   },
   "h": "@capH + @fontSize * 1.25 + @chgH",
-  "yc": "@capH + @fontSize * 1.25 + 11"
+  "yc": {
+   "$if": "change",
+   "then": "@capH + @fontSize * 1.25 + 11",
+   "else": 0
+  }
  },
  "capabilities": [
   "text.dynamic",
@@ -1443,19 +1447,119 @@
        {
         "semantics": {
          "contentDescription": {
-          "$if": "label",
-          "then": "@label",
-          "else": {
-           "$if": "change",
-           "then": {
+          "$if": "change",
+          "then": {
+           "type": "textMerge",
+           "id1": {
             "type": "textMerge",
             "id1": {
              "type": "textMerge",
              "id1": {
               "type": "textMerge",
               "id1": {
-               "type": "textMerge",
-               "id1": {
+               "$if": "label",
+               "then": {
+                "type": "textMerge",
+                "id1": "@label, ",
+                "id2": {
+                 "$if": "suffix",
+                 "then": {
+                  "type": "textMerge",
+                  "id1": {
+                   "$if": "prefix",
+                   "then": {
+                    "type": "textMerge",
+                    "id1": "@prefix",
+                    "id2": {
+                     "type": "textFromFloat",
+                     "value": "@value",
+                     "whole": 9,
+                     "decimal": "@decimals",
+                     "flags": {
+                      "$if": "grouping == 'comma'",
+                      "then": 23,
+                      "else": {
+                       "$if": "grouping == 'period'",
+                       "then": 87,
+                       "else": {
+                        "$if": "grouping == 'space'",
+                        "then": 151,
+                        "else": 7
+                       }
+                      }
+                     }
+                    }
+                   },
+                   "else": {
+                    "type": "textFromFloat",
+                    "value": "@value",
+                    "whole": 9,
+                    "decimal": "@decimals",
+                    "flags": {
+                     "$if": "grouping == 'comma'",
+                     "then": 23,
+                     "else": {
+                      "$if": "grouping == 'period'",
+                      "then": 87,
+                      "else": {
+                       "$if": "grouping == 'space'",
+                       "then": 151,
+                       "else": 7
+                      }
+                     }
+                    }
+                   }
+                  },
+                  "id2": "@suffix"
+                 },
+                 "else": {
+                  "$if": "prefix",
+                  "then": {
+                   "type": "textMerge",
+                   "id1": "@prefix",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@value",
+                    "whole": 9,
+                    "decimal": "@decimals",
+                    "flags": {
+                     "$if": "grouping == 'comma'",
+                     "then": 23,
+                     "else": {
+                      "$if": "grouping == 'period'",
+                      "then": 87,
+                      "else": {
+                       "$if": "grouping == 'space'",
+                       "then": 151,
+                       "else": 7
+                      }
+                     }
+                    }
+                   }
+                  },
+                  "else": {
+                   "type": "textFromFloat",
+                   "value": "@value",
+                   "whole": 9,
+                   "decimal": "@decimals",
+                   "flags": {
+                    "$if": "grouping == 'comma'",
+                    "then": 23,
+                    "else": {
+                     "$if": "grouping == 'period'",
+                     "then": 87,
+                     "else": {
+                      "$if": "grouping == 'space'",
+                      "then": 151,
+                      "else": 7
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               },
+               "else": {
                 "$if": "caption",
                 "then": {
                  "type": "textMerge",
@@ -1655,23 +1759,127 @@
                   }
                  }
                 }
-               },
-               "id2": ", "
+               }
               },
-              "id2": "@dir"
+              "id2": ", "
              },
-             "id2": " "
+             "id2": "@dir"
             },
+            "id2": " "
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@mag",
+             "whole": 6,
+             "decimal": "@changeDecimals",
+             "flags": 7
+            },
+            "id2": " percent"
+           }
+          },
+          "else": {
+           "$if": "label",
+           "then": {
+            "type": "textMerge",
+            "id1": "@label, ",
             "id2": {
-             "type": "textMerge",
-             "id1": {
-              "type": "textFromFloat",
-              "value": "@mag",
-              "whole": 6,
-              "decimal": "@changeDecimals",
-              "flags": 7
+             "$if": "suffix",
+             "then": {
+              "type": "textMerge",
+              "id1": {
+               "$if": "prefix",
+               "then": {
+                "type": "textMerge",
+                "id1": "@prefix",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@value",
+                 "whole": 9,
+                 "decimal": "@decimals",
+                 "flags": {
+                  "$if": "grouping == 'comma'",
+                  "then": 23,
+                  "else": {
+                   "$if": "grouping == 'period'",
+                   "then": 87,
+                   "else": {
+                    "$if": "grouping == 'space'",
+                    "then": 151,
+                    "else": 7
+                   }
+                  }
+                 }
+                }
+               },
+               "else": {
+                "type": "textFromFloat",
+                "value": "@value",
+                "whole": 9,
+                "decimal": "@decimals",
+                "flags": {
+                 "$if": "grouping == 'comma'",
+                 "then": 23,
+                 "else": {
+                  "$if": "grouping == 'period'",
+                  "then": 87,
+                  "else": {
+                   "$if": "grouping == 'space'",
+                   "then": 151,
+                   "else": 7
+                  }
+                 }
+                }
+               }
+              },
+              "id2": "@suffix"
              },
-             "id2": " percent"
+             "else": {
+              "$if": "prefix",
+              "then": {
+               "type": "textMerge",
+               "id1": "@prefix",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@value",
+                "whole": 9,
+                "decimal": "@decimals",
+                "flags": {
+                 "$if": "grouping == 'comma'",
+                 "then": 23,
+                 "else": {
+                  "$if": "grouping == 'period'",
+                  "then": 87,
+                  "else": {
+                   "$if": "grouping == 'space'",
+                   "then": 151,
+                   "else": 7
+                  }
+                 }
+                }
+               }
+              },
+              "else": {
+               "type": "textFromFloat",
+               "value": "@value",
+               "whole": 9,
+               "decimal": "@decimals",
+               "flags": {
+                "$if": "grouping == 'comma'",
+                "then": 23,
+                "else": {
+                 "$if": "grouping == 'period'",
+                 "then": 87,
+                 "else": {
+                  "$if": "grouping == 'space'",
+                  "then": 151,
+                  "else": 7
+                 }
+                }
+               }
+              }
+             }
             }
            },
            "else": {

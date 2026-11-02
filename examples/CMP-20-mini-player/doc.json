@@ -1,0 +1,486 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 72,
+  "profiles": 513,
+  "contentDescription": "A mini player: art, title, artist, a thin progress line, play and next; with more height, a larger cover and all three controls"
+ },
+ "resources": {
+  "variables": {
+   "pos": {
+    "value": 83,
+    "export": true
+   },
+   "dur": {
+    "value": 225,
+    "export": true
+   },
+   "playing": {
+    "value": 1,
+    "export": true
+   },
+   "seed": {
+    "value": 1,
+    "export": true
+   },
+   "W": "windowWidth()",
+   "H": "windowHeight()",
+   "cardW": "min(@W, 480)",
+   "cardH": "min(@H, 160)",
+   "roomy": "step(@H, 119.5)",
+   "slim": "1 - @roomy",
+   "tall": "@roomy * step(@W, 219.5)",
+   "sq": "@roomy * (1 - step(@W, 219.5))",
+   "frac": "clamp(0, 1, @pos / max(@dur, 1))",
+   "slimC": "max(32, @cardH - 19)",
+   "tallC": "max(72, min(@cardH - 27, floor(@cardW * 0.38)))"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "title",
+    "vtype": "string",
+    "value": "Blue in Green",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "artist",
+    "vtype": "string",
+    "value": "Miles Davis",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "horizontalAlignment": "center",
+    "verticalAlignment": "bottom",
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     }
+    ],
+    "children": [
+     {
+      "column": {
+       "modifiers": [
+        {
+         "width": "@cardW"
+        },
+        {
+         "height": "@cardH"
+        },
+        {
+         "clip": {
+          "roundedRect": 14
+         }
+        },
+        {
+         "background": "@colors.surface"
+        }
+       ],
+       "children": [
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "visibility": "@slim"
+           },
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           },
+           {
+            "padding": [
+             8,
+             4,
+             4,
+             4
+            ]
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@slimC"
+              },
+              {
+               "height": "@slimC"
+              }
+             ],
+             "children": [
+              {
+               "CoverArt": {
+                "seed": "@seed",
+                "radius": 8,
+                "label": "Album art"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 10
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              {
+               "horizontalWeight": 1
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "@title",
+                "fontSize": 14,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "fontWeight": 700
+               }
+              },
+              {
+               "text": {
+                "value": "@artist",
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "overflow": "ellipsis"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 8
+              }
+             ]
+            }
+           },
+           {
+            "Equalizer": {
+             "playing": "@playing",
+             "size": 14
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 4
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 112
+              }
+             ],
+             "children": [
+              {
+               "TransportControls": {
+                "size": "small",
+                "playing": "@playing",
+                "previous": false,
+                "onPlayPause": {
+                 "type": "hostNamedAction",
+                 "name": "playPauseMini"
+                },
+                "onNext": {
+                 "type": "hostNamedAction",
+                 "name": "nextMini"
+                }
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "visibility": "@tall"
+           },
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           },
+           {
+            "padding": 12
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@tallC"
+              },
+              {
+               "height": "@tallC"
+              }
+             ],
+             "children": [
+              {
+               "CoverArt": {
+                "seed": "@seed",
+                "radius": 12,
+                "label": "Album art"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 14
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "verticalArrangement": "center",
+             "modifiers": [
+              {
+               "horizontalWeight": 1
+              },
+              {
+               "spacedBy": 4
+              }
+             ],
+             "children": [
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 "fillMaxWidth"
+                ],
+                "children": [
+                 {
+                  "column": {
+                   "modifiers": [
+                    {
+                     "horizontalWeight": 1
+                    }
+                   ],
+                   "children": [
+                    {
+                     "text": {
+                      "value": "@title",
+                      "fontSize": 16,
+                      "color": "@colors.onSurface",
+                      "maxLines": 1,
+                      "overflow": "ellipsis",
+                      "fontWeight": 700
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "@artist",
+                      "fontSize": 13,
+                      "color": "@colors.muted",
+                      "maxLines": 1,
+                      "overflow": "ellipsis"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 8
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "Equalizer": {
+                   "playing": "@playing",
+                   "size": 16
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "TransportControls": {
+                "size": "small",
+                "playing": "@playing",
+                "onPlayPause": {
+                 "type": "hostNamedAction",
+                 "name": "playPause"
+                },
+                "onPrevious": {
+                 "type": "hostNamedAction",
+                 "name": "previous"
+                },
+                "onNext": {
+                 "type": "hostNamedAction",
+                 "name": "next"
+                }
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "visibility": "@sq"
+           },
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           },
+           {
+            "padding": 8
+           },
+           {
+            "spacedBy": 2
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "verticalWeight": 1
+              }
+             ],
+             "children": [
+              {
+               "CoverArt": {
+                "seed": "@seed",
+                "radius": 10,
+                "label": "Album art"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "@title",
+             "fontSize": 13,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "fontWeight": 700,
+             "textAlign": "center"
+            }
+           },
+           {
+            "TransportControls": {
+             "size": "small",
+             "playing": "@playing",
+             "previous": false,
+             "onPlayPause": {
+              "type": "hostNamedAction",
+              "name": "playPauseS"
+             },
+             "onNext": {
+              "type": "hostNamedAction",
+              "name": "nextS"
+             }
+            }
+           }
+          ]
+         }
+        },
+        {
+         "canvas": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": 3
+           },
+           {
+            "semantics": {
+             "contentDescription": "Playback position"
+            }
+           }
+          ],
+          "commands": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.track"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawRect": {
+             "left": 0,
+             "top": 0,
+             "right": "componentWidth()",
+             "bottom": 3
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.primary"
+              }
+             ]
+            }
+           },
+           {
+            "drawRect": {
+             "left": 0,
+             "top": 0,
+             "right": "componentWidth() * @frac",
+             "bottom": 3
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,923 @@
+{
+ "component": "SleepStages",
+ "version": 1,
+ "summary": "A hypnogram: sleep stages over the night from one host array, one lane per stage, runs as rounded bars joined by thin steps, with stage names and times at the left and the start and end times under it. The lanes read in mono; labels drop in small boxes.",
+ "params": {
+  "stages": {
+   "type": "float",
+   "required": true,
+   "doc": "\"@name\" of a float array in resources.floatArrays, one value per equal time slice (5 or 30 minutes), each the index of a stage in `lanes`: by default 0 awake, 1 REM, 2 light, 3 deep. Export it so the host can replace the night"
+  },
+  "lanes": {
+   "type": "list",
+   "static": true,
+   "default": [
+    {
+     "label": "Awake"
+    },
+    {
+     "label": "REM"
+    },
+    {
+     "label": "Light"
+    },
+    {
+     "label": "Deep"
+    }
+   ],
+   "doc": "Top to bottom: [{label, minutes, color}]. minutes (number or \"@variable\", from the host) shows as 1h 12m and is spoken. Default: Awake, REM, Light, Deep"
+  },
+  "start": {
+   "type": "string",
+   "doc": "Time under the left end, e.g. \"23:10\" or \"@bedtime\""
+  },
+  "end": {
+   "type": "string",
+   "doc": "Time under the right end"
+  },
+  "label": {
+   "type": "string",
+   "default": "Sleep stages",
+   "doc": "Starts the spoken summary"
+  },
+  "description": {
+   "type": "string",
+   "doc": "Replaces the spoken summary"
+  }
+ },
+ "locals": {
+  "nl": {
+   "$count": "lanes"
+  }
+ },
+ "capabilities": [
+  "data.array",
+  "data.loop",
+  "draw.shapes",
+  "a11y.labels"
+ ],
+ "call": {
+  "SleepStages": {
+   "stages": "@night",
+   "start": "23:10",
+   "end": "06:50"
+  }
+ },
+ "pitfalls": [
+  "stages is the name of a float array, not a JSON list. A value outside the lanes draws nothing in that slice",
+  "An expression cannot total an array by stage, so minutes per lane comes from the host: pass them in lanes, or leave them out and the left column has names only. If the host sends both, they cannot disagree only if it derives them from the same data",
+  "It fills the box it is given: use a sized or weighted parent. Under 200 wide the left column drops; under 96 tall the times drop",
+  "Each stage has its own loop over the array, so cost at run time grows with slices x stages: 30-minute or 5-minute slices are fine, one per minute is not",
+  "Stage colours are theme colours; in mono the lane alone says the stage, which is what a hypnogram is"
+ ],
+ "body": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize"
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "commands": [
+       {
+        "$if": "!lanes",
+        "then": [
+         {
+          "variable": {
+           "name": "say_0",
+           "vtype": "string",
+           "value": ""
+          }
+         },
+         {
+          "variable": {
+           "name": "say_1",
+           "vtype": "string",
+           "value": ""
+          }
+         },
+         {
+          "variable": {
+           "name": "say_2",
+           "vtype": "string",
+           "value": ""
+          }
+         },
+         {
+          "variable": {
+           "name": "say_3",
+           "vtype": "string",
+           "value": ""
+          }
+         },
+         {
+          "variable": {
+           "name": "say_4",
+           "vtype": "string",
+           "value": ""
+          }
+         },
+         {
+          "variable": {
+           "name": "say_5",
+           "vtype": "string",
+           "value": ""
+          }
+         }
+        ]
+       },
+       {
+        "variable": {
+         "name": "W",
+         "value": "componentWidth()"
+        }
+       },
+       {
+        "variable": {
+         "name": "H",
+         "value": "componentHeight()"
+        }
+       },
+       {
+        "variable": {
+         "name": "hasX",
+         "value": {
+          "$if": "start || end",
+          "then": "step(@H, 95)",
+          "else": 0
+         }
+        }
+       },
+       {
+        "variable": {
+         "name": "axis",
+         "value": "@hasX * 18"
+        }
+       },
+       {
+        "variable": {
+         "name": "top",
+         "value": 2
+        }
+       },
+       {
+        "variable": {
+         "name": "lane",
+         "value": "(@H - @axis - 4) / @nl"
+        }
+       },
+       {
+        "variable": {
+         "name": "ts",
+         "value": "clamp(11, 14, @lane * 0.34)"
+        }
+       },
+       {
+        "variable": {
+         "name": "two",
+         "value": "step(@lane, 33)"
+        }
+       },
+       {
+        "variable": {
+         "name": "gut",
+         "value": "step(@W, 199) * clamp(52, 84, @W * 0.2)"
+        }
+       },
+       {
+        "variable": {
+         "name": "n",
+         "value": "arrayLength(@stages)"
+        }
+       },
+       {
+        "variable": {
+         "name": "bar",
+         "value": {
+          "$if": "theme.mono",
+          "then": "clamp(4, 9, @lane * 0.28)",
+          "else": "clamp(5, 14, @lane * 0.42)"
+         }
+        }
+       },
+       {
+        "variable": {
+         "name": "x0",
+         "value": "@gut + @bar / 2"
+        }
+       },
+       {
+        "variable": {
+         "name": "dx",
+         "value": "(@W - @gut - @bar) / max(@n, 1)"
+        }
+       },
+       {
+        "$each": "lanes",
+        "as": "s",
+        "index": "k",
+        "fields": [
+         "label",
+         "minutes",
+         "color"
+        ],
+        "do": [
+         {
+          "$if": "s_minutes",
+          "then": {
+           "variable": {
+            "name": "sm_@k",
+            "value": "@s_minutes"
+           }
+          }
+         },
+         {
+          "variable": {
+           "name": "say_@k",
+           "vtype": "string",
+           "value": {
+            "$if": "s_minutes",
+            "then": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@s_label",
+               "id2": " "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "round(@sm_@k)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              }
+             },
+             "id2": " minutes. "
+            },
+            "else": ""
+           }
+          }
+         },
+         {
+          "variable": {
+           "name": "ly_@k",
+           "value": "@top + (@k + 0.5) * @lane"
+          }
+         },
+         {
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.track"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 0.75
+              },
+              {
+               "alpha": 0.5
+              }
+             ]
+            }
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.outline"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 0.75
+              },
+              {
+               "alpha": 0.25
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "drawLine": {
+           "x1": "@gut",
+           "y1": "@ly_@k",
+           "x2": "@W",
+           "y2": "@ly_@k"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": "step(@gut, 0)"
+            },
+            {
+             "textSize": "@ts"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": "@s_label",
+           "x": 0,
+           "y": {
+            "$if": "s_minutes",
+            "then": "@ly_@k - @two * @ts * 0.6",
+            "else": "@ly_@k"
+           },
+           "panX": -1,
+           "panY": 0
+          }
+         },
+         {
+          "$if": "s_minutes",
+          "then": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.muted"
+              },
+              {
+               "alpha": "step(@gut, 0) * @two * step(@sm_@k, 59.5)"
+              },
+              {
+               "textSize": "@ts * 0.9"
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "round(floor(@sm_@k / 60))",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                },
+                "id2": "h "
+               },
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(@sm_@k % 60)",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "id2": "m"
+             },
+             "x": 0,
+             "y": "@ly_@k + @ts * 0.6",
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.muted"
+              },
+              {
+               "alpha": "step(@gut, 0) * @two * (1 - step(@sm_@k, 59.5))"
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "round(@sm_@k)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              },
+              "id2": "m"
+             },
+             "x": 0,
+             "y": "@ly_@k + @ts * 0.6",
+             "panX": -1,
+             "panY": 0
+            }
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 1.5
+          },
+          {
+           "alpha": {
+            "$if": "theme.mono",
+            "then": 1,
+            "else": 0.55
+           }
+          },
+          {
+           "strokeCap": "round"
+          }
+         ]
+        }
+       },
+       {
+        "loop": {
+         "index": "i",
+         "from": 1,
+         "until": "@n",
+         "commands": [
+          {
+           "variable": {
+            "name": "p",
+            "value": "arrayGet(@stages, i - 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "c",
+            "value": "arrayGet(@stages, i)"
+           }
+          },
+          {
+           "drawLine": {
+            "x1": "@x0 + i * @dx",
+            "y1": "@top + (@p + 0.5) * @lane",
+            "x2": "@x0 + i * @dx",
+            "y2": "@top + (@c + 0.5) * @lane"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "$each": "lanes",
+        "as": "s",
+        "index": "k",
+        "fields": [
+         "label",
+         "minutes",
+         "color"
+        ],
+        "do": [
+         {
+          "loop": {
+           "index": "i",
+           "from": 0,
+           "until": "@n",
+           "commands": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "$if": "theme.mono",
+                "then": {
+                 "color": "@colors.onSurface"
+                },
+                "else": {
+                 "color": {
+                  "$if": "s_color",
+                  "then": "@s_color",
+                  "else": {
+                   "$if": "k == '0'",
+                   "then": "@colors.warning",
+                   "else": {
+                    "$if": "k == '1'",
+                    "then": "@colors.success",
+                    "else": {
+                     "$if": "k == '2'",
+                     "then": "@colors.primary",
+                     "else": "@colors.secondary"
+                    }
+                   }
+                  }
+                 }
+                }
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeCap": "round"
+               },
+               {
+                "strokeWidth": "@bar"
+               },
+               {
+                "alpha": "1 - step(abs(arrayGet(@stages, i) - @k), 0.5)"
+               }
+              ]
+             }
+            },
+            {
+             "drawLine": {
+              "x1": "@x0 + i * @dx",
+              "y1": "@ly_@k",
+              "x2": "@x0 + (i + 1) * @dx",
+              "y2": "@ly_@k"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": "@hasX"
+          },
+          {
+           "textSize": 12
+          }
+         ]
+        }
+       },
+       {
+        "$if": "start",
+        "then": {
+         "drawTextAnchored": {
+          "text": "@start",
+          "x": "@gut",
+          "y": "@H - 8",
+          "panX": -1,
+          "panY": 0
+         }
+        }
+       },
+       {
+        "$if": "end",
+        "then": {
+         "drawTextAnchored": {
+          "text": "@end",
+          "x": "@W",
+          "y": "@H - 8",
+          "panX": 1,
+          "panY": 0
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "description",
+     "then": {
+      "box": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "semantics": {
+          "contentDescription": "@description"
+         }
+        }
+       ]
+      }
+     },
+     "else": [
+      {
+       "$each": "lanes",
+       "index": "z",
+       "count": "nz",
+       "do": {
+        "$if": "z == '0'",
+        "then": {
+         "box": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "semantics": {
+             "contentDescription": {
+              "$if": "nz == '1'",
+              "then": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@label",
+                  "id2": {
+                   "$if": "start",
+                   "then": {
+                    "type": "textMerge",
+                    "id1": " from ",
+                    "id2": "@start"
+                   },
+                   "else": ""
+                  }
+                 },
+                 "id2": {
+                  "$if": "end",
+                  "then": {
+                   "type": "textMerge",
+                   "id1": " to ",
+                   "id2": "@end"
+                  },
+                  "else": ""
+                 }
+                },
+                "id2": ". "
+               },
+               "id2": "@say_0"
+              },
+              "else": {
+               "$if": "nz == '2'",
+               "then": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": "@label",
+                    "id2": {
+                     "$if": "start",
+                     "then": {
+                      "type": "textMerge",
+                      "id1": " from ",
+                      "id2": "@start"
+                     },
+                     "else": ""
+                    }
+                   },
+                   "id2": {
+                    "$if": "end",
+                    "then": {
+                     "type": "textMerge",
+                     "id1": " to ",
+                     "id2": "@end"
+                    },
+                    "else": ""
+                   }
+                  },
+                  "id2": ". "
+                 },
+                 "id2": "@say_0"
+                },
+                "id2": "@say_1"
+               },
+               "else": {
+                "$if": "nz == '3'",
+                "then": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "@label",
+                      "id2": {
+                       "$if": "start",
+                       "then": {
+                        "type": "textMerge",
+                        "id1": " from ",
+                        "id2": "@start"
+                       },
+                       "else": ""
+                      }
+                     },
+                     "id2": {
+                      "$if": "end",
+                      "then": {
+                       "type": "textMerge",
+                       "id1": " to ",
+                       "id2": "@end"
+                      },
+                      "else": ""
+                     }
+                    },
+                    "id2": ". "
+                   },
+                   "id2": "@say_0"
+                  },
+                  "id2": "@say_1"
+                 },
+                 "id2": "@say_2"
+                },
+                "else": {
+                 "$if": "nz == '4'",
+                 "then": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textMerge",
+                        "id1": "@label",
+                        "id2": {
+                         "$if": "start",
+                         "then": {
+                          "type": "textMerge",
+                          "id1": " from ",
+                          "id2": "@start"
+                         },
+                         "else": ""
+                        }
+                       },
+                       "id2": {
+                        "$if": "end",
+                        "then": {
+                         "type": "textMerge",
+                         "id1": " to ",
+                         "id2": "@end"
+                        },
+                        "else": ""
+                       }
+                      },
+                      "id2": ". "
+                     },
+                     "id2": "@say_0"
+                    },
+                    "id2": "@say_1"
+                   },
+                   "id2": "@say_2"
+                  },
+                  "id2": "@say_3"
+                 },
+                 "else": {
+                  "$if": "nz == '5'",
+                  "then": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textMerge",
+                          "id1": "@label",
+                          "id2": {
+                           "$if": "start",
+                           "then": {
+                            "type": "textMerge",
+                            "id1": " from ",
+                            "id2": "@start"
+                           },
+                           "else": ""
+                          }
+                         },
+                         "id2": {
+                          "$if": "end",
+                          "then": {
+                           "type": "textMerge",
+                           "id1": " to ",
+                           "id2": "@end"
+                          },
+                          "else": ""
+                         }
+                        },
+                        "id2": ". "
+                       },
+                       "id2": "@say_0"
+                      },
+                      "id2": "@say_1"
+                     },
+                     "id2": "@say_2"
+                    },
+                    "id2": "@say_3"
+                   },
+                   "id2": "@say_4"
+                  },
+                  "else": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textMerge",
+                           "id1": "@label",
+                           "id2": {
+                            "$if": "start",
+                            "then": {
+                             "type": "textMerge",
+                             "id1": " from ",
+                             "id2": "@start"
+                            },
+                            "else": ""
+                           }
+                          },
+                          "id2": {
+                           "$if": "end",
+                           "then": {
+                            "type": "textMerge",
+                            "id1": " to ",
+                            "id2": "@end"
+                           },
+                           "else": ""
+                          }
+                         },
+                         "id2": ". "
+                        },
+                        "id2": "@say_0"
+                       },
+                       "id2": "@say_1"
+                      },
+                      "id2": "@say_2"
+                     },
+                     "id2": "@say_3"
+                    },
+                    "id2": "@say_4"
+                   },
+                   "id2": "@say_5"
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          ]
+         }
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

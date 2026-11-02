@@ -1,0 +1,478 @@
+{
+ "component": "AllocationBar",
+ "version": 1,
+ "summary": "A portfolio share or budget split: one rounded bar cut into segments by a float array, with a legend of colour swatch, name and percent, computed from the live values. In mono the segments alternate filled and hollow, so they stay apart.",
+ "params": {
+  "values": {
+   "type": "float",
+   "required": true,
+   "doc": "A float array, \"@name\" of resources.floatArrays, same length and order as items; amounts in any unit, 0 or more. Shares are value / sum"
+  },
+  "items": {
+   "type": "list",
+   "required": true,
+   "doc": "One per value: {\"label\": \"Stocks\", \"color\": \"@colors.primary\"}, or a bare \"Stocks\". The colour is optional: by default they run primary, secondary, success, warning, error, highlight"
+  },
+  "legend": {
+   "type": "enum",
+   "values": [
+    "rows",
+    "none"
+   ],
+   "default": "rows",
+   "static": true,
+   "doc": "rows: a line per item, under the bar; none: the bar alone"
+  },
+  "barHeight": {
+   "type": "float",
+   "default": 12,
+   "static": true,
+   "doc": "Bar thickness"
+  },
+  "decimals": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Digits after the point in percents"
+  },
+  "fontSize": {
+   "type": "float",
+   "default": 13,
+   "static": true,
+   "doc": "Legend text size"
+  },
+  "label": {
+   "type": "string",
+   "default": "Allocation",
+   "doc": "Spoken for the bar; the legend's rows are read on their own"
+  }
+ },
+ "locals": {
+  "sum": "max(arraySum(@values), 0.000001)",
+  "p": {
+   "$if": "decimals == '0'",
+   "then": 1,
+   "else": {
+    "$if": "decimals == '1'",
+    "then": 10,
+    "else": {
+     "$if": "decimals == '2'",
+     "then": 100,
+     "else": {
+      "$if": "decimals == '3'",
+      "then": 1000,
+      "else": {
+       "$if": "decimals == '4'",
+       "then": 10000,
+       "else": 1000000
+      }
+     }
+    }
+   }
+  }
+ },
+ "capabilities": [
+  "data.array",
+  "draw.shapes",
+  "text.dynamic",
+  "a11y.labels"
+ ],
+ "call": {
+  "AllocationBar": {
+   "values": "@alloc",
+   "items": [
+    "Stocks",
+    "Bonds",
+    "Cash"
+   ]
+  }
+ },
+ "pitfalls": [
+  "values is a float array the host can replace; items is fixed when the document is built, so the number of categories can't change at run time. A value of 0 draws no segment and its row reads 0%",
+  "Percents are rounded one by one, so they can add up to 99 or 101: that is normal, or give decimals 1",
+  "DonutChart is for a ring with a total in the middle; this is the shorter, more exact read when the names and percents matter: lengths are easier to compare than angles",
+  "A row's swatch and name are separate from the percent's text, so a screen reader hears 'Stocks' then '62%'"
+ ],
+ "body": {
+  "column": {
+   "modifiers": [
+    "fillMaxWidth",
+    {
+     "spacedBy": 10
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": "@barHeight"
+       },
+       {
+        "clip": {
+         "roundedRect": "@barHeight / 2"
+        }
+       },
+       {
+        "semantics": {
+         "contentDescription": "@label"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "variable": {
+         "name": "W",
+         "value": "componentWidth()"
+        }
+       },
+       {
+        "variable": {
+         "name": "xx",
+         "value": 0,
+         "commit": true
+        }
+       },
+       {
+        "$each": "items",
+        "as": "r",
+        "index": "i",
+        "fields": [
+         "label",
+         "color"
+        ],
+        "do": [
+         {
+          "variable": {
+           "name": "sw",
+           "value": "arrayGet(@values, @i) / @sum * @W",
+           "commit": true
+          }
+         },
+         {
+          "variable": {
+           "name": "xe",
+           "value": "@xx + @sw - 2 * step(@W - @xx - @sw, 0.5)",
+           "commit": true
+          }
+         },
+         {
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "drawRect": {
+             "left": "@xx",
+             "top": 0,
+             "right": "@xe",
+             "bottom": "@barHeight"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.background"
+              },
+              {
+               "alpha": "1 - ifElse(1, 0, step(fract(@i / 2), 0.25))"
+              }
+             ]
+            }
+           },
+           {
+            "drawRect": {
+             "left": "@xx + 1.5",
+             "top": 1.5,
+             "right": "max(@xx + 1.5, @xe - 1.5)",
+             "bottom": "@barHeight - 1.5"
+            }
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": {
+                "$if": "theme.mono",
+                "then": "@colors.onSurface",
+                "else": {
+                 "$if": "r_color",
+                 "then": "@r_color",
+                 "else": {
+                  "$if": "i == '0'",
+                  "then": "@colors.primary",
+                  "else": {
+                   "$if": "i == '1'",
+                   "then": "@colors.secondary",
+                   "else": {
+                    "$if": "i == '2'",
+                    "then": "@colors.success",
+                    "else": {
+                     "$if": "i == '3'",
+                     "then": "@colors.warning",
+                     "else": {
+                      "$if": "i == '4'",
+                      "then": "@colors.error",
+                      "else": {
+                       "$if": "i == '5'",
+                       "then": "@colors.highlight",
+                       "else": "@colors.muted"
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "drawRect": {
+             "left": "@xx",
+             "top": 0,
+             "right": "@xe",
+             "bottom": "@barHeight"
+            }
+           }
+          ]
+         },
+         {
+          "variable": {
+           "name": "xx",
+           "value": "@xx + @sw",
+           "commit": true
+          }
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "$if": "legend == 'rows'",
+     "then": {
+      "column": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "spacedBy": 6
+        }
+       ],
+       "children": [
+        {
+         "$each": "items",
+         "as": "r",
+         "index": "i",
+         "fields": [
+          "label",
+          "color"
+         ],
+         "do": {
+          "row": {
+           "verticalAlignment": "center",
+           "modifiers": [
+            "fillMaxWidth"
+           ],
+           "children": [
+            {
+             "canvas": {
+              "modifiers": [
+               {
+                "size": [
+                 10,
+                 10
+                ]
+               }
+              ],
+              "commands": [
+               {
+                "$if": "theme.mono",
+                "then": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.onSurface"
+                    },
+                    {
+                     "style": "fill"
+                    },
+                    {
+                     "alpha": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawRoundRect": {
+                   "left": 0,
+                   "top": 0,
+                   "right": 10,
+                   "bottom": 10,
+                   "rx": 3,
+                   "ry": 3
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.background"
+                    },
+                    {
+                     "alpha": "1 - ifElse(1, 0, step(fract(@i / 2), 0.25))"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawRoundRect": {
+                   "left": 1.5,
+                   "top": 1.5,
+                   "right": 8.5,
+                   "bottom": 8.5,
+                   "rx": 1.5,
+                   "ry": 1.5
+                  }
+                 }
+                ],
+                "else": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": {
+                      "$if": "theme.mono",
+                      "then": "@colors.onSurface",
+                      "else": {
+                       "$if": "r_color",
+                       "then": "@r_color",
+                       "else": {
+                        "$if": "i == '0'",
+                        "then": "@colors.primary",
+                        "else": {
+                         "$if": "i == '1'",
+                         "then": "@colors.secondary",
+                         "else": {
+                          "$if": "i == '2'",
+                          "then": "@colors.success",
+                          "else": {
+                           "$if": "i == '3'",
+                           "then": "@colors.warning",
+                           "else": {
+                            "$if": "i == '4'",
+                            "then": "@colors.error",
+                            "else": {
+                             "$if": "i == '5'",
+                             "then": "@colors.highlight",
+                             "else": "@colors.muted"
+                            }
+                           }
+                          }
+                         }
+                        }
+                       }
+                      }
+                     }
+                    },
+                    {
+                     "style": "fill"
+                    },
+                    {
+                     "alpha": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawRoundRect": {
+                   "left": 0,
+                   "top": 0,
+                   "right": 10,
+                   "bottom": 10,
+                   "rx": 3,
+                   "ry": 3
+                  }
+                 }
+                ]
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": "@r_label",
+              "fontSize": "@fontSize",
+              "color": "@colors.onSurface",
+              "maxLines": 1,
+              "overflow": "ellipsis",
+              "modifiers": [
+               {
+                "weight": 1
+               },
+               {
+                "padding": {
+                 "start": 8,
+                 "end": 8
+                }
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "round(arrayGet(@values, @i) / @sum * 100 * @p) / @p",
+                "whole": 5,
+                "decimal": "@decimals",
+                "flags": 7
+               },
+               "id2": "%"
+              },
+              "fontSize": "@fontSize",
+              "fontWeight": 500,
+              "color": "@colors.onSurface",
+              "maxLines": 1
+             }
+            }
+           ]
+          }
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

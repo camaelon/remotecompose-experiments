@@ -1,0 +1,502 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Stock detail: symbol, latest price, change since the previous close, an intraday chart with previous close as baseline, and open, high, low and volume"
+ },
+ "components": {
+  "Stat": {
+   "summary": "A caption and a slot on one line",
+   "params": {
+    "caption": {
+     "type": "string",
+     "required": true,
+     "doc": "Name"
+    },
+    "price": {
+     "type": "float",
+     "doc": "A price printed with cents, rounded"
+    }
+   },
+   "slots": {
+    "content": {
+     "doc": "The value"
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "weight": 1
+      },
+      {
+       "height": 30
+      }
+     ],
+     "children": [
+      {
+       "text": {
+        "value": "@caption",
+        "fontSize": 12,
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ]
+       }
+      },
+      {
+       "$if": "price",
+       "then": {
+        "text": {
+         "value": {
+          "type": "textFromFloat",
+          "value": "round(@price * 100) / 100",
+          "whole": 7,
+          "decimal": 2,
+          "flags": 23
+         },
+         "fontSize": 13,
+         "fontWeight": 500,
+         "color": "@colors.onSurface",
+         "maxLines": 1
+        }
+       }
+      },
+      {
+       "$slot": "content"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "floatArrays": {
+   "prices": {
+    "value": [
+     188.4,
+     188.78,
+     189.38,
+     189.11,
+     188.8,
+     189.01,
+     189.79,
+     190.02,
+     189.6,
+     189.34,
+     189.38,
+     189.83,
+     189.89,
+     189.8,
+     189.77,
+     189.9,
+     189.66,
+     189.72,
+     189.89,
+     190.63,
+     190.67,
+     191.13,
+     190.77,
+     191.19,
+     191.32,
+     191.16,
+     191.21,
+     191.64,
+     191.57,
+     192.06,
+     192.75,
+     193.4,
+     194.05,
+     193.51,
+     193.63,
+     193.33,
+     193.7,
+     193.71,
+     193.79,
+     193.96,
+     193.7,
+     193.72,
+     193.41,
+     194.25,
+     194.05,
+     194.04,
+     193.3,
+     192.68,
+     192.32,
+     192.63,
+     192.93,
+     193.03,
+     192.75,
+     193.5,
+     193.06,
+     192.69,
+     192.88,
+     192.45
+    ],
+    "export": true
+   }
+  },
+  "variables": {
+   "prev": {
+    "value": 187.65,
+    "export": true
+   },
+   "volume": {
+    "value": 38420000,
+    "export": true
+   },
+   "n": "arrayLength(@prices)",
+   "price": "arrayGet(@prices, @n - 1)",
+   "chg": "@price - @prev",
+   "pct": "ifElse(0, @chg / @prev * 100, step(abs(@prev), 0.000001))",
+   "first": "arrayGet(@prices, 0)",
+   "high": "arrayMax(@prices)",
+   "low": "arrayMin(@prices)",
+   "W": "windowWidth()",
+   "H": "windowHeight()",
+   "pad": "ifElse(12, 16, step(min(@W, @H), 300))",
+   "iw": "@W - 2 * @pad",
+   "ih": "@H - 2 * @pad",
+   "wide": "step(@W, @H * 1.25)",
+   "hasStats": "step(@H, 239)",
+   "hasName": "step(@W, 279)",
+   "hasToday": "step(@W, 279) * step(@H, 239)",
+   "fs": "clamp(22, 40, min(@W * 0.115, @H * 0.14))",
+   "heroH": "24 + @fs * 1.25 + 22",
+   "heroW": "ifElse(@iw, max(132, @iw * 0.42), @wide)",
+   "gap": "ifElse(8, 16, @hasStats)",
+   "statsH": "@hasStats * 72",
+   "cLeft": "@wide * (@heroW + @gap)",
+   "cTop": "(1 - @wide) * (@heroH + 8)",
+   "cW": "@iw - @cLeft",
+   "cH": "@ih - @cTop - (1 - @wide) * (@statsH + @hasStats * 12)",
+   "sTop": "ifElse(@cTop + @cH + 12, @heroH + 16, @wide)",
+   "sW": "ifElse(@iw, @heroW, @wide)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "symbol",
+    "vtype": "string",
+    "value": "AAPL",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "company",
+    "vtype": "string",
+    "value": "Apple Inc.",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "horizontalAlignment": "center",
+    "verticalAlignment": "center",
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.surface"
+     }
+    ],
+    "children": [
+     {
+      "box": {
+       "modifiers": [
+        {
+         "width": "@iw"
+        },
+        {
+         "height": "@ih"
+        }
+       ],
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           {
+            "width": "@heroW"
+           }
+          ],
+          "children": [
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 24
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "@symbol",
+                "fontSize": 14,
+                "fontWeight": 700,
+                "color": "@colors.onSurface",
+                "maxLines": 1
+               }
+              },
+              {
+               "text": {
+                "value": "@company",
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "modifiers": [
+                 {
+                  "visibility": "@hasName"
+                 },
+                 {
+                  "padding": {
+                   "start": 8
+                  }
+                 },
+                 {
+                  "weight": 1
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "CompactNumber": {
+             "value": "@price",
+             "prefix": "$",
+             "decimals": 2,
+             "fontSize": "@fs",
+             "fontWeight": 600
+            }
+           },
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 22
+              }
+             ],
+             "children": [
+              {
+               "Delta": {
+                "value": "@pct",
+                "amount": "@chg",
+                "prefix": "$",
+                "fontSize": 13
+               }
+              },
+              {
+               "text": {
+                "value": "today",
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "visibility": "@hasToday"
+                 },
+                 {
+                  "padding": {
+                   "start": 6
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": "@cTop"
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": "@cH"
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@cLeft"
+                 },
+                 "fillMaxHeight"
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@cW"
+                 },
+                 {
+                  "height": "@cH"
+                 }
+                ],
+                "children": [
+                 {
+                  "PriceChart": {
+                   "values": "@prices",
+                   "baseline": "@prev",
+                   "points": 78,
+                   "fill": true,
+                   "xLabels": [
+                    "9:30",
+                    "11:00",
+                    "12:30",
+                    "2:00",
+                    "4:00"
+                   ],
+                   "label": "Today's price"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "visibility": "@hasStats"
+           },
+           {
+            "width": "@sW"
+           },
+           "fillMaxHeight"
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": "@sTop"
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "Stat": {
+                "caption": "Open",
+                "price": "@first"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 16
+                 },
+                 {
+                  "height": 1
+                 }
+                ]
+               }
+              },
+              {
+               "Stat": {
+                "caption": "High",
+                "price": "@high"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "Stat": {
+                "caption": "Low",
+                "price": "@low"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 16
+                 },
+                 {
+                  "height": 1
+                 }
+                ]
+               }
+              },
+              {
+               "Stat": {
+                "caption": "Volume",
+                "children": [
+                 {
+                  "CompactNumber": {
+                   "value": "@volume",
+                   "fontSize": 13,
+                   "fontWeight": 500
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

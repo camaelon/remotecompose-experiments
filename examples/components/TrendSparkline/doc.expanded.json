@@ -1,0 +1,1449 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 170,
+  "profiles": 513,
+  "contentDescription": "Small trends coloured by direction"
+ },
+ "resources": {
+  "floatArrays": {
+   "up": {
+    "value": [
+     101,
+     102,
+     101.5,
+     103,
+     104,
+     103.5,
+     105
+    ],
+    "export": true
+   },
+   "down": {
+    "value": [
+     105,
+     104,
+     104.5,
+     103,
+     101
+    ],
+    "export": true
+   },
+   "flat": {
+    "value": [
+     50,
+     50,
+     50,
+     50
+    ],
+    "export": true
+   }
+  },
+  "colors": {
+   "error": {
+    "light": "#FFC62828",
+    "dark": "#FFEF5350"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "success": {
+    "light": "#FF2E7D32",
+    "dark": "#FF66BB6A"
+   },
+   "surface": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF1C2433"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.surface"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 12
+    }
+   ],
+   "children": [
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Rising",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            64,
+            28
+           ]
+          },
+          {
+           "semantics": {
+            "contentDescription": "Trend"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "trendsparkline1_n",
+            "value": "arrayLength(@up)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_li",
+            "value": "max(@trendsparkline1_n - 1, 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_last",
+            "value": "arrayGet(@up, @trendsparkline1_n - 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_hi",
+            "value": "arrayMax(@up)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_lo",
+            "value": "arrayMin(@up)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_mid",
+            "value": "(@trendsparkline1_hi + @trendsparkline1_lo) / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_rng",
+            "value": "max(@trendsparkline1_hi - @trendsparkline1_lo, max(0.005 * abs(@trendsparkline1_mid), 0.000001))"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_ref",
+            "value": "arrayGet(@up, 0)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_up",
+            "value": "step(@trendsparkline1_last, @trendsparkline1_ref)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_dn",
+            "value": "step(@trendsparkline1_ref, @trendsparkline1_last)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_fl",
+            "value": "1 - @trendsparkline1_up - @trendsparkline1_dn"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_W",
+            "value": "componentWidth()"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_H",
+            "value": "componentHeight()"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_cy",
+            "value": "@trendsparkline1_H / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_ky",
+            "value": "(@trendsparkline1_H - 8) / @trendsparkline1_rng"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline1_kx",
+            "value": "(@trendsparkline1_W - 8) / @trendsparkline1_li"
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "trendsparkline1_sl",
+            "expressionX": "4 + u * @trendsparkline1_kx",
+            "expressionY": "@trendsparkline1_cy - (arrayGet(@up, round(u)) - @trendsparkline1_mid) * @trendsparkline1_ky",
+            "start": 0,
+            "end": "@trendsparkline1_n - 1",
+            "count": "@trendsparkline1_n",
+            "flags": 4
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "trendsparkline1_su",
+            "expressionX": "4 + clamp(0, @trendsparkline1_li, u) * @trendsparkline1_kx",
+            "expressionY": "ifElse(@trendsparkline1_cy - (arrayGet(@up, round(clamp(0, @trendsparkline1_li, u))) - @trendsparkline1_mid) * @trendsparkline1_ky, @trendsparkline1_H, step(abs(u - @trendsparkline1_li / 2), @trendsparkline1_li / 2 + 0.5))",
+            "start": -1,
+            "end": "@trendsparkline1_n",
+            "count": "@trendsparkline1_n + 2",
+            "flags": 4
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "@trendsparkline1_up * 0.16"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline1_su"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "@trendsparkline1_dn * 0.16"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline1_su"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline1_up"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline1_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline1_W - 4",
+            "cy": "@trendsparkline1_cy - (@trendsparkline1_last - @trendsparkline1_mid) * @trendsparkline1_ky",
+            "radius": 2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline1_dn"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline1_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline1_W - 4",
+            "cy": "@trendsparkline1_cy - (@trendsparkline1_last - @trendsparkline1_mid) * @trendsparkline1_ky",
+            "radius": 2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline1_fl"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline1_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline1_W - 4",
+            "cy": "@trendsparkline1_cy - (@trendsparkline1_last - @trendsparkline1_mid) * @trendsparkline1_ky",
+            "radius": 2
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Falling",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            64,
+            28
+           ]
+          },
+          {
+           "semantics": {
+            "contentDescription": "Trend"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "trendsparkline2_n",
+            "value": "arrayLength(@down)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_li",
+            "value": "max(@trendsparkline2_n - 1, 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_last",
+            "value": "arrayGet(@down, @trendsparkline2_n - 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_hi",
+            "value": "arrayMax(@down)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_lo",
+            "value": "arrayMin(@down)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_mid",
+            "value": "(@trendsparkline2_hi + @trendsparkline2_lo) / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_rng",
+            "value": "max(@trendsparkline2_hi - @trendsparkline2_lo, max(0.005 * abs(@trendsparkline2_mid), 0.000001))"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_ref",
+            "value": "arrayGet(@down, 0)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_up",
+            "value": "step(@trendsparkline2_last, @trendsparkline2_ref)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_dn",
+            "value": "step(@trendsparkline2_ref, @trendsparkline2_last)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_fl",
+            "value": "1 - @trendsparkline2_up - @trendsparkline2_dn"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_W",
+            "value": "componentWidth()"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_H",
+            "value": "componentHeight()"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_cy",
+            "value": "@trendsparkline2_H / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_ky",
+            "value": "(@trendsparkline2_H - 8) / @trendsparkline2_rng"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline2_kx",
+            "value": "(@trendsparkline2_W - 8) / @trendsparkline2_li"
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "trendsparkline2_sl",
+            "expressionX": "4 + u * @trendsparkline2_kx",
+            "expressionY": "@trendsparkline2_cy - (arrayGet(@down, round(u)) - @trendsparkline2_mid) * @trendsparkline2_ky",
+            "start": 0,
+            "end": "@trendsparkline2_n - 1",
+            "count": "@trendsparkline2_n",
+            "flags": 4
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "trendsparkline2_su",
+            "expressionX": "4 + clamp(0, @trendsparkline2_li, u) * @trendsparkline2_kx",
+            "expressionY": "ifElse(@trendsparkline2_cy - (arrayGet(@down, round(clamp(0, @trendsparkline2_li, u))) - @trendsparkline2_mid) * @trendsparkline2_ky, @trendsparkline2_H, step(abs(u - @trendsparkline2_li / 2), @trendsparkline2_li / 2 + 0.5))",
+            "start": -1,
+            "end": "@trendsparkline2_n",
+            "count": "@trendsparkline2_n + 2",
+            "flags": 4
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "@trendsparkline2_up * 0.16"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline2_su"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "@trendsparkline2_dn * 0.16"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline2_su"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline2_up"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline2_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline2_W - 4",
+            "cy": "@trendsparkline2_cy - (@trendsparkline2_last - @trendsparkline2_mid) * @trendsparkline2_ky",
+            "radius": 2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline2_dn"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline2_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline2_W - 4",
+            "cy": "@trendsparkline2_cy - (@trendsparkline2_last - @trendsparkline2_mid) * @trendsparkline2_ky",
+            "radius": 2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline2_fl"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline2_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline2_W - 4",
+            "cy": "@trendsparkline2_cy - (@trendsparkline2_last - @trendsparkline2_mid) * @trendsparkline2_ky",
+            "radius": 2
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Flat",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            64,
+            28
+           ]
+          },
+          {
+           "semantics": {
+            "contentDescription": "Trend"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "trendsparkline3_n",
+            "value": "arrayLength(@flat)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_li",
+            "value": "max(@trendsparkline3_n - 1, 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_last",
+            "value": "arrayGet(@flat, @trendsparkline3_n - 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_hi",
+            "value": "arrayMax(@flat)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_lo",
+            "value": "arrayMin(@flat)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_mid",
+            "value": "(@trendsparkline3_hi + @trendsparkline3_lo) / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_rng",
+            "value": "max(@trendsparkline3_hi - @trendsparkline3_lo, max(0.005 * abs(@trendsparkline3_mid), 0.000001))"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_ref",
+            "value": "arrayGet(@flat, 0)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_up",
+            "value": "step(@trendsparkline3_last, @trendsparkline3_ref)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_dn",
+            "value": "step(@trendsparkline3_ref, @trendsparkline3_last)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_fl",
+            "value": "1 - @trendsparkline3_up - @trendsparkline3_dn"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_W",
+            "value": "componentWidth()"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_H",
+            "value": "componentHeight()"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_cy",
+            "value": "@trendsparkline3_H / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_ky",
+            "value": "(@trendsparkline3_H - 8) / @trendsparkline3_rng"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline3_kx",
+            "value": "(@trendsparkline3_W - 8) / @trendsparkline3_li"
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "trendsparkline3_sl",
+            "expressionX": "4 + u * @trendsparkline3_kx",
+            "expressionY": "@trendsparkline3_cy - (arrayGet(@flat, round(u)) - @trendsparkline3_mid) * @trendsparkline3_ky",
+            "start": 0,
+            "end": "@trendsparkline3_n - 1",
+            "count": "@trendsparkline3_n",
+            "flags": 4
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "trendsparkline3_su",
+            "expressionX": "4 + clamp(0, @trendsparkline3_li, u) * @trendsparkline3_kx",
+            "expressionY": "ifElse(@trendsparkline3_cy - (arrayGet(@flat, round(clamp(0, @trendsparkline3_li, u))) - @trendsparkline3_mid) * @trendsparkline3_ky, @trendsparkline3_H, step(abs(u - @trendsparkline3_li / 2), @trendsparkline3_li / 2 + 0.5))",
+            "start": -1,
+            "end": "@trendsparkline3_n",
+            "count": "@trendsparkline3_n + 2",
+            "flags": 4
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "@trendsparkline3_up * 0.16"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline3_su"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "@trendsparkline3_dn * 0.16"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline3_su"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline3_up"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline3_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline3_W - 4",
+            "cy": "@trendsparkline3_cy - (@trendsparkline3_last - @trendsparkline3_mid) * @trendsparkline3_ky",
+            "radius": 2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline3_dn"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline3_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline3_W - 4",
+            "cy": "@trendsparkline3_cy - (@trendsparkline3_last - @trendsparkline3_mid) * @trendsparkline3_ky",
+            "radius": 2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline3_fl"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline3_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline3_W - 4",
+            "cy": "@trendsparkline3_cy - (@trendsparkline3_last - @trendsparkline3_mid) * @trendsparkline3_ky",
+            "radius": 2
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Against a baseline",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            96,
+            28
+           ]
+          },
+          {
+           "semantics": {
+            "contentDescription": "Trend"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "trendsparkline4_n",
+            "value": "arrayLength(@up)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_li",
+            "value": "max(@trendsparkline4_n - 1, 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_last",
+            "value": "arrayGet(@up, @trendsparkline4_n - 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_hi",
+            "value": "max(arrayMax(@up), 103)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_lo",
+            "value": "min(arrayMin(@up), 103)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_mid",
+            "value": "(@trendsparkline4_hi + @trendsparkline4_lo) / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_rng",
+            "value": "max(@trendsparkline4_hi - @trendsparkline4_lo, max(0.005 * abs(@trendsparkline4_mid), 0.000001))"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_up",
+            "value": "step(@trendsparkline4_last, 103)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_dn",
+            "value": "step(103, @trendsparkline4_last)"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_fl",
+            "value": "1 - @trendsparkline4_up - @trendsparkline4_dn"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_W",
+            "value": "componentWidth()"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_H",
+            "value": "componentHeight()"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_cy",
+            "value": "@trendsparkline4_H / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_ky",
+            "value": "(@trendsparkline4_H - 8) / @trendsparkline4_rng"
+           }
+          },
+          {
+           "variable": {
+            "name": "trendsparkline4_kx",
+            "value": "(@trendsparkline4_W - 8) / @trendsparkline4_li"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "floor(@trendsparkline4_W / 5)",
+            "commands": [
+             {
+              "drawLine": {
+               "x1": "i * 5",
+               "y1": "@trendsparkline4_cy - (103 - @trendsparkline4_mid) * @trendsparkline4_ky",
+               "x2": "i * 5 + 2.5",
+               "y2": "@trendsparkline4_cy - (103 - @trendsparkline4_mid) * @trendsparkline4_ky"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "trendsparkline4_sl",
+            "expressionX": "4 + u * @trendsparkline4_kx",
+            "expressionY": "@trendsparkline4_cy - (arrayGet(@up, round(u)) - @trendsparkline4_mid) * @trendsparkline4_ky",
+            "start": 0,
+            "end": "@trendsparkline4_n - 1",
+            "count": "@trendsparkline4_n",
+            "flags": 4
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "trendsparkline4_su",
+            "expressionX": "4 + clamp(0, @trendsparkline4_li, u) * @trendsparkline4_kx",
+            "expressionY": "ifElse(@trendsparkline4_cy - (arrayGet(@up, round(clamp(0, @trendsparkline4_li, u))) - @trendsparkline4_mid) * @trendsparkline4_ky, @trendsparkline4_H, step(abs(u - @trendsparkline4_li / 2), @trendsparkline4_li / 2 + 0.5))",
+            "start": -1,
+            "end": "@trendsparkline4_n",
+            "count": "@trendsparkline4_n + 2",
+            "flags": 4
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "@trendsparkline4_up * 0.16"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline4_su"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "@trendsparkline4_dn * 0.16"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline4_su"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline4_up"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline4_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline4_W - 4",
+            "cy": "@trendsparkline4_cy - (@trendsparkline4_last - @trendsparkline4_mid) * @trendsparkline4_ky",
+            "radius": 2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline4_dn"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline4_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline4_W - 4",
+            "cy": "@trendsparkline4_cy - (@trendsparkline4_last - @trendsparkline4_mid) * @trendsparkline4_ky",
+            "radius": 2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": "@trendsparkline4_fl"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "trendsparkline4_sl"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@trendsparkline4_W - 4",
+            "cy": "@trendsparkline4_cy - (@trendsparkline4_last - @trendsparkline4_mid) * @trendsparkline4_ky",
+            "radius": 2
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

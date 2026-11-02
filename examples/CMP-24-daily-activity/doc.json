@@ -1,0 +1,451 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Daily activity: move, exercise and stand rings, steps against a goal, and last night's sleep stages. It rearranges from phone to landscape, widget and watch."
+ },
+ "resources": {
+  "variables": {
+   "move": {
+    "value": 420,
+    "export": true
+   },
+   "moveGoal": {
+    "value": 600,
+    "export": true
+   },
+   "exercise": {
+    "value": 24,
+    "export": true
+   },
+   "exerciseGoal": {
+    "value": 30,
+    "export": true
+   },
+   "stand": {
+    "value": 7,
+    "export": true
+   },
+   "standGoal": {
+    "value": 12,
+    "export": true
+   },
+   "steps": {
+    "value": 8432,
+    "export": true
+   },
+   "stepsGoal": {
+    "value": 10000,
+    "export": true
+   },
+   "awakeMin": {
+    "value": 24,
+    "export": true
+   },
+   "remMin": {
+    "value": 95,
+    "export": true
+   },
+   "lightMin": {
+    "value": 232,
+    "export": true
+   },
+   "deepMin": {
+    "value": 79,
+    "export": true
+   },
+   "W": "windowWidth()",
+   "H": "windowHeight()",
+   "pad": "ifElse(ifElse(8, 12, step(min(@W, @H), 199)), 16, step(min(@W, @H), 300))",
+   "iw": "@W - 2 * @pad",
+   "ih": "@H - 2 * @pad",
+   "solo": "(1 - step(max(@W, @H), min(@W, @H) * 1.25)) * (1 - step(min(@W, @H), 240))",
+   "hasP": "1 - @solo",
+   "wide": "step(@W, @H * 1.25) * @hasP",
+   "hasT": "@hasP * step(@H, 300)",
+   "tH": "@hasT * 36",
+   "bodyH": "@ih - @tH",
+   "g": "ifElse(16, 10, step(320, @H))",
+   "rw": "ifElse(@iw, (@iw - @g) * ifElse(0.5, 0.42, step(240, @H)), @wide)",
+   "pH": "@hasP * ifElse(max(130, @bodyH * 0.42), @bodyH, @wide)",
+   "pw": "ifElse(@iw, @iw - @rw - @g, @wide)",
+   "rh": "ifElse(ifElse(@ih, @bodyH - @pH - @g, @hasP), @bodyH, @wide)",
+   "px": "@wide * (@rw + @g)",
+   "py": "(1 - @wide) * (@rh + @g) * @hasP",
+   "sleepH": "max(0, @pH - 33 - 12)",
+   "hasSH": "step(@sleepH, 118)",
+   "shH": "@hasSH * 24",
+   "chartH": "@sleepH - @shH",
+   "hasSleep": "step(@chartH, 40)"
+  },
+  "floatArrays": {
+   "night": {
+    "value": [
+     0,
+     2,
+     2,
+     3,
+     3,
+     3,
+     2,
+     2,
+     1,
+     1,
+     2,
+     3,
+     3,
+     2,
+     2,
+     1,
+     1,
+     0,
+     2,
+     2,
+     3,
+     2,
+     1,
+     1,
+     1,
+     2,
+     2,
+     0,
+     2,
+     1,
+     1,
+     0
+    ],
+    "export": true
+   }
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "day",
+    "vtype": "string",
+    "value": "Today",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "date",
+    "vtype": "string",
+    "value": "Sat 1 Nov",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "sleepTotal",
+    "vtype": "string",
+    "value": "7h 10m",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "bedtime",
+    "vtype": "string",
+    "value": "23:10",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "wake",
+    "vtype": "string",
+    "value": "06:20",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "horizontalAlignment": "center",
+    "verticalAlignment": "center",
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.surface"
+     }
+    ],
+    "children": [
+     {
+      "column": {
+       "modifiers": [
+        {
+         "width": "@iw"
+        },
+        {
+         "height": "@ih"
+        }
+       ],
+       "children": [
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": "@tH"
+           },
+           {
+            "visibility": "@hasT"
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              },
+              {
+               "padding": {
+                "end": 8
+               }
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "@day",
+                "fontSize": "@theme.text_lg",
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "overflow": "ellipsis"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "@date",
+             "fontSize": "@theme.text_sm",
+             "color": "@colors.muted",
+             "maxLines": 1
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": "@bodyH"
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@rw"
+              },
+              {
+               "height": "@rh"
+              }
+             ],
+             "children": [
+              {
+               "ActivityRings": {
+                "label": "Today",
+                "centerValue": "100 * @move / max(@moveGoal, 1)",
+                "center": "%",
+                "caption": "Move",
+                "rings": [
+                 {
+                  "label": "Move",
+                  "value": "@move",
+                  "target": "@moveGoal",
+                  "unit": "kcal"
+                 },
+                 {
+                  "label": "Exercise",
+                  "value": "@exercise",
+                  "target": "@exerciseGoal",
+                  "unit": "min"
+                 },
+                 {
+                  "label": "Stand",
+                  "value": "@stand",
+                  "target": "@standGoal",
+                  "unit": "h"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              {
+               "visibility": "@hasP"
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "height": "@py"
+                 },
+                 {
+                  "width": 1
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": "@px"
+                    },
+                    {
+                     "height": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "column": {
+                   "modifiers": [
+                    {
+                     "width": "@pw"
+                    },
+                    {
+                     "height": "@pH"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "GoalBar": {
+                      "value": "@steps",
+                      "target": "@stepsGoal",
+                      "label": "Steps"
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "height": 12
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "row": {
+                      "verticalAlignment": "center",
+                      "modifiers": [
+                       "fillMaxWidth",
+                       {
+                        "height": "@shH"
+                       },
+                       {
+                        "visibility": "@hasSH"
+                       }
+                      ],
+                      "children": [
+                       {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "weight": 1
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "Sleep",
+                            "fontSize": "@theme.text_md",
+                            "color": "@colors.onSurface",
+                            "maxLines": 1
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": "@sleepTotal",
+                         "fontSize": "@theme.text_md",
+                         "color": "@colors.muted",
+                         "maxLines": 1
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       "fillMaxWidth",
+                       {
+                        "height": "@chartH"
+                       },
+                       {
+                        "visibility": "@hasSleep"
+                       }
+                      ],
+                      "children": [
+                       {
+                        "SleepStages": {
+                         "stages": "@night",
+                         "start": "@bedtime",
+                         "end": "@wake",
+                         "label": "Sleep",
+                         "lanes": [
+                          {
+                           "label": "Awake",
+                           "minutes": "@awakeMin"
+                          },
+                          {
+                           "label": "REM",
+                           "minutes": "@remMin"
+                          },
+                          {
+                           "label": "Light",
+                           "minutes": "@lightMin"
+                          },
+                          {
+                           "label": "Deep",
+                           "minutes": "@deepMin"
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

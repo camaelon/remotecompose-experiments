@@ -1,0 +1,3090 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Stock detail: symbol, latest price, change since the previous close, an intraday chart with previous close as baseline, and open, high, low and volume"
+ },
+ "resources": {
+  "floatArrays": {
+   "prices": {
+    "value": [
+     188.4,
+     188.78,
+     189.38,
+     189.11,
+     188.8,
+     189.01,
+     189.79,
+     190.02,
+     189.6,
+     189.34,
+     189.38,
+     189.83,
+     189.89,
+     189.8,
+     189.77,
+     189.9,
+     189.66,
+     189.72,
+     189.89,
+     190.63,
+     190.67,
+     191.13,
+     190.77,
+     191.19,
+     191.32,
+     191.16,
+     191.21,
+     191.64,
+     191.57,
+     192.06,
+     192.75,
+     193.4,
+     194.05,
+     193.51,
+     193.63,
+     193.33,
+     193.7,
+     193.71,
+     193.79,
+     193.96,
+     193.7,
+     193.72,
+     193.41,
+     194.25,
+     194.05,
+     194.04,
+     193.3,
+     192.68,
+     192.32,
+     192.63,
+     192.93,
+     193.03,
+     192.75,
+     193.5,
+     193.06,
+     192.69,
+     192.88,
+     192.45
+    ],
+    "export": true
+   }
+  },
+  "variables": {
+   "prev": {
+    "value": 187.65,
+    "export": true
+   },
+   "volume": {
+    "value": 38420000,
+    "export": true
+   },
+   "n": "arrayLength(@prices)",
+   "price": "arrayGet(@prices, @n - 1)",
+   "chg": "@price - @prev",
+   "pct": "ifElse(0, @chg / @prev * 100, step(abs(@prev), 0.000001))",
+   "first": "arrayGet(@prices, 0)",
+   "high": "arrayMax(@prices)",
+   "low": "arrayMin(@prices)",
+   "W": "windowWidth()",
+   "H": "windowHeight()",
+   "pad": "ifElse(12, 16, step(min(@W, @H), 300))",
+   "iw": "@W - 2 * @pad",
+   "ih": "@H - 2 * @pad",
+   "wide": "step(@W, @H * 1.25)",
+   "hasStats": "step(@H, 239)",
+   "hasName": "step(@W, 279)",
+   "hasToday": "step(@W, 279) * step(@H, 239)",
+   "fs": "clamp(22, 40, min(@W * 0.115, @H * 0.14))",
+   "heroH": "24 + @fs * 1.25 + 22",
+   "heroW": "ifElse(@iw, max(132, @iw * 0.42), @wide)",
+   "gap": "ifElse(8, 16, @hasStats)",
+   "statsH": "@hasStats * 72",
+   "cLeft": "@wide * (@heroW + @gap)",
+   "cTop": "(1 - @wide) * (@heroH + 8)",
+   "cW": "@iw - @cLeft",
+   "cH": "@ih - @cTop - (1 - @wide) * (@statsH + @hasStats * 12)",
+   "sTop": "ifElse(@cTop + @cH + 12, @heroH + 16, @wide)",
+   "sW": "ifElse(@iw, @heroW, @wide)",
+   "compactnumber1_a": "abs(@price)",
+   "compactnumber1_t": "clamp(0, 4, floor(log(max(@compactnumber1_a * 1.00052, 1)) / 3))",
+   "compactnumber1_s": "@compactnumber1_a / pow(1000, @compactnumber1_t)",
+   "compactnumber1_q": "pow(10, clamp(0, 6, 3 - 1 - floor(log(max(@compactnumber1_s, 0.000001)))))",
+   "compactnumber1_m": "round(@compactnumber1_s * @compactnumber1_q) * step(@compactnumber1_a, 0.000999)",
+   "compactnumber1_r": "@compactnumber1_m / @compactnumber1_q",
+   "compactnumber1_dd": "step(@compactnumber1_m, 0.5) * max(0, log(@compactnumber1_q) - (1 - step(@compactnumber1_m % 10, 0.5)) - (1 - step(@compactnumber1_m % 100, 0.5)) - (1 - step(@compactnumber1_m % 1000, 0.5)))",
+   "compactnumber1_ti": "max(@compactnumber1_t - 1, 0)",
+   "compactnumber1_full": "(1 - step(@compactnumber1_a, 1000000 - 0.5)) * max(step(@compactnumber1_a, 0.0999), 1 - step(@compactnumber1_a, 0))",
+   "compactnumber1_shortv": "1 - @compactnumber1_full",
+   "compactnumber1_fr": "round(@compactnumber1_a * 100) / 100",
+   "compactnumber1_neg": "step(0 - @price, 0) * step(max(@compactnumber1_r, @compactnumber1_fr), 0)",
+   "delta1_mag": "round(abs(@pct) * 100) / 100",
+   "delta1_amt": "round(abs(@chg) * 100) / 100",
+   "delta1_up": "step(@pct, 0.004999)",
+   "delta1_dn": "step(0 - @pct, 0.004999)",
+   "delta1_fl": "1 - @delta1_up - @delta1_dn",
+   "compactnumber2_a": "abs(@volume)",
+   "compactnumber2_t": "clamp(0, 4, floor(log(max(@compactnumber2_a * 1.00052, 1)) / 3))",
+   "compactnumber2_s": "@compactnumber2_a / pow(1000, @compactnumber2_t)",
+   "compactnumber2_q": "pow(10, clamp(0, 6, 3 - 1 - floor(log(max(@compactnumber2_s, 0.000001)))))",
+   "compactnumber2_m": "round(@compactnumber2_s * @compactnumber2_q) * step(@compactnumber2_a, 0.000999)",
+   "compactnumber2_r": "@compactnumber2_m / @compactnumber2_q",
+   "compactnumber2_dd": "step(@compactnumber2_m, 0.5) * max(0, log(@compactnumber2_q) - (1 - step(@compactnumber2_m % 10, 0.5)) - (1 - step(@compactnumber2_m % 100, 0.5)) - (1 - step(@compactnumber2_m % 1000, 0.5)))",
+   "compactnumber2_ti": "max(@compactnumber2_t - 1, 0)",
+   "compactnumber2_neg": "step(0 - @volume, 0) * step(@compactnumber2_r, 0)",
+   "vis_1": 1
+  },
+  "colors": {
+   "error": {
+    "light": "#FFC62828",
+    "dark": "#FFEF5350"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onPrimary": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF0B1A2E"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "success": {
+    "light": "#FF2E7D32",
+    "dark": "#FF66BB6A"
+   },
+   "surface": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF1C2433"
+   },
+   "track": {
+    "light": "#FFB0B8C4",
+    "dark": "#FF2A3342"
+   }
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "symbol",
+    "vtype": "string",
+    "value": "AAPL",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "company",
+    "vtype": "string",
+    "value": "Apple Inc.",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "horizontalAlignment": "center",
+    "verticalAlignment": "center",
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.surface"
+     }
+    ],
+    "children": [
+     {
+      "box": {
+       "modifiers": [
+        {
+         "width": "@iw"
+        },
+        {
+         "height": "@ih"
+        }
+       ],
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           {
+            "width": "@heroW"
+           }
+          ],
+          "children": [
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 24
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "@symbol",
+                "fontSize": 14,
+                "fontWeight": 700,
+                "color": "@colors.onSurface",
+                "maxLines": 1
+               }
+              },
+              {
+               "text": {
+                "value": "@company",
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "modifiers": [
+                 {
+                  "visibility": "@hasName"
+                 },
+                 {
+                  "padding": {
+                   "start": 8
+                  }
+                 },
+                 {
+                  "weight": 1
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "children": [
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": [
+                   1,
+                   1
+                  ]
+                 }
+                ],
+                "commands": [
+                 {
+                  "textSubtext": {
+                   "text": "-",
+                   "start": 0,
+                   "len": "@compactnumber1_neg",
+                   "varName": "compactnumber1_sg"
+                  }
+                 },
+                 {
+                  "textSubtext": {
+                   "text": "KMBT",
+                   "start": "@compactnumber1_ti",
+                   "len": "step(@compactnumber1_t, 0.5)",
+                   "varName": "compactnumber1_un"
+                  }
+                 },
+                 {
+                  "textSubtext": {
+                   "text": " thousand million  billion  trillion ",
+                   "start": "@compactnumber1_ti * 9",
+                   "len": "step(@compactnumber1_t, 0.5) * 9",
+                   "varName": "compactnumber1_word"
+                  }
+                 },
+                 {
+                  "textSubtext": {
+                   "text": {
+                    "type": "textFromFloat",
+                    "value": "@compactnumber1_r + step(@compactnumber1_r, 0) * 0.4 / @compactnumber1_q",
+                    "whole": 7,
+                    "decimal": 6,
+                    "flags": 7
+                   },
+                   "start": 0,
+                   "len": "floor(log(max(@compactnumber1_r, 1))) + 1 + @compactnumber1_dd + step(@compactnumber1_dd, 0.5)",
+                   "varName": "compactnumber1_nm"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@compactnumber1_sg",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": "$",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@compactnumber1_fr",
+                    "whole": 9,
+                    "decimal": 2,
+                    "flags": 23
+                   }
+                  }
+                 },
+                 "id2": ""
+                },
+                "fontSize": "@fs",
+                "fontWeight": 600,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "visibility": "@compactnumber1_full"
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": "@compactnumber1_sg",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": "$",
+                    "id2": "@compactnumber1_nm"
+                   }
+                  },
+                  "id2": "@compactnumber1_un"
+                 },
+                 "id2": ""
+                },
+                "fontSize": "@fs",
+                "fontWeight": 600,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "visibility": "@compactnumber1_shortv"
+                 },
+                 {
+                  "semantics": {
+                   "contentDescription": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "@compactnumber1_sg",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": "$",
+                       "id2": "@compactnumber1_nm"
+                      }
+                     },
+                     "id2": "@compactnumber1_word"
+                    },
+                    "id2": ""
+                   }
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 22
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": [
+                      1,
+                      1
+                     ]
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "delta1_ms1",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "$",
+                       "id2": {
+                        "type": "textFromFloat",
+                        "value": "@delta1_amt",
+                        "whole": 9,
+                        "decimal": 2,
+                        "flags": 23
+                       }
+                      }
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "delta1_ms",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@delta1_mag",
+                        "whole": 9,
+                        "decimal": 2,
+                        "flags": 23
+                       },
+                       "id2": "%"
+                      }
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "delta1_sp",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@delta1_mag",
+                        "whole": 9,
+                        "decimal": 2,
+                        "flags": 23
+                       },
+                       "id2": " percent"
+                      }
+                     }
+                    },
+                    {
+                     "pathExpression": {
+                      "id": "delta1_tri",
+                      "expressionX": "u * 8.84 / 2",
+                      "expressionY": "7.28 / 2 + (@delta1_up - @delta1_dn) * (7.28 * abs(u - 1) - 7.28 / 2)",
+                      "start": 0,
+                      "end": 2,
+                      "count": 3,
+                      "flags": 4
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    {
+                     "visibility": "@delta1_up"
+                    },
+                    {
+                     "spacedBy": 3.9
+                    }
+                   ],
+                   "children": [
+                    {
+                     "canvas": {
+                      "modifiers": [
+                       {
+                        "size": [
+                         8.84,
+                         7.28
+                        ]
+                       }
+                      ],
+                      "commands": [
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "color": "@colors.success"
+                          },
+                          {
+                           "style": "fill"
+                          },
+                          {
+                           "alpha": 1
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawPath": {
+                         "path": "delta1_tri"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textMerge",
+                           "id1": "+",
+                           "id2": "@delta1_ms1"
+                          },
+                          "id2": " ("
+                         },
+                         "id2": "+"
+                        },
+                        "id2": "@delta1_ms"
+                       },
+                       "id2": ")"
+                      },
+                      "fontSize": 13,
+                      "fontWeight": 500,
+                      "color": "@colors.success",
+                      "maxLines": 1,
+                      "modifiers": [
+                       {
+                        "semantics": {
+                         "contentDescription": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textMerge",
+                           "id1": {
+                            "type": "textMerge",
+                            "id1": "up ",
+                            "id2": "@delta1_ms1"
+                           },
+                           "id2": ", "
+                          },
+                          "id2": "@delta1_sp"
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    {
+                     "visibility": "@delta1_dn"
+                    },
+                    {
+                     "spacedBy": 3.9
+                    }
+                   ],
+                   "children": [
+                    {
+                     "canvas": {
+                      "modifiers": [
+                       {
+                        "size": [
+                         8.84,
+                         7.28
+                        ]
+                       }
+                      ],
+                      "commands": [
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "color": "@colors.error"
+                          },
+                          {
+                           "style": "fill"
+                          },
+                          {
+                           "alpha": 1
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawPath": {
+                         "path": "delta1_tri"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textMerge",
+                           "id1": "−",
+                           "id2": "@delta1_ms1"
+                          },
+                          "id2": " ("
+                         },
+                         "id2": "−"
+                        },
+                        "id2": "@delta1_ms"
+                       },
+                       "id2": ")"
+                      },
+                      "fontSize": 13,
+                      "fontWeight": 500,
+                      "color": "@colors.error",
+                      "maxLines": 1,
+                      "modifiers": [
+                       {
+                        "semantics": {
+                         "contentDescription": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textMerge",
+                           "id1": {
+                            "type": "textMerge",
+                            "id1": "down ",
+                            "id2": "@delta1_ms1"
+                           },
+                           "id2": ", "
+                          },
+                          "id2": "@delta1_sp"
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    {
+                     "visibility": "@delta1_fl"
+                    },
+                    {
+                     "spacedBy": 3.9
+                    }
+                   ],
+                   "children": [
+                    {
+                     "canvas": {
+                      "modifiers": [
+                       {
+                        "size": [
+                         8.84,
+                         7.28
+                        ]
+                       }
+                      ],
+                      "commands": [
+                       {
+                        "paint": {
+                         "ops": [
+                          {
+                           "color": "@colors.muted"
+                          },
+                          {
+                           "style": "fill"
+                          },
+                          {
+                           "alpha": 1
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "drawRoundRect": {
+                         "left": 0,
+                         "top": 2.64,
+                         "right": 8.84,
+                         "bottom": 4.64,
+                         "rx": 1,
+                         "ry": 1
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textMerge",
+                           "id1": "",
+                           "id2": "@delta1_ms1"
+                          },
+                          "id2": " ("
+                         },
+                         "id2": ""
+                        },
+                        "id2": "@delta1_ms"
+                       },
+                       "id2": ")"
+                      },
+                      "fontSize": 13,
+                      "fontWeight": 500,
+                      "color": "@colors.muted",
+                      "maxLines": 1,
+                      "modifiers": [
+                       {
+                        "semantics": {
+                         "contentDescription": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textMerge",
+                           "id1": {
+                            "type": "textMerge",
+                            "id1": "unchanged, ",
+                            "id2": "@delta1_ms1"
+                           },
+                           "id2": ", "
+                          },
+                          "id2": "@delta1_sp"
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "today",
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "visibility": "@hasToday"
+                 },
+                 {
+                  "padding": {
+                   "start": 6
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": "@cTop"
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": "@cH"
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@cLeft"
+                 },
+                 "fillMaxHeight"
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@cW"
+                 },
+                 {
+                  "height": "@cH"
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    "fillMaxSize",
+                    {
+                     "semantics": {
+                      "contentDescription": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textMerge",
+                           "id1": {
+                            "type": "textMerge",
+                            "id1": "Today's price",
+                            "id2": ", latest "
+                           },
+                           "id2": {
+                            "type": "textFromFloat",
+                            "value": "arrayGet(@prices, arrayLength(@prices) - 1)",
+                            "whole": 9,
+                            "decimal": 2,
+                            "flags": 23
+                           }
+                          },
+                          "id2": ", high "
+                         },
+                         "id2": {
+                          "type": "textFromFloat",
+                          "value": "arrayMax(@prices)",
+                          "whole": 9,
+                          "decimal": 2,
+                          "flags": 23
+                         }
+                        },
+                        "id2": ", low "
+                       },
+                       "id2": {
+                        "type": "textFromFloat",
+                        "value": "arrayMin(@prices)",
+                        "whole": 9,
+                        "decimal": 2,
+                        "flags": 23
+                       }
+                      }
+                     }
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "pricechart1_n",
+                      "value": "arrayLength(@prices)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_lastI",
+                      "value": "@pricechart1_n - 1"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_slots",
+                      "value": "max(78 - 1, max(@pricechart1_lastI, 1))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_last",
+                      "value": "arrayGet(@prices, @pricechart1_lastI)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_hi",
+                      "value": "arrayMax(@prices)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_lo",
+                      "value": "arrayMin(@prices)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_mn",
+                      "value": "min(@pricechart1_lo, @prev)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_mx",
+                      "value": "max(@pricechart1_hi, @prev)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_mid",
+                      "value": "(@pricechart1_mn + @pricechart1_mx) / 2"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_rng",
+                      "value": "max(@pricechart1_mx - @pricechart1_mn, ifElse(1, 0.01 * abs(@pricechart1_mid), step(abs(@pricechart1_mid), 0.000001)))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_a0",
+                      "value": "@pricechart1_mid - @pricechart1_rng / 2"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_a1",
+                      "value": "@pricechart1_mid + @pricechart1_rng / 2"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_up",
+                      "value": "step(@pricechart1_last, @prev)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_dn",
+                      "value": "step(@prev, @pricechart1_last)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_fl",
+                      "value": "1 - @pricechart1_up - @pricechart1_dn"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_t",
+                      "value": "clamp(0, 4, floor(log(max(max(abs(@pricechart1_mn), abs(@pricechart1_mx)) * 1.0005, 1)) / 3))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_div",
+                      "value": "pow(1000, @pricechart1_t)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_W",
+                      "value": "componentWidth()"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_H",
+                      "value": "componentHeight()"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_raw",
+                      "value": "@pricechart1_rng / ifElse(2, 3, step(@pricechart1_H, 130))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_mag",
+                      "value": "pow(10, floor(log(@pricechart1_raw)))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_fr",
+                      "value": "@pricechart1_raw / @pricechart1_mag"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_stp",
+                      "value": "@pricechart1_mag * (1 + step(@pricechart1_fr, 1.41) + 3 * step(@pricechart1_fr, 3.16) + 5 * step(@pricechart1_fr, 7.07))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_first",
+                      "value": "ceil(@pricechart1_a0 / @pricechart1_stp - 0.001) * @pricechart1_stp"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_dd",
+                      "value": "clamp(0, 6, ceil(0 - log(@pricechart1_stp / @pricechart1_div) - 0.001))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_pd",
+                      "value": "pow(10, @pricechart1_dd)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_dec",
+                      "value": "max(@pricechart1_dd, ifElse(2, 2, step(@pricechart1_t, 0.5)))"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_pq",
+                      "value": "pow(10, @pricechart1_dec)"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "KMBT",
+                      "start": "max(@pricechart1_t - 1, 0)",
+                      "len": "step(@pricechart1_t, 0.5)",
+                      "varName": "pricechart1_un"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_t0",
+                      "value": "@pricechart1_first + 0 * @pricechart1_stp"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_l0f",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textFromFloat",
+                       "value": "@pricechart1_t0 / @pricechart1_div + sign(@pricechart1_t0) * 0.5 / @pricechart1_pd",
+                       "whole": 9,
+                       "decimal": 6,
+                       "flags": 23
+                      }
+                     }
+                    },
+                    {
+                     "textLength": {
+                      "text": "@pricechart1_l0f",
+                      "name": "pricechart1_l0l"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "@pricechart1_l0f",
+                      "start": 0,
+                      "len": "@pricechart1_l0l - 6 + @pricechart1_dd - step(0.5, @pricechart1_dd)",
+                      "varName": "pricechart1_l0c"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_l0",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "@pricechart1_l0c",
+                       "id2": "@pricechart1_un"
+                      }
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_t1",
+                      "value": "@pricechart1_first + 1 * @pricechart1_stp"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_l1f",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textFromFloat",
+                       "value": "@pricechart1_t1 / @pricechart1_div + sign(@pricechart1_t1) * 0.5 / @pricechart1_pd",
+                       "whole": 9,
+                       "decimal": 6,
+                       "flags": 23
+                      }
+                     }
+                    },
+                    {
+                     "textLength": {
+                      "text": "@pricechart1_l1f",
+                      "name": "pricechart1_l1l"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "@pricechart1_l1f",
+                      "start": 0,
+                      "len": "@pricechart1_l1l - 6 + @pricechart1_dd - step(0.5, @pricechart1_dd)",
+                      "varName": "pricechart1_l1c"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_l1",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "@pricechart1_l1c",
+                       "id2": "@pricechart1_un"
+                      }
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_t2",
+                      "value": "@pricechart1_first + 2 * @pricechart1_stp"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_l2f",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textFromFloat",
+                       "value": "@pricechart1_t2 / @pricechart1_div + sign(@pricechart1_t2) * 0.5 / @pricechart1_pd",
+                       "whole": 9,
+                       "decimal": 6,
+                       "flags": 23
+                      }
+                     }
+                    },
+                    {
+                     "textLength": {
+                      "text": "@pricechart1_l2f",
+                      "name": "pricechart1_l2l"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "@pricechart1_l2f",
+                      "start": 0,
+                      "len": "@pricechart1_l2l - 6 + @pricechart1_dd - step(0.5, @pricechart1_dd)",
+                      "varName": "pricechart1_l2c"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_l2",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "@pricechart1_l2c",
+                       "id2": "@pricechart1_un"
+                      }
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_t3",
+                      "value": "@pricechart1_first + 3 * @pricechart1_stp"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_l3f",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textFromFloat",
+                       "value": "@pricechart1_t3 / @pricechart1_div + sign(@pricechart1_t3) * 0.5 / @pricechart1_pd",
+                       "whole": 9,
+                       "decimal": 6,
+                       "flags": 23
+                      }
+                     }
+                    },
+                    {
+                     "textLength": {
+                      "text": "@pricechart1_l3f",
+                      "name": "pricechart1_l3l"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "@pricechart1_l3f",
+                      "start": 0,
+                      "len": "@pricechart1_l3l - 6 + @pricechart1_dd - step(0.5, @pricechart1_dd)",
+                      "varName": "pricechart1_l3c"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_l3",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "@pricechart1_l3c",
+                       "id2": "@pricechart1_un"
+                      }
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_t4",
+                      "value": "@pricechart1_first + 4 * @pricechart1_stp"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_l4f",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textFromFloat",
+                       "value": "@pricechart1_t4 / @pricechart1_div + sign(@pricechart1_t4) * 0.5 / @pricechart1_pd",
+                       "whole": 9,
+                       "decimal": 6,
+                       "flags": 23
+                      }
+                     }
+                    },
+                    {
+                     "textLength": {
+                      "text": "@pricechart1_l4f",
+                      "name": "pricechart1_l4l"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "@pricechart1_l4f",
+                      "start": 0,
+                      "len": "@pricechart1_l4l - 6 + @pricechart1_dd - step(0.5, @pricechart1_dd)",
+                      "varName": "pricechart1_l4c"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_l4",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "@pricechart1_l4c",
+                       "id2": "@pricechart1_un"
+                      }
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_lqf",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textFromFloat",
+                       "value": "@pricechart1_last / @pricechart1_div + sign(@pricechart1_last) * 0.5 / @pricechart1_pq",
+                       "whole": 9,
+                       "decimal": 6,
+                       "flags": 23
+                      }
+                     }
+                    },
+                    {
+                     "textLength": {
+                      "text": "@pricechart1_lqf",
+                      "name": "pricechart1_lql"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "@pricechart1_lqf",
+                      "start": 0,
+                      "len": "@pricechart1_lql - 6 + @pricechart1_dec - step(0.5, @pricechart1_dec)",
+                      "varName": "pricechart1_lqc"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_lq",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "@pricechart1_lqc",
+                       "id2": "@pricechart1_un"
+                      }
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_lbf",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textFromFloat",
+                       "value": "@prev / @pricechart1_div + sign(@prev) * 0.5 / @pricechart1_pq",
+                       "whole": 9,
+                       "decimal": 6,
+                       "flags": 23
+                      }
+                     }
+                    },
+                    {
+                     "textLength": {
+                      "text": "@pricechart1_lbf",
+                      "name": "pricechart1_lbl"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "@pricechart1_lbf",
+                      "start": 0,
+                      "len": "@pricechart1_lbl - 6 + @pricechart1_dec - step(0.5, @pricechart1_dec)",
+                      "varName": "pricechart1_lbc"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_lb",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "@pricechart1_lbc",
+                       "id2": "@pricechart1_un"
+                      }
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_lhf",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textFromFloat",
+                       "value": "@pricechart1_hi / @pricechart1_div + sign(@pricechart1_hi) * 0.5 / @pricechart1_pq",
+                       "whole": 9,
+                       "decimal": 6,
+                       "flags": 23
+                      }
+                     }
+                    },
+                    {
+                     "textLength": {
+                      "text": "@pricechart1_lhf",
+                      "name": "pricechart1_lhl"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "@pricechart1_lhf",
+                      "start": 0,
+                      "len": "@pricechart1_lhl - 6 + @pricechart1_dec - step(0.5, @pricechart1_dec)",
+                      "varName": "pricechart1_lhc"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_lh",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "@pricechart1_lhc",
+                       "id2": "@pricechart1_un"
+                      }
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_llf",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textFromFloat",
+                       "value": "@pricechart1_lo / @pricechart1_div + sign(@pricechart1_lo) * 0.5 / @pricechart1_pq",
+                       "whole": 9,
+                       "decimal": 6,
+                       "flags": 23
+                      }
+                     }
+                    },
+                    {
+                     "textLength": {
+                      "text": "@pricechart1_llf",
+                      "name": "pricechart1_lll"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "@pricechart1_llf",
+                      "start": 0,
+                      "len": "@pricechart1_lll - 6 + @pricechart1_dec - step(0.5, @pricechart1_dec)",
+                      "varName": "pricechart1_llc"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_ll",
+                      "vtype": "string",
+                      "commit": true,
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "@pricechart1_llc",
+                       "id2": "@pricechart1_un"
+                      }
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "textSize": 10
+                       },
+                       {
+                        "style": "fill"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "textMeasure": {
+                      "text": "@pricechart1_lq",
+                      "mode": 0,
+                      "name": "pricechart1_wq"
+                     }
+                    },
+                    {
+                     "textMeasure": {
+                      "text": "@pricechart1_l0",
+                      "mode": 0,
+                      "name": "pricechart1_w0"
+                     }
+                    },
+                    {
+                     "textMeasure": {
+                      "text": "@pricechart1_l3",
+                      "mode": 0,
+                      "name": "pricechart1_w3"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_sy",
+                      "value": "1 * step(@pricechart1_W, 199)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_sx",
+                      "value": "step(5, 0.5) * step(@pricechart1_H, 109)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_hl",
+                      "value": "1 * step(@pricechart1_H, 119) * step(@pricechart1_W, 199) * step(@pricechart1_hi - @pricechart1_lo, 0)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_gw",
+                      "value": "@pricechart1_sy * (max(@pricechart1_wq + 10, max(@pricechart1_w0, @pricechart1_w3) + 6) + 6)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_L",
+                      "value": 1
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_R",
+                      "value": "@pricechart1_W - @pricechart1_gw - 5"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_T",
+                      "value": "5 + @pricechart1_hl * 15"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_B",
+                      "value": "@pricechart1_H - 5 - @pricechart1_sx * 18 - @pricechart1_hl * 15"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_kx",
+                      "value": "(@pricechart1_R - @pricechart1_L) / @pricechart1_slots"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_ky",
+                      "value": "(@pricechart1_B - @pricechart1_T) / @pricechart1_rng"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_xq",
+                      "value": "@pricechart1_L + @pricechart1_lastI * @pricechart1_kx"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_yq",
+                      "value": "@pricechart1_B - (@pricechart1_last - @pricechart1_a0) * @pricechart1_ky"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_by",
+                      "value": "@pricechart1_B - (@prev - @pricechart1_a0) * @pricechart1_ky"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_yt",
+                      "value": "clamp(8, @pricechart1_H - 8, @pricechart1_yq)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_y0",
+                      "value": "@pricechart1_B - (@pricechart1_t0 - @pricechart1_a0) * @pricechart1_ky"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_g0",
+                      "value": "step(@pricechart1_a1 + @pricechart1_stp * 0.01, @pricechart1_t0)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.track"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1
+                       },
+                       {
+                        "alpha": "@pricechart1_g0 * @pricechart1_sy * 0.5"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": "@pricechart1_L",
+                      "y1": "@pricechart1_y0",
+                      "x2": "@pricechart1_R + 4",
+                      "y2": "@pricechart1_y0"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_g0 * @pricechart1_sy * step(abs(@pricechart1_y0 - @pricechart1_yt), 15) * step(abs(@pricechart1_y0 - @pricechart1_by), 12)"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "@pricechart1_l0",
+                      "x": "@pricechart1_W - 3",
+                      "y": "@pricechart1_y0",
+                      "panX": 1,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_y1",
+                      "value": "@pricechart1_B - (@pricechart1_t1 - @pricechart1_a0) * @pricechart1_ky"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_g1",
+                      "value": "step(@pricechart1_a1 + @pricechart1_stp * 0.01, @pricechart1_t1)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.track"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1
+                       },
+                       {
+                        "alpha": "@pricechart1_g1 * @pricechart1_sy * 0.5"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": "@pricechart1_L",
+                      "y1": "@pricechart1_y1",
+                      "x2": "@pricechart1_R + 4",
+                      "y2": "@pricechart1_y1"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_g1 * @pricechart1_sy * step(abs(@pricechart1_y1 - @pricechart1_yt), 15) * step(abs(@pricechart1_y1 - @pricechart1_by), 12)"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "@pricechart1_l1",
+                      "x": "@pricechart1_W - 3",
+                      "y": "@pricechart1_y1",
+                      "panX": 1,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_y2",
+                      "value": "@pricechart1_B - (@pricechart1_t2 - @pricechart1_a0) * @pricechart1_ky"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_g2",
+                      "value": "step(@pricechart1_a1 + @pricechart1_stp * 0.01, @pricechart1_t2)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.track"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1
+                       },
+                       {
+                        "alpha": "@pricechart1_g2 * @pricechart1_sy * 0.5"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": "@pricechart1_L",
+                      "y1": "@pricechart1_y2",
+                      "x2": "@pricechart1_R + 4",
+                      "y2": "@pricechart1_y2"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_g2 * @pricechart1_sy * step(abs(@pricechart1_y2 - @pricechart1_yt), 15) * step(abs(@pricechart1_y2 - @pricechart1_by), 12)"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "@pricechart1_l2",
+                      "x": "@pricechart1_W - 3",
+                      "y": "@pricechart1_y2",
+                      "panX": 1,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_y3",
+                      "value": "@pricechart1_B - (@pricechart1_t3 - @pricechart1_a0) * @pricechart1_ky"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_g3",
+                      "value": "step(@pricechart1_a1 + @pricechart1_stp * 0.01, @pricechart1_t3)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.track"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1
+                       },
+                       {
+                        "alpha": "@pricechart1_g3 * @pricechart1_sy * 0.5"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": "@pricechart1_L",
+                      "y1": "@pricechart1_y3",
+                      "x2": "@pricechart1_R + 4",
+                      "y2": "@pricechart1_y3"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_g3 * @pricechart1_sy * step(abs(@pricechart1_y3 - @pricechart1_yt), 15) * step(abs(@pricechart1_y3 - @pricechart1_by), 12)"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "@pricechart1_l3",
+                      "x": "@pricechart1_W - 3",
+                      "y": "@pricechart1_y3",
+                      "panX": 1,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_y4",
+                      "value": "@pricechart1_B - (@pricechart1_t4 - @pricechart1_a0) * @pricechart1_ky"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_g4",
+                      "value": "step(@pricechart1_a1 + @pricechart1_stp * 0.01, @pricechart1_t4)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.track"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1
+                       },
+                       {
+                        "alpha": "@pricechart1_g4 * @pricechart1_sy * 0.5"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": "@pricechart1_L",
+                      "y1": "@pricechart1_y4",
+                      "x2": "@pricechart1_R + 4",
+                      "y2": "@pricechart1_y4"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_g4 * @pricechart1_sy * step(abs(@pricechart1_y4 - @pricechart1_yt), 15) * step(abs(@pricechart1_y4 - @pricechart1_by), 12)"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "@pricechart1_l4",
+                      "x": "@pricechart1_W - 3",
+                      "y": "@pricechart1_y4",
+                      "panX": 1,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "pathExpression": {
+                      "id": "pricechart1_line",
+                      "expressionX": "@pricechart1_L + u * @pricechart1_kx",
+                      "expressionY": "@pricechart1_B - (arrayGet(@prices, round(u)) - @pricechart1_a0) * @pricechart1_ky",
+                      "start": 0,
+                      "end": "@pricechart1_lastI",
+                      "count": "@pricechart1_n",
+                      "flags": 4
+                     }
+                    },
+                    {
+                     "pathExpression": {
+                      "id": "pricechart1_under",
+                      "expressionX": "@pricechart1_L + clamp(0, @pricechart1_lastI, u) * @pricechart1_kx",
+                      "expressionY": "ifElse(@pricechart1_B - (arrayGet(@prices, round(clamp(0, @pricechart1_lastI, u))) - @pricechart1_a0) * @pricechart1_ky, @pricechart1_by, step(abs(u - @pricechart1_lastI / 2), @pricechart1_lastI / 2 + 0.5))",
+                      "start": -1,
+                      "end": "@pricechart1_n",
+                      "count": "@pricechart1_n + 2",
+                      "flags": 4
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "linearGradient": {
+                         "x1": 0,
+                         "y1": "@pricechart1_T",
+                         "x2": 0,
+                         "y2": "@pricechart1_by",
+                         "colors": [
+                          "@colors.success",
+                          "@colors.surface"
+                         ]
+                        }
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "1 * 0.29"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "save": [
+                      {
+                       "clipRect": {
+                        "left": 0,
+                        "top": "@pricechart1_T",
+                        "right": "@pricechart1_W",
+                        "bottom": "@pricechart1_by"
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "pricechart1_under"
+                       }
+                      }
+                     ]
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "linearGradient": {
+                         "x1": 0,
+                         "y1": "@pricechart1_B",
+                         "x2": 0,
+                         "y2": "@pricechart1_by",
+                         "colors": [
+                          "@colors.error",
+                          "@colors.surface"
+                         ]
+                        }
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "1 * 0.29"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "save": [
+                      {
+                       "clipRect": {
+                        "left": 0,
+                        "top": "@pricechart1_by",
+                        "right": "@pricechart1_W",
+                        "bottom": "@pricechart1_B"
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "pricechart1_under"
+                       }
+                      }
+                     ]
+                    },
+                    {
+                     "paint": {
+                      "shader": 0
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1
+                       },
+                       {
+                        "alpha": 1
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "i",
+                      "from": 0,
+                      "until": "floor((@pricechart1_R - @pricechart1_L) / 7)",
+                      "commands": [
+                       {
+                        "drawLine": {
+                         "x1": "@pricechart1_L + i * 7",
+                         "y1": "@pricechart1_by",
+                         "x2": "@pricechart1_L + i * 7 + 3.5",
+                         "y2": "@pricechart1_by"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_sy * step(abs(@pricechart1_by - @pricechart1_yt), 15)"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "@pricechart1_lb",
+                      "x": "@pricechart1_W - 3",
+                      "y": "@pricechart1_by",
+                      "panX": 1,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.track"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1
+                       },
+                       {
+                        "alpha": "step(@pricechart1_slots - @pricechart1_lastI, 0.5)"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": "@pricechart1_xq",
+                      "y1": "@pricechart1_T",
+                      "x2": "@pricechart1_xq",
+                      "y2": "@pricechart1_B"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1
+                       },
+                       {
+                        "alpha": "0.5 * @pricechart1_sy"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": "@pricechart1_xq",
+                      "y1": "@pricechart1_yq",
+                      "x2": "@pricechart1_R + 4",
+                      "y2": "@pricechart1_yq"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_fq",
+                      "value": "(1 - step(@pricechart1_hi, @prev)) * (1 - step(@prev, @pricechart1_lo))"
+                     }
+                    },
+                    {
+                     "save": [
+                      {
+                       "clipRect": {
+                        "left": 0,
+                        "top": 0,
+                        "right": "@pricechart1_W",
+                        "bottom": "@pricechart1_by"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.success"
+                         },
+                         {
+                          "strokeWidth": 2
+                         },
+                         {
+                          "strokeCap": "round"
+                         },
+                         {
+                          "strokeJoin": "round"
+                         },
+                         {
+                          "style": "stroke"
+                         },
+                         {
+                          "alpha": "1 - @pricechart1_fq"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "pricechart1_line"
+                       }
+                      }
+                     ]
+                    },
+                    {
+                     "save": [
+                      {
+                       "clipRect": {
+                        "left": 0,
+                        "top": "@pricechart1_by",
+                        "right": "@pricechart1_W",
+                        "bottom": "@pricechart1_H"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.error"
+                         },
+                         {
+                          "strokeWidth": 2
+                         },
+                         {
+                          "strokeCap": "round"
+                         },
+                         {
+                          "strokeJoin": "round"
+                         },
+                         {
+                          "style": "stroke"
+                         },
+                         {
+                          "alpha": "1 - @pricechart1_fq"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "pricechart1_line"
+                       }
+                      }
+                     ]
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "strokeWidth": 2
+                       },
+                       {
+                        "strokeCap": "round"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "alpha": "@pricechart1_fq"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "pricechart1_line"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_ih",
+                      "value": 0,
+                      "commit": true
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_il",
+                      "value": 0,
+                      "commit": true
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "i",
+                      "from": 1,
+                      "until": "@pricechart1_n",
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "pricechart1_ih",
+                         "value": "ifElse(@pricechart1_ih, i, step(arrayGet(@prices, i), arrayGet(@prices, @pricechart1_ih)))",
+                         "commit": true
+                        }
+                       },
+                       {
+                        "variable": {
+                         "name": "pricechart1_il",
+                         "value": "ifElse(@pricechart1_il, i, step(arrayGet(@prices, @pricechart1_il), arrayGet(@prices, i)))",
+                         "commit": true
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_xh",
+                      "value": "@pricechart1_L + @pricechart1_ih * @pricechart1_kx"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_yh",
+                      "value": "@pricechart1_B - (@pricechart1_hi - @pricechart1_a0) * @pricechart1_ky"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_ah",
+                      "value": "@pricechart1_hl * step(@pricechart1_lastI - 0.5, @pricechart1_ih)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.surface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 3
+                       },
+                       {
+                        "alpha": "@pricechart1_ah"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "textMeasure": {
+                      "text": "@pricechart1_lh",
+                      "mode": 0,
+                      "name": "pricechart1_wh"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_ch",
+                      "value": "clamp(@pricechart1_L + @pricechart1_wh / 2, @pricechart1_R - @pricechart1_wh / 2, @pricechart1_xh)"
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "@pricechart1_lh",
+                      "x": "@pricechart1_ch",
+                      "y": "@pricechart1_yh - 9",
+                      "panX": 0,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_ah"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "@pricechart1_lh",
+                      "x": "@pricechart1_ch",
+                      "y": "@pricechart1_yh - 9",
+                      "panX": 0,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "drawCircle": {
+                      "cx": "@pricechart1_xh",
+                      "cy": "@pricechart1_yh",
+                      "radius": 2
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_xl",
+                      "value": "@pricechart1_L + @pricechart1_il * @pricechart1_kx"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_yl",
+                      "value": "@pricechart1_B - (@pricechart1_lo - @pricechart1_a0) * @pricechart1_ky"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_al",
+                      "value": "@pricechart1_hl * step(@pricechart1_lastI - 0.5, @pricechart1_il)"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.surface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 3
+                       },
+                       {
+                        "alpha": "@pricechart1_al"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "textMeasure": {
+                      "text": "@pricechart1_ll",
+                      "mode": 0,
+                      "name": "pricechart1_wl"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_cl",
+                      "value": "clamp(@pricechart1_L + @pricechart1_wl / 2, @pricechart1_R - @pricechart1_wl / 2, @pricechart1_xl)"
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "@pricechart1_ll",
+                      "x": "@pricechart1_cl",
+                      "y": "@pricechart1_yl + 9",
+                      "panX": 0,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_al"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "@pricechart1_ll",
+                      "x": "@pricechart1_cl",
+                      "y": "@pricechart1_yl + 9",
+                      "panX": 0,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "drawCircle": {
+                      "cx": "@pricechart1_xl",
+                      "cy": "@pricechart1_yl",
+                      "radius": 2
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.success"
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_up"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawCircle": {
+                      "cx": "@pricechart1_xq",
+                      "cy": "@pricechart1_yq",
+                      "radius": 3
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.error"
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_dn"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawCircle": {
+                      "cx": "@pricechart1_xq",
+                      "cy": "@pricechart1_yq",
+                      "radius": 3
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_fl"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawCircle": {
+                      "cx": "@pricechart1_xq",
+                      "cy": "@pricechart1_yq",
+                      "radius": 3
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "pricechart1_tl",
+                      "value": "@pricechart1_W - @pricechart1_wq - 8"
+                     }
+                    },
+                    {
+                     "save": [
+                      {
+                       "clipRect": {
+                        "left": "@pricechart1_tl",
+                        "top": 0,
+                        "right": "@pricechart1_W",
+                        "bottom": "@pricechart1_H * @pricechart1_sy"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.success"
+                         },
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "alpha": "@pricechart1_up"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRoundRect": {
+                        "left": "@pricechart1_tl",
+                        "top": "@pricechart1_yt - 8",
+                        "right": "@pricechart1_W",
+                        "bottom": "@pricechart1_yt + 8",
+                        "rx": 4,
+                        "ry": 4
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.error"
+                         },
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "alpha": "@pricechart1_dn"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRoundRect": {
+                        "left": "@pricechart1_tl",
+                        "top": "@pricechart1_yt - 8",
+                        "right": "@pricechart1_W",
+                        "bottom": "@pricechart1_yt + 8",
+                        "rx": 4,
+                        "ry": 4
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.muted"
+                         },
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "alpha": "@pricechart1_fl"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRoundRect": {
+                        "left": "@pricechart1_tl",
+                        "top": "@pricechart1_yt - 8",
+                        "right": "@pricechart1_W",
+                        "bottom": "@pricechart1_yt + 8",
+                        "rx": 4,
+                        "ry": 4
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onPrimary"
+                         },
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "alpha": 1
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawTextAnchored": {
+                        "text": "@pricechart1_lq",
+                        "x": "@pricechart1_W - 4",
+                        "y": "@pricechart1_yt",
+                        "panX": 1,
+                        "panY": 0
+                       }
+                      }
+                     ]
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "fill"
+                       },
+                       {
+                        "alpha": "@pricechart1_sx"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@pricechart1_sx * max(step(@pricechart1_W, 5 * 62), 1 - step(0, 0.5) * step(5 - 1.5, 0))"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "9:30",
+                      "x": "@pricechart1_L + (@pricechart1_R - @pricechart1_L) * 0 / max(5 - 1, 1)",
+                      "y": "@pricechart1_H - 6",
+                      "panX": -1,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@pricechart1_sx * max(step(@pricechart1_W, 5 * 62), 1 - step(1, 0.5) * step(5 - 1.5, 1))"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "11:00",
+                      "x": "@pricechart1_L + (@pricechart1_R - @pricechart1_L) * 1 / max(5 - 1, 1)",
+                      "y": "@pricechart1_H - 6",
+                      "panX": -0.5,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@pricechart1_sx * max(step(@pricechart1_W, 5 * 62), 1 - step(2, 0.5) * step(5 - 1.5, 2))"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "12:30",
+                      "x": "@pricechart1_L + (@pricechart1_R - @pricechart1_L) * 2 / max(5 - 1, 1)",
+                      "y": "@pricechart1_H - 6",
+                      "panX": 0,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@pricechart1_sx * max(step(@pricechart1_W, 5 * 62), 1 - step(3, 0.5) * step(5 - 1.5, 3))"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "2:00",
+                      "x": "@pricechart1_L + (@pricechart1_R - @pricechart1_L) * 3 / max(5 - 1, 1)",
+                      "y": "@pricechart1_H - 6",
+                      "panX": 0.5,
+                      "panY": 0
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "alpha": "@pricechart1_sx * max(step(@pricechart1_W, 5 * 62), 1 - step(4, 0.5) * step(5 - 1.5, 4))"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawTextAnchored": {
+                      "text": "4:00",
+                      "x": "@pricechart1_L + (@pricechart1_R - @pricechart1_L) * 4 / max(5 - 1, 1)",
+                      "y": "@pricechart1_H - 6",
+                      "panX": 1,
+                      "panY": 0
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "visibility": "@hasStats"
+           },
+           {
+            "width": "@sW"
+           },
+           "fillMaxHeight"
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": "@sTop"
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 {
+                  "height": 30
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "Open",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textFromFloat",
+                    "value": "round(@first * 100) / 100",
+                    "whole": 7,
+                    "decimal": 2,
+                    "flags": 23
+                   },
+                   "fontSize": 13,
+                   "fontWeight": 500,
+                   "color": "@colors.onSurface",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 16
+                 },
+                 {
+                  "height": 1
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 {
+                  "height": 30
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "High",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textFromFloat",
+                    "value": "round(@high * 100) / 100",
+                    "whole": 7,
+                    "decimal": 2,
+                    "flags": 23
+                   },
+                   "fontSize": 13,
+                   "fontWeight": 500,
+                   "color": "@colors.onSurface",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 {
+                  "height": 30
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "Low",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textFromFloat",
+                    "value": "round(@low * 100) / 100",
+                    "whole": 7,
+                    "decimal": 2,
+                    "flags": 23
+                   },
+                   "fontSize": 13,
+                   "fontWeight": 500,
+                   "color": "@colors.onSurface",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 16
+                 },
+                 {
+                  "height": 1
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 {
+                  "height": 30
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "Volume",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "children": [
+                    {
+                     "canvas": {
+                      "modifiers": [
+                       {
+                        "size": [
+                         1,
+                         1
+                        ]
+                       }
+                      ],
+                      "commands": [
+                       {
+                        "textSubtext": {
+                         "text": "-",
+                         "start": 0,
+                         "len": "@compactnumber2_neg",
+                         "varName": "compactnumber2_sg"
+                        }
+                       },
+                       {
+                        "textSubtext": {
+                         "text": "KMBT",
+                         "start": "@compactnumber2_ti",
+                         "len": "step(@compactnumber2_t, 0.5)",
+                         "varName": "compactnumber2_un"
+                        }
+                       },
+                       {
+                        "textSubtext": {
+                         "text": " thousand million  billion  trillion ",
+                         "start": "@compactnumber2_ti * 9",
+                         "len": "step(@compactnumber2_t, 0.5) * 9",
+                         "varName": "compactnumber2_word"
+                        }
+                       },
+                       {
+                        "textSubtext": {
+                         "text": {
+                          "type": "textFromFloat",
+                          "value": "@compactnumber2_r + step(@compactnumber2_r, 0) * 0.4 / @compactnumber2_q",
+                          "whole": 7,
+                          "decimal": 6,
+                          "flags": 7
+                         },
+                         "start": 0,
+                         "len": "floor(log(max(@compactnumber2_r, 1))) + 1 + @compactnumber2_dd + step(@compactnumber2_dd, 0.5)",
+                         "varName": "compactnumber2_nm"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textMerge",
+                         "id1": "@compactnumber2_sg",
+                         "id2": "@compactnumber2_nm"
+                        },
+                        "id2": "@compactnumber2_un"
+                       },
+                       "id2": ""
+                      },
+                      "fontSize": 13,
+                      "fontWeight": 500,
+                      "color": "@colors.onSurface",
+                      "maxLines": 1,
+                      "modifiers": [
+                       {
+                        "visibility": "@vis_1"
+                       },
+                       {
+                        "semantics": {
+                         "contentDescription": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textMerge",
+                           "id1": {
+                            "type": "textMerge",
+                            "id1": "@compactnumber2_sg",
+                            "id2": "@compactnumber2_nm"
+                           },
+                           "id2": "@compactnumber2_word"
+                          },
+                          "id2": ""
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

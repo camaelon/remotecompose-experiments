@@ -1,0 +1,1133 @@
+{
+ "id": "CMP-22",
+ "name": "portfolio",
+ "version": 1,
+ "title": "Portfolio: total, allocation, holdings",
+ "summary": "A portfolio screen: total and today's change, an allocation bar with percents, and holdings as rows with a trend, value and change. Two columns in landscape, total and bar only at widget size.",
+ "prompt": "A portfolio screen: the total value and today's change, allocation by asset class, and my holdings with their value and change. Two columns in landscape; a 4x2 and 2x2 widget shows the total and the bar.",
+ "level": 2,
+ "family": "CMP",
+ "components": [
+  "CompactNumber",
+  "Delta",
+  "AllocationBar",
+  "QuoteRow",
+  "TrendSparkline",
+  "Holdings"
+ ],
+ "capabilities": {
+  "primary": [
+   "layout.stack",
+   "host.variables",
+   "data.array"
+  ],
+  "secondary": [
+   "expr.array",
+   "expr.system",
+   "a11y.labels",
+   "text.dynamic"
+  ]
+ },
+ "use_cases": [
+  "finance",
+  "dashboard",
+  "list",
+  "widget"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "stock",
+  "ticker",
+  "portfolio",
+  "crypto",
+  "price",
+  "market",
+  "finance",
+  "investment",
+  "chart",
+  "analytics",
+  "revenue",
+  "holdings",
+  "watchlist",
+  "trading",
+  "net worth",
+  "balance",
+  "asset allocation",
+  "my investments",
+  "positions",
+  "wealth",
+  "savings",
+  "fund",
+  "shares",
+  "stocks",
+  "stock ticker",
+  "stock widget",
+  "quotes",
+  "sparkline rows"
+ ],
+ "teaches": [
+  "An inline Holdings component runs $each with fields over the list, reading value and change from arrays by index, so the host updates numbers without a new document",
+  "The total is arraySum of the holdings, so it can't disagree",
+  "Rearranges rather than stretches: two columns when wide, and only total and bar in a widget"
+ ],
+ "snippets": [
+  {
+   "pointer": "/components/Holdings",
+   "shows": "data.array",
+   "note": "$each with fields over the holdings"
+  },
+  {
+   "pointer": "/resources/variables/wide",
+   "shows": "expr.system",
+   "note": "one column or two"
+  },
+  {
+   "pointer": "/resources/variables/gain",
+   "shows": "host.variables",
+   "note": "today's change, sent by the host"
+  },
+  {
+   "pointer": "/root/column/children/0",
+   "shows": "layout.stack",
+   "note": "total, bar and rows placed by spacer lengths in one box"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "holdingValue": {
+    "type": "float_array",
+    "meaning": "value of each holding, in list order"
+   },
+   "holdingChange": {
+    "type": "float_array",
+    "meaning": "today's percent change of each"
+   },
+   "byClass": {
+    "type": "float_array",
+    "meaning": "value per asset class"
+   },
+   "gain": {
+    "meaning": "today's gain in money, signed",
+    "min": -1000000,
+    "max": 1000000
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Phone: Portfolio, $48,210.00, down −$114.63 (−0.24%) today, a bar 22/46/9/23 with Stocks, Funds, Bonds, Crypto, then Holdings with 5 rows. Landscape: total and bar left, rows right. 4x2 and 2x2: total, change, bar.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360
+   },
+   {
+    "name": "w4x2",
+    "width": 320,
+    "height": 160
+   },
+   {
+    "name": "w2x2",
+    "width": 160,
+    "height": 160
+   },
+   {
+    "name": "gain",
+    "variables": {
+     "gain": 812.4
+    }
+   }
+  ]
+ },
+ "related": [
+  "QuoteRow",
+  "AllocationBar",
+  "CMP-21",
+  "CMP-18"
+ ],
+ "pitfalls": [
+  "About 25 KB: each row costs about 2.8 KB because its parts hold named text values. Five to ten rows is fine; for many, use RowList with host strings",
+  "The list's length is fixed when the document is built",
+  "Sample data is invented"
+ ],
+ "derived": {
+  "components": [
+   "AllocationBar",
+   "CompactNumber",
+   "Delta",
+   "Holdings",
+   "QuoteRow",
+   "TrendSparkline"
+  ],
+  "component_instances": 20,
+  "component_modes": {
+   "CompactNumber": "expand",
+   "Delta": "expand",
+   "AllocationBar": "expand",
+   "Holdings": "expand",
+   "QuoteRow": "expand",
+   "TrendSparkline": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 24631,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 1313,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 26,
+   "ANIMATED_FLOAT": 231,
+   "COLOR_CONSTANT": 20,
+   "COLOR_EXPRESSIONS": 20,
+   "COMPONENT_VALUE": 12,
+   "CanvasContent": 36,
+   "CoreText": 51,
+   "DATA_FLOAT": 3,
+   "DATA_TEXT": 34,
+   "DRAW_CIRCLE": 15,
+   "DRAW_PATH": 37,
+   "DRAW_RECT": 8,
+   "DRAW_ROUND_RECT": 10,
+   "DataListFloat": 8,
+   "HEADER": 1,
+   "LAYOUT_BOX": 28,
+   "LAYOUT_CANVAS": 36,
+   "LAYOUT_COLUMN": 24,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 29,
+   "LayoutComponentContent": 165,
+   "LoopOperation": 20,
+   "MODIFIER_BACKGROUND": 16,
+   "MODIFIER_HEIGHT": 46,
+   "MODIFIER_PADDING": 45,
+   "MODIFIER_VISIBILITY": 49,
+   "MODIFIER_WIDTH": 76,
+   "NAMED_VARIABLE": 19,
+   "PAINT_VALUES": 70,
+   "PathExpression": 16,
+   "RoundedClipRectModifierOperation": 17,
+   "THEME": 30,
+   "TextFromFloat": 18,
+   "TextMerge": 92,
+   "TextSubtext": 4
+  },
+  "host_variables": [
+   {
+    "name": "byClass",
+    "type": "float_array",
+    "value": [
+     10584,
+     22185,
+     4416,
+     11025
+    ]
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "gain",
+    "type": "float",
+    "value": -114.629997
+   },
+   {
+    "name": "holdingChange",
+    "type": "float_array",
+    "value": [
+     1.25,
+     -3.4000001,
+     0.620000005,
+     0.0399999991,
+     -2.18000007
+    ]
+   },
+   {
+    "name": "holdingValue",
+    "type": "float_array",
+    "value": [
+     7680,
+     2904,
+     22185,
+     4416,
+     11025
+    ]
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "surfaceHigh",
+    "type": "color",
+    "value": "#FF263042"
+   },
+   {
+    "name": "t0",
+    "type": "float_array",
+    "value": [
+     100,
+     100.57,
+     100.730003,
+     103.129997,
+     103.699997,
+     104.07,
+     104.599998,
+     104.529999,
+     104.330002,
+     104.910004,
+     104.879997,
+     105.639999,
+     105.760002,
+     104.889999,
+     104.309998,
+     104.019997
+    ]
+   },
+   {
+    "name": "t1",
+    "type": "float_array",
+    "value": [
+     100,
+     98.5500031,
+     98.3000031,
+     97.9199982,
+     98.3099976,
+     97.5699997,
+     97.2300034,
+     97.3899994,
+     97.6600037,
+     96.8199997,
+     97.5800018,
+     96.9899979,
+     97.5400009,
+     97.1500015,
+     96.6900024,
+     95.7099991
+    ]
+   },
+   {
+    "name": "t2",
+    "type": "float_array",
+    "value": [
+     100,
+     100.220001,
+     102.019997,
+     101.919998,
+     103.190002,
+     104.330002,
+     104.389999,
+     105.389999,
+     106.559998,
+     106.669998,
+     106.639999,
+     107.639999,
+     108.160004,
+     109.800003,
+     110.379997,
+     109.959999
+    ]
+   },
+   {
+    "name": "t3",
+    "type": "float_array",
+    "value": [
+     100,
+     100.040001,
+     99.7200012,
+     100.010002,
+     100.279999,
+     100.199997,
+     99.9700012,
+     100.300003,
+     100.230003,
+     100.669998,
+     100.410004,
+     100.370003,
+     100.25,
+     99.9700012,
+     100.879997,
+     101.459999
+    ]
+   },
+   {
+    "name": "t4",
+    "type": "float_array",
+    "value": [
+     100,
+     98.8099976,
+     99.4100037,
+     96.75,
+     97.9300003,
+     98.9000015,
+     98.0699997,
+     97.2300034,
+     97.1500015,
+     97.3300018,
+     96.4800034,
+     95.0199966,
+     94.3000031,
+     93.3700027,
+     93.9599991,
+     93.6800003
+    ]
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [
+   "info: hidden_rows"
+  ],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: layout_deep_nesting",
+   "info: expression_entries"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 20833,
+    "component_modes": {
+     "CompactNumber": "expand",
+     "Delta": "expand",
+     "AllocationBar": "expand",
+     "Holdings": "expand",
+     "QuoteRow": "expand",
+     "TrendSparkline": "expand"
+    },
+    "op_count": 1112,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "byClass",
+      "type": "float_array",
+      "value": [
+       10584,
+       22185,
+       4416,
+       11025
+      ]
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "gain",
+      "type": "float",
+      "value": -114.629997
+     },
+     {
+      "name": "holdingChange",
+      "type": "float_array",
+      "value": [
+       1.25,
+       -3.4000001,
+       0.620000005,
+       0.0399999991,
+       -2.18000007
+      ]
+     },
+     {
+      "name": "holdingValue",
+      "type": "float_array",
+      "value": [
+       7680,
+       2904,
+       22185,
+       4416,
+       11025
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "t0",
+      "type": "float_array",
+      "value": [
+       100,
+       100.57,
+       100.730003,
+       103.129997,
+       103.699997,
+       104.07,
+       104.599998,
+       104.529999,
+       104.330002,
+       104.910004,
+       104.879997,
+       105.639999,
+       105.760002,
+       104.889999,
+       104.309998,
+       104.019997
+      ]
+     },
+     {
+      "name": "t1",
+      "type": "float_array",
+      "value": [
+       100,
+       98.5500031,
+       98.3000031,
+       97.9199982,
+       98.3099976,
+       97.5699997,
+       97.2300034,
+       97.3899994,
+       97.6600037,
+       96.8199997,
+       97.5800018,
+       96.9899979,
+       97.5400009,
+       97.1500015,
+       96.6900024,
+       95.7099991
+      ]
+     },
+     {
+      "name": "t2",
+      "type": "float_array",
+      "value": [
+       100,
+       100.220001,
+       102.019997,
+       101.919998,
+       103.190002,
+       104.330002,
+       104.389999,
+       105.389999,
+       106.559998,
+       106.669998,
+       106.639999,
+       107.639999,
+       108.160004,
+       109.800003,
+       110.379997,
+       109.959999
+      ]
+     },
+     {
+      "name": "t3",
+      "type": "float_array",
+      "value": [
+       100,
+       100.040001,
+       99.7200012,
+       100.010002,
+       100.279999,
+       100.199997,
+       99.9700012,
+       100.300003,
+       100.230003,
+       100.669998,
+       100.410004,
+       100.370003,
+       100.25,
+       99.9700012,
+       100.879997,
+       101.459999
+      ]
+     },
+     {
+      "name": "t4",
+      "type": "float_array",
+      "value": [
+       100,
+       98.8099976,
+       99.4100037,
+       96.75,
+       97.9300003,
+       98.9000015,
+       98.0699997,
+       97.2300034,
+       97.1500015,
+       97.3300018,
+       96.4800034,
+       95.0199966,
+       94.3000031,
+       93.3700027,
+       93.9599991,
+       93.6800003
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 20833,
+    "component_modes": {
+     "CompactNumber": "expand",
+     "Delta": "expand",
+     "AllocationBar": "expand",
+     "Holdings": "expand",
+     "QuoteRow": "expand",
+     "TrendSparkline": "expand"
+    },
+    "op_count": 1112,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "byClass",
+      "type": "float_array",
+      "value": [
+       10584,
+       22185,
+       4416,
+       11025
+      ]
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "gain",
+      "type": "float",
+      "value": -114.629997
+     },
+     {
+      "name": "holdingChange",
+      "type": "float_array",
+      "value": [
+       1.25,
+       -3.4000001,
+       0.620000005,
+       0.0399999991,
+       -2.18000007
+      ]
+     },
+     {
+      "name": "holdingValue",
+      "type": "float_array",
+      "value": [
+       7680,
+       2904,
+       22185,
+       4416,
+       11025
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "t0",
+      "type": "float_array",
+      "value": [
+       100,
+       100.57,
+       100.730003,
+       103.129997,
+       103.699997,
+       104.07,
+       104.599998,
+       104.529999,
+       104.330002,
+       104.910004,
+       104.879997,
+       105.639999,
+       105.760002,
+       104.889999,
+       104.309998,
+       104.019997
+      ]
+     },
+     {
+      "name": "t1",
+      "type": "float_array",
+      "value": [
+       100,
+       98.5500031,
+       98.3000031,
+       97.9199982,
+       98.3099976,
+       97.5699997,
+       97.2300034,
+       97.3899994,
+       97.6600037,
+       96.8199997,
+       97.5800018,
+       96.9899979,
+       97.5400009,
+       97.1500015,
+       96.6900024,
+       95.7099991
+      ]
+     },
+     {
+      "name": "t2",
+      "type": "float_array",
+      "value": [
+       100,
+       100.220001,
+       102.019997,
+       101.919998,
+       103.190002,
+       104.330002,
+       104.389999,
+       105.389999,
+       106.559998,
+       106.669998,
+       106.639999,
+       107.639999,
+       108.160004,
+       109.800003,
+       110.379997,
+       109.959999
+      ]
+     },
+     {
+      "name": "t3",
+      "type": "float_array",
+      "value": [
+       100,
+       100.040001,
+       99.7200012,
+       100.010002,
+       100.279999,
+       100.199997,
+       99.9700012,
+       100.300003,
+       100.230003,
+       100.669998,
+       100.410004,
+       100.370003,
+       100.25,
+       99.9700012,
+       100.879997,
+       101.459999
+      ]
+     },
+     {
+      "name": "t4",
+      "type": "float_array",
+      "value": [
+       100,
+       98.8099976,
+       99.4100037,
+       96.75,
+       97.9300003,
+       98.9000015,
+       98.0699997,
+       97.2300034,
+       97.1500015,
+       97.3300018,
+       96.4800034,
+       95.0199966,
+       94.3000031,
+       93.3700027,
+       93.9599991,
+       93.6800003
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: expression_entries"
+    ]
+   },
+   "w4x2": {
+    "render": "render-w4x2.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": [
+     "info: expression_entries"
+    ]
+   },
+   "w2x2": {
+    "render": "render-w2x2.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": [
+     "info: expression_entries"
+    ]
+   },
+   "gain": {
+    "render": "render-gain.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   }
+  },
+  "json_keys": [
+   "$each",
+   "AllocationBar",
+   "CompactNumber",
+   "Delta",
+   "H",
+   "Holdings",
+   "QuoteRow",
+   "W",
+   "alpha",
+   "amount",
+   "apiLevel",
+   "as",
+   "background",
+   "barH",
+   "barHeight",
+   "barTop",
+   "body",
+   "bottom",
+   "box",
+   "byClass",
+   "canvas",
+   "change",
+   "children",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "commit",
+   "compactnumber1_a",
+   "compactnumber1_dd",
+   "compactnumber1_fr",
+   "compactnumber1_full",
+   "compactnumber1_m",
+   "compactnumber1_neg",
+   "compactnumber1_q",
+   "compactnumber1_r",
+   "compactnumber1_s",
+   "compactnumber1_shortv",
+   "compactnumber1_t",
+   "compactnumber1_ti",
+   "components",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "decimals",
+   "delta1_amt",
+   "delta1_dn",
+   "delta1_fl",
+   "delta1_mag",
+   "delta1_up",
+   "do",
+   "doc",
+   "drawCircle",
+   "drawPath",
+   "drawRect",
+   "drawRoundRect",
+   "end",
+   "error",
+   "export",
+   "expressionX",
+   "expressionY",
+   "fields",
+   "flags",
+   "floatArrays",
+   "fontSize",
+   "fontWeight",
+   "fs",
+   "gain",
+   "gainPct",
+   "gap",
+   "hasList",
+   "header",
+   "height",
+   "heroH",
+   "holdingChange",
+   "holdingValue",
+   "horizontalAlignment",
+   "id",
+   "id1",
+   "id2",
+   "ih",
+   "index",
+   "items",
+   "iw",
+   "lLeft",
+   "lTop",
+   "lW",
+   "label",
+   "left",
+   "leftW",
+   "legend",
+   "len",
+   "light",
+   "maxLines",
+   "modifiers",
+   "muted",
+   "name",
+   "noList",
+   "onPrimary",
+   "onSurface",
+   "ops",
+   "overflow",
+   "pad",
+   "padding",
+   "paint",
+   "params",
+   "path",
+   "pathExpression",
+   "prefix",
+   "price",
+   "primary",
+   "profiles",
+   "quoterow1_fold",
+   "quoterow1_open",
+   "quoterow1_wideEnough",
+   "quoterow2_fold",
+   "quoterow2_open",
+   "quoterow2_wideEnough",
+   "quoterow3_fold",
+   "quoterow3_open",
+   "quoterow3_wideEnough",
+   "quoterow4_fold",
+   "quoterow4_open",
+   "quoterow4_wideEnough",
+   "quoterow5_fold",
+   "quoterow5_open",
+   "quoterow5_wideEnough",
+   "radius",
+   "required",
+   "resources",
+   "right",
+   "root",
+   "roundedRect",
+   "row",
+   "rows",
+   "rx",
+   "ry",
+   "secondary",
+   "semantics",
+   "showLegend",
+   "size",
+   "spacedBy",
+   "start",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "success",
+   "summary",
+   "surface",
+   "surfaceHigh",
+   "symbol",
+   "t0",
+   "t1",
+   "t2",
+   "t3",
+   "t4",
+   "text",
+   "textSubtext",
+   "top",
+   "total",
+   "trend",
+   "type",
+   "value",
+   "values",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "visibility",
+   "vtype",
+   "warning",
+   "weight",
+   "whole",
+   "wide",
+   "wideEnough",
+   "width"
+  ],
+  "evidence": {
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "expr.array": [
+    "arraySum(",
+    "arrayMax(",
+    "arrayMin(",
+    "arrayLength(",
+    "arrayGet("
+   ],
+   "expr.system": [
+    "fontSize()",
+    "windowWidth",
+    "windowHeight",
+    "componentWidth",
+    "componentHeight"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ]
+  },
+  "built_at": "2026-11-02T02:08:40.194Z"
+ }
+}

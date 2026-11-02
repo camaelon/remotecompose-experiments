@@ -1,0 +1,706 @@
+{
+ "component": "GoalBar",
+ "version": 1,
+ "summary": "A labelled bar against a goal: the label, value / goal and the amount past it on one baseline, over a tinted track with a tick at the goal and room beyond it, so reaching and passing the goal are both visible. For steps, water, protein, savings. Read as one sentence.",
+ "params": {
+  "value": {
+   "type": "float",
+   "required": true,
+   "doc": "A number, \"@variable\" or expression; may pass the target"
+  },
+  "target": {
+   "type": "float",
+   "required": true,
+   "doc": "The goal"
+  },
+  "label": {
+   "type": "string",
+   "doc": "At the start of the line, and of the spoken sentence"
+  },
+  "unit": {
+   "type": "string",
+   "doc": "After the goal: \"steps\", \"ml\""
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "The fill; its tint is the track"
+  },
+  "overColor": {
+   "type": "color",
+   "default": "@colors.success",
+   "doc": "The \"+N\" text past the goal; pass @colors.error when past is bad"
+  },
+  "goalAt": {
+   "type": "float",
+   "default": 0.8,
+   "static": true,
+   "doc": "Where the tick sits on the track while under the goal, 0..1. Past it, the bar rescales and the tick moves left"
+  },
+  "height": {
+   "type": "float",
+   "default": 10,
+   "static": true,
+   "doc": "Bar thickness in dp"
+  },
+  "textSize": {
+   "type": "float",
+   "default": 14,
+   "static": true,
+   "doc": "Size of the line above the bar"
+  },
+  "description": {
+   "type": "string",
+   "doc": "Replaces the spoken sentence"
+  }
+ },
+ "locals": {
+  "pa": {
+   "value": "@value / max(@target, 0.01)",
+   "anim": 0.5
+  },
+  "over": "step(@value, @target)",
+  "lineH": "@textSize * 1.35",
+  "barY": "@textSize * 1.35 + 6",
+  "total": "@textSize * 1.35 + 9 + @height"
+ },
+ "capabilities": [
+  "draw.shapes",
+  "data.expression",
+  "text.dynamic",
+  "a11y.labels"
+ ],
+ "call": {
+  "GoalBar": {
+   "value": 8432,
+   "target": 10000,
+   "label": "Steps",
+   "unit": "steps"
+  }
+ },
+ "pitfalls": [
+  "It fills its parent's width: in a row, give it a weighted box. Its height is fixed by textSize and height",
+  "Unlike ProgressBar, the goal is always marked: the track runs on past it (goalAt), so a full bar never reads as a limit. Use ProgressBar when the end of the bar is the limit",
+  "The line scales down together when it would not fit the width, so label and numbers never touch",
+  "Drawn text does not follow the system font scale"
+ ],
+ "body": {
+  "box": {
+   "modifiers": [
+    "fillMaxWidth",
+    {
+     "height": "@total"
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "commands": [
+       {
+        "variable": {
+         "name": "W",
+         "value": "componentWidth()"
+        }
+       },
+       {
+        "variable": {
+         "name": "dom",
+         "value": "max(1 / @goalAt, @pa)"
+        }
+       },
+       {
+        "variable": {
+         "name": "tx",
+         "value": "@W / @dom"
+        }
+       },
+       {
+        "variable": {
+         "name": "fx",
+         "value": "@W * clamp(0, 1, @pa / @dom)"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": 1
+          },
+          {
+           "textSize": "@textSize"
+          }
+         ]
+        }
+       },
+       {
+        "textMeasure": {
+         "text": {
+          "$if": "label",
+          "then": "@label",
+          "else": ""
+         },
+         "mode": 0,
+         "name": "lw"
+        }
+       },
+       {
+        "textMeasure": {
+         "text": {
+          "$if": "label",
+          "then": "@label",
+          "else": ""
+         },
+         "mode": 4,
+         "name": "lt"
+        }
+       },
+       {
+        "textMeasure": {
+         "text": {
+          "$if": "label",
+          "then": "@label",
+          "else": ""
+         },
+         "mode": 5,
+         "name": "lb"
+        }
+       },
+       {
+        "textMeasure": {
+         "text": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "round(@value)",
+             "whole": 9,
+             "decimal": 0,
+             "flags": 23
+            },
+            "id2": " / "
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "round(@target)",
+            "whole": 9,
+            "decimal": 0,
+            "flags": 23
+           }
+          },
+          "id2": {
+           "$if": "unit",
+           "then": {
+            "type": "textMerge",
+            "id1": " ",
+            "id2": "@unit"
+           },
+           "else": ""
+          }
+         },
+         "mode": 0,
+         "name": "vw"
+        }
+       },
+       {
+        "textMeasure": {
+         "text": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "round(@value)",
+             "whole": 9,
+             "decimal": 0,
+             "flags": 23
+            },
+            "id2": " / "
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "round(@target)",
+            "whole": 9,
+            "decimal": 0,
+            "flags": 23
+           }
+          },
+          "id2": {
+           "$if": "unit",
+           "then": {
+            "type": "textMerge",
+            "id1": " ",
+            "id2": "@unit"
+           },
+           "else": ""
+          }
+         },
+         "mode": 4,
+         "name": "vt"
+        }
+       },
+       {
+        "textMeasure": {
+         "text": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "round(@value)",
+             "whole": 9,
+             "decimal": 0,
+             "flags": 23
+            },
+            "id2": " / "
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "round(@target)",
+            "whole": 9,
+            "decimal": 0,
+            "flags": 23
+           }
+          },
+          "id2": {
+           "$if": "unit",
+           "then": {
+            "type": "textMerge",
+            "id1": " ",
+            "id2": "@unit"
+           },
+           "else": ""
+          }
+         },
+         "mode": 5,
+         "name": "vb"
+        }
+       },
+       {
+        "textMeasure": {
+         "text": {
+          "type": "textMerge",
+          "id1": "+",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "round(abs(@value - @target))",
+           "whole": 9,
+           "decimal": 0,
+           "flags": 23
+          }
+         },
+         "mode": 0,
+         "name": "pw"
+        }
+       },
+       {
+        "textMeasure": {
+         "text": {
+          "type": "textMerge",
+          "id1": "+",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "round(abs(@value - @target))",
+           "whole": 9,
+           "decimal": 0,
+           "flags": 23
+          }
+         },
+         "mode": 4,
+         "name": "pt"
+        }
+       },
+       {
+        "textMeasure": {
+         "text": {
+          "type": "textMerge",
+          "id1": "+",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "round(abs(@value - @target))",
+           "whole": 9,
+           "decimal": 0,
+           "flags": 23
+          }
+         },
+         "mode": 5,
+         "name": "pb"
+        }
+       },
+       {
+        "variable": {
+         "name": "fs",
+         "value": "min(1, @W / (@lw + @vw + 10 + @over * (@pw + 8)))"
+        }
+       },
+       {
+        "variable": {
+         "name": "base",
+         "value": "@lineH * 0.76"
+        }
+       },
+       {
+        "save": [
+         {
+          "scale": {
+           "sx": "@fs",
+           "sy": "@fs",
+           "pivotX": 0,
+           "pivotY": "@lineH / 2"
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": {
+            "$if": "label",
+            "then": "@label",
+            "else": ""
+           },
+           "x": 0,
+           "y": "@base + (@lt + @lb) / 2",
+           "panX": -1,
+           "panY": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "round(@value)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              },
+              "id2": " / "
+             },
+             "id2": {
+              "type": "textFromFloat",
+              "value": "round(@target)",
+              "whole": 9,
+              "decimal": 0,
+              "flags": 23
+             }
+            },
+            "id2": {
+             "$if": "unit",
+             "then": {
+              "type": "textMerge",
+              "id1": " ",
+              "id2": "@unit"
+             },
+             "else": ""
+            }
+           },
+           "x": "@W / @fs",
+           "y": "@base + (@vt + @vb) / 2",
+           "panX": 1,
+           "panY": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "$if": "theme.mono",
+             "then": {
+              "color": "@colors.onSurface"
+             },
+             "else": {
+              "color": "@overColor"
+             }
+            },
+            {
+             "alpha": "@over"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": {
+            "type": "textMerge",
+            "id1": "+",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "round(abs(@value - @target))",
+             "whole": 9,
+             "decimal": 0,
+             "flags": 23
+            }
+           },
+           "x": "@W / @fs - @vw - 8",
+           "y": "@base + (@pt + @pb) / 2",
+           "panX": 1,
+           "panY": 0
+          }
+         }
+        ]
+       },
+       {
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.track"
+            },
+            {
+             "alpha": 1
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 1.5
+            }
+           ]
+          }
+         },
+         {
+          "drawLine": {
+           "x1": 0,
+           "y1": "@barY + @height / 2",
+           "x2": "@W",
+           "y2": "@barY + @height / 2"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@color"
+            },
+            {
+             "alpha": 0.18
+            },
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": 0,
+           "top": "@barY",
+           "right": "@W",
+           "bottom": "@barY + @height",
+           "rx": "@height / 2",
+           "ry": "@height / 2"
+          }
+         }
+        ]
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "$if": "theme.mono",
+           "then": {
+            "color": "@colors.onSurface"
+           },
+           "else": {
+            "color": "@color"
+           }
+          },
+          {
+           "alpha": "step(@pa, 0)"
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": 0,
+         "top": "@barY",
+         "right": "max(@height, @fx)",
+         "bottom": "@barY + @height",
+         "rx": "@height / 2",
+         "ry": "@height / 2"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.surface"
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawRect": {
+         "left": "@tx - 2.5",
+         "top": "@barY - 3",
+         "right": "@tx + 2.5",
+         "bottom": "@barY + @height + 3"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@tx - 1",
+         "top": "@barY - 3",
+         "right": "@tx + 1",
+         "bottom": "@barY + @height + 3",
+         "rx": 1,
+         "ry": 1
+        }
+       },
+       {
+        "textSubtext": {
+         "text": "left over",
+         "start": "5 * @over",
+         "len": 4,
+         "varName": "wd"
+        }
+       },
+       {
+        "variable": {
+         "name": "say",
+         "vtype": "string",
+         "value": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "$if": "label",
+                  "then": {
+                   "type": "textMerge",
+                   "id1": "@label",
+                   "id2": " "
+                  },
+                  "else": ""
+                 },
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "round(@value)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 }
+                },
+                "id2": " of "
+               },
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(@target)",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "id2": {
+               "$if": "unit",
+               "then": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "@unit"
+               },
+               "else": ""
+              }
+             },
+             "id2": ", "
+            },
+            "id2": {
+             "type": "textFromFloat",
+             "value": "round(abs(@target - @value))",
+             "whole": 9,
+             "decimal": 0,
+             "flags": 23
+            }
+           },
+           "id2": " "
+          },
+          "id2": "@wd"
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "semantics": {
+         "contentDescription": {
+          "$if": "description",
+          "then": "@description",
+          "else": "@say"
+         }
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

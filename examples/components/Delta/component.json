@@ -1,0 +1,831 @@
+{
+ "component": "Delta",
+ "version": 1,
+ "summary": "A change as an arrow, a sign and a number, green for up and red for down (or the reverse with invert), that still reads in mono by its arrow and sign and is spoken as words: \"up 2.40 percent\". Text or solid pill; optionally an amount and a percent together, +$2.40 (+1.25%).",
+ "params": {
+  "value": {
+   "type": "float",
+   "required": true,
+   "doc": "The signed change, in percent unless suffix says otherwise: a literal, a \"@variable\" or an expression. Its sign chooses arrow, sign and colour; a value that rounds to 0 at `decimals` is flat"
+  },
+  "amount": {
+   "type": "float",
+   "doc": "The same change as an amount, to show both: +$2.40 (+1.25%). Its own sign is ignored; value decides the direction"
+  },
+  "prefix": {
+   "type": "string",
+   "default": "",
+   "doc": "Before the first number, after the sign: \"$\""
+  },
+  "suffix": {
+   "type": "string",
+   "default": "%",
+   "doc": "After the percent or value: \"%\", \" min\", \" pts\""
+  },
+  "spoken": {
+   "type": "string",
+   "default": " percent",
+   "doc": "What a screen reader says for suffix, with its space: \" percent\", \" minutes\""
+  },
+  "decimals": {
+   "type": "float",
+   "default": 2,
+   "static": true,
+   "doc": "Digits after the point in value"
+  },
+  "amountDecimals": {
+   "type": "float",
+   "default": 2,
+   "static": true,
+   "doc": "Digits after the point in amount"
+  },
+  "invert": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "A fall is good (costs, latency, churn): down turns green and up red; the arrow and sign still tell the truth"
+  },
+  "style": {
+   "type": "enum",
+   "values": [
+    "text",
+    "pill"
+   ],
+   "default": "text",
+   "static": true,
+   "doc": "text: coloured arrow and number. pill: a solid coloured pill for rows in a list (in mono: just the arrow and number, no fill)"
+  },
+  "arrow": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Draw the arrow; the sign stays"
+  },
+  "fontSize": {
+   "type": "float",
+   "default": 14,
+   "static": true,
+   "doc": "Text size; the arrow follows it"
+  },
+  "fontWeight": {
+   "type": "float",
+   "default": 500,
+   "static": true,
+   "doc": "Text weight"
+  }
+ },
+ "locals": {
+  "p": {
+   "$if": "decimals == '0'",
+   "then": 1,
+   "else": {
+    "$if": "decimals == '1'",
+    "then": 10,
+    "else": {
+     "$if": "decimals == '2'",
+     "then": 100,
+     "else": {
+      "$if": "decimals == '3'",
+      "then": 1000,
+      "else": {
+       "$if": "decimals == '4'",
+       "then": 10000,
+       "else": 1000000
+      }
+     }
+    }
+   }
+  },
+  "pa": {
+   "$if": "amountDecimals == '0'",
+   "then": 1,
+   "else": {
+    "$if": "amountDecimals == '1'",
+    "then": 10,
+    "else": {
+     "$if": "amountDecimals == '2'",
+     "then": 100,
+     "else": {
+      "$if": "amountDecimals == '3'",
+      "then": 1000,
+      "else": {
+       "$if": "amountDecimals == '4'",
+       "then": 10000,
+       "else": 1000000
+      }
+     }
+    }
+   }
+  },
+  "mag": "round(abs(@value) * @p) / @p",
+  "amt": {
+   "$if": "amount",
+   "then": "round(abs(@amount) * @pa) / @pa",
+   "else": 0
+  },
+  "h": "0.4999 / @p",
+  "up": "step(@value, @h)",
+  "dn": "step(0 - @value, @h)",
+  "fl": "1 - @up - @dn",
+  "aw": "@fontSize * 0.68",
+  "ah": "@fontSize * 0.56"
+ },
+ "capabilities": [
+  "text.dynamic",
+  "draw.path",
+  "a11y.labels",
+  "data.condition"
+ ],
+ "call": {
+  "Delta": {
+   "value": 2.4
+  }
+ },
+ "pitfalls": [
+  "The number is rounded before printing and the direction is taken after rounding, so 0.004% is flat and shows 0.00%, not a green arrow on zero",
+  "Three copies of the row (up, down, flat) are switched with visibility, because a text's colour can't be an expression. So one call costs about 1 KB: cheap for a screen, count it for long lists",
+  "Say what the change is relative to in the words beside it (\"today\", \"since open\"): nothing here knows the period. A signed value like -0.4 with suffix \" min\" gives −0.40 min: set decimals 0 for whole units",
+  "Colour is decided from `value`, not from whether the number is good: pass invert for costs",
+  "Prefix goes after the sign: −$2.40"
+ ],
+ "body": {
+  "box": {
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         1,
+         1
+        ]
+       }
+      ],
+      "commands": [
+       {
+        "$if": "amount",
+        "then": {
+         "variable": {
+          "name": "ms1",
+          "vtype": "string",
+          "commit": true,
+          "value": {
+           "$if": "prefix",
+           "then": {
+            "type": "textMerge",
+            "id1": "@prefix",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "@amt",
+             "whole": 9,
+             "decimal": "@amountDecimals",
+             "flags": 23
+            }
+           },
+           "else": {
+            "type": "textFromFloat",
+            "value": "@amt",
+            "whole": 9,
+            "decimal": "@amountDecimals",
+            "flags": 23
+           }
+          }
+         }
+        }
+       },
+       {
+        "$if": "amount",
+        "then": {
+         "variable": {
+          "name": "ms",
+          "vtype": "string",
+          "commit": true,
+          "value": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@mag",
+            "whole": 9,
+            "decimal": "@decimals",
+            "flags": 23
+           },
+           "id2": "@suffix"
+          }
+         }
+        },
+        "else": {
+         "variable": {
+          "name": "ms",
+          "vtype": "string",
+          "commit": true,
+          "value": {
+           "type": "textMerge",
+           "id1": {
+            "$if": "prefix",
+            "then": {
+             "type": "textMerge",
+             "id1": "@prefix",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@mag",
+              "whole": 9,
+              "decimal": "@decimals",
+              "flags": 23
+             }
+            },
+            "else": {
+             "type": "textFromFloat",
+             "value": "@mag",
+             "whole": 9,
+             "decimal": "@decimals",
+             "flags": 23
+            }
+           },
+           "id2": "@suffix"
+          }
+         }
+        }
+       },
+       {
+        "$if": "amount",
+        "then": {
+         "variable": {
+          "name": "sp",
+          "vtype": "string",
+          "commit": true,
+          "value": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@mag",
+            "whole": 9,
+            "decimal": "@decimals",
+            "flags": 23
+           },
+           "id2": "@spoken"
+          }
+         }
+        },
+        "else": {
+         "variable": {
+          "name": "sp",
+          "vtype": "string",
+          "commit": true,
+          "value": {
+           "type": "textMerge",
+           "id1": {
+            "$if": "prefix",
+            "then": {
+             "type": "textMerge",
+             "id1": "@prefix",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@mag",
+              "whole": 9,
+              "decimal": "@decimals",
+              "flags": 23
+             }
+            },
+            "else": {
+             "type": "textFromFloat",
+             "value": "@mag",
+             "whole": 9,
+             "decimal": "@decimals",
+             "flags": 23
+            }
+           },
+           "id2": "@spoken"
+          }
+         }
+        }
+       },
+       {
+        "$if": "arrow",
+        "then": [
+         {
+          "pathExpression": {
+           "id": "tri",
+           "expressionX": "u * @aw / 2",
+           "expressionY": "@ah / 2 + (@up - @dn) * (@ah * abs(u - 1) - @ah / 2)",
+           "start": 0,
+           "end": 2,
+           "count": 3,
+           "flags": 4
+          }
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "visibility": "@up"
+       },
+       {
+        "$if": "style == 'pill'",
+        "then": {
+         "$if": "!theme.mono",
+         "then": [
+          {
+           "clip": {
+            "roundedRect": "@fontSize * 0.5"
+           }
+          },
+          {
+           "background": {
+            "$if": "invert",
+            "then": "@colors.error",
+            "else": "@colors.success"
+           }
+          },
+          {
+           "padding": [
+            "@fontSize * 0.55",
+            "@fontSize * 0.2"
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "spacedBy": "@fontSize * 0.3"
+       }
+      ],
+      "children": [
+       {
+        "$if": "arrow",
+        "then": {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": [
+             "@aw",
+             "@ah"
+            ]
+           }
+          ],
+          "commands": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": {
+                "$if": "style == 'pill'",
+                "then": {
+                 "$if": "theme.mono",
+                 "then": {
+                  "$if": "invert",
+                  "then": "@colors.error",
+                  "else": "@colors.success"
+                 },
+                 "else": "@colors.onPrimary"
+                },
+                "else": {
+                 "$if": "invert",
+                 "then": "@colors.error",
+                 "else": "@colors.success"
+                }
+               }
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "drawPath": {
+             "path": "tri"
+            }
+           }
+          ]
+         }
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "$if": "amount",
+          "then": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": "@ms1"
+              },
+              "id2": " ("
+             },
+             "id2": "+"
+            },
+            "id2": "@ms"
+           },
+           "id2": ")"
+          },
+          "else": {
+           "type": "textMerge",
+           "id1": "+",
+           "id2": "@ms"
+          }
+         },
+         "fontSize": "@fontSize",
+         "fontWeight": "@fontWeight",
+         "color": {
+          "$if": "style == 'pill'",
+          "then": {
+           "$if": "theme.mono",
+           "then": {
+            "$if": "invert",
+            "then": "@colors.error",
+            "else": "@colors.success"
+           },
+           "else": "@colors.onPrimary"
+          },
+          "else": {
+           "$if": "invert",
+           "then": "@colors.error",
+           "else": "@colors.success"
+          }
+         },
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "$if": "amount",
+             "then": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": "up ",
+                "id2": "@ms1"
+               },
+               "id2": ", "
+              },
+              "id2": "@sp"
+             },
+             "else": {
+              "type": "textMerge",
+              "id1": "up ",
+              "id2": "@sp"
+             }
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "visibility": "@dn"
+       },
+       {
+        "$if": "style == 'pill'",
+        "then": {
+         "$if": "!theme.mono",
+         "then": [
+          {
+           "clip": {
+            "roundedRect": "@fontSize * 0.5"
+           }
+          },
+          {
+           "background": {
+            "$if": "invert",
+            "then": "@colors.success",
+            "else": "@colors.error"
+           }
+          },
+          {
+           "padding": [
+            "@fontSize * 0.55",
+            "@fontSize * 0.2"
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "spacedBy": "@fontSize * 0.3"
+       }
+      ],
+      "children": [
+       {
+        "$if": "arrow",
+        "then": {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": [
+             "@aw",
+             "@ah"
+            ]
+           }
+          ],
+          "commands": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": {
+                "$if": "style == 'pill'",
+                "then": {
+                 "$if": "theme.mono",
+                 "then": {
+                  "$if": "invert",
+                  "then": "@colors.success",
+                  "else": "@colors.error"
+                 },
+                 "else": "@colors.onPrimary"
+                },
+                "else": {
+                 "$if": "invert",
+                 "then": "@colors.success",
+                 "else": "@colors.error"
+                }
+               }
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "drawPath": {
+             "path": "tri"
+            }
+           }
+          ]
+         }
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "$if": "amount",
+          "then": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "−",
+               "id2": "@ms1"
+              },
+              "id2": " ("
+             },
+             "id2": "−"
+            },
+            "id2": "@ms"
+           },
+           "id2": ")"
+          },
+          "else": {
+           "type": "textMerge",
+           "id1": "−",
+           "id2": "@ms"
+          }
+         },
+         "fontSize": "@fontSize",
+         "fontWeight": "@fontWeight",
+         "color": {
+          "$if": "style == 'pill'",
+          "then": {
+           "$if": "theme.mono",
+           "then": {
+            "$if": "invert",
+            "then": "@colors.success",
+            "else": "@colors.error"
+           },
+           "else": "@colors.onPrimary"
+          },
+          "else": {
+           "$if": "invert",
+           "then": "@colors.success",
+           "else": "@colors.error"
+          }
+         },
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "$if": "amount",
+             "then": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": "down ",
+                "id2": "@ms1"
+               },
+               "id2": ", "
+              },
+              "id2": "@sp"
+             },
+             "else": {
+              "type": "textMerge",
+              "id1": "down ",
+              "id2": "@sp"
+             }
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "visibility": "@fl"
+       },
+       {
+        "$if": "style == 'pill'",
+        "then": {
+         "$if": "!theme.mono",
+         "then": [
+          {
+           "clip": {
+            "roundedRect": "@fontSize * 0.5"
+           }
+          },
+          {
+           "background": "@colors.surfaceHigh"
+          },
+          {
+           "padding": [
+            "@fontSize * 0.55",
+            "@fontSize * 0.2"
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "spacedBy": "@fontSize * 0.3"
+       }
+      ],
+      "children": [
+       {
+        "$if": "arrow",
+        "then": {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": [
+             "@aw",
+             "@ah"
+            ]
+           }
+          ],
+          "commands": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": {
+                "$if": "style == 'pill'",
+                "then": {
+                 "$if": "theme.mono",
+                 "then": "@colors.muted",
+                 "else": "@colors.onSurface"
+                },
+                "else": "@colors.muted"
+               }
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "drawRoundRect": {
+             "left": 0,
+             "top": "@ah / 2 - 1",
+             "right": "@aw",
+             "bottom": "@ah / 2 + 1",
+             "rx": 1,
+             "ry": 1
+            }
+           }
+          ]
+         }
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "$if": "amount",
+          "then": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "",
+               "id2": "@ms1"
+              },
+              "id2": " ("
+             },
+             "id2": ""
+            },
+            "id2": "@ms"
+           },
+           "id2": ")"
+          },
+          "else": {
+           "type": "textMerge",
+           "id1": "",
+           "id2": "@ms"
+          }
+         },
+         "fontSize": "@fontSize",
+         "fontWeight": "@fontWeight",
+         "color": {
+          "$if": "style == 'pill'",
+          "then": {
+           "$if": "theme.mono",
+           "then": "@colors.muted",
+           "else": "@colors.onSurface"
+          },
+          "else": "@colors.muted"
+         },
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "$if": "amount",
+             "then": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": "unchanged, ",
+                "id2": "@ms1"
+               },
+               "id2": ", "
+              },
+              "id2": "@sp"
+             },
+             "else": {
+              "type": "textMerge",
+              "id1": "unchanged, ",
+              "id2": "@sp"
+             }
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

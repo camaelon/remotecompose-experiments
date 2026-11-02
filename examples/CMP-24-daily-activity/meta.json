@@ -1,0 +1,1322 @@
+{
+ "id": "CMP-24",
+ "name": "daily-activity",
+ "version": 1,
+ "title": "Daily activity",
+ "summary": "A day at a glance: move, exercise and stand rings with their numbers, steps against a goal and a hypnogram of last night's sleep. Stacked on a phone, side by side in landscape and at 4x2, rings alone at 2x2 and on a round watch.",
+ "prompt": "Build a daily activity screen: move, exercise and stand rings with goals, steps against a goal, and last night's sleep as stages over time. Rings past their goal must show it. It must fit a phone, landscape, a 4x2 and a 2x2 widget and a round watch.",
+ "level": 3,
+ "family": "CMP",
+ "components": [
+  "ActivityRings",
+  "GoalBar",
+  "SleepStages"
+ ],
+ "capabilities": {
+  "primary": [
+   "layout.stack",
+   "host.variables",
+   "data.array"
+  ],
+  "secondary": [
+   "expr.system",
+   "a11y.labels",
+   "text.dynamic"
+  ]
+ },
+ "use_cases": [
+  "fitness",
+  "dashboard",
+  "widget"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "health",
+  "fitness",
+  "calories",
+  "macros",
+  "steps",
+  "activity rings",
+  "sleep",
+  "heart rate",
+  "workout",
+  "water",
+  "weight",
+  "goal",
+  "daily activity",
+  "activity tracker",
+  "move exercise stand",
+  "rings",
+  "hypnogram",
+  "sleep stages",
+  "rem",
+  "deep sleep",
+  "step goal",
+  "step counter",
+  "fitness tracker",
+  "smartwatch",
+  "wear"
+ ],
+ "teaches": [
+  "The same tree stacks or goes side by side through spacer lengths from windowWidth() and windowHeight(), and rings get what the panel leaves",
+  "ActivityRings decides its own legend from its box: under the rings when tall, beside when wide, none in a watch-sized square",
+  "Sleep comes from one exported array of stage indexes; the minutes per stage come from the host, since an expression cannot total an array by stage"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/variables/wide",
+   "shows": "expr.system",
+   "note": "side by side when the window is wide; hasP drops the panel on a watch"
+  },
+  {
+   "pointer": "/root/5/column/children/0/column/children/1/box/children/0",
+   "shows": "layout.stack",
+   "note": "the rings' box, with the panel placed after it by spacer lengths"
+  },
+  {
+   "pointer": "/resources/floatArrays/night",
+   "shows": "data.array",
+   "note": "the night: one stage index per 15 minutes"
+  },
+  {
+   "pointer": "/resources/variables/steps",
+   "shows": "host.variables",
+   "note": "exported numbers the app sends"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "move": {
+    "min": 0,
+    "max": 3000,
+    "meaning": "active calories"
+   },
+   "moveGoal": {
+    "min": 1,
+    "max": 3000,
+    "meaning": "move goal"
+   },
+   "exercise": {
+    "min": 0,
+    "max": 300,
+    "meaning": "exercise minutes"
+   },
+   "exerciseGoal": {
+    "min": 1,
+    "max": 300,
+    "meaning": "exercise goal"
+   },
+   "stand": {
+    "min": 0,
+    "max": 24,
+    "meaning": "hours stood"
+   },
+   "standGoal": {
+    "min": 1,
+    "max": 24,
+    "meaning": "stand goal"
+   },
+   "steps": {
+    "min": 0,
+    "max": 50000,
+    "meaning": "steps today"
+   },
+   "stepsGoal": {
+    "min": 1,
+    "max": 50000,
+    "meaning": "step goal"
+   },
+   "awakeMin": {
+    "min": 0,
+    "max": 600,
+    "meaning": "minutes awake"
+   },
+   "remMin": {
+    "min": 0,
+    "max": 600,
+    "meaning": "minutes of REM"
+   },
+   "lightMin": {
+    "min": 0,
+    "max": 600,
+    "meaning": "minutes of light sleep"
+   },
+   "deepMin": {
+    "min": 0,
+    "max": 600,
+    "meaning": "minutes of deep sleep"
+   },
+   "night": {
+    "type": "float_array",
+    "meaning": "one value per equal slice of the night: 0 awake, 1 REM, 2 light, 3 deep"
+   },
+   "day": {
+    "type": "string",
+    "meaning": "title",
+    "default": "Today"
+   },
+   "date": {
+    "type": "string",
+    "meaning": "date, formatted",
+    "default": "Sat 1 Nov"
+   },
+   "sleepTotal": {
+    "type": "string",
+    "meaning": "total sleep, formatted",
+    "default": "7h 10m"
+   },
+   "bedtime": {
+    "type": "string",
+    "meaning": "start time",
+    "default": "23:10"
+   },
+   "wake": {
+    "type": "string",
+    "meaning": "end time",
+    "default": "06:50"
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Phone: Today and the date, three rings with Move, Exercise and Stand under them, a steps bar with a goal tick, Sleep with a hypnogram of four lanes. Landscape: rings left, steps and sleep right. 4x2: rings left, steps and a small hypnogram right. 2x2 and round: rings alone with 70% in the hole. move 1740: a second lap on the outer ring.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "wide",
+    "width": 640,
+    "height": 360
+   },
+   {
+    "name": "w4x2",
+    "width": 320,
+    "height": 160
+   },
+   {
+    "name": "w2x2",
+    "width": 160,
+    "height": 160
+   },
+   {
+    "name": "round",
+    "width": 227,
+    "height": 227,
+    "round": true
+   },
+   {
+    "name": "over",
+    "theme": "dark",
+    "variables": {
+     "move": 1740,
+     "exercise": 55,
+     "steps": 23000
+    }
+   },
+   {
+    "name": "over-mono",
+    "componentTheme": "mono-dark",
+    "variables": {
+     "move": 1740,
+     "exercise": 55,
+     "steps": 23000
+    }
+   },
+   {
+    "name": "zero",
+    "theme": "light",
+    "variables": {
+     "move": 0,
+     "exercise": 0,
+     "stand": 0,
+     "steps": 0
+    }
+   },
+   {
+    "name": "long-day",
+    "theme": "light",
+    "variables": {
+     "day": "Wednesday the 24th of September 2026"
+    }
+   }
+  ]
+ },
+ "related": [
+  "ActivityRings",
+  "GoalBar",
+  "SleepStages",
+  "CMP-23",
+  "CMP-17"
+ ],
+ "pitfalls": [
+  "Every host string needs its own starting value: equal strings share one text id"
+ ],
+ "derived": {
+  "components": [
+   "ActivityRings",
+   "GoalBar",
+   "SleepStages"
+  ],
+  "component_instances": 3,
+  "component_modes": {
+   "ActivityRings": "expand",
+   "GoalBar": "expand",
+   "SleepStages": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 19348,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 933,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATED_FLOAT": 293,
+   "COLOR_CONSTANT": 16,
+   "COLOR_EXPRESSIONS": 16,
+   "COMPONENT_VALUE": 5,
+   "CanvasContent": 3,
+   "CoreText": 4,
+   "DATA_FLOAT": 15,
+   "DATA_TEXT": 34,
+   "DRAW_ARC": 6,
+   "DRAW_CIRCLE": 3,
+   "DRAW_LINE": 9,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 3,
+   "DRAW_TEXT_ANCHOR": 28,
+   "DataListFloat": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 14,
+   "LAYOUT_CANVAS": 3,
+   "LAYOUT_COLUMN": 4,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 3,
+   "LayoutComponentContent": 22,
+   "LoopOperation": 21,
+   "MATRIX_RESTORE": 9,
+   "MATRIX_SAVE": 9,
+   "MATRIX_SCALE": 9,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 20,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_VISIBILITY": 4,
+   "MODIFIER_WIDTH": 21,
+   "NAMED_VARIABLE": 26,
+   "PAINT_VALUES": 61,
+   "THEME": 24,
+   "TextFromFloat": 66,
+   "TextMeasure": 32,
+   "TextMerge": 137,
+   "TextSubtext": 4
+  },
+  "host_variables": [
+   {
+    "name": "awakeMin",
+    "type": "float",
+    "value": 24
+   },
+   {
+    "name": "bedtime",
+    "type": "string",
+    "value": "23:10"
+   },
+   {
+    "name": "date",
+    "type": "string",
+    "value": "Sat 1 Nov"
+   },
+   {
+    "name": "day",
+    "type": "string",
+    "value": "Today"
+   },
+   {
+    "name": "deepMin",
+    "type": "float",
+    "value": 79
+   },
+   {
+    "name": "exercise",
+    "type": "float",
+    "value": 24
+   },
+   {
+    "name": "exerciseGoal",
+    "type": "float",
+    "value": 30
+   },
+   {
+    "name": "lightMin",
+    "type": "float",
+    "value": 232
+   },
+   {
+    "name": "move",
+    "type": "float",
+    "value": 420
+   },
+   {
+    "name": "moveGoal",
+    "type": "float",
+    "value": 600
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "night",
+    "type": "float_array",
+    "value": [
+     0,
+     2,
+     2,
+     3,
+     3,
+     3,
+     2,
+     2,
+     1,
+     1,
+     2,
+     3,
+     3,
+     2,
+     2,
+     1,
+     1,
+     0,
+     2,
+     2,
+     3,
+     2,
+     1,
+     1,
+     1,
+     2,
+     2,
+     0,
+     2,
+     1,
+     1,
+     0
+    ]
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "remMin",
+    "type": "float",
+    "value": 95
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   },
+   {
+    "name": "sleepTotal",
+    "type": "string",
+    "value": "7h 10m"
+   },
+   {
+    "name": "stand",
+    "type": "float",
+    "value": 7
+   },
+   {
+    "name": "standGoal",
+    "type": "float",
+    "value": 12
+   },
+   {
+    "name": "steps",
+    "type": "float",
+    "value": 8432
+   },
+   {
+    "name": "stepsGoal",
+    "type": "float",
+    "value": 10000
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "wake",
+    "type": "string",
+    "value": "06:20"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: layout_deep_nesting",
+   "info: deep_expressions",
+   "info: expression_entries"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 19389,
+    "component_modes": {
+     "ActivityRings": "expand",
+     "GoalBar": "expand",
+     "SleepStages": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 907,
+    "host_variables": [
+     {
+      "name": "awakeMin",
+      "type": "float",
+      "value": 24
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "bedtime",
+      "type": "string",
+      "value": "23:10"
+     },
+     {
+      "name": "date",
+      "type": "string",
+      "value": "Sat 1 Nov"
+     },
+     {
+      "name": "day",
+      "type": "string",
+      "value": "Today"
+     },
+     {
+      "name": "deepMin",
+      "type": "float",
+      "value": 79
+     },
+     {
+      "name": "exercise",
+      "type": "float",
+      "value": 24
+     },
+     {
+      "name": "exerciseGoal",
+      "type": "float",
+      "value": 30
+     },
+     {
+      "name": "lightMin",
+      "type": "float",
+      "value": 232
+     },
+     {
+      "name": "move",
+      "type": "float",
+      "value": 420
+     },
+     {
+      "name": "moveGoal",
+      "type": "float",
+      "value": 600
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "night",
+      "type": "float_array",
+      "value": [
+       0,
+       2,
+       2,
+       3,
+       3,
+       3,
+       2,
+       2,
+       1,
+       1,
+       2,
+       3,
+       3,
+       2,
+       2,
+       1,
+       1,
+       0,
+       2,
+       2,
+       3,
+       2,
+       1,
+       1,
+       1,
+       2,
+       2,
+       0,
+       2,
+       1,
+       1,
+       0
+      ]
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "remMin",
+      "type": "float",
+      "value": 95
+     },
+     {
+      "name": "sleepTotal",
+      "type": "string",
+      "value": "7h 10m"
+     },
+     {
+      "name": "stand",
+      "type": "float",
+      "value": 7
+     },
+     {
+      "name": "standGoal",
+      "type": "float",
+      "value": 12
+     },
+     {
+      "name": "steps",
+      "type": "float",
+      "value": 8432
+     },
+     {
+      "name": "stepsGoal",
+      "type": "float",
+      "value": 10000
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "wake",
+      "type": "string",
+      "value": "06:20"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 19389,
+    "component_modes": {
+     "ActivityRings": "expand",
+     "GoalBar": "expand",
+     "SleepStages": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 907,
+    "host_variables": [
+     {
+      "name": "awakeMin",
+      "type": "float",
+      "value": 24
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "bedtime",
+      "type": "string",
+      "value": "23:10"
+     },
+     {
+      "name": "date",
+      "type": "string",
+      "value": "Sat 1 Nov"
+     },
+     {
+      "name": "day",
+      "type": "string",
+      "value": "Today"
+     },
+     {
+      "name": "deepMin",
+      "type": "float",
+      "value": 79
+     },
+     {
+      "name": "exercise",
+      "type": "float",
+      "value": 24
+     },
+     {
+      "name": "exerciseGoal",
+      "type": "float",
+      "value": 30
+     },
+     {
+      "name": "lightMin",
+      "type": "float",
+      "value": 232
+     },
+     {
+      "name": "move",
+      "type": "float",
+      "value": 420
+     },
+     {
+      "name": "moveGoal",
+      "type": "float",
+      "value": 600
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "night",
+      "type": "float_array",
+      "value": [
+       0,
+       2,
+       2,
+       3,
+       3,
+       3,
+       2,
+       2,
+       1,
+       1,
+       2,
+       3,
+       3,
+       2,
+       2,
+       1,
+       1,
+       0,
+       2,
+       2,
+       3,
+       2,
+       1,
+       1,
+       1,
+       2,
+       2,
+       0,
+       2,
+       1,
+       1,
+       0
+      ]
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "remMin",
+      "type": "float",
+      "value": 95
+     },
+     {
+      "name": "sleepTotal",
+      "type": "string",
+      "value": "7h 10m"
+     },
+     {
+      "name": "stand",
+      "type": "float",
+      "value": 7
+     },
+     {
+      "name": "standGoal",
+      "type": "float",
+      "value": 12
+     },
+     {
+      "name": "steps",
+      "type": "float",
+      "value": 8432
+     },
+     {
+      "name": "stepsGoal",
+      "type": "float",
+      "value": 10000
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "wake",
+      "type": "string",
+      "value": "06:20"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: layout_deep_nesting",
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "w4x2": {
+    "render": "render-w4x2.png",
+    "render_findings": [],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: layout_deep_nesting",
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "w2x2": {
+    "render": "render-w2x2.png",
+    "render_findings": [],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "round": {
+    "render": "render-round.png",
+    "render_findings": [],
+    "size": [
+     227,
+     227
+    ],
+    "audit_findings": [
+     "warning: hardcoded_date",
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "over": {
+    "theme": "dark",
+    "render": "render-over.png",
+    "render_findings": []
+   },
+   "over-mono": {
+    "componentTheme": "mono-dark",
+    "bytes": 19389,
+    "component_modes": {
+     "ActivityRings": "expand",
+     "GoalBar": "expand",
+     "SleepStages": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 907,
+    "host_variables": [
+     {
+      "name": "awakeMin",
+      "type": "float",
+      "value": 24
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "bedtime",
+      "type": "string",
+      "value": "23:10"
+     },
+     {
+      "name": "date",
+      "type": "string",
+      "value": "Sat 1 Nov"
+     },
+     {
+      "name": "day",
+      "type": "string",
+      "value": "Today"
+     },
+     {
+      "name": "deepMin",
+      "type": "float",
+      "value": 79
+     },
+     {
+      "name": "exercise",
+      "type": "float",
+      "value": 24
+     },
+     {
+      "name": "exerciseGoal",
+      "type": "float",
+      "value": 30
+     },
+     {
+      "name": "lightMin",
+      "type": "float",
+      "value": 232
+     },
+     {
+      "name": "move",
+      "type": "float",
+      "value": 420
+     },
+     {
+      "name": "moveGoal",
+      "type": "float",
+      "value": 600
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "night",
+      "type": "float_array",
+      "value": [
+       0,
+       2,
+       2,
+       3,
+       3,
+       3,
+       2,
+       2,
+       1,
+       1,
+       2,
+       3,
+       3,
+       2,
+       2,
+       1,
+       1,
+       0,
+       2,
+       2,
+       3,
+       2,
+       1,
+       1,
+       1,
+       2,
+       2,
+       0,
+       2,
+       1,
+       1,
+       0
+      ]
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "remMin",
+      "type": "float",
+      "value": 95
+     },
+     {
+      "name": "sleepTotal",
+      "type": "string",
+      "value": "7h 10m"
+     },
+     {
+      "name": "stand",
+      "type": "float",
+      "value": 7
+     },
+     {
+      "name": "standGoal",
+      "type": "float",
+      "value": 12
+     },
+     {
+      "name": "steps",
+      "type": "float",
+      "value": 8432
+     },
+     {
+      "name": "stepsGoal",
+      "type": "float",
+      "value": 10000
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "wake",
+      "type": "string",
+      "value": "06:20"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-over-mono.png",
+    "render_findings": []
+   },
+   "zero": {
+    "theme": "light",
+    "render": "render-zero.png",
+    "render_findings": []
+   },
+   "long-day": {
+    "theme": "light",
+    "render": "render-long-day.png",
+    "render_findings": [
+     "info: text_ellipsized"
+    ]
+   }
+  },
+  "json_keys": [
+   "ActivityRings",
+   "GoalBar",
+   "H",
+   "SleepStages",
+   "W",
+   "alpha",
+   "anim",
+   "apiLevel",
+   "awakeMin",
+   "background",
+   "bodyH",
+   "bottom",
+   "box",
+   "canvas",
+   "caption",
+   "center",
+   "centerValue",
+   "chartH",
+   "children",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "deepMin",
+   "drawArc",
+   "drawCircle",
+   "drawLine",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "end",
+   "exercise",
+   "exerciseGoal",
+   "export",
+   "flags",
+   "floatArrays",
+   "fontSize",
+   "from",
+   "g",
+   "goalbar1_over",
+   "hasP",
+   "hasSH",
+   "hasSleep",
+   "hasT",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "id1",
+   "id2",
+   "ih",
+   "index",
+   "iw",
+   "label",
+   "lanes",
+   "left",
+   "len",
+   "light",
+   "lightMin",
+   "loop",
+   "maxLines",
+   "minutes",
+   "mode",
+   "modifiers",
+   "move",
+   "moveGoal",
+   "muted",
+   "name",
+   "night",
+   "onSurface",
+   "ops",
+   "outline",
+   "overflow",
+   "pH",
+   "pad",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "pivotX",
+   "pivotY",
+   "primary",
+   "profiles",
+   "pw",
+   "px",
+   "py",
+   "radius",
+   "remMin",
+   "resources",
+   "rh",
+   "right",
+   "rings",
+   "root",
+   "row",
+   "rw",
+   "rx",
+   "ry",
+   "save",
+   "scale",
+   "secondary",
+   "semantics",
+   "shH",
+   "sleepH",
+   "solo",
+   "stages",
+   "stand",
+   "standGoal",
+   "start",
+   "startAngle",
+   "steps",
+   "stepsGoal",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "success",
+   "surface",
+   "sweepAngle",
+   "sx",
+   "sy",
+   "tH",
+   "target",
+   "text",
+   "textMeasure",
+   "textSize",
+   "textSubtext",
+   "top",
+   "type",
+   "unit",
+   "until",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "visibility",
+   "vtype",
+   "warning",
+   "weight",
+   "whole",
+   "wide",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "expr.system": [
+    "fontSize()",
+    "windowWidth",
+    "windowHeight",
+    "componentWidth",
+    "componentHeight"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ]
+  },
+  "built_at": "2026-11-02T02:08:47.423Z"
+ }
+}

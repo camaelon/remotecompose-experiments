@@ -1,0 +1,1260 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 310,
+  "profiles": 513,
+  "contentDescription": "Numbers shortened with K, M, B and T"
+ },
+ "resources": {
+  "variables": {
+   "volume": {
+    "value": 38420000,
+    "export": true
+   },
+   "balance": {
+    "value": 1234.5,
+    "export": true
+   },
+   "loss": {
+    "value": -2500000,
+    "export": true
+   },
+   "tiny": {
+    "value": 0.00412,
+    "export": true
+   },
+   "compactnumber1_a": "abs(@volume)",
+   "compactnumber1_t": "clamp(0, 4, floor(log(max(@compactnumber1_a * 1.00052, 1)) / 3))",
+   "compactnumber1_s": "@compactnumber1_a / pow(1000, @compactnumber1_t)",
+   "compactnumber1_q": "pow(10, clamp(0, 6, 3 - 1 - floor(log(max(@compactnumber1_s, 0.000001)))))",
+   "compactnumber1_m": "round(@compactnumber1_s * @compactnumber1_q) * step(@compactnumber1_a, 0.000999)",
+   "compactnumber1_r": "@compactnumber1_m / @compactnumber1_q",
+   "compactnumber1_dd": "step(@compactnumber1_m, 0.5) * max(0, log(@compactnumber1_q) - (1 - step(@compactnumber1_m % 10, 0.5)) - (1 - step(@compactnumber1_m % 100, 0.5)) - (1 - step(@compactnumber1_m % 1000, 0.5)))",
+   "compactnumber1_ti": "max(@compactnumber1_t - 1, 0)",
+   "compactnumber1_neg": "step(0 - @volume, 0) * step(@compactnumber1_r, 0)",
+   "compactnumber2_a": "abs(@balance)",
+   "compactnumber2_t": "clamp(0, 4, floor(log(max(@compactnumber2_a * 1.00052, 1)) / 3))",
+   "compactnumber2_s": "@compactnumber2_a / pow(1000, @compactnumber2_t)",
+   "compactnumber2_q": "pow(10, clamp(0, 6, 3 - 1 - floor(log(max(@compactnumber2_s, 0.000001)))))",
+   "compactnumber2_m": "round(@compactnumber2_s * @compactnumber2_q) * step(@compactnumber2_a, 0.000999)",
+   "compactnumber2_r": "@compactnumber2_m / @compactnumber2_q",
+   "compactnumber2_dd": "step(@compactnumber2_m, 0.5) * max(0, log(@compactnumber2_q) - (1 - step(@compactnumber2_m % 10, 0.5)) - (1 - step(@compactnumber2_m % 100, 0.5)) - (1 - step(@compactnumber2_m % 1000, 0.5)))",
+   "compactnumber2_ti": "max(@compactnumber2_t - 1, 0)",
+   "compactnumber2_full": "(1 - step(@compactnumber2_a, 1000000 - 0.5)) * max(step(@compactnumber2_a, 0.0999), 1 - step(@compactnumber2_a, 0))",
+   "compactnumber2_shortv": "1 - @compactnumber2_full",
+   "compactnumber2_fr": "round(@compactnumber2_a * 100) / 100",
+   "compactnumber2_neg": "step(0 - @balance, 0) * step(max(@compactnumber2_r, @compactnumber2_fr), 0)",
+   "compactnumber3_a": "abs(@loss)",
+   "compactnumber3_t": "clamp(0, 4, floor(log(max(@compactnumber3_a * 1.00052, 1)) / 3))",
+   "compactnumber3_s": "@compactnumber3_a / pow(1000, @compactnumber3_t)",
+   "compactnumber3_q": "pow(10, clamp(0, 6, 3 - 1 - floor(log(max(@compactnumber3_s, 0.000001)))))",
+   "compactnumber3_m": "round(@compactnumber3_s * @compactnumber3_q) * step(@compactnumber3_a, 0.000999)",
+   "compactnumber3_r": "@compactnumber3_m / @compactnumber3_q",
+   "compactnumber3_dd": "step(@compactnumber3_m, 0.5) * max(0, log(@compactnumber3_q) - (1 - step(@compactnumber3_m % 10, 0.5)) - (1 - step(@compactnumber3_m % 100, 0.5)) - (1 - step(@compactnumber3_m % 1000, 0.5)))",
+   "compactnumber3_ti": "max(@compactnumber3_t - 1, 0)",
+   "compactnumber3_neg": "step(0 - @loss, 0) * step(@compactnumber3_r, 0)",
+   "compactnumber4_a": "abs(@tiny)",
+   "compactnumber4_t": "clamp(0, 4, floor(log(max(@compactnumber4_a * 1.00052, 1)) / 3))",
+   "compactnumber4_s": "@compactnumber4_a / pow(1000, @compactnumber4_t)",
+   "compactnumber4_q": "pow(10, clamp(0, 6, 3 - 1 - floor(log(max(@compactnumber4_s, 0.000001)))))",
+   "compactnumber4_m": "round(@compactnumber4_s * @compactnumber4_q) * step(@compactnumber4_a, 0.000999)",
+   "compactnumber4_r": "@compactnumber4_m / @compactnumber4_q",
+   "compactnumber4_dd": "step(@compactnumber4_m, 0.5) * max(0, log(@compactnumber4_q) - (1 - step(@compactnumber4_m % 10, 0.5)) - (1 - step(@compactnumber4_m % 100, 0.5)) - (1 - step(@compactnumber4_m % 1000, 0.5)))",
+   "compactnumber4_ti": "max(@compactnumber4_t - 1, 0)",
+   "compactnumber4_neg": "step(0 - @tiny, 0) * step(@compactnumber4_r, 0)",
+   "compactnumber5_t": "clamp(0, 4, floor(log(max(842 * 1.00052, 1)) / 3))",
+   "compactnumber5_s": "842 / pow(1000, @compactnumber5_t)",
+   "compactnumber5_q": "pow(10, clamp(0, 6, 3 - 1 - floor(log(max(@compactnumber5_s, 0.000001)))))",
+   "compactnumber5_m": "round(@compactnumber5_s * @compactnumber5_q) * step(842, 0.000999)",
+   "compactnumber5_r": "@compactnumber5_m / @compactnumber5_q",
+   "compactnumber5_dd": "step(@compactnumber5_m, 0.5) * max(0, log(@compactnumber5_q) - (1 - step(@compactnumber5_m % 10, 0.5)) - (1 - step(@compactnumber5_m % 100, 0.5)) - (1 - step(@compactnumber5_m % 1000, 0.5)))",
+   "compactnumber5_ti": "max(@compactnumber5_t - 1, 0)",
+   "compactnumber5_neg": "step(0 - 842, 0) * step(@compactnumber5_r, 0)",
+   "compactnumber6_t": "clamp(0, 4, floor(log(max(2810000000000 * 1.00052, 1)) / 3))",
+   "compactnumber6_s": "2810000000000 / pow(1000, @compactnumber6_t)",
+   "compactnumber6_q": "pow(10, clamp(0, 6, 3 - 1 - floor(log(max(@compactnumber6_s, 0.000001)))))",
+   "compactnumber6_m": "round(@compactnumber6_s * @compactnumber6_q) * step(2810000000000, 0.000999)",
+   "compactnumber6_r": "@compactnumber6_m / @compactnumber6_q",
+   "compactnumber6_dd": "step(@compactnumber6_m, 0.5) * max(0, log(@compactnumber6_q) - (1 - step(@compactnumber6_m % 10, 0.5)) - (1 - step(@compactnumber6_m % 100, 0.5)) - (1 - step(@compactnumber6_m % 1000, 0.5)))",
+   "compactnumber6_ti": "max(@compactnumber6_t - 1, 0)",
+   "compactnumber6_neg": "step(0 - 2810000000000, 0) * step(@compactnumber6_r, 0)",
+   "compactnumber7_t": "clamp(0, 4, floor(log(max(0.0116 * 1.00052, 1)) / 3))",
+   "compactnumber7_s": "0.0116 / pow(1000, @compactnumber7_t)",
+   "compactnumber7_q": "pow(10, clamp(0, 6, 3 - 1 - floor(log(max(@compactnumber7_s, 0.000001)))))",
+   "compactnumber7_m": "round(@compactnumber7_s * @compactnumber7_q) * step(0.0116, 0.000999)",
+   "compactnumber7_r": "@compactnumber7_m / @compactnumber7_q",
+   "compactnumber7_dd": "step(@compactnumber7_m, 0.5) * max(0, log(@compactnumber7_q) - (1 - step(@compactnumber7_m % 10, 0.5)) - (1 - step(@compactnumber7_m % 100, 0.5)) - (1 - step(@compactnumber7_m % 1000, 0.5)))",
+   "compactnumber7_ti": "max(@compactnumber7_t - 1, 0)",
+   "compactnumber7_fr": "round(0.0116 * 100) / 100",
+   "compactnumber7_neg": "step(0 - 0.0116, 0) * step(@compactnumber7_fr, 0)",
+   "compactnumber8_t": "clamp(0, 4, floor(log(max(1640 * 1.00052, 1)) / 3))",
+   "compactnumber8_s": "1640 / pow(1000, @compactnumber8_t)",
+   "compactnumber8_q": "pow(10, clamp(0, 6, 3 - 1 - floor(log(max(@compactnumber8_s, 0.000001)))))",
+   "compactnumber8_m": "round(@compactnumber8_s * @compactnumber8_q) * step(1640, 0.000999)",
+   "compactnumber8_r": "@compactnumber8_m / @compactnumber8_q",
+   "compactnumber8_dd": "step(@compactnumber8_m, 0.5) * max(0, log(@compactnumber8_q) - (1 - step(@compactnumber8_m % 10, 0.5)) - (1 - step(@compactnumber8_m % 100, 0.5)) - (1 - step(@compactnumber8_m % 1000, 0.5)))",
+   "compactnumber8_ti": "max(@compactnumber8_t - 1, 0)",
+   "compactnumber8_fr": "round(1640 * 1) / 1",
+   "compactnumber8_neg": "step(0 - 1640, 0) * step(max(@compactnumber8_r, @compactnumber8_fr), 0)",
+   "vis_1": 1,
+   "vis_0": 0
+  },
+  "colors": {
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "surface": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF1C2433"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.surface"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 12
+    }
+   ],
+   "children": [
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Volume",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "textSubtext": {
+               "text": "-",
+               "start": 0,
+               "len": "@compactnumber1_neg",
+               "varName": "compactnumber1_sg"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "KMBT",
+               "start": "@compactnumber1_ti",
+               "len": "step(@compactnumber1_t, 0.5)",
+               "varName": "compactnumber1_un"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " thousand million  billion  trillion ",
+               "start": "@compactnumber1_ti * 9",
+               "len": "step(@compactnumber1_t, 0.5) * 9",
+               "varName": "compactnumber1_word"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@compactnumber1_r + step(@compactnumber1_r, 0) * 0.4 / @compactnumber1_q",
+                "whole": 7,
+                "decimal": 6,
+                "flags": 7
+               },
+               "start": 0,
+               "len": "floor(log(max(@compactnumber1_r, 1))) + 1 + @compactnumber1_dd + step(@compactnumber1_dd, 0.5)",
+               "varName": "compactnumber1_nm"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@compactnumber1_sg",
+               "id2": "@compactnumber1_nm"
+              },
+              "id2": "@compactnumber1_un"
+             },
+             "id2": ""
+            },
+            "fontSize": 15,
+            "fontWeight": 400,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@vis_1"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@compactnumber1_sg",
+                  "id2": "@compactnumber1_nm"
+                 },
+                 "id2": "@compactnumber1_word"
+                },
+                "id2": ""
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Balance",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "textSubtext": {
+               "text": "-",
+               "start": 0,
+               "len": "@compactnumber2_neg",
+               "varName": "compactnumber2_sg"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "KMBT",
+               "start": "@compactnumber2_ti",
+               "len": "step(@compactnumber2_t, 0.5)",
+               "varName": "compactnumber2_un"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " thousand million  billion  trillion ",
+               "start": "@compactnumber2_ti * 9",
+               "len": "step(@compactnumber2_t, 0.5) * 9",
+               "varName": "compactnumber2_word"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@compactnumber2_r + step(@compactnumber2_r, 0) * 0.4 / @compactnumber2_q",
+                "whole": 7,
+                "decimal": 6,
+                "flags": 7
+               },
+               "start": 0,
+               "len": "floor(log(max(@compactnumber2_r, 1))) + 1 + @compactnumber2_dd + step(@compactnumber2_dd, 0.5)",
+               "varName": "compactnumber2_nm"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": "@compactnumber2_sg",
+              "id2": {
+               "type": "textMerge",
+               "id1": "$",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@compactnumber2_fr",
+                "whole": 9,
+                "decimal": 2,
+                "flags": 23
+               }
+              }
+             },
+             "id2": ""
+            },
+            "fontSize": 15,
+            "fontWeight": 400,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@compactnumber2_full"
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@compactnumber2_sg",
+               "id2": {
+                "type": "textMerge",
+                "id1": "$",
+                "id2": "@compactnumber2_nm"
+               }
+              },
+              "id2": "@compactnumber2_un"
+             },
+             "id2": ""
+            },
+            "fontSize": 15,
+            "fontWeight": 400,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@compactnumber2_shortv"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@compactnumber2_sg",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": "$",
+                   "id2": "@compactnumber2_nm"
+                  }
+                 },
+                 "id2": "@compactnumber2_word"
+                },
+                "id2": ""
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Net",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "textSubtext": {
+               "text": "-",
+               "start": 0,
+               "len": "@compactnumber3_neg",
+               "varName": "compactnumber3_sg"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "KMBT",
+               "start": "@compactnumber3_ti",
+               "len": "step(@compactnumber3_t, 0.5)",
+               "varName": "compactnumber3_un"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " thousand million  billion  trillion ",
+               "start": "@compactnumber3_ti * 9",
+               "len": "step(@compactnumber3_t, 0.5) * 9",
+               "varName": "compactnumber3_word"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@compactnumber3_r + step(@compactnumber3_r, 0) * 0.4 / @compactnumber3_q",
+                "whole": 7,
+                "decimal": 6,
+                "flags": 7
+               },
+               "start": 0,
+               "len": "floor(log(max(@compactnumber3_r, 1))) + 1 + @compactnumber3_dd + step(@compactnumber3_dd, 0.5)",
+               "varName": "compactnumber3_nm"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@compactnumber3_sg",
+               "id2": {
+                "type": "textMerge",
+                "id1": "$",
+                "id2": "@compactnumber3_nm"
+               }
+              },
+              "id2": "@compactnumber3_un"
+             },
+             "id2": ""
+            },
+            "fontSize": 15,
+            "fontWeight": 400,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@vis_1"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@compactnumber3_sg",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": "$",
+                   "id2": "@compactnumber3_nm"
+                  }
+                 },
+                 "id2": "@compactnumber3_word"
+                },
+                "id2": ""
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Price",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "textSubtext": {
+               "text": "-",
+               "start": 0,
+               "len": "@compactnumber4_neg",
+               "varName": "compactnumber4_sg"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "KMBT",
+               "start": "@compactnumber4_ti",
+               "len": "step(@compactnumber4_t, 0.5)",
+               "varName": "compactnumber4_un"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " thousand million  billion  trillion ",
+               "start": "@compactnumber4_ti * 9",
+               "len": "step(@compactnumber4_t, 0.5) * 9",
+               "varName": "compactnumber4_word"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@compactnumber4_r + step(@compactnumber4_r, 0) * 0.4 / @compactnumber4_q",
+                "whole": 7,
+                "decimal": 6,
+                "flags": 7
+               },
+               "start": 0,
+               "len": "floor(log(max(@compactnumber4_r, 1))) + 1 + @compactnumber4_dd + step(@compactnumber4_dd, 0.5)",
+               "varName": "compactnumber4_nm"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@compactnumber4_sg",
+               "id2": {
+                "type": "textMerge",
+                "id1": "$",
+                "id2": "@compactnumber4_nm"
+               }
+              },
+              "id2": "@compactnumber4_un"
+             },
+             "id2": ""
+            },
+            "fontSize": 15,
+            "fontWeight": 400,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@vis_1"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@compactnumber4_sg",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": "$",
+                   "id2": "@compactnumber4_nm"
+                  }
+                 },
+                 "id2": "@compactnumber4_word"
+                },
+                "id2": ""
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Energy",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "textSubtext": {
+               "text": "-",
+               "start": 0,
+               "len": "@compactnumber5_neg",
+               "varName": "compactnumber5_sg"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "KMBT",
+               "start": "@compactnumber5_ti",
+               "len": "step(@compactnumber5_t, 0.5)",
+               "varName": "compactnumber5_un"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " thousand million  billion  trillion ",
+               "start": "@compactnumber5_ti * 9",
+               "len": "step(@compactnumber5_t, 0.5) * 9",
+               "varName": "compactnumber5_word"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@compactnumber5_r + step(@compactnumber5_r, 0) * 0.4 / @compactnumber5_q",
+                "whole": 7,
+                "decimal": 6,
+                "flags": 7
+               },
+               "start": 0,
+               "len": "floor(log(max(@compactnumber5_r, 1))) + 1 + @compactnumber5_dd + step(@compactnumber5_dd, 0.5)",
+               "varName": "compactnumber5_nm"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@compactnumber5_sg",
+               "id2": "@compactnumber5_nm"
+              },
+              "id2": "@compactnumber5_un"
+             },
+             "id2": " kWh"
+            },
+            "fontSize": 15,
+            "fontWeight": 400,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@vis_1"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@compactnumber5_sg",
+                  "id2": "@compactnumber5_nm"
+                 },
+                 "id2": "@compactnumber5_word"
+                },
+                "id2": " kWh"
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Market cap",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "textSubtext": {
+               "text": "-",
+               "start": 0,
+               "len": "@compactnumber6_neg",
+               "varName": "compactnumber6_sg"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "KMBT",
+               "start": "@compactnumber6_ti",
+               "len": "step(@compactnumber6_t, 0.5)",
+               "varName": "compactnumber6_un"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " thousand million  billion  trillion ",
+               "start": "@compactnumber6_ti * 9",
+               "len": "step(@compactnumber6_t, 0.5) * 9",
+               "varName": "compactnumber6_word"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@compactnumber6_r + step(@compactnumber6_r, 0) * 0.4 / @compactnumber6_q",
+                "whole": 7,
+                "decimal": 6,
+                "flags": 7
+               },
+               "start": 0,
+               "len": "floor(log(max(@compactnumber6_r, 1))) + 1 + @compactnumber6_dd + step(@compactnumber6_dd, 0.5)",
+               "varName": "compactnumber6_nm"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@compactnumber6_sg",
+               "id2": {
+                "type": "textMerge",
+                "id1": "$",
+                "id2": "@compactnumber6_nm"
+               }
+              },
+              "id2": "@compactnumber6_un"
+             },
+             "id2": ""
+            },
+            "fontSize": 20,
+            "fontWeight": 600,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@vis_1"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@compactnumber6_sg",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": "$",
+                   "id2": "@compactnumber6_nm"
+                  }
+                 },
+                 "id2": "@compactnumber6_word"
+                },
+                "id2": ""
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Saved",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "textSubtext": {
+               "text": "-",
+               "start": 0,
+               "len": "@compactnumber7_neg",
+               "varName": "compactnumber7_sg"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "KMBT",
+               "start": "@compactnumber7_ti",
+               "len": "step(@compactnumber7_t, 0.5)",
+               "varName": "compactnumber7_un"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " thousand million  billion  trillion ",
+               "start": "@compactnumber7_ti * 9",
+               "len": "step(@compactnumber7_t, 0.5) * 9",
+               "varName": "compactnumber7_word"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@compactnumber7_r + step(@compactnumber7_r, 0) * 0.4 / @compactnumber7_q",
+                "whole": 7,
+                "decimal": 6,
+                "flags": 7
+               },
+               "start": 0,
+               "len": "floor(log(max(@compactnumber7_r, 1))) + 1 + @compactnumber7_dd + step(@compactnumber7_dd, 0.5)",
+               "varName": "compactnumber7_nm"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": "@compactnumber7_sg",
+              "id2": {
+               "type": "textMerge",
+               "id1": "$",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@compactnumber7_fr",
+                "whole": 9,
+                "decimal": 2,
+                "flags": 23
+               }
+              }
+             },
+             "id2": ""
+            },
+            "fontSize": 15,
+            "fontWeight": 400,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@vis_1"
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@compactnumber7_sg",
+               "id2": {
+                "type": "textMerge",
+                "id1": "$",
+                "id2": "@compactnumber7_nm"
+               }
+              },
+              "id2": "@compactnumber7_un"
+             },
+             "id2": ""
+            },
+            "fontSize": 15,
+            "fontWeight": 400,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@vis_0"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@compactnumber7_sg",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": "$",
+                   "id2": "@compactnumber7_nm"
+                  }
+                 },
+                 "id2": "@compactnumber7_word"
+                },
+                "id2": ""
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Steps",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               1,
+               1
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "textSubtext": {
+               "text": "-",
+               "start": 0,
+               "len": "@compactnumber8_neg",
+               "varName": "compactnumber8_sg"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "KMBT",
+               "start": "@compactnumber8_ti",
+               "len": "step(@compactnumber8_t, 0.5)",
+               "varName": "compactnumber8_un"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " thousand million  billion  trillion ",
+               "start": "@compactnumber8_ti * 9",
+               "len": "step(@compactnumber8_t, 0.5) * 9",
+               "varName": "compactnumber8_word"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@compactnumber8_r + step(@compactnumber8_r, 0) * 0.4 / @compactnumber8_q",
+                "whole": 7,
+                "decimal": 6,
+                "flags": 7
+               },
+               "start": 0,
+               "len": "floor(log(max(@compactnumber8_r, 1))) + 1 + @compactnumber8_dd + step(@compactnumber8_dd, 0.5)",
+               "varName": "compactnumber8_nm"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": "@compactnumber8_sg",
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@compactnumber8_fr",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              }
+             },
+             "id2": ""
+            },
+            "fontSize": 15,
+            "fontWeight": 400,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@vis_1"
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@compactnumber8_sg",
+               "id2": "@compactnumber8_nm"
+              },
+              "id2": "@compactnumber8_un"
+             },
+             "id2": ""
+            },
+            "fontSize": 15,
+            "fontWeight": 400,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@vis_0"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@compactnumber8_sg",
+                  "id2": "@compactnumber8_nm"
+                 },
+                 "id2": "@compactnumber8_word"
+                },
+                "id2": ""
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,909 @@
+{
+ "id": "CMP-23",
+ "name": "calorie-tracker",
+ "version": 1,
+ "title": "Calorie tracker",
+ "summary": "Calories eaten against a target as a big ring with what is left, and macros as bars with their own targets. Ring over bars on a phone, side by side in landscape and at 4x2, ring alone at 2x2 and on a round watch. Past the target the ring runs a second lap, in mono too, and a screen reader hears it all as one summary.",
+ "prompt": "Build a calorie tracker: calories eaten against a daily target as a ring, with carbs, protein and fat as bars. Show what is left, and show clearly when a target is passed. It must fit a phone, landscape, a 4x2 and a 2x2 widget and a round watch.",
+ "level": 2,
+ "family": "CMP",
+ "components": [
+  "MeterBreakdown"
+ ],
+ "capabilities": {
+  "primary": [
+   "layout.stack",
+   "host.variables"
+  ],
+  "secondary": [
+   "expr.system",
+   "a11y.labels",
+   "text.dynamic"
+  ]
+ },
+ "use_cases": [
+  "fitness",
+  "widget",
+  "gauge"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "health",
+  "fitness",
+  "calories",
+  "macros",
+  "steps",
+  "activity rings",
+  "sleep",
+  "heart rate",
+  "workout",
+  "water",
+  "weight",
+  "goal",
+  "calorie tracker",
+  "calorie counter",
+  "food diary",
+  "nutrition",
+  "carbs",
+  "protein",
+  "fat",
+  "kcal",
+  "meter breakdown",
+  "target",
+  "over target",
+  "diet"
+ ],
+ "teaches": [
+  "One call fills the screen: MeterBreakdown arranges itself from the box it gets, so the document only sets the padding and whether a title fits",
+  "Parts take \"@variable\" for value and target; list the most important part first, since parts drop from the end",
+  "Past the target the ring runs a second lap and a bar marks the limit; the numbers say how much, for mono and screen readers"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1/column/children/0/column/children/1/box/children/0",
+   "shows": "layout.stack",
+   "note": "the whole screen, one call: ring and parts"
+  },
+  {
+   "pointer": "/resources/variables/hasT",
+   "shows": "expr.system",
+   "note": "the title only when the window is tall"
+  },
+  {
+   "pointer": "/resources/variables/eaten",
+   "shows": "host.variables",
+   "note": "everything the app sends is an exported number"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "eaten": {
+    "min": 0,
+    "max": 6000,
+    "meaning": "calories eaten today"
+   },
+   "target": {
+    "min": 500,
+    "max": 6000,
+    "meaning": "daily target"
+   },
+   "carbs": {
+    "min": 0,
+    "max": 600,
+    "meaning": "carbs in grams"
+   },
+   "carbsGoal": {
+    "min": 0,
+    "max": 600,
+    "meaning": "carbs target in grams"
+   },
+   "protein": {
+    "min": 0,
+    "max": 400,
+    "meaning": "protein in grams"
+   },
+   "proteinGoal": {
+    "min": 0,
+    "max": 400,
+    "meaning": "protein target in grams"
+   },
+   "fat": {
+    "min": 0,
+    "max": 300,
+    "meaning": "fat in grams"
+   },
+   "fatGoal": {
+    "min": 0,
+    "max": 300,
+    "meaning": "fat target in grams"
+   },
+   "day": {
+    "type": "string",
+    "meaning": "the title",
+    "default": "Today"
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Phone: Today, a big blue ring reading 1,640, of 2,000 kcal, 360 left, then three bars. Landscape and 4x2: ring left, bars right. 2x2 and round: ring alone. eaten 2600: a red second lap over a dimmed blue ring and 600 over; in mono a cut line in the white ring. protein 140: a +25 and a marked excess on the bar. The sample macros add up: 200 g carbs, 102 g protein and 48 g fat are 1,640 kcal at 4, 4 and 9 kcal per gram, and the goals make 2,000. A long day ends in an ellipsis before Calories.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "wide",
+    "width": 640,
+    "height": 360
+   },
+   {
+    "name": "w4x2",
+    "width": 320,
+    "height": 160
+   },
+   {
+    "name": "w2x2",
+    "width": 160,
+    "height": 160
+   },
+   {
+    "name": "round",
+    "width": 227,
+    "height": 227,
+    "round": true
+   },
+   {
+    "name": "over",
+    "theme": "dark",
+    "variables": {
+     "eaten": 2600,
+     "carbs": 330,
+     "protein": 140,
+     "fat": 80
+    }
+   },
+   {
+    "name": "over-mono",
+    "componentTheme": "mono-dark",
+    "variables": {
+     "eaten": 2600,
+     "carbs": 330,
+     "protein": 140,
+     "fat": 80
+    }
+   },
+   {
+    "name": "zero",
+    "theme": "light",
+    "variables": {
+     "eaten": 0,
+     "carbs": 0,
+     "protein": 0,
+     "fat": 0
+    }
+   },
+   {
+    "name": "on-target",
+    "theme": "light",
+    "variables": {
+     "eaten": 2000,
+     "carbs": 250,
+     "protein": 115,
+     "fat": 60
+    }
+   },
+   {
+    "name": "huge",
+    "theme": "light",
+    "variables": {
+     "eaten": 123456
+    }
+   },
+   {
+    "name": "long-day",
+    "theme": "light",
+    "variables": {
+     "day": "Wednesday the 24th of September 2026"
+    }
+   }
+  ]
+ },
+ "related": [
+  "MeterBreakdown",
+  "ActivityRings",
+  "GoalBar",
+  "CMP-24",
+  "CMP-17"
+ ],
+ "pitfalls": [
+  "Do not hand-write the ring for an over-target lap: MeterBreakdown does it, in mono too"
+ ],
+ "derived": {
+  "components": [
+   "MeterBreakdown"
+  ],
+  "component_instances": 1,
+  "component_modes": {
+   "MeterBreakdown": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 14228,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 698,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 246,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "CoreText": 2,
+   "DATA_FLOAT": 8,
+   "DATA_TEXT": 19,
+   "DRAW_ARC": 2,
+   "DRAW_CIRCLE": 1,
+   "DRAW_RECT": 3,
+   "DRAW_ROUND_RECT": 9,
+   "DRAW_TEXT_ANCHOR": 15,
+   "HEADER": 1,
+   "LAYOUT_BOX": 4,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 2,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 9,
+   "LoopOperation": 14,
+   "MATRIX_RESTORE": 7,
+   "MATRIX_SAVE": 7,
+   "MATRIX_SCALE": 10,
+   "MATRIX_TRANSLATE": 3,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 7,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_VISIBILITY": 1,
+   "MODIFIER_WIDTH": 8,
+   "NAMED_VARIABLE": 16,
+   "PAINT_VALUES": 34,
+   "THEME": 21,
+   "TextFromFloat": 56,
+   "TextMeasure": 31,
+   "TextMerge": 121,
+   "TextSubtext": 4
+  },
+  "host_variables": [
+   {
+    "name": "carbs",
+    "type": "float",
+    "value": 200
+   },
+   {
+    "name": "carbsGoal",
+    "type": "float",
+    "value": 250
+   },
+   {
+    "name": "day",
+    "type": "string",
+    "value": "Today"
+   },
+   {
+    "name": "eaten",
+    "type": "float",
+    "value": 1640
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "fat",
+    "type": "float",
+    "value": 48
+   },
+   {
+    "name": "fatGoal",
+    "type": "float",
+    "value": 60
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "protein",
+    "type": "float",
+    "value": 102
+   },
+   {
+    "name": "proteinGoal",
+    "type": "float",
+    "value": 115
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "target",
+    "type": "float",
+    "value": 2000
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: deep_expressions",
+   "info: expression_entries"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 13924,
+    "component_modes": {
+     "MeterBreakdown": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 659,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "carbs",
+      "type": "float",
+      "value": 200
+     },
+     {
+      "name": "carbsGoal",
+      "type": "float",
+      "value": 250
+     },
+     {
+      "name": "day",
+      "type": "string",
+      "value": "Today"
+     },
+     {
+      "name": "eaten",
+      "type": "float",
+      "value": 1640
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "fat",
+      "type": "float",
+      "value": 48
+     },
+     {
+      "name": "fatGoal",
+      "type": "float",
+      "value": 60
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "protein",
+      "type": "float",
+      "value": 102
+     },
+     {
+      "name": "proteinGoal",
+      "type": "float",
+      "value": 115
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "target",
+      "type": "float",
+      "value": 2000
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 13924,
+    "component_modes": {
+     "MeterBreakdown": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 659,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "carbs",
+      "type": "float",
+      "value": 200
+     },
+     {
+      "name": "carbsGoal",
+      "type": "float",
+      "value": 250
+     },
+     {
+      "name": "day",
+      "type": "string",
+      "value": "Today"
+     },
+     {
+      "name": "eaten",
+      "type": "float",
+      "value": 1640
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "fat",
+      "type": "float",
+      "value": 48
+     },
+     {
+      "name": "fatGoal",
+      "type": "float",
+      "value": 60
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "protein",
+      "type": "float",
+      "value": 102
+     },
+     {
+      "name": "proteinGoal",
+      "type": "float",
+      "value": 115
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "target",
+      "type": "float",
+      "value": 2000
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "w4x2": {
+    "render": "render-w4x2.png",
+    "render_findings": [],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": [
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "w2x2": {
+    "render": "render-w2x2.png",
+    "render_findings": [],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": [
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "round": {
+    "render": "render-round.png",
+    "render_findings": [],
+    "size": [
+     227,
+     227
+    ],
+    "audit_findings": [
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "over": {
+    "theme": "dark",
+    "render": "render-over.png",
+    "render_findings": []
+   },
+   "over-mono": {
+    "componentTheme": "mono-dark",
+    "bytes": 13924,
+    "component_modes": {
+     "MeterBreakdown": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 659,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "carbs",
+      "type": "float",
+      "value": 200
+     },
+     {
+      "name": "carbsGoal",
+      "type": "float",
+      "value": 250
+     },
+     {
+      "name": "day",
+      "type": "string",
+      "value": "Today"
+     },
+     {
+      "name": "eaten",
+      "type": "float",
+      "value": 1640
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "fat",
+      "type": "float",
+      "value": 48
+     },
+     {
+      "name": "fatGoal",
+      "type": "float",
+      "value": 60
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "protein",
+      "type": "float",
+      "value": 102
+     },
+     {
+      "name": "proteinGoal",
+      "type": "float",
+      "value": 115
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "target",
+      "type": "float",
+      "value": 2000
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-over-mono.png",
+    "render_findings": []
+   },
+   "zero": {
+    "theme": "light",
+    "render": "render-zero.png",
+    "render_findings": []
+   },
+   "on-target": {
+    "theme": "light",
+    "render": "render-on-target.png",
+    "render_findings": []
+   },
+   "huge": {
+    "theme": "light",
+    "render": "render-huge.png",
+    "render_findings": []
+   },
+   "long-day": {
+    "theme": "light",
+    "render": "render-long-day.png",
+    "render_findings": [
+     "info: text_ellipsized"
+    ]
+   }
+  },
+  "json_keys": [
+   "H",
+   "MeterBreakdown",
+   "W",
+   "alpha",
+   "anim",
+   "apiLevel",
+   "background",
+   "bodyH",
+   "bottom",
+   "box",
+   "canvas",
+   "carbs",
+   "carbsGoal",
+   "children",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "drawArc",
+   "drawCircle",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "eaten",
+   "end",
+   "error",
+   "export",
+   "fat",
+   "fatGoal",
+   "flags",
+   "fontSize",
+   "hasT",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "id1",
+   "id2",
+   "ih",
+   "iw",
+   "label",
+   "left",
+   "len",
+   "light",
+   "maxLines",
+   "meterbreakdown1_stOn",
+   "meterbreakdown1_stOver",
+   "meterbreakdown1_stUnder",
+   "mode",
+   "modifiers",
+   "muted",
+   "name",
+   "onSurface",
+   "ops",
+   "overflow",
+   "pad",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "parts",
+   "pivotX",
+   "pivotY",
+   "primary",
+   "profiles",
+   "protein",
+   "proteinGoal",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "row",
+   "rx",
+   "ry",
+   "save",
+   "scale",
+   "semantics",
+   "start",
+   "startAngle",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "success",
+   "surface",
+   "sweepAngle",
+   "sx",
+   "sy",
+   "tH",
+   "target",
+   "text",
+   "textMeasure",
+   "textSize",
+   "textSubtext",
+   "top",
+   "translate",
+   "type",
+   "unit",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "visibility",
+   "vtype",
+   "warning",
+   "weight",
+   "whole",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "expr.system": [
+    "fontSize()",
+    "windowWidth",
+    "windowHeight",
+    "componentWidth",
+    "componentHeight"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ]
+  },
+  "built_at": "2026-11-02T02:08:43.440Z"
+ }
+}

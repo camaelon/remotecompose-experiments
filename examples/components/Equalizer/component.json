@@ -1,0 +1,194 @@
+{
+ "component": "Equalizer",
+ "version": 1,
+ "summary": "A small \"now playing\" indicator: four rounded bars that dance while playing and rest low when paused. It repaints only while playing, and is a still, distinct picture in mono looks.",
+ "params": {
+  "playing": {
+   "type": "float",
+   "default": 1,
+   "doc": "1 while playing, 0 when paused (a variable or an expression)"
+  },
+  "size": {
+   "type": "float",
+   "default": 20,
+   "static": true,
+   "doc": "Width and height in dp"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Bar colour"
+  },
+  "label": {
+   "type": "string",
+   "doc": "Accessibility label; leave it out when a text beside it already says what is playing"
+  }
+ },
+ "locals": {
+  "s": 0,
+  "h0": 0,
+  "h1": 0,
+  "h2": 0,
+  "h3": 0,
+  "a": {
+   "value": "@playing",
+   "anim": 0.3
+  },
+  "tick": {
+   "$if": "theme.mono",
+   "then": "@playing * 0",
+   "else": "@playing * floor(animationTime() * 4)"
+  },
+  "d": {
+   "value": "@tick",
+   "anim": 0.24
+  }
+ },
+ "capabilities": [
+  "draw.shapes",
+  "data.expression",
+  "anim.value",
+  "a11y.labels"
+ ],
+ "call": {
+  "Equalizer": {
+   "playing": 1
+  }
+ },
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "size": "@size"
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label"
+     }
+    }
+   ],
+   "commands": [
+    {
+     "variable": {
+      "name": {
+       "$name": "s"
+      },
+      "flush": true,
+      "value": "min(componentWidth(), componentHeight())"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@color"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "variable": {
+      "name": {
+       "$name": "h0"
+      },
+      "flush": true,
+      "value": {
+       "$if": "theme.mono",
+       "then": "ifElse(0.22, 0.55, @playing)",
+       "else": "0.22 + 0.78 * @a * abs(sin(@d * 1.7 + 0.4))"
+      }
+     }
+    },
+    {
+     "drawRoundRect": {
+      "left": "0 * @s",
+      "top": "@s * (1 - @h0)",
+      "right": "(0 + 0.16) * @s",
+      "bottom": "@s",
+      "rx": "0.08 * @s",
+      "ry": "0.08 * @s"
+     }
+    },
+    {
+     "variable": {
+      "name": {
+       "$name": "h1"
+      },
+      "flush": true,
+      "value": {
+       "$if": "theme.mono",
+       "then": "ifElse(0.22, 1, @playing)",
+       "else": "0.22 + 0.78 * @a * abs(sin(@d * 2.3 + 1.9))"
+      }
+     }
+    },
+    {
+     "drawRoundRect": {
+      "left": "0.28 * @s",
+      "top": "@s * (1 - @h1)",
+      "right": "(0.28 + 0.16) * @s",
+      "bottom": "@s",
+      "rx": "0.08 * @s",
+      "ry": "0.08 * @s"
+     }
+    },
+    {
+     "variable": {
+      "name": {
+       "$name": "h2"
+      },
+      "flush": true,
+      "value": {
+       "$if": "theme.mono",
+       "then": "ifElse(0.22, 0.7, @playing)",
+       "else": "0.22 + 0.78 * @a * abs(sin(@d * 1.3 + 3.1))"
+      }
+     }
+    },
+    {
+     "drawRoundRect": {
+      "left": "0.56 * @s",
+      "top": "@s * (1 - @h2)",
+      "right": "(0.56 + 0.16) * @s",
+      "bottom": "@s",
+      "rx": "0.08 * @s",
+      "ry": "0.08 * @s"
+     }
+    },
+    {
+     "variable": {
+      "name": {
+       "$name": "h3"
+      },
+      "flush": true,
+      "value": {
+       "$if": "theme.mono",
+       "then": "ifElse(0.22, 0.4, @playing)",
+       "else": "0.22 + 0.78 * @a * abs(sin(@d * 2.9 + 5.0))"
+      }
+     }
+    },
+    {
+     "drawRoundRect": {
+      "left": "0.84 * @s",
+      "top": "@s * (1 - @h3)",
+      "right": "(0.84 + 0.16) * @s",
+      "bottom": "@s",
+      "rx": "0.08 * @s",
+      "ry": "0.08 * @s"
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Bars keep moving only while playing is 1: the eased value that drives them stops, so a paused document goes idle. While playing, the document repaints every frame",
+  "In mono it does not move: a fixed set of bars when playing, four short ones when paused"
+ ]
+}

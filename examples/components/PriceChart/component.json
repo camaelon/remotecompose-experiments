@@ -1,0 +1,2771 @@
+{
+ "component": "PriceChart",
+ "version": 1,
+ "summary": "A line chart of one series with a computed y axis, for any measurement that moves over time and may have a reference value: a price, a balance, heart rate, temperature. Line with a fading area, axis labels on round ticks, an optional baseline with one colour above and another below, high and low marks, x labels, the latest value in a tag. Use it rather than LineChart when the axis must follow data the host replaces; LineChart when you write the labels yourself or plot several series. Fills its box and drops axes and marks when small.",
+ "params": {
+  "values": {
+   "type": "float",
+   "required": true,
+   "doc": "A float array, \"@name\" of resources.floatArrays, export it so the host can replace it. Oldest first; any length of 1 or more; any range, negative too"
+  },
+  "baseline": {
+   "type": "float",
+   "doc": "A reference value such as previous close: a dashed line with its value at the axis, the line and area green above and red below. The y range always includes it. Without it, the whole line takes the colour of last against first"
+  },
+  "points": {
+   "type": "float",
+   "doc": "How many samples the full period will have (390 for a US trading day in minutes): a day still in progress stops short, with a vertical marker at now and the rest empty, instead of stretching. Default: the array's length"
+  },
+  "minRange": {
+   "type": "float",
+   "default": 0.01,
+   "doc": "The y axis spans at least this fraction of the price (0.01 is 1%), so a 0.1% wobble does not fill the chart and read as a crash. 0 scales to min and max"
+  },
+  "decimals": {
+   "type": "float",
+   "default": 2,
+   "static": true,
+   "doc": "Decimals of the latest price, the baseline and the marks, for values under 1000; more are used if the ticks are finer (a price of 0.0042). 0 for whole units such as kWh or bpm. Above 1000, the axis switches to K, M, B, T"
+  },
+  "color": {
+   "type": "color",
+   "doc": "Give it when up and down don't mean good and bad (heart rate, energy, visits): one colour for line, area and tag, no direction"
+  },
+  "xLabels": {
+   "type": "list",
+   "doc": "Labels under the chart, spread evenly from left to right: [\"10am\", \"12pm\", \"2pm\", \"4pm\"]. Only first and last are kept when narrow"
+  },
+  "marks": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Dot and value at the highest and lowest points (not when the latest price is that point, its tag says it)"
+  },
+  "area": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "The fading wash under the line, a smooth gradient (never in mono)"
+  },
+  "yAxis": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Tick labels and the latest-price tag on the right; dropped by itself under 200 dp wide"
+  },
+  "surface": {
+   "type": "color",
+   "default": "@colors.surface",
+   "doc": "The colour behind the chart: the halo that keeps the high and low labels clear of grid lines, and the colour the area fades into. Set it if the chart is not on @colors.surface"
+  },
+  "thickness": {
+   "type": "float",
+   "default": 2,
+   "static": true,
+   "doc": "Line width"
+  },
+  "height": {
+   "type": "float",
+   "default": 220,
+   "static": true,
+   "doc": "Height in dp (ignored with fill)"
+  },
+  "fill": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Fill the space the caller gives it, so the widget decides the size"
+  },
+  "label": {
+   "type": "string",
+   "default": "Price chart",
+   "doc": "What the chart is, spoken before the latest, high and low"
+  }
+ },
+ "locals": {
+  "n": "arrayLength(@values)",
+  "lastI": "@n - 1",
+  "slots": {
+   "$if": "points",
+   "then": "max(@points - 1, max(@lastI, 1))",
+   "else": "max(@lastI, 1)"
+  },
+  "last": "arrayGet(@values, @lastI)",
+  "hi": "arrayMax(@values)",
+  "lo": "arrayMin(@values)",
+  "mn": {
+   "$if": "baseline",
+   "then": "min(@lo, @baseline)",
+   "else": {
+    "$if": "baseline != 'undefined'",
+    "then": "min(@lo, @baseline)",
+    "else": "@lo"
+   }
+  },
+  "mx": {
+   "$if": "baseline",
+   "then": "max(@hi, @baseline)",
+   "else": {
+    "$if": "baseline != 'undefined'",
+    "then": "max(@hi, @baseline)",
+    "else": "@hi"
+   }
+  },
+  "mid": "(@mn + @mx) / 2",
+  "rng": "max(@mx - @mn, ifElse(1, @minRange * abs(@mid), step(abs(@mid), 0.000001)))",
+  "a0": "@mid - @rng / 2",
+  "a1": "@mid + @rng / 2",
+  "ref": {
+   "$if": "baseline",
+   "then": "@baseline",
+   "else": {
+    "$if": "baseline != 'undefined'",
+    "then": "@baseline",
+    "else": "arrayGet(@values, 0)"
+   }
+  },
+  "up": "step(@last, @ref)",
+  "dn": "step(@ref, @last)",
+  "fl": "1 - @up - @dn",
+  "t": "clamp(0, 4, floor(log(max(max(abs(@mn), abs(@mx)) * 1.0005, 1)) / 3))",
+  "div": "pow(1000, @t)",
+  "nxl": {
+   "$if": "xLabels",
+   "then": {
+    "$count": "xLabels"
+   },
+   "else": 0
+  }
+ },
+ "capabilities": [
+  "data.array",
+  "draw.path",
+  "text.dynamic",
+  "text.measure",
+  "a11y.labels",
+  "data.condition"
+ ],
+ "call": {
+  "PriceChart": {
+   "values": "@prices",
+   "baseline": 101.2
+  }
+ },
+ "pitfalls": [
+  "Use this rather than LineChart for a single series judged against a reference or read off an axis (a price, a balance, heart rate): LineChart's axis labels are fixed text you write, these are computed from the data, on round steps (1, 2, 5 × 10ⁿ), and move when the host replaces the array. Finance is only its default: without color, green means up and red down, so pass color for anything else",
+  "Which chart: PriceChart for a hero chart of one series with an axis; TrendSparkline for a word-sized trend in a row; LineChart for time-of-day curves with function mode or labels you choose; BarChart for separate quantities",
+  "The line is straight segments through the samples, not a spline: a spline invents highs and lows between prices. High and low are the samples' own; pass the session's real high and low in your stats",
+  "Set a height through fill and a sized parent: with fill in a column, give the parent a verticalWeight or an exact height. Under 200 dp wide the y axis and marks go, under 110 dp tall the x labels go, so a 2x2 widget keeps line, area, baseline and dot",
+  "Every number on the axis is a text built at run time (printed with six decimals and cut), about 6.5 KB a chart, 7.5 KB with a baseline. It is meant for the one hero chart of a screen; rows take TrendSparkline",
+  "Mono: no area and no direction colours. With a baseline the line is white above and grey below; the tag is a filled face",
+  "A float holds about 7 digits: prices above 99,999.99 lose cents on the axis",
+  "The area fades to `surface` under an alpha, not to transparent, so it looks the same in every player: on another background, pass that colour as surface or the bottom edge of the wash shows faintly"
+ ],
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "$if": "fill",
+     "then": "fillMaxSize",
+     "else": "fillMaxWidth"
+    },
+    {
+     "$if": "!fill",
+     "then": {
+      "height": "@height"
+     }
+    },
+    {
+     "semantics": {
+      "contentDescription": {
+       "type": "textMerge",
+       "id1": {
+        "type": "textMerge",
+        "id1": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": "@label",
+            "id2": ", latest "
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "arrayGet(@values, arrayLength(@values) - 1)",
+            "whole": 9,
+            "decimal": "@decimals",
+            "flags": 23
+           }
+          },
+          "id2": ", high "
+         },
+         "id2": {
+          "type": "textFromFloat",
+          "value": "arrayMax(@values)",
+          "whole": 9,
+          "decimal": "@decimals",
+          "flags": 23
+         }
+        },
+        "id2": ", low "
+       },
+       "id2": {
+        "type": "textFromFloat",
+        "value": "arrayMin(@values)",
+        "whole": 9,
+        "decimal": "@decimals",
+        "flags": 23
+       }
+      }
+     }
+    }
+   ],
+   "commands": [
+    {
+     "variable": {
+      "name": "W",
+      "value": "componentWidth()"
+     }
+    },
+    {
+     "variable": {
+      "name": "H",
+      "value": "componentHeight()"
+     }
+    },
+    {
+     "variable": {
+      "name": "raw",
+      "value": "@rng / ifElse(2, 3, step(@H, 130))"
+     }
+    },
+    {
+     "variable": {
+      "name": "mag",
+      "value": "pow(10, floor(log(@raw)))"
+     }
+    },
+    {
+     "variable": {
+      "name": "fr",
+      "value": "@raw / @mag"
+     }
+    },
+    {
+     "variable": {
+      "name": "stp",
+      "value": "@mag * (1 + step(@fr, 1.41) + 3 * step(@fr, 3.16) + 5 * step(@fr, 7.07))"
+     }
+    },
+    {
+     "variable": {
+      "name": "first",
+      "value": "ceil(@a0 / @stp - 0.001) * @stp"
+     }
+    },
+    {
+     "variable": {
+      "name": "dd",
+      "value": "clamp(0, 6, ceil(0 - log(@stp / @div) - 0.001))"
+     }
+    },
+    {
+     "variable": {
+      "name": "pd",
+      "value": "pow(10, @dd)"
+     }
+    },
+    {
+     "variable": {
+      "name": "dec",
+      "value": "max(@dd, ifElse(@decimals, 2, step(@t, 0.5)))"
+     }
+    },
+    {
+     "variable": {
+      "name": "pq",
+      "value": "pow(10, @dec)"
+     }
+    },
+    {
+     "textSubtext": {
+      "text": "KMBT",
+      "start": "max(@t - 1, 0)",
+      "len": "step(@t, 0.5)",
+      "varName": "un"
+     }
+    },
+    {
+     "variable": {
+      "name": "t0",
+      "value": "@first + 0 * @stp"
+     }
+    },
+    {
+     "variable": {
+      "name": "l0f",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textFromFloat",
+       "value": "@t0 / @div + sign(@t0) * 0.5 / @pd",
+       "whole": 9,
+       "decimal": 6,
+       "flags": 23
+      }
+     }
+    },
+    {
+     "textLength": {
+      "text": "@l0f",
+      "name": "l0l"
+     }
+    },
+    {
+     "textSubtext": {
+      "text": "@l0f",
+      "start": 0,
+      "len": "@l0l - 6 + @dd - step(0.5, @dd)",
+      "varName": "l0c"
+     }
+    },
+    {
+     "variable": {
+      "name": "l0",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textMerge",
+       "id1": "@l0c",
+       "id2": "@un"
+      }
+     }
+    },
+    {
+     "variable": {
+      "name": "t1",
+      "value": "@first + 1 * @stp"
+     }
+    },
+    {
+     "variable": {
+      "name": "l1f",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textFromFloat",
+       "value": "@t1 / @div + sign(@t1) * 0.5 / @pd",
+       "whole": 9,
+       "decimal": 6,
+       "flags": 23
+      }
+     }
+    },
+    {
+     "textLength": {
+      "text": "@l1f",
+      "name": "l1l"
+     }
+    },
+    {
+     "textSubtext": {
+      "text": "@l1f",
+      "start": 0,
+      "len": "@l1l - 6 + @dd - step(0.5, @dd)",
+      "varName": "l1c"
+     }
+    },
+    {
+     "variable": {
+      "name": "l1",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textMerge",
+       "id1": "@l1c",
+       "id2": "@un"
+      }
+     }
+    },
+    {
+     "variable": {
+      "name": "t2",
+      "value": "@first + 2 * @stp"
+     }
+    },
+    {
+     "variable": {
+      "name": "l2f",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textFromFloat",
+       "value": "@t2 / @div + sign(@t2) * 0.5 / @pd",
+       "whole": 9,
+       "decimal": 6,
+       "flags": 23
+      }
+     }
+    },
+    {
+     "textLength": {
+      "text": "@l2f",
+      "name": "l2l"
+     }
+    },
+    {
+     "textSubtext": {
+      "text": "@l2f",
+      "start": 0,
+      "len": "@l2l - 6 + @dd - step(0.5, @dd)",
+      "varName": "l2c"
+     }
+    },
+    {
+     "variable": {
+      "name": "l2",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textMerge",
+       "id1": "@l2c",
+       "id2": "@un"
+      }
+     }
+    },
+    {
+     "variable": {
+      "name": "t3",
+      "value": "@first + 3 * @stp"
+     }
+    },
+    {
+     "variable": {
+      "name": "l3f",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textFromFloat",
+       "value": "@t3 / @div + sign(@t3) * 0.5 / @pd",
+       "whole": 9,
+       "decimal": 6,
+       "flags": 23
+      }
+     }
+    },
+    {
+     "textLength": {
+      "text": "@l3f",
+      "name": "l3l"
+     }
+    },
+    {
+     "textSubtext": {
+      "text": "@l3f",
+      "start": 0,
+      "len": "@l3l - 6 + @dd - step(0.5, @dd)",
+      "varName": "l3c"
+     }
+    },
+    {
+     "variable": {
+      "name": "l3",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textMerge",
+       "id1": "@l3c",
+       "id2": "@un"
+      }
+     }
+    },
+    {
+     "variable": {
+      "name": "t4",
+      "value": "@first + 4 * @stp"
+     }
+    },
+    {
+     "variable": {
+      "name": "l4f",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textFromFloat",
+       "value": "@t4 / @div + sign(@t4) * 0.5 / @pd",
+       "whole": 9,
+       "decimal": 6,
+       "flags": 23
+      }
+     }
+    },
+    {
+     "textLength": {
+      "text": "@l4f",
+      "name": "l4l"
+     }
+    },
+    {
+     "textSubtext": {
+      "text": "@l4f",
+      "start": 0,
+      "len": "@l4l - 6 + @dd - step(0.5, @dd)",
+      "varName": "l4c"
+     }
+    },
+    {
+     "variable": {
+      "name": "l4",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textMerge",
+       "id1": "@l4c",
+       "id2": "@un"
+      }
+     }
+    },
+    {
+     "variable": {
+      "name": "lqf",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textFromFloat",
+       "value": "@last / @div + sign(@last) * 0.5 / @pq",
+       "whole": 9,
+       "decimal": 6,
+       "flags": 23
+      }
+     }
+    },
+    {
+     "textLength": {
+      "text": "@lqf",
+      "name": "lql"
+     }
+    },
+    {
+     "textSubtext": {
+      "text": "@lqf",
+      "start": 0,
+      "len": "@lql - 6 + @dec - step(0.5, @dec)",
+      "varName": "lqc"
+     }
+    },
+    {
+     "variable": {
+      "name": "lq",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "type": "textMerge",
+       "id1": "@lqc",
+       "id2": "@un"
+      }
+     }
+    },
+    {
+     "$if": "baseline",
+     "then": [
+      {
+       "variable": {
+        "name": "lbf",
+        "vtype": "string",
+        "commit": true,
+        "value": {
+         "type": "textFromFloat",
+         "value": "@baseline / @div + sign(@baseline) * 0.5 / @pq",
+         "whole": 9,
+         "decimal": 6,
+         "flags": 23
+        }
+       }
+      },
+      {
+       "textLength": {
+        "text": "@lbf",
+        "name": "lbl"
+       }
+      },
+      {
+       "textSubtext": {
+        "text": "@lbf",
+        "start": 0,
+        "len": "@lbl - 6 + @dec - step(0.5, @dec)",
+        "varName": "lbc"
+       }
+      },
+      {
+       "variable": {
+        "name": "lb",
+        "vtype": "string",
+        "commit": true,
+        "value": {
+         "type": "textMerge",
+         "id1": "@lbc",
+         "id2": "@un"
+        }
+       }
+      }
+     ],
+     "else": {
+      "$if": "baseline != 'undefined'",
+      "then": [
+       {
+        "variable": {
+         "name": "lbf",
+         "vtype": "string",
+         "commit": true,
+         "value": {
+          "type": "textFromFloat",
+          "value": "@baseline / @div + sign(@baseline) * 0.5 / @pq",
+          "whole": 9,
+          "decimal": 6,
+          "flags": 23
+         }
+        }
+       },
+       {
+        "textLength": {
+         "text": "@lbf",
+         "name": "lbl"
+        }
+       },
+       {
+        "textSubtext": {
+         "text": "@lbf",
+         "start": 0,
+         "len": "@lbl - 6 + @dec - step(0.5, @dec)",
+         "varName": "lbc"
+        }
+       },
+       {
+        "variable": {
+         "name": "lb",
+         "vtype": "string",
+         "commit": true,
+         "value": {
+          "type": "textMerge",
+          "id1": "@lbc",
+          "id2": "@un"
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "marks",
+     "then": [
+      {
+       "variable": {
+        "name": "lhf",
+        "vtype": "string",
+        "commit": true,
+        "value": {
+         "type": "textFromFloat",
+         "value": "@hi / @div + sign(@hi) * 0.5 / @pq",
+         "whole": 9,
+         "decimal": 6,
+         "flags": 23
+        }
+       }
+      },
+      {
+       "textLength": {
+        "text": "@lhf",
+        "name": "lhl"
+       }
+      },
+      {
+       "textSubtext": {
+        "text": "@lhf",
+        "start": 0,
+        "len": "@lhl - 6 + @dec - step(0.5, @dec)",
+        "varName": "lhc"
+       }
+      },
+      {
+       "variable": {
+        "name": "lh",
+        "vtype": "string",
+        "commit": true,
+        "value": {
+         "type": "textMerge",
+         "id1": "@lhc",
+         "id2": "@un"
+        }
+       }
+      },
+      {
+       "variable": {
+        "name": "llf",
+        "vtype": "string",
+        "commit": true,
+        "value": {
+         "type": "textFromFloat",
+         "value": "@lo / @div + sign(@lo) * 0.5 / @pq",
+         "whole": 9,
+         "decimal": 6,
+         "flags": 23
+        }
+       }
+      },
+      {
+       "textLength": {
+        "text": "@llf",
+        "name": "lll"
+       }
+      },
+      {
+       "textSubtext": {
+        "text": "@llf",
+        "start": 0,
+        "len": "@lll - 6 + @dec - step(0.5, @dec)",
+        "varName": "llc"
+       }
+      },
+      {
+       "variable": {
+        "name": "ll",
+        "vtype": "string",
+        "commit": true,
+        "value": {
+         "type": "textMerge",
+         "id1": "@llc",
+         "id2": "@un"
+        }
+       }
+      }
+     ]
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "textSize": 10
+       },
+       {
+        "style": "fill"
+       }
+      ]
+     }
+    },
+    {
+     "textMeasure": {
+      "text": "@lq",
+      "mode": 0,
+      "name": "wq"
+     }
+    },
+    {
+     "textMeasure": {
+      "text": "@l0",
+      "mode": 0,
+      "name": "w0"
+     }
+    },
+    {
+     "textMeasure": {
+      "text": "@l3",
+      "mode": 0,
+      "name": "w3"
+     }
+    },
+    {
+     "variable": {
+      "name": "sy",
+      "value": "@yAxis * step(@W, 199)"
+     }
+    },
+    {
+     "variable": {
+      "name": "sx",
+      "value": "step(@nxl, 0.5) * step(@H, 109)"
+     }
+    },
+    {
+     "variable": {
+      "name": "hl",
+      "value": "@marks * step(@H, 119) * step(@W, 199) * step(@hi - @lo, 0)"
+     }
+    },
+    {
+     "variable": {
+      "name": "gw",
+      "value": "@sy * (max(@wq + 10, max(@w0, @w3) + 6) + 6)"
+     }
+    },
+    {
+     "variable": {
+      "name": "L",
+      "value": 1
+     }
+    },
+    {
+     "variable": {
+      "name": "R",
+      "value": "@W - @gw - 5"
+     }
+    },
+    {
+     "variable": {
+      "name": "T",
+      "value": "5 + @hl * 15"
+     }
+    },
+    {
+     "variable": {
+      "name": "B",
+      "value": "@H - 5 - @sx * 18 - @hl * 15"
+     }
+    },
+    {
+     "variable": {
+      "name": "kx",
+      "value": "(@R - @L) / @slots"
+     }
+    },
+    {
+     "variable": {
+      "name": "ky",
+      "value": "(@B - @T) / @rng"
+     }
+    },
+    {
+     "variable": {
+      "name": "xq",
+      "value": "@L + @lastI * @kx"
+     }
+    },
+    {
+     "variable": {
+      "name": "yq",
+      "value": "@B - (@last - @a0) * @ky"
+     }
+    },
+    {
+     "variable": {
+      "name": "by",
+      "value": {
+       "$if": "baseline",
+       "then": "@B - (@baseline - @a0) * @ky",
+       "else": {
+        "$if": "baseline != 'undefined'",
+        "then": "@B - (@baseline - @a0) * @ky",
+        "else": "@B"
+       }
+      }
+     }
+    },
+    {
+     "variable": {
+      "name": "yt",
+      "value": "clamp(8, @H - 8, @yq)"
+     }
+    },
+    {
+     "variable": {
+      "name": "y0",
+      "value": "@B - (@t0 - @a0) * @ky"
+     }
+    },
+    {
+     "variable": {
+      "name": "g0",
+      "value": "step(@a1 + @stp * 0.01, @t0)"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.track"
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": 1
+       },
+       {
+        "alpha": {
+         "$if": "theme.mono",
+         "then": "@g0 * @sy",
+         "else": "@g0 * @sy * 0.5"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawLine": {
+      "x1": {
+       "$if": "theme.mono",
+       "then": "@R",
+       "else": "@L"
+      },
+      "y1": "@y0",
+      "x2": "@R + 4",
+      "y2": "@y0"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.muted"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": {
+         "$if": "baseline",
+         "then": "@g0 * @sy * step(abs(@y0 - @yt), 15) * step(abs(@y0 - @by), 12)",
+         "else": {
+          "$if": "baseline != 'undefined'",
+          "then": "@g0 * @sy * step(abs(@y0 - @yt), 15) * step(abs(@y0 - @by), 12)",
+          "else": "@g0 * @sy * step(abs(@y0 - @yt), 15)"
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawTextAnchored": {
+      "text": "@l0",
+      "x": "@W - 3",
+      "y": "@y0",
+      "panX": 1,
+      "panY": 0
+     }
+    },
+    {
+     "variable": {
+      "name": "y1",
+      "value": "@B - (@t1 - @a0) * @ky"
+     }
+    },
+    {
+     "variable": {
+      "name": "g1",
+      "value": "step(@a1 + @stp * 0.01, @t1)"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.track"
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": 1
+       },
+       {
+        "alpha": {
+         "$if": "theme.mono",
+         "then": "@g1 * @sy",
+         "else": "@g1 * @sy * 0.5"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawLine": {
+      "x1": {
+       "$if": "theme.mono",
+       "then": "@R",
+       "else": "@L"
+      },
+      "y1": "@y1",
+      "x2": "@R + 4",
+      "y2": "@y1"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.muted"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": {
+         "$if": "baseline",
+         "then": "@g1 * @sy * step(abs(@y1 - @yt), 15) * step(abs(@y1 - @by), 12)",
+         "else": {
+          "$if": "baseline != 'undefined'",
+          "then": "@g1 * @sy * step(abs(@y1 - @yt), 15) * step(abs(@y1 - @by), 12)",
+          "else": "@g1 * @sy * step(abs(@y1 - @yt), 15)"
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawTextAnchored": {
+      "text": "@l1",
+      "x": "@W - 3",
+      "y": "@y1",
+      "panX": 1,
+      "panY": 0
+     }
+    },
+    {
+     "variable": {
+      "name": "y2",
+      "value": "@B - (@t2 - @a0) * @ky"
+     }
+    },
+    {
+     "variable": {
+      "name": "g2",
+      "value": "step(@a1 + @stp * 0.01, @t2)"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.track"
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": 1
+       },
+       {
+        "alpha": {
+         "$if": "theme.mono",
+         "then": "@g2 * @sy",
+         "else": "@g2 * @sy * 0.5"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawLine": {
+      "x1": {
+       "$if": "theme.mono",
+       "then": "@R",
+       "else": "@L"
+      },
+      "y1": "@y2",
+      "x2": "@R + 4",
+      "y2": "@y2"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.muted"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": {
+         "$if": "baseline",
+         "then": "@g2 * @sy * step(abs(@y2 - @yt), 15) * step(abs(@y2 - @by), 12)",
+         "else": {
+          "$if": "baseline != 'undefined'",
+          "then": "@g2 * @sy * step(abs(@y2 - @yt), 15) * step(abs(@y2 - @by), 12)",
+          "else": "@g2 * @sy * step(abs(@y2 - @yt), 15)"
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawTextAnchored": {
+      "text": "@l2",
+      "x": "@W - 3",
+      "y": "@y2",
+      "panX": 1,
+      "panY": 0
+     }
+    },
+    {
+     "variable": {
+      "name": "y3",
+      "value": "@B - (@t3 - @a0) * @ky"
+     }
+    },
+    {
+     "variable": {
+      "name": "g3",
+      "value": "step(@a1 + @stp * 0.01, @t3)"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.track"
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": 1
+       },
+       {
+        "alpha": {
+         "$if": "theme.mono",
+         "then": "@g3 * @sy",
+         "else": "@g3 * @sy * 0.5"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawLine": {
+      "x1": {
+       "$if": "theme.mono",
+       "then": "@R",
+       "else": "@L"
+      },
+      "y1": "@y3",
+      "x2": "@R + 4",
+      "y2": "@y3"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.muted"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": {
+         "$if": "baseline",
+         "then": "@g3 * @sy * step(abs(@y3 - @yt), 15) * step(abs(@y3 - @by), 12)",
+         "else": {
+          "$if": "baseline != 'undefined'",
+          "then": "@g3 * @sy * step(abs(@y3 - @yt), 15) * step(abs(@y3 - @by), 12)",
+          "else": "@g3 * @sy * step(abs(@y3 - @yt), 15)"
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawTextAnchored": {
+      "text": "@l3",
+      "x": "@W - 3",
+      "y": "@y3",
+      "panX": 1,
+      "panY": 0
+     }
+    },
+    {
+     "variable": {
+      "name": "y4",
+      "value": "@B - (@t4 - @a0) * @ky"
+     }
+    },
+    {
+     "variable": {
+      "name": "g4",
+      "value": "step(@a1 + @stp * 0.01, @t4)"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.track"
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": 1
+       },
+       {
+        "alpha": {
+         "$if": "theme.mono",
+         "then": "@g4 * @sy",
+         "else": "@g4 * @sy * 0.5"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawLine": {
+      "x1": {
+       "$if": "theme.mono",
+       "then": "@R",
+       "else": "@L"
+      },
+      "y1": "@y4",
+      "x2": "@R + 4",
+      "y2": "@y4"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.muted"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": {
+         "$if": "baseline",
+         "then": "@g4 * @sy * step(abs(@y4 - @yt), 15) * step(abs(@y4 - @by), 12)",
+         "else": {
+          "$if": "baseline != 'undefined'",
+          "then": "@g4 * @sy * step(abs(@y4 - @yt), 15) * step(abs(@y4 - @by), 12)",
+          "else": "@g4 * @sy * step(abs(@y4 - @yt), 15)"
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawTextAnchored": {
+      "text": "@l4",
+      "x": "@W - 3",
+      "y": "@y4",
+      "panX": 1,
+      "panY": 0
+     }
+    },
+    {
+     "pathExpression": {
+      "id": "line",
+      "expressionX": "@L + u * @kx",
+      "expressionY": "@B - (arrayGet(@values, round(u)) - @a0) * @ky",
+      "start": 0,
+      "end": "@lastI",
+      "count": "@n",
+      "flags": 4
+     }
+    },
+    {
+     "$if": "area",
+     "then": {
+      "$if": "!theme.mono",
+      "then": [
+       {
+        "pathExpression": {
+         "id": "under",
+         "expressionX": "@L + clamp(0, @lastI, u) * @kx",
+         "expressionY": "ifElse(@B - (arrayGet(@values, round(clamp(0, @lastI, u))) - @a0) * @ky, @by, step(abs(u - @lastI / 2), @lastI / 2 + 0.5))",
+         "start": -1,
+         "end": "@n",
+         "count": "@n + 2",
+         "flags": 4
+        }
+       },
+       {
+        "$if": "color",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "linearGradient": {
+              "x1": 0,
+              "y1": "@T",
+              "x2": 0,
+              "y2": "@B",
+              "colors": [
+               "@color",
+               "@surface"
+              ]
+             }
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": "1 * 0.29"
+            }
+           ]
+          }
+         },
+         {
+          "drawPath": {
+           "path": "under"
+          }
+         }
+        ],
+        "else": {
+         "$if": "baseline",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "linearGradient": {
+               "x1": 0,
+               "y1": "@T",
+               "x2": 0,
+               "y2": "@by",
+               "colors": [
+                "@colors.success",
+                "@surface"
+               ]
+              }
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "1 * 0.29"
+             }
+            ]
+           }
+          },
+          {
+           "save": [
+            {
+             "clipRect": {
+              "left": 0,
+              "top": "@T",
+              "right": "@W",
+              "bottom": "@by"
+             }
+            },
+            {
+             "drawPath": {
+              "path": "under"
+             }
+            }
+           ]
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "linearGradient": {
+               "x1": 0,
+               "y1": "@B",
+               "x2": 0,
+               "y2": "@by",
+               "colors": [
+                "@colors.error",
+                "@surface"
+               ]
+              }
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "1 * 0.29"
+             }
+            ]
+           }
+          },
+          {
+           "save": [
+            {
+             "clipRect": {
+              "left": 0,
+              "top": "@by",
+              "right": "@W",
+              "bottom": "@B"
+             }
+            },
+            {
+             "drawPath": {
+              "path": "under"
+             }
+            }
+           ]
+          }
+         ],
+         "else": {
+          "$if": "baseline != 'undefined'",
+          "then": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "linearGradient": {
+                "x1": 0,
+                "y1": "@T",
+                "x2": 0,
+                "y2": "@by",
+                "colors": [
+                 "@colors.success",
+                 "@surface"
+                ]
+               }
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": "1 * 0.29"
+              }
+             ]
+            }
+           },
+           {
+            "save": [
+             {
+              "clipRect": {
+               "left": 0,
+               "top": "@T",
+               "right": "@W",
+               "bottom": "@by"
+              }
+             },
+             {
+              "drawPath": {
+               "path": "under"
+              }
+             }
+            ]
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "linearGradient": {
+                "x1": 0,
+                "y1": "@B",
+                "x2": 0,
+                "y2": "@by",
+                "colors": [
+                 "@colors.error",
+                 "@surface"
+                ]
+               }
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": "1 * 0.29"
+              }
+             ]
+            }
+           },
+           {
+            "save": [
+             {
+              "clipRect": {
+               "left": 0,
+               "top": "@by",
+               "right": "@W",
+               "bottom": "@B"
+              }
+             },
+             {
+              "drawPath": {
+               "path": "under"
+              }
+             }
+            ]
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "linearGradient": {
+                "x1": 0,
+                "y1": "@T",
+                "x2": 0,
+                "y2": "@B",
+                "colors": [
+                 "@colors.success",
+                 "@surface"
+                ]
+               }
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": "@up * 0.29"
+              }
+             ]
+            }
+           },
+           {
+            "drawPath": {
+             "path": "under"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "linearGradient": {
+                "x1": 0,
+                "y1": "@T",
+                "x2": 0,
+                "y2": "@B",
+                "colors": [
+                 "@colors.error",
+                 "@surface"
+                ]
+               }
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": "@dn * 0.29"
+              }
+             ]
+            }
+           },
+           {
+            "drawPath": {
+             "path": "under"
+            }
+           }
+          ]
+         }
+        }
+       },
+       {
+        "paint": {
+         "shader": 0
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "baseline",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "loop": {
+        "index": "i",
+        "from": 0,
+        "until": "floor((@R - @L) / 7)",
+        "commands": [
+         {
+          "drawLine": {
+           "x1": "@L + i * 7",
+           "y1": "@by",
+           "x2": "@L + i * 7 + 3.5",
+           "y2": "@by"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": "@sy * step(abs(@by - @yt), 15)"
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "@lb",
+        "x": "@W - 3",
+        "y": "@by",
+        "panX": 1,
+        "panY": 0
+       }
+      }
+     ],
+     "else": {
+      "$if": "baseline != 'undefined'",
+      "then": [
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 1
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "loop": {
+         "index": "i",
+         "from": 0,
+         "until": "floor((@R - @L) / 7)",
+         "commands": [
+          {
+           "drawLine": {
+            "x1": "@L + i * 7",
+            "y1": "@by",
+            "x2": "@L + i * 7 + 3.5",
+            "y2": "@by"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": "@sy * step(abs(@by - @yt), 15)"
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": "@lb",
+         "x": "@W - 3",
+         "y": "@by",
+         "panX": 1,
+         "panY": 0
+        }
+       }
+      ]
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.track"
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": 1
+       },
+       {
+        "alpha": "step(@slots - @lastI, 0.5)"
+       }
+      ]
+     }
+    },
+    {
+     "drawLine": {
+      "x1": "@xq",
+      "y1": "@T",
+      "x2": "@xq",
+      "y2": "@B"
+     }
+    },
+    {
+     "$if": "!theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "alpha": "0.5 * @sy"
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "@xq",
+        "y1": "@yq",
+        "x2": "@R + 4",
+        "y2": "@yq"
+       }
+      }
+     ]
+    },
+    {
+     "$if": "color",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": {
+           "$if": "theme.mono",
+           "then": "@colors.onSurface",
+           "else": "@color"
+          }
+         },
+         {
+          "strokeWidth": "@thickness"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeJoin": "round"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "line"
+       }
+      }
+     ],
+     "else": {
+      "$if": "baseline",
+      "then": [
+       {
+        "variable": {
+         "name": "fq",
+         "value": "(1 - step(@hi, @ref)) * (1 - step(@ref, @lo))"
+        }
+       },
+       {
+        "save": [
+         {
+          "clipRect": {
+           "left": 0,
+           "top": 0,
+           "right": "@W",
+           "bottom": "@by"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": {
+              "$if": "theme.mono",
+              "then": "@colors.onSurface",
+              "else": "@colors.success"
+             }
+            },
+            {
+             "strokeWidth": "@thickness"
+            },
+            {
+             "strokeCap": "round"
+            },
+            {
+             "strokeJoin": "round"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "alpha": "1 - @fq"
+            }
+           ]
+          }
+         },
+         {
+          "drawPath": {
+           "path": "line"
+          }
+         }
+        ]
+       },
+       {
+        "save": [
+         {
+          "clipRect": {
+           "left": 0,
+           "top": "@by",
+           "right": "@W",
+           "bottom": "@H"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": {
+              "$if": "theme.mono",
+              "then": "@colors.muted",
+              "else": "@colors.error"
+             }
+            },
+            {
+             "strokeWidth": "@thickness"
+            },
+            {
+             "strokeCap": "round"
+            },
+            {
+             "strokeJoin": "round"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "alpha": "1 - @fq"
+            }
+           ]
+          }
+         },
+         {
+          "drawPath": {
+           "path": "line"
+          }
+         }
+        ]
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "strokeWidth": "@thickness"
+          },
+          {
+           "strokeCap": "round"
+          },
+          {
+           "strokeJoin": "round"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "alpha": "@fq"
+          }
+         ]
+        }
+       },
+       {
+        "drawPath": {
+         "path": "line"
+        }
+       }
+      ],
+      "else": {
+       "$if": "baseline != 'undefined'",
+       "then": [
+        {
+         "variable": {
+          "name": "fq",
+          "value": "(1 - step(@hi, @ref)) * (1 - step(@ref, @lo))"
+         }
+        },
+        {
+         "save": [
+          {
+           "clipRect": {
+            "left": 0,
+            "top": 0,
+            "right": "@W",
+            "bottom": "@by"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.success"
+              }
+             },
+             {
+              "strokeWidth": "@thickness"
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "alpha": "1 - @fq"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "line"
+           }
+          }
+         ]
+        },
+        {
+         "save": [
+          {
+           "clipRect": {
+            "left": 0,
+            "top": "@by",
+            "right": "@W",
+            "bottom": "@H"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.muted",
+               "else": "@colors.error"
+              }
+             },
+             {
+              "strokeWidth": "@thickness"
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "alpha": "1 - @fq"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "line"
+           }
+          }
+         ]
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "strokeWidth": "@thickness"
+           },
+           {
+            "strokeCap": "round"
+           },
+           {
+            "strokeJoin": "round"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "alpha": "@fq"
+           }
+          ]
+         }
+        },
+        {
+         "drawPath": {
+          "path": "line"
+         }
+        }
+       ],
+       "else": {
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "strokeWidth": "@thickness"
+            },
+            {
+             "strokeCap": "round"
+            },
+            {
+             "strokeJoin": "round"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "drawPath": {
+           "path": "line"
+          }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.success"
+            },
+            {
+             "strokeWidth": "@thickness"
+            },
+            {
+             "strokeCap": "round"
+            },
+            {
+             "strokeJoin": "round"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "alpha": "@up"
+            }
+           ]
+          }
+         },
+         {
+          "drawPath": {
+           "path": "line"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.error"
+            },
+            {
+             "strokeWidth": "@thickness"
+            },
+            {
+             "strokeCap": "round"
+            },
+            {
+             "strokeJoin": "round"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "alpha": "@dn"
+            }
+           ]
+          }
+         },
+         {
+          "drawPath": {
+           "path": "line"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.muted"
+            },
+            {
+             "strokeWidth": "@thickness"
+            },
+            {
+             "strokeCap": "round"
+            },
+            {
+             "strokeJoin": "round"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "alpha": "@fl"
+            }
+           ]
+          }
+         },
+         {
+          "drawPath": {
+           "path": "line"
+          }
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "$if": "marks",
+     "then": [
+      {
+       "variable": {
+        "name": "ih",
+        "value": 0,
+        "commit": true
+       }
+      },
+      {
+       "variable": {
+        "name": "il",
+        "value": 0,
+        "commit": true
+       }
+      },
+      {
+       "loop": {
+        "index": "i",
+        "from": 1,
+        "until": "@n",
+        "commands": [
+         {
+          "variable": {
+           "name": "ih",
+           "value": "ifElse(@ih, i, step(arrayGet(@values, i), arrayGet(@values, @ih)))",
+           "commit": true
+          }
+         },
+         {
+          "variable": {
+           "name": "il",
+           "value": "ifElse(@il, i, step(arrayGet(@values, @il), arrayGet(@values, i)))",
+           "commit": true
+          }
+         }
+        ]
+       }
+      },
+      {
+       "variable": {
+        "name": "xh",
+        "value": "@L + @ih * @kx"
+       }
+      },
+      {
+       "variable": {
+        "name": "yh",
+        "value": "@B - (@hi - @a0) * @ky"
+       }
+      },
+      {
+       "variable": {
+        "name": "ah",
+        "value": "@hl * step(@lastI - 0.5, @ih)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@surface"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 3
+         },
+         {
+          "alpha": "@ah"
+         }
+        ]
+       }
+      },
+      {
+       "textMeasure": {
+        "text": "@lh",
+        "mode": 0,
+        "name": "wh"
+       }
+      },
+      {
+       "variable": {
+        "name": "ch",
+        "value": "clamp(@L + @wh / 2, @R - @wh / 2, @xh)"
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "@lh",
+        "x": "@ch",
+        "y": "@yh - 9",
+        "panX": 0,
+        "panY": 0
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": "@ah"
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "@lh",
+        "x": "@ch",
+        "y": "@yh - 9",
+        "panX": 0,
+        "panY": 0
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@xh",
+        "cy": "@yh",
+        "radius": 2
+       }
+      },
+      {
+       "variable": {
+        "name": "xl",
+        "value": "@L + @il * @kx"
+       }
+      },
+      {
+       "variable": {
+        "name": "yl",
+        "value": "@B - (@lo - @a0) * @ky"
+       }
+      },
+      {
+       "variable": {
+        "name": "al",
+        "value": "@hl * step(@lastI - 0.5, @il)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@surface"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 3
+         },
+         {
+          "alpha": "@al"
+         }
+        ]
+       }
+      },
+      {
+       "textMeasure": {
+        "text": "@ll",
+        "mode": 0,
+        "name": "wl"
+       }
+      },
+      {
+       "variable": {
+        "name": "cl",
+        "value": "clamp(@L + @wl / 2, @R - @wl / 2, @xl)"
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "@ll",
+        "x": "@cl",
+        "y": "@yl + 9",
+        "panX": 0,
+        "panY": 0
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": "@al"
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "@ll",
+        "x": "@cl",
+        "y": "@yl + 9",
+        "panX": 0,
+        "panY": 0
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@xl",
+        "cy": "@yl",
+        "radius": 2
+       }
+      }
+     ]
+    },
+    {
+     "$if": "!theme.mono",
+     "then": {
+      "$if": "color",
+      "then": [
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": {
+            "$if": "theme.mono",
+            "then": "@colors.primary",
+            "else": "@color"
+           }
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "drawCircle": {
+         "cx": "@xq",
+         "cy": "@yq",
+         "radius": 3
+        }
+       }
+      ],
+      "else": {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.primary"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@xq",
+          "cy": "@yq",
+          "radius": 3
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.success"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": "@up"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@xq",
+          "cy": "@yq",
+          "radius": 3
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.error"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": "@dn"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@xq",
+          "cy": "@yq",
+          "radius": 3
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": "@fl"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@xq",
+          "cy": "@yq",
+          "radius": 3
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@xq",
+        "cy": "@yq",
+        "radius": 3
+       }
+      }
+     ]
+    },
+    {
+     "variable": {
+      "name": "tl",
+      "value": "@W - @wq - 8"
+     }
+    },
+    {
+     "save": [
+      {
+       "clipRect": {
+        "left": "@tl",
+        "top": 0,
+        "right": "@W",
+        "bottom": "@H * @sy"
+       }
+      },
+      {
+       "$if": "color",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": {
+             "$if": "theme.mono",
+             "then": "@colors.primary",
+             "else": "@color"
+            }
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@tl",
+          "top": "@yt - 8",
+          "right": "@W",
+          "bottom": "@yt + 8",
+          "rx": 4,
+          "ry": 4
+         }
+        }
+       ],
+       "else": {
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.primary"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@tl",
+           "top": "@yt - 8",
+           "right": "@W",
+           "bottom": "@yt + 8",
+           "rx": 4,
+           "ry": 4
+          }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.success"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": "@up"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@tl",
+           "top": "@yt - 8",
+           "right": "@W",
+           "bottom": "@yt + 8",
+           "rx": 4,
+           "ry": 4
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.error"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": "@dn"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@tl",
+           "top": "@yt - 8",
+           "right": "@W",
+           "bottom": "@yt + 8",
+           "rx": 4,
+           "ry": 4
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.muted"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": "@fl"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "@tl",
+           "top": "@yt - 8",
+           "right": "@W",
+           "bottom": "@yt + 8",
+           "rx": 4,
+           "ry": 4
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onPrimary"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "@lq",
+        "x": "@W - 4",
+        "y": "@yt",
+        "panX": 1,
+        "panY": 0
+       }
+      }
+     ]
+    },
+    {
+     "$if": "xLabels",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": "@sx"
+         }
+        ]
+       }
+      },
+      {
+       "$each": "xLabels",
+       "as": "lab",
+       "index": "xi",
+       "do": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "@sx * max(step(@W, @nxl * 62), 1 - step(@xi, 0.5) * step(@nxl - 1.5, @xi))"
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "@lab",
+          "x": "@L + (@R - @L) * @xi / max(@nxl - 1, 1)",
+          "y": "@H - 6",
+          "panX": "2 * @xi / max(@nxl - 1, 1) - 1",
+          "panY": 0
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

@@ -366,6 +366,11 @@ Traps the library hit (the linter catches the first four):
   `alpha`, so a canvas that starts without one inherits a 0 and draws nothing; C++ resets it.
   Start each branch that later fades with `{"alpha": 1}` in its first paint (Switch and
   Checkbox mono).
+- A paint `color` op resets alpha to 1: write `alpha` after `color` in the same paint.
+- A host action can carry a variable: `{"type":"hostAction", ... "value":"@pos","valueType":"float","actionType":0}`
+  sends its current value (json2rc and the Java parser write identical bytes). See SeekBar.
+- Java runs `onTouchUp` only if the canvas also has `onTouchDown` (an empty list will do), and
+  runs separate `onTouchUp` modifiers last first: keep one list, in order.
 
 ## Drawing something the library doesn't have
 

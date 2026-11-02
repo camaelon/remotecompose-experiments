@@ -237,6 +237,10 @@ const DROP = Symbol("drop");
 let cached = null;
 
 /** { components: Map<name, definition>, theme: {colors, numbers} } */
+// For measuring what the vertical sets cost or save: RC_HIDE_VERTICALS=1 leaves them out.
+export const VERTICAL_COMPONENTS = ["SeekBar", "CoverArt", "TransportControls", "Equalizer", "CompactNumber", "Delta", "PriceChart", "TrendSparkline", "AllocationBar", "QuoteRow", "ActivityRings", "MeterBreakdown", "GoalBar", "SleepStages"];
+export const VERTICAL_EXAMPLES = ["CMP-19", "CMP-20", "CMP-21", "CMP-22", "CMP-23", "CMP-24"];
+const HIDDEN_VERTICALS = new Set(process.env.RC_HIDE_VERTICALS ? VERTICAL_COMPONENTS : []);
 export function loadLibrary(dir = LIBRARY_DIR) {
     if (cached && cached.dir === dir) return cached;
     const components = new Map();
@@ -245,6 +249,7 @@ export function loadLibrary(dir = LIBRARY_DIR) {
             const file = path.join(dir, d.name, "component.json");
             if (!d.isDirectory() || !existsSync(file)) continue;
             const def = JSON.parse(readFileSync(file, "utf8"));
+            if (HIDDEN_VERTICALS.has(def.component)) continue;
             components.set(def.component, { ...def, dir: path.join(dir, d.name) });
         }
     }
@@ -1738,7 +1743,7 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
             if (Array.isArray(x)) { x.forEach(look); return; }
             if (!x || typeof x !== "object") return;
             for (const [k, v] of Object.entries(x)) {
-                if (TEXT_KEYS.has(k) && typeof v === "string" && !/^@[A-Za-z_]\w*$/.test(v) && !/[*/()+]|\s-\s/.test(v)) {
+                if (TEXT_KEYS.has(k) && typeof v === "string" && !/^@[A-Za-z_]\w*$/.test(v) && !/[*/()+%]|\s-\s/.test(v)) {
                     for (const m of v.matchAll(/@([A-Za-z_]\w*)/g)) if (known.has(m[1])) embedded.add(`"${v.slice(0, 40)}"`);
                 }
                 look(v);

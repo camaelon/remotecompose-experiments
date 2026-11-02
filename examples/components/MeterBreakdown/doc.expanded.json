@@ -1,0 +1,2434 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 520,
+  "profiles": 513,
+  "contentDescription": "MeterBreakdown: a ring of calories with three macro bars"
+ },
+ "resources": {
+  "variables": {
+   "eaten": {
+    "value": 1640,
+    "export": true
+   },
+   "meterbreakdown1_stOn": "1 - step(abs(@eaten - 2000), 0.5)",
+   "meterbreakdown1_stOver": "step(@eaten, 2000) * (1 - @meterbreakdown1_stOn)",
+   "meterbreakdown1_stUnder": "1 - @meterbreakdown1_stOn - @meterbreakdown1_stOver"
+  },
+  "colors": {
+   "error": {
+    "light": "#FFC62828",
+    "dark": "#FFEF5350"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   },
+   "success": {
+    "light": "#FF2E7D32",
+    "dark": "#FF66BB6A"
+   },
+   "surface": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF1C2433"
+   },
+   "warning": {
+    "light": "#FFA15C00",
+    "dark": "#FFFFB74D"
+   }
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.surface"
+    },
+    {
+     "padding": 16
+    }
+   ],
+   "children": [
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "variable": {
+         "name": "meterbreakdown1_pa",
+         "value": {
+          "value": "@eaten / max(2000, 0.01)",
+          "anim": 0.5
+         }
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "meterbreakdown1_W",
+            "value": "componentWidth()"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_H",
+            "value": "componentHeight()"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_wd",
+            "value": "step(@meterbreakdown1_W, @meterbreakdown1_H * 1.2)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_near",
+            "value": "(1 - @meterbreakdown1_wd) * (1 - step(@meterbreakdown1_H, @meterbreakdown1_W * 1.25)) * (1 - step(min(@meterbreakdown1_W, @meterbreakdown1_H), 240))"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_gW",
+            "value": "max(12, @meterbreakdown1_W * 0.05)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_gT",
+            "value": "max(10, @meterbreakdown1_H * 0.03)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_kW",
+            "value": "step(@meterbreakdown1_W * 0.5 - @meterbreakdown1_gW, 104) * floor(@meterbreakdown1_H / 32)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_kT",
+            "value": "(1 - @meterbreakdown1_near) * floor((@meterbreakdown1_H - @meterbreakdown1_gT - max(100, @meterbreakdown1_W * 0.5)) / 32)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_k",
+            "value": "clamp(0, 3, ifElse(@meterbreakdown1_kT, @meterbreakdown1_kW, @meterbreakdown1_wd))"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_has",
+            "value": "step(@meterbreakdown1_k, 0)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_rhW",
+            "value": "clamp(32, 58, @meterbreakdown1_H / max(@meterbreakdown1_k, 1))"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_rhT",
+            "value": "clamp(32, 56, (@meterbreakdown1_H - @meterbreakdown1_gT - @meterbreakdown1_W) / max(@meterbreakdown1_k, 1))"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_rh",
+            "value": "ifElse(@meterbreakdown1_rhT, @meterbreakdown1_rhW, @meterbreakdown1_wd)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_DW",
+            "value": "min(@meterbreakdown1_H, @meterbreakdown1_W * 0.46)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_DT",
+            "value": "min(@meterbreakdown1_W, @meterbreakdown1_H - @meterbreakdown1_gT - @meterbreakdown1_k * @meterbreakdown1_rh)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_D",
+            "value": "ifElse(min(@meterbreakdown1_W, @meterbreakdown1_H), ifElse(@meterbreakdown1_DT, @meterbreakdown1_DW, @meterbreakdown1_wd), @meterbreakdown1_has)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_ts",
+            "value": "clamp(11, 16, @meterbreakdown1_rh * 0.3)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_bh",
+            "value": "clamp(4, 8, @meterbreakdown1_rh * 0.15)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_lh",
+            "value": "@meterbreakdown1_ts * 1.3"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_by",
+            "value": "@meterbreakdown1_lh + 3"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_ct",
+            "value": "@meterbreakdown1_by + @meterbreakdown1_bh"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_aw",
+            "value": "ifElse(@meterbreakdown1_W, min(@meterbreakdown1_W - @meterbreakdown1_D - @meterbreakdown1_gW, 380), @meterbreakdown1_wd)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_gx",
+            "value": "@meterbreakdown1_wd * (@meterbreakdown1_W - @meterbreakdown1_D - @meterbreakdown1_gW - @meterbreakdown1_aw) / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_ax",
+            "value": "@meterbreakdown1_wd * (@meterbreakdown1_gx + @meterbreakdown1_D + @meterbreakdown1_gW)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_fr",
+            "value": "(@meterbreakdown1_H - @meterbreakdown1_D - @meterbreakdown1_gT - @meterbreakdown1_k * @meterbreakdown1_rh + @meterbreakdown1_rh - @meterbreakdown1_ct) / 3"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_top",
+            "value": "ifElse(@meterbreakdown1_fr * 2 + @meterbreakdown1_D + @meterbreakdown1_gT, (@meterbreakdown1_H - @meterbreakdown1_k * @meterbreakdown1_rh + @meterbreakdown1_rh - @meterbreakdown1_ct) / 2, @meterbreakdown1_wd)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_cx",
+            "value": "ifElse(@meterbreakdown1_W / 2, ifElse(@meterbreakdown1_W / 2, @meterbreakdown1_gx + @meterbreakdown1_D / 2, @meterbreakdown1_wd), @meterbreakdown1_has)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_cy",
+            "value": "ifElse(@meterbreakdown1_H / 2, ifElse(@meterbreakdown1_fr + @meterbreakdown1_D / 2, @meterbreakdown1_H / 2, @meterbreakdown1_wd), @meterbreakdown1_has)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_t",
+            "value": "@meterbreakdown1_D * 0.1"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_rad",
+            "value": "@meterbreakdown1_D / 2 - @meterbreakdown1_t / 2"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "strokeCap": "round"
+             },
+             {
+              "style": "stroke"
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             },
+             {
+              "alpha": 0.18
+             },
+             {
+              "strokeWidth": "@meterbreakdown1_t"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@meterbreakdown1_cx",
+            "cy": "@meterbreakdown1_cy",
+            "radius": "@meterbreakdown1_rad"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             },
+             {
+              "alpha": "step(@meterbreakdown1_pa, 0) * (1 - 0.6 * step(@meterbreakdown1_pa, 1))"
+             }
+            ]
+           }
+          },
+          {
+           "drawArc": {
+            "left": "@meterbreakdown1_cx - @meterbreakdown1_rad",
+            "top": "@meterbreakdown1_cy - @meterbreakdown1_rad",
+            "right": "@meterbreakdown1_cx + @meterbreakdown1_rad",
+            "bottom": "@meterbreakdown1_cy + @meterbreakdown1_rad",
+            "startAngle": -90,
+            "sweepAngle": "min(@meterbreakdown1_pa, 1) * 360"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "alpha": "step(@meterbreakdown1_pa, 1)"
+             }
+            ]
+           }
+          },
+          {
+           "drawArc": {
+            "left": "@meterbreakdown1_cx - @meterbreakdown1_rad",
+            "top": "@meterbreakdown1_cy - @meterbreakdown1_rad",
+            "right": "@meterbreakdown1_cx + @meterbreakdown1_rad",
+            "bottom": "@meterbreakdown1_cy + @meterbreakdown1_rad",
+            "startAngle": -90,
+            "sweepAngle": "((@meterbreakdown1_pa) - ceil(@meterbreakdown1_pa) + 1) * 360"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             },
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_I",
+            "value": "@meterbreakdown1_D - 2 * @meterbreakdown1_t - 8"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_big",
+            "value": "min(68, @meterbreakdown1_D * 0.23)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_sm",
+            "value": "clamp(10, 18, @meterbreakdown1_D * 0.08)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_lnH",
+            "value": "@meterbreakdown1_sm * 1.35"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_hasOf",
+            "value": "step(@meterbreakdown1_D, 168)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_hasCap",
+            "value": "step(@meterbreakdown1_D, 200)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_blk",
+            "value": "@meterbreakdown1_big * 1.05 + @meterbreakdown1_lnH * (1 + @meterbreakdown1_hasOf + @meterbreakdown1_hasCap) * step(@meterbreakdown1_D, 80)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_yTop",
+            "value": "@meterbreakdown1_cy - @meterbreakdown1_blk / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_yBig",
+            "value": "@meterbreakdown1_yTop + @meterbreakdown1_hasCap * @meterbreakdown1_lnH + @meterbreakdown1_big * 0.525"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_yS1",
+            "value": "@meterbreakdown1_yBig + @meterbreakdown1_big * 0.525 + @meterbreakdown1_lnH / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_yS2",
+            "value": "@meterbreakdown1_yS1 + @meterbreakdown1_lnH"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_R2",
+            "value": "@meterbreakdown1_I * @meterbreakdown1_I / 4"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "textSize": "@meterbreakdown1_big"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "textMeasure": {
+            "text": {
+             "type": "textFromFloat",
+             "value": "round(@eaten)",
+             "whole": 9,
+             "decimal": 0,
+             "flags": 23
+            },
+            "mode": 0,
+            "name": "meterbreakdown1_bw"
+           }
+          },
+          {
+           "save": [
+            {
+             "scale": {
+              "sx": "min(1, 1.8 * sqrt(max(@meterbreakdown1_R2 - pow(abs(@meterbreakdown1_yBig - @meterbreakdown1_cy) + @meterbreakdown1_big * 0.4, 2), 1)) / @meterbreakdown1_bw)",
+              "sy": "min(1, 1.8 * sqrt(max(@meterbreakdown1_R2 - pow(abs(@meterbreakdown1_yBig - @meterbreakdown1_cy) + @meterbreakdown1_big * 0.4, 2), 1)) / @meterbreakdown1_bw)",
+              "pivotX": "@meterbreakdown1_cx",
+              "pivotY": "@meterbreakdown1_yBig"
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textFromFloat",
+               "value": "round(@eaten)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              },
+              "x": "@meterbreakdown1_cx",
+              "y": "@meterbreakdown1_yBig",
+              "panX": 0,
+              "panY": 0
+             }
+            }
+           ]
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "textSize": "@meterbreakdown1_sm"
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": "@meterbreakdown1_hasCap"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Eaten",
+            "x": "@meterbreakdown1_cx",
+            "y": "@meterbreakdown1_yTop + @meterbreakdown1_lnH / 2",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_dS",
+            "value": "abs(@meterbreakdown1_yS2 * @meterbreakdown1_hasOf + @meterbreakdown1_yS1 * (1 - @meterbreakdown1_hasOf) - @meterbreakdown1_cy) + @meterbreakdown1_sm * 0.5"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_chord",
+            "value": "2 * sqrt(max(@meterbreakdown1_R2 - @meterbreakdown1_dS * @meterbreakdown1_dS, 1))"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_yStat",
+            "value": "ifElse(@meterbreakdown1_yS1, @meterbreakdown1_yS2, @meterbreakdown1_hasOf)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_seenS",
+            "value": "step(@meterbreakdown1_D, 80)"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": "@meterbreakdown1_hasOf"
+             }
+            ]
+           }
+          },
+          {
+           "textMeasure": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": "of ",
+              "id2": {
+               "type": "textFromFloat",
+               "value": "round(2000)",
+               "whole": 9,
+               "decimal": 0,
+               "flags": 23
+              }
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": " ",
+              "id2": "kcal"
+             }
+            },
+            "mode": 0,
+            "name": "meterbreakdown1_ofw"
+           }
+          },
+          {
+           "save": [
+            {
+             "scale": {
+              "sx": "min(1, 2 * sqrt(max(@meterbreakdown1_R2 - pow(abs(@meterbreakdown1_yS1 - @meterbreakdown1_cy) + @meterbreakdown1_sm * 0.5, 2), 1)) / @meterbreakdown1_ofw)",
+              "sy": "min(1, 2 * sqrt(max(@meterbreakdown1_R2 - pow(abs(@meterbreakdown1_yS1 - @meterbreakdown1_cy) + @meterbreakdown1_sm * 0.5, 2), 1)) / @meterbreakdown1_ofw)",
+              "pivotX": "@meterbreakdown1_cx",
+              "pivotY": "@meterbreakdown1_yS1"
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": "of ",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(2000)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "kcal"
+               }
+              },
+              "x": "@meterbreakdown1_cx",
+              "y": "@meterbreakdown1_yS1",
+              "panX": 0,
+              "panY": 0
+             }
+            }
+           ]
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "alpha": "@meterbreakdown1_stUnder * @meterbreakdown1_seenS"
+             }
+            ]
+           }
+          },
+          {
+           "textMeasure": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "round(abs(2000 - @eaten))",
+              "whole": 9,
+              "decimal": 0,
+              "flags": 23
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": " ",
+              "id2": "left"
+             }
+            },
+            "mode": 0,
+            "name": "meterbreakdown1_lw"
+           }
+          },
+          {
+           "save": [
+            {
+             "scale": {
+              "sx": "min(1, @meterbreakdown1_chord / @meterbreakdown1_lw)",
+              "sy": "min(1, @meterbreakdown1_chord / @meterbreakdown1_lw)",
+              "pivotX": "@meterbreakdown1_cx",
+              "pivotY": "@meterbreakdown1_yStat"
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "round(abs(2000 - @eaten))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "left"
+               }
+              },
+              "x": "@meterbreakdown1_cx",
+              "y": "@meterbreakdown1_yStat",
+              "panX": 0,
+              "panY": 0
+             }
+            }
+           ]
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             },
+             {
+              "alpha": "@meterbreakdown1_stOver * @meterbreakdown1_seenS"
+             }
+            ]
+           }
+          },
+          {
+           "textMeasure": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "round(abs(2000 - @eaten))",
+              "whole": 9,
+              "decimal": 0,
+              "flags": 23
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": " ",
+              "id2": "over"
+             }
+            },
+            "mode": 0,
+            "name": "meterbreakdown1_ow"
+           }
+          },
+          {
+           "save": [
+            {
+             "scale": {
+              "sx": "min(1, @meterbreakdown1_chord / @meterbreakdown1_ow)",
+              "sy": "min(1, @meterbreakdown1_chord / @meterbreakdown1_ow)",
+              "pivotX": "@meterbreakdown1_cx",
+              "pivotY": "@meterbreakdown1_yStat"
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "round(abs(2000 - @eaten))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "over"
+               }
+              },
+              "x": "@meterbreakdown1_cx",
+              "y": "@meterbreakdown1_yStat",
+              "panX": 0,
+              "panY": 0
+             }
+            }
+           ]
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             },
+             {
+              "alpha": "@meterbreakdown1_stOn * @meterbreakdown1_seenS"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "On target",
+            "x": "@meterbreakdown1_cx",
+            "y": "@meterbreakdown1_yStat",
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "left over",
+            "start": "5 * @meterbreakdown1_stOver",
+            "len": 4,
+            "varName": "meterbreakdown1_wM"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_sayMain",
+            "vtype": "string",
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "Eaten",
+                      "id2": " "
+                     },
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "round(@eaten)",
+                      "whole": 9,
+                      "decimal": 0,
+                      "flags": 23
+                     }
+                    },
+                    "id2": " of "
+                   },
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "round(2000)",
+                    "whole": 9,
+                    "decimal": 0,
+                    "flags": 23
+                   }
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " ",
+                   "id2": "kcal"
+                  }
+                 },
+                 "id2": ", "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(abs(2000 - @eaten))",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": " "
+              },
+              "id2": "@meterbreakdown1_wM"
+             },
+             "id2": ". "
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pv_0",
+            "value": 180
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pt_0",
+            "value": 250
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pp_0",
+            "value": {
+             "value": "@meterbreakdown1_pv_0 / max(@meterbreakdown1_pt_0, 0.01)",
+             "anim": 0.5
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pd_0",
+            "value": "max(1, @meterbreakdown1_pp_0)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_po_0",
+            "value": "step(@meterbreakdown1_pv_0, @meterbreakdown1_pt_0) * step(@meterbreakdown1_pp_0, 1)"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "left over",
+            "start": "5 * @meterbreakdown1_po_0",
+            "len": 4,
+            "varName": "meterbreakdown1_pw_0"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_say_0",
+            "vtype": "string",
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "Carbs",
+                      "id2": " "
+                     },
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "round(@meterbreakdown1_pv_0)",
+                      "whole": 9,
+                      "decimal": 0,
+                      "flags": 23
+                     }
+                    },
+                    "id2": " of "
+                   },
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "round(@meterbreakdown1_pt_0)",
+                    "whole": 9,
+                    "decimal": 0,
+                    "flags": 23
+                   }
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " ",
+                   "id2": "g"
+                  }
+                 },
+                 "id2": ", "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(abs(@meterbreakdown1_pt_0 - @meterbreakdown1_pv_0))",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": " "
+              },
+              "id2": "@meterbreakdown1_pw_0"
+             },
+             "id2": ". "
+            }
+           }
+          },
+          {
+           "save": [
+            {
+             "translate": {
+              "dx": "@meterbreakdown1_ax",
+              "dy": "@meterbreakdown1_top + 0 * @meterbreakdown1_rh"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.muted"
+               },
+               {
+                "style": "fill"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 0)"
+               },
+               {
+                "textSize": "@meterbreakdown1_ts"
+               }
+              ]
+             }
+            },
+            {
+             "textMeasure": {
+              "text": "Carbs",
+              "mode": 0,
+              "name": "meterbreakdown1_lw_0"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_0)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_0)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "mode": 0,
+              "name": "meterbreakdown1_vw_0"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_0 - @meterbreakdown1_pt_0))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "mode": 0,
+              "name": "meterbreakdown1_ow_0"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": "Carbs",
+              "mode": 4,
+              "name": "meterbreakdown1_lt_0"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": "Carbs",
+              "mode": 5,
+              "name": "meterbreakdown1_lb_0"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_0)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_0)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "mode": 4,
+              "name": "meterbreakdown1_vt_0"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_0)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_0)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "mode": 5,
+              "name": "meterbreakdown1_vb_0"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_0 - @meterbreakdown1_pt_0))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "mode": 4,
+              "name": "meterbreakdown1_ot_0"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_0 - @meterbreakdown1_pt_0))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "mode": 5,
+              "name": "meterbreakdown1_ob_0"
+             }
+            },
+            {
+             "variable": {
+              "name": "meterbreakdown1_fs_0",
+              "value": "min(1, @meterbreakdown1_aw / (@meterbreakdown1_lw_0 + @meterbreakdown1_vw_0 + 10 + @meterbreakdown1_po_0 * (@meterbreakdown1_ow_0 + 8)))"
+             }
+            },
+            {
+             "scale": {
+              "sx": "@meterbreakdown1_fs_0",
+              "sy": "@meterbreakdown1_fs_0",
+              "pivotX": 0,
+              "pivotY": "@meterbreakdown1_lh / 2"
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": "Carbs",
+              "x": 0,
+              "y": "@meterbreakdown1_lh * 0.76 + (@meterbreakdown1_lt_0 + @meterbreakdown1_lb_0) / 2",
+              "panX": -1,
+              "panY": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onSurface"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 0)"
+               }
+              ]
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_0)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_0)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "x": "@meterbreakdown1_aw / @meterbreakdown1_fs_0",
+              "y": "@meterbreakdown1_lh * 0.76 + (@meterbreakdown1_vt_0 + @meterbreakdown1_vb_0) / 2",
+              "panX": 1,
+              "panY": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.error"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 0) * @meterbreakdown1_po_0"
+               }
+              ]
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_0 - @meterbreakdown1_pt_0))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "x": "@meterbreakdown1_aw / @meterbreakdown1_fs_0 - @meterbreakdown1_vw_0 - 8",
+              "y": "@meterbreakdown1_lh * 0.76 + (@meterbreakdown1_ot_0 + @meterbreakdown1_ob_0) / 2",
+              "panX": 1,
+              "panY": 0
+             }
+            },
+            {
+             "scale": {
+              "sx": "1 / @meterbreakdown1_fs_0",
+              "sy": "1 / @meterbreakdown1_fs_0",
+              "pivotX": 0,
+              "pivotY": "@meterbreakdown1_lh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.primary"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 0) * 0.18"
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": 0,
+              "top": "@meterbreakdown1_by",
+              "right": "@meterbreakdown1_aw",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh",
+              "rx": "@meterbreakdown1_bh / 2",
+              "ry": "@meterbreakdown1_bh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.error"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 0) * @meterbreakdown1_po_0"
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": "@meterbreakdown1_aw / @meterbreakdown1_pd_0 - @meterbreakdown1_bh / 2",
+              "top": "@meterbreakdown1_by",
+              "right": "@meterbreakdown1_aw",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh",
+              "rx": "@meterbreakdown1_bh / 2",
+              "ry": "@meterbreakdown1_bh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.primary"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 0) * step(@meterbreakdown1_pp_0, 0)"
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": 0,
+              "top": "@meterbreakdown1_by",
+              "right": "max(@meterbreakdown1_bh, @meterbreakdown1_aw * min(@meterbreakdown1_pp_0, 1) / @meterbreakdown1_pd_0)",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh",
+              "rx": "@meterbreakdown1_bh / 2",
+              "ry": "@meterbreakdown1_bh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.surface"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 0) * @meterbreakdown1_po_0"
+               }
+              ]
+             }
+            },
+            {
+             "drawRect": {
+              "left": "@meterbreakdown1_aw / @meterbreakdown1_pd_0 - 1",
+              "top": "@meterbreakdown1_by - 1",
+              "right": "@meterbreakdown1_aw / @meterbreakdown1_pd_0 + 1",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh + 1"
+             }
+            }
+           ]
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pv_1",
+            "value": 95
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pt_1",
+            "value": 70
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pp_1",
+            "value": {
+             "value": "@meterbreakdown1_pv_1 / max(@meterbreakdown1_pt_1, 0.01)",
+             "anim": 0.5
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pd_1",
+            "value": "max(1, @meterbreakdown1_pp_1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_po_1",
+            "value": "step(@meterbreakdown1_pv_1, @meterbreakdown1_pt_1) * step(@meterbreakdown1_pp_1, 1)"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "left over",
+            "start": "5 * @meterbreakdown1_po_1",
+            "len": 4,
+            "varName": "meterbreakdown1_pw_1"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_say_1",
+            "vtype": "string",
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "Protein",
+                      "id2": " "
+                     },
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "round(@meterbreakdown1_pv_1)",
+                      "whole": 9,
+                      "decimal": 0,
+                      "flags": 23
+                     }
+                    },
+                    "id2": " of "
+                   },
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "round(@meterbreakdown1_pt_1)",
+                    "whole": 9,
+                    "decimal": 0,
+                    "flags": 23
+                   }
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " ",
+                   "id2": "g"
+                  }
+                 },
+                 "id2": ", "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(abs(@meterbreakdown1_pt_1 - @meterbreakdown1_pv_1))",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": " "
+              },
+              "id2": "@meterbreakdown1_pw_1"
+             },
+             "id2": ". "
+            }
+           }
+          },
+          {
+           "save": [
+            {
+             "translate": {
+              "dx": "@meterbreakdown1_ax",
+              "dy": "@meterbreakdown1_top + 1 * @meterbreakdown1_rh"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.muted"
+               },
+               {
+                "style": "fill"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 1)"
+               },
+               {
+                "textSize": "@meterbreakdown1_ts"
+               }
+              ]
+             }
+            },
+            {
+             "textMeasure": {
+              "text": "Protein",
+              "mode": 0,
+              "name": "meterbreakdown1_lw_1"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_1)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_1)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "mode": 0,
+              "name": "meterbreakdown1_vw_1"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_1 - @meterbreakdown1_pt_1))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "mode": 0,
+              "name": "meterbreakdown1_ow_1"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": "Protein",
+              "mode": 4,
+              "name": "meterbreakdown1_lt_1"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": "Protein",
+              "mode": 5,
+              "name": "meterbreakdown1_lb_1"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_1)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_1)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "mode": 4,
+              "name": "meterbreakdown1_vt_1"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_1)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_1)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "mode": 5,
+              "name": "meterbreakdown1_vb_1"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_1 - @meterbreakdown1_pt_1))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "mode": 4,
+              "name": "meterbreakdown1_ot_1"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_1 - @meterbreakdown1_pt_1))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "mode": 5,
+              "name": "meterbreakdown1_ob_1"
+             }
+            },
+            {
+             "variable": {
+              "name": "meterbreakdown1_fs_1",
+              "value": "min(1, @meterbreakdown1_aw / (@meterbreakdown1_lw_1 + @meterbreakdown1_vw_1 + 10 + @meterbreakdown1_po_1 * (@meterbreakdown1_ow_1 + 8)))"
+             }
+            },
+            {
+             "scale": {
+              "sx": "@meterbreakdown1_fs_1",
+              "sy": "@meterbreakdown1_fs_1",
+              "pivotX": 0,
+              "pivotY": "@meterbreakdown1_lh / 2"
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": "Protein",
+              "x": 0,
+              "y": "@meterbreakdown1_lh * 0.76 + (@meterbreakdown1_lt_1 + @meterbreakdown1_lb_1) / 2",
+              "panX": -1,
+              "panY": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onSurface"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 1)"
+               }
+              ]
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_1)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_1)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "x": "@meterbreakdown1_aw / @meterbreakdown1_fs_1",
+              "y": "@meterbreakdown1_lh * 0.76 + (@meterbreakdown1_vt_1 + @meterbreakdown1_vb_1) / 2",
+              "panX": 1,
+              "panY": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.error"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 1) * @meterbreakdown1_po_1"
+               }
+              ]
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_1 - @meterbreakdown1_pt_1))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "x": "@meterbreakdown1_aw / @meterbreakdown1_fs_1 - @meterbreakdown1_vw_1 - 8",
+              "y": "@meterbreakdown1_lh * 0.76 + (@meterbreakdown1_ot_1 + @meterbreakdown1_ob_1) / 2",
+              "panX": 1,
+              "panY": 0
+             }
+            },
+            {
+             "scale": {
+              "sx": "1 / @meterbreakdown1_fs_1",
+              "sy": "1 / @meterbreakdown1_fs_1",
+              "pivotX": 0,
+              "pivotY": "@meterbreakdown1_lh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.success"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 1) * 0.18"
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": 0,
+              "top": "@meterbreakdown1_by",
+              "right": "@meterbreakdown1_aw",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh",
+              "rx": "@meterbreakdown1_bh / 2",
+              "ry": "@meterbreakdown1_bh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.error"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 1) * @meterbreakdown1_po_1"
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": "@meterbreakdown1_aw / @meterbreakdown1_pd_1 - @meterbreakdown1_bh / 2",
+              "top": "@meterbreakdown1_by",
+              "right": "@meterbreakdown1_aw",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh",
+              "rx": "@meterbreakdown1_bh / 2",
+              "ry": "@meterbreakdown1_bh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.success"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 1) * step(@meterbreakdown1_pp_1, 0)"
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": 0,
+              "top": "@meterbreakdown1_by",
+              "right": "max(@meterbreakdown1_bh, @meterbreakdown1_aw * min(@meterbreakdown1_pp_1, 1) / @meterbreakdown1_pd_1)",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh",
+              "rx": "@meterbreakdown1_bh / 2",
+              "ry": "@meterbreakdown1_bh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.surface"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 1) * @meterbreakdown1_po_1"
+               }
+              ]
+             }
+            },
+            {
+             "drawRect": {
+              "left": "@meterbreakdown1_aw / @meterbreakdown1_pd_1 - 1",
+              "top": "@meterbreakdown1_by - 1",
+              "right": "@meterbreakdown1_aw / @meterbreakdown1_pd_1 + 1",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh + 1"
+             }
+            }
+           ]
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pv_2",
+            "value": 48
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pt_2",
+            "value": 65
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pp_2",
+            "value": {
+             "value": "@meterbreakdown1_pv_2 / max(@meterbreakdown1_pt_2, 0.01)",
+             "anim": 0.5
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_pd_2",
+            "value": "max(1, @meterbreakdown1_pp_2)"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_po_2",
+            "value": "step(@meterbreakdown1_pv_2, @meterbreakdown1_pt_2) * step(@meterbreakdown1_pp_2, 1)"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "left over",
+            "start": "5 * @meterbreakdown1_po_2",
+            "len": 4,
+            "varName": "meterbreakdown1_pw_2"
+           }
+          },
+          {
+           "variable": {
+            "name": "meterbreakdown1_say_2",
+            "vtype": "string",
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "Fat",
+                      "id2": " "
+                     },
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "round(@meterbreakdown1_pv_2)",
+                      "whole": 9,
+                      "decimal": 0,
+                      "flags": 23
+                     }
+                    },
+                    "id2": " of "
+                   },
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "round(@meterbreakdown1_pt_2)",
+                    "whole": 9,
+                    "decimal": 0,
+                    "flags": 23
+                   }
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " ",
+                   "id2": "g"
+                  }
+                 },
+                 "id2": ", "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(abs(@meterbreakdown1_pt_2 - @meterbreakdown1_pv_2))",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": " "
+              },
+              "id2": "@meterbreakdown1_pw_2"
+             },
+             "id2": ". "
+            }
+           }
+          },
+          {
+           "save": [
+            {
+             "translate": {
+              "dx": "@meterbreakdown1_ax",
+              "dy": "@meterbreakdown1_top + 2 * @meterbreakdown1_rh"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.muted"
+               },
+               {
+                "style": "fill"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 2)"
+               },
+               {
+                "textSize": "@meterbreakdown1_ts"
+               }
+              ]
+             }
+            },
+            {
+             "textMeasure": {
+              "text": "Fat",
+              "mode": 0,
+              "name": "meterbreakdown1_lw_2"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_2)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_2)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "mode": 0,
+              "name": "meterbreakdown1_vw_2"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_2 - @meterbreakdown1_pt_2))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "mode": 0,
+              "name": "meterbreakdown1_ow_2"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": "Fat",
+              "mode": 4,
+              "name": "meterbreakdown1_lt_2"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": "Fat",
+              "mode": 5,
+              "name": "meterbreakdown1_lb_2"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_2)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_2)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "mode": 4,
+              "name": "meterbreakdown1_vt_2"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_2)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_2)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "mode": 5,
+              "name": "meterbreakdown1_vb_2"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_2 - @meterbreakdown1_pt_2))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "mode": 4,
+              "name": "meterbreakdown1_ot_2"
+             }
+            },
+            {
+             "textMeasure": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_2 - @meterbreakdown1_pt_2))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "mode": 5,
+              "name": "meterbreakdown1_ob_2"
+             }
+            },
+            {
+             "variable": {
+              "name": "meterbreakdown1_fs_2",
+              "value": "min(1, @meterbreakdown1_aw / (@meterbreakdown1_lw_2 + @meterbreakdown1_vw_2 + 10 + @meterbreakdown1_po_2 * (@meterbreakdown1_ow_2 + 8)))"
+             }
+            },
+            {
+             "scale": {
+              "sx": "@meterbreakdown1_fs_2",
+              "sy": "@meterbreakdown1_fs_2",
+              "pivotX": 0,
+              "pivotY": "@meterbreakdown1_lh / 2"
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": "Fat",
+              "x": 0,
+              "y": "@meterbreakdown1_lh * 0.76 + (@meterbreakdown1_lt_2 + @meterbreakdown1_lb_2) / 2",
+              "panX": -1,
+              "panY": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onSurface"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 2)"
+               }
+              ]
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@meterbreakdown1_pv_2)",
+                  "whole": 9,
+                  "decimal": 0,
+                  "flags": 23
+                 },
+                 "id2": " / "
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@meterbreakdown1_pt_2)",
+                 "whole": 9,
+                 "decimal": 0,
+                 "flags": 23
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": "g"
+               }
+              },
+              "x": "@meterbreakdown1_aw / @meterbreakdown1_fs_2",
+              "y": "@meterbreakdown1_lh * 0.76 + (@meterbreakdown1_vt_2 + @meterbreakdown1_vb_2) / 2",
+              "panX": 1,
+              "panY": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.error"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 2) * @meterbreakdown1_po_2"
+               }
+              ]
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "round(abs(@meterbreakdown1_pv_2 - @meterbreakdown1_pt_2))",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "x": "@meterbreakdown1_aw / @meterbreakdown1_fs_2 - @meterbreakdown1_vw_2 - 8",
+              "y": "@meterbreakdown1_lh * 0.76 + (@meterbreakdown1_ot_2 + @meterbreakdown1_ob_2) / 2",
+              "panX": 1,
+              "panY": 0
+             }
+            },
+            {
+             "scale": {
+              "sx": "1 / @meterbreakdown1_fs_2",
+              "sy": "1 / @meterbreakdown1_fs_2",
+              "pivotX": 0,
+              "pivotY": "@meterbreakdown1_lh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.warning"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 2) * 0.18"
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": 0,
+              "top": "@meterbreakdown1_by",
+              "right": "@meterbreakdown1_aw",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh",
+              "rx": "@meterbreakdown1_bh / 2",
+              "ry": "@meterbreakdown1_bh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.error"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 2) * @meterbreakdown1_po_2"
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": "@meterbreakdown1_aw / @meterbreakdown1_pd_2 - @meterbreakdown1_bh / 2",
+              "top": "@meterbreakdown1_by",
+              "right": "@meterbreakdown1_aw",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh",
+              "rx": "@meterbreakdown1_bh / 2",
+              "ry": "@meterbreakdown1_bh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.warning"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 2) * step(@meterbreakdown1_pp_2, 0)"
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": 0,
+              "top": "@meterbreakdown1_by",
+              "right": "max(@meterbreakdown1_bh, @meterbreakdown1_aw * min(@meterbreakdown1_pp_2, 1) / @meterbreakdown1_pd_2)",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh",
+              "rx": "@meterbreakdown1_bh / 2",
+              "ry": "@meterbreakdown1_bh / 2"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.surface"
+               },
+               {
+                "alpha": "step(@meterbreakdown1_k, 2) * @meterbreakdown1_po_2"
+               }
+              ]
+             }
+            },
+            {
+             "drawRect": {
+              "left": "@meterbreakdown1_aw / @meterbreakdown1_pd_2 - 1",
+              "top": "@meterbreakdown1_by - 1",
+              "right": "@meterbreakdown1_aw / @meterbreakdown1_pd_2 + 1",
+              "bottom": "@meterbreakdown1_by + @meterbreakdown1_bh + 1"
+             }
+            }
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@meterbreakdown1_sayMain",
+               "id2": "@meterbreakdown1_say_0"
+              },
+              "id2": "@meterbreakdown1_say_1"
+             },
+             "id2": "@meterbreakdown1_say_2"
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

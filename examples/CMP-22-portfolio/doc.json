@@ -1,0 +1,484 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Portfolio: total value and today's change, allocation by holding, and the holdings as rows with price trend and change"
+ },
+ "components": {
+  "Holdings": {
+   "summary": "The holdings, one QuoteRow each, value and change read from arrays",
+   "params": {
+    "rows": {
+     "type": "list",
+     "required": true,
+     "doc": "symbol, name, trend array"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "$each": "rows",
+       "as": "r",
+       "index": "i",
+       "fields": [
+        "symbol",
+        "name",
+        "trend"
+       ],
+       "do": {
+        "QuoteRow": {
+         "symbol": "@r_symbol",
+         "name": "@r_name",
+         "price": "arrayGet(@holdingValue, @i)",
+         "change": "arrayGet(@holdingChange, @i)",
+         "values": "@r_trend",
+         "decimals": 0
+        }
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "floatArrays": {
+   "holdingValue": {
+    "value": [
+     7680,
+     2904,
+     22185,
+     4416,
+     11025
+    ],
+    "export": true
+   },
+   "holdingChange": {
+    "value": [
+     1.25,
+     -3.4,
+     0.62,
+     0.04,
+     -2.18
+    ],
+    "export": true
+   },
+   "byClass": {
+    "value": [
+     10584,
+     22185,
+     4416,
+     11025
+    ],
+    "export": true
+   },
+   "t0": {
+    "value": [
+     100,
+     100.57,
+     100.73,
+     103.13,
+     103.7,
+     104.07,
+     104.6,
+     104.53,
+     104.33,
+     104.91,
+     104.88,
+     105.64,
+     105.76,
+     104.89,
+     104.31,
+     104.02
+    ],
+    "export": true
+   },
+   "t1": {
+    "value": [
+     100,
+     98.55,
+     98.3,
+     97.92,
+     98.31,
+     97.57,
+     97.23,
+     97.39,
+     97.66,
+     96.82,
+     97.58,
+     96.99,
+     97.54,
+     97.15,
+     96.69,
+     95.71
+    ],
+    "export": true
+   },
+   "t2": {
+    "value": [
+     100,
+     100.22,
+     102.02,
+     101.92,
+     103.19,
+     104.33,
+     104.39,
+     105.39,
+     106.56,
+     106.67,
+     106.64,
+     107.64,
+     108.16,
+     109.8,
+     110.38,
+     109.96
+    ],
+    "export": true
+   },
+   "t3": {
+    "value": [
+     100,
+     100.04,
+     99.72,
+     100.01,
+     100.28,
+     100.2,
+     99.97,
+     100.3,
+     100.23,
+     100.67,
+     100.41,
+     100.37,
+     100.25,
+     99.97,
+     100.88,
+     101.46
+    ],
+    "export": true
+   },
+   "t4": {
+    "value": [
+     100,
+     98.81,
+     99.41,
+     96.75,
+     97.93,
+     98.9,
+     98.07,
+     97.23,
+     97.15,
+     97.33,
+     96.48,
+     95.02,
+     94.3,
+     93.37,
+     93.96,
+     93.68
+    ],
+    "export": true
+   }
+  },
+  "variables": {
+   "gain": {
+    "value": -114.63,
+    "export": true
+   },
+   "total": "arraySum(@holdingValue)",
+   "gainPct": "@gain / max(@total - @gain, 0.0001) * 100",
+   "W": "windowWidth()",
+   "H": "windowHeight()",
+   "pad": "ifElse(12, 16, step(min(@W, @H), 300))",
+   "iw": "@W - 2 * @pad",
+   "ih": "@H - 2 * @pad",
+   "wide": "step(@W, @H * 1.25) * step(@H, 239)",
+   "hasList": "step(@H, 239)",
+   "noList": "1 - @hasList",
+   "showLegend": "step(@H, 239)",
+   "fs": "clamp(24, 38, min(@W * 0.115, @H * 0.15))",
+   "leftW": "ifElse(@iw, @iw * 0.42, @wide)",
+   "gap": "@wide * 20",
+   "heroH": "20 + @fs * 1.25 + 24",
+   "barH": "ifElse(16, 22 + 4 * 24, @showLegend)",
+   "lLeft": "@wide * (@leftW + @gap)",
+   "lTop": "(1 - @wide) * (@heroH + @barH + 20)",
+   "lW": "@iw - @lLeft",
+   "barTop": "@heroH + ifElse(ifElse(14, 6, step(150, @ih)), 8, @hasList)",
+   "wideEnough": "step(@W, 279)"
+  }
+ },
+ "root": {
+  "column": {
+   "horizontalAlignment": "center",
+   "verticalAlignment": "center",
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.surface"
+    }
+   ],
+   "children": [
+    {
+     "box": {
+      "modifiers": [
+       {
+        "width": "@iw"
+       },
+       {
+        "height": "@ih"
+       }
+      ],
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          {
+           "width": "@leftW"
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Portfolio",
+            "fontSize": 13,
+            "color": "@colors.muted",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "height": 20
+             }
+            ]
+           }
+          },
+          {
+           "CompactNumber": {
+            "value": "@total",
+            "prefix": "$",
+            "decimals": 2,
+            "fontSize": "@fs",
+            "fontWeight": 600
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 24
+             }
+            ],
+            "children": [
+             {
+              "Delta": {
+               "value": "@gainPct",
+               "amount": "@gain",
+               "prefix": "$",
+               "fontSize": 13
+              }
+             },
+             {
+              "text": {
+               "value": "today",
+               "fontSize": 12,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "visibility": "@wideEnough"
+                },
+                {
+                 "padding": {
+                  "start": 6
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          {
+           "width": "@leftW"
+          },
+          "fillMaxHeight"
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": "@barTop"
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "visibility": "@showLegend"
+             }
+            ],
+            "children": [
+             {
+              "AllocationBar": {
+               "values": "@byClass",
+               "items": [
+                "Stocks",
+                "Funds",
+                "Bonds",
+                "Crypto"
+               ],
+               "label": "Allocation",
+               "fontSize": 12
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "visibility": "@noList"
+             }
+            ],
+            "children": [
+             {
+              "AllocationBar": {
+               "values": "@byClass",
+               "items": [
+                "Stocks",
+                "Funds",
+                "Bonds",
+                "Crypto"
+               ],
+               "legend": "none",
+               "barHeight": 10,
+               "label": "Allocation"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          {
+           "visibility": "@hasList"
+          },
+          "fillMaxSize"
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": "@lTop"
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": "@lLeft"
+                },
+                "fillMaxHeight"
+               ]
+              }
+             },
+             {
+              "column": {
+               "modifiers": [
+                {
+                 "width": "@lW"
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "Holdings",
+                  "fontSize": 13,
+                  "color": "@colors.muted",
+                  "maxLines": 1,
+                  "modifiers": [
+                   {
+                    "height": 20
+                   }
+                  ]
+                 }
+                },
+                {
+                 "Holdings": {
+                  "rows": [
+                   {
+                    "symbol": "AAPL",
+                    "name": "40 shares",
+                    "trend": "@t0"
+                   },
+                   {
+                    "symbol": "TSLA",
+                    "name": "12 shares",
+                    "trend": "@t1"
+                   },
+                   {
+                    "symbol": "VTI",
+                    "name": "85 shares",
+                    "trend": "@t2"
+                   },
+                   {
+                    "symbol": "BND",
+                    "name": "60 shares",
+                    "trend": "@t3"
+                   },
+                   {
+                    "symbol": "BTC",
+                    "name": "0.18 BTC",
+                    "trend": "@t4"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

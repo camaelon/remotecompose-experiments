@@ -6,7 +6,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadLibrary, loadIconCatalog } from "./components.mjs";
+import { loadLibrary, loadIconCatalog, VERTICAL_EXAMPLES } from "./components.mjs";
 import { designAudit } from "./design-audit.mjs";
 import { loadMaps } from "./maps.mjs";
 import { STRUCTURES, classifyStructure, structureMenu, HIDE_TEMPLATES } from "./structures.mjs";
@@ -73,6 +73,7 @@ export function loadCatalog() {
     if (cache && cache.stamp === stamp) return cache;
     const vocab = JSON.parse(readFileSync(VOCAB_PATH, "utf8"));
     const catalog = existsSync(catPath) ? JSON.parse(readFileSync(catPath, "utf8")) : { examples: [] };
+    if (process.env.RC_HIDE_VERTICALS) catalog.examples = catalog.examples.filter((e) => !VERTICAL_EXAMPLES.includes(e.id));
     const library = loadLibrary();
     // phrase (normalised words joined by a space) -> [{kind, id}]
     const phrases = new Map();
@@ -836,7 +837,7 @@ function designRules(goal, r, needed) {
     // A quantity against a target (calories, a budget, a goal) is often past it.
     if (/\b(target|goal|budget|limit|quota|vs\.?|against)\b/.test(g)) rules.push({
         rule: "Show the overshoot",
-        how: "A value against a target goes past it (31 % over the calories, a category over its budget): a bar shows it with ProgressBar {\"progress\": \"@spent / max(@limit, 0.01)\", \"overshoot\": true} — the bar rescales, a tick marks the limit and the excess is an @colors.error segment (hatched in mono). ProgressRing clamps at a full ring: show the excess beside it as its own mark (a second lap or segment in @colors.error, thick vs thin in mono). Always add a computed \"N over\" text (step(@v, @target) switches \"N left\" / \"N over\") — then check it with render samples at 0, at the target and over it.",
+        how: "A value against a target goes past it (31 % over the calories, a category over its budget): a bar shows it with ProgressBar {\"progress\": \"@spent / max(@limit, 0.01)\", \"overshoot\": true} — the bar rescales, a tick marks the limit and the excess is an @colors.error segment (hatched in mono). ProgressRing clamps at a full ring: for a ring past its target use ActivityRings (a second lap) or MeterBreakdown (the ring with its parts). Always add a computed \"N over\" text (step(@v, @target) switches \"N left\" / \"N over\") — then check it with render samples at 0, at the target and over it.",
     });
     if (QUANTITY_WORDS.test(g)) rules.push({
         rule: "Give quantities a visual",

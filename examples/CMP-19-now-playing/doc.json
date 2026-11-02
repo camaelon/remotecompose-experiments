@@ -1,0 +1,526 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "A now playing screen: cover, title, artist, seek bar and transport controls, side by side when landscape, compact as a 4x2 or 2x2 widget"
+ },
+ "resources": {
+  "variables": {
+   "pos": {
+    "value": 83,
+    "export": true
+   },
+   "dur": {
+    "value": 225,
+    "export": true
+   },
+   "playing": {
+    "value": 1,
+    "export": true
+   },
+   "shuf": {
+    "value": 0,
+    "export": true
+   },
+   "rep": {
+    "value": 0,
+    "export": true
+   },
+   "seed": {
+    "value": 1,
+    "export": true
+   },
+   "W": "windowWidth()",
+   "H": "windowHeight()",
+   "tiny": "1 - step(@W, 220)",
+   "land": "(1 - @tiny) * step(@W, @H * 1.15) * step(@H, 247.5) * step(@W, 351.5)",
+   "port": "(1 - @tiny) * (1 - @land) * step(@H, 355.5)",
+   "big": "@land + @port",
+   "bar": "(1 - @tiny) * (1 - @big)",
+   "fw": "ifElse(min(@W, 560), min(@W, 1000), @land)",
+   "cw": "@fw - 32",
+   "ch": "@H - 32",
+   "five": "step(@W, 459.5)",
+   "rsv": "ifElse(200, 264, @five)",
+   "pcs": "max(0, min(@cw - 16, @ch - 228))",
+   "lcs": "max(0, min(min(@ch - 16, @cw - 24 - @rsv), @fw / 2))",
+   "ex": "max(0, (@ch - @pcs - 228) / 2)",
+   "aw": "ifElse(@cw, @lcs + 16, @land)",
+   "ah": "ifElse(@pcs + 12, @ch, @land)",
+   "bw": "ifElse(@cw, @cw - @aw - 8, @land)",
+   "bh": "ifElse(216, @ch, @land)",
+   "acs": "ifElse(@pcs, @lcs, @land)",
+   "sb": "step(@H, 127.5)",
+   "topH": "max(36, @H - 16 - 48 - 16 * @sb)",
+   "barCover": "min(@topH, max(48, @W - 172))",
+   "secAt": "ifElse(300, ifElse(99999, 0, @five), @land)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "title",
+    "vtype": "string",
+    "value": "Blue in Green",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "artist",
+    "vtype": "string",
+    "value": "Miles Davis",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "album",
+    "vtype": "string",
+    "value": "Kind of Blue",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "horizontalAlignment": "center",
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     }
+    ],
+    "children": [
+     {
+      "flow": {
+       "modifiers": [
+        {
+         "width": "@fw"
+        },
+        {
+         "height": "@H"
+        },
+        {
+         "padding": 16
+        },
+        {
+         "visibility": "@big"
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": "@cw"
+           },
+           {
+            "height": "@ex"
+           },
+           {
+            "visibility": "@port"
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "width": "@aw"
+           },
+           {
+            "height": "@ah"
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@acs"
+              },
+              {
+               "height": "@acs"
+              }
+             ],
+             "children": [
+              {
+               "CoverArt": {
+                "seed": "@seed",
+                "label": "Album art",
+                "radius": 16
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "verticalArrangement": "center",
+          "modifiers": [
+           {
+            "width": "@bw"
+           },
+           {
+            "height": "@bh"
+           },
+           {
+            "spacedBy": 2
+           }
+          ],
+          "children": [
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "padding": [
+                8,
+                0
+               ]
+              }
+             ],
+             "children": [
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "horizontalWeight": 1
+                 },
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "@title",
+                   "fontSize": 22,
+                   "color": "@colors.onSurface",
+                   "maxLines": 1,
+                   "overflow": "ellipsis",
+                   "fontWeight": 700
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "@artist",
+                   "fontSize": 15,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "overflow": "ellipsis"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 10
+                 }
+                ]
+               }
+              },
+              {
+               "Equalizer": {
+                "playing": "@playing",
+                "size": 20
+               }
+              }
+             ]
+            }
+           },
+           {
+            "SeekBar": {
+             "position": "@pos",
+             "duration": "@dur",
+             "onSeek": {
+              "type": "hostNamedAction",
+              "name": "seek",
+              "value": "@pos",
+              "valueType": "float",
+              "actionType": 0
+             }
+            }
+           },
+           {
+            "TransportControls": {
+             "playing": "@playing",
+             "shuffle": "@shuf",
+             "repeat": "@rep",
+             "onPlayPause": {
+              "type": "hostNamedAction",
+              "name": "playPause"
+             },
+             "onPrevious": {
+              "type": "hostNamedAction",
+              "name": "previous"
+             },
+             "onNext": {
+              "type": "hostNamedAction",
+              "name": "next"
+             },
+             "onShuffle": {
+              "type": "hostNamedAction",
+              "name": "shuffle",
+              "value": "@shuf",
+              "valueType": "float",
+              "actionType": 0
+             },
+             "onRepeat": {
+              "type": "hostNamedAction",
+              "name": "repeat",
+              "value": "@rep",
+              "valueType": "float",
+              "actionType": 0
+             },
+             "secondaryAt": "@secAt"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "column": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "visibility": "@bar"
+        },
+        {
+         "background": "@colors.background"
+        },
+        {
+         "padding": 8
+        }
+       ],
+       "children": [
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": "@topH"
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@barCover"
+              },
+              {
+               "height": "@barCover"
+              }
+             ],
+             "children": [
+              {
+               "CoverArt": {
+                "seed": "@seed",
+                "radius": 10,
+                "label": "Album art"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 12
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              {
+               "horizontalWeight": 1
+              },
+              {
+               "spacedBy": 2
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "@title",
+                "fontSize": 16,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "fontWeight": 700
+               }
+              },
+              {
+               "text": {
+                "value": "@artist",
+                "fontSize": 13,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "overflow": "ellipsis"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 8
+              }
+             ]
+            }
+           },
+           {
+            "Equalizer": {
+             "playing": "@playing",
+             "size": 16
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "visibility": "@sb"
+           }
+          ],
+          "children": [
+           {
+            "SeekBar": {
+             "position": "@pos",
+             "duration": "@dur",
+             "times": "none",
+             "barHeight": 16,
+             "label": "Seek",
+             "onSeek": {
+              "type": "hostNamedAction",
+              "name": "seekWidget",
+              "value": "@pos",
+              "valueType": "float",
+              "actionType": 0
+             }
+            }
+           }
+          ]
+         }
+        },
+        {
+         "TransportControls": {
+          "size": "small",
+          "playing": "@playing",
+          "onPlayPause": {
+           "type": "hostNamedAction",
+           "name": "playPauseW"
+          },
+          "onPrevious": {
+           "type": "hostNamedAction",
+           "name": "previousW"
+          },
+          "onNext": {
+           "type": "hostNamedAction",
+           "name": "nextW"
+          }
+         }
+        }
+       ]
+      }
+     },
+     {
+      "column": {
+       "horizontalAlignment": "center",
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "visibility": "@tiny"
+        },
+        {
+         "background": "@colors.background"
+        },
+        {
+         "padding": 8
+        },
+        {
+         "spacedBy": 4
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           }
+          ],
+          "children": [
+           {
+            "CoverArt": {
+             "seed": "@seed",
+             "radius": 10,
+             "label": "Album art"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": "@title",
+          "fontSize": 13,
+          "color": "@colors.onSurface",
+          "maxLines": 1,
+          "overflow": "ellipsis",
+          "fontWeight": 700,
+          "textAlign": "center"
+         }
+        },
+        {
+         "TransportControls": {
+          "size": "small",
+          "playing": "@playing",
+          "onPlayPause": {
+           "type": "hostNamedAction",
+           "name": "playPauseS"
+          },
+          "onPrevious": {
+           "type": "hostNamedAction",
+           "name": "previousS"
+          },
+          "onNext": {
+           "type": "hostNamedAction",
+           "name": "nextS"
+          }
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

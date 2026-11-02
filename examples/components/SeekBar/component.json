@@ -1,0 +1,780 @@
+{
+ "component": "SeekBar",
+ "version": 1,
+ "summary": "A media seek bar the app drives: it follows the host's position, a drag takes over while the finger is down (the thumb grows, the times follow the finger), the release sends a host action and writes the position, and it follows the host again. Elapsed and remaining times below, m:ss or h:mm:ss by the duration, --:-- with no thumb and no touch when the duration is 0.",
+ "params": {
+  "position": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "Seconds played. Bind an exported variable the app keeps writing ({\"pos\": {\"value\": 0, \"export\": true}}). The release writes it too, so the thumb stays where it was dropped until the app's next write; read it in onSeek"
+  },
+  "duration": {
+   "type": "float",
+   "required": true,
+   "doc": "Length in seconds: \"@dur\". 0 (not loaded, a live stream): an empty track, --:--, and a touch does nothing"
+  },
+  "buffered": {
+   "type": "float",
+   "doc": "Seconds buffered: a muted part of the track up to here"
+  },
+  "label": {
+   "type": "string",
+   "default": "Seek",
+   "doc": "Accessibility label"
+  },
+  "stateText": {
+   "type": "text",
+   "doc": "What a screen reader hears as the value. Omitted: \"1:23 of 3:45\""
+  },
+  "times": {
+   "type": "enum",
+   "values": [
+    "below",
+    "none"
+   ],
+   "default": "below",
+   "static": true,
+   "doc": "below: elapsed at the left, remaining at the right, under the track. none: the track only, for widgets"
+  },
+  "barHeight": {
+   "type": "float",
+   "default": 48,
+   "static": true,
+   "doc": "Height of the touch band in dp: 48 where it fits, 16 to 24 in a small widget"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Played part and thumb"
+  },
+  "onSeek": {
+   "type": "action",
+   "doc": "Runs when the finger lifts, after the position is written. To send the value: {\"type\": \"hostNamedAction\", \"name\": \"seek\", \"value\": \"@pos\", \"valueType\": \"float\", \"actionType\": 0}, naming the variable bound to position. Both keys: json2rc reads valueType, the Java parser actionType; the bytes are the same"
+  }
+ },
+ "locals": {
+  "drag": 0,
+  "touch": 0,
+  "shown": 0,
+  "x0": 0,
+  "tx": 0,
+  "cy": 0,
+  "el": 0,
+  "rem": 0,
+  "p": {
+   "value": "@drag",
+   "anim": 0.15
+  },
+  "hostEl": "floor(clamp(0, @duration, @position))",
+  "has": "step(@duration, 0)",
+  "none": "1 - @has",
+  "long": "step(@duration, 3599.5)",
+  "short": "@has * (1 - @long)",
+  "remShort": "@short"
+ },
+ "capabilities": [
+  "input.drag",
+  "input.host",
+  "input.press",
+  "host.variables",
+  "text.dynamic",
+  "a11y.state",
+  "anim.value"
+ ],
+ "call": {
+  "SeekBar": {
+   "position": "@pos",
+   "duration": "@dur",
+   "onSeek": {
+    "type": "hostNamedAction",
+    "name": "seek",
+    "value": "@pos",
+    "valueType": "float",
+    "actionType": 0
+   }
+  }
+ },
+ "body": {
+  "column": {
+   "modifiers": [
+    "fillMaxWidth"
+   ],
+   "children": [
+    {
+     "$if": "times == 'inline'",
+     "then": {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "verticalAlignment": "center",
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "padding": [
+             0,
+             0,
+             4,
+             0
+            ]
+           }
+          ],
+          "children": []
+         }
+        }
+       ]
+      }
+     },
+     "else": {
+      "box": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": "@barHeight"
+        }
+       ],
+       "children": [
+        {
+         "canvas": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": "@barHeight"
+           },
+           {
+            "visibility": "@has"
+           },
+           {
+            "onTouchDown": {
+             "type": "valueFloatChange",
+             "target": "@drag",
+             "value": 1
+            }
+           },
+           {
+            "onTouchUp": [
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@position",
+              "value": "clamp(0, @duration, (touchX() - @x0 - 8) / (componentWidth() - 16) * @duration)"
+             },
+             {
+              "type": "valueFloatChange",
+              "target": "@drag",
+              "value": 0
+             },
+             {
+              "$if": "onSeek",
+              "then": "@onSeek"
+             }
+            ]
+           },
+           {
+            "onTouchCancel": {
+             "type": "valueFloatChange",
+             "target": "@drag",
+             "value": 0
+            }
+           }
+          ],
+          "commands": [
+           {
+            "componentValue": {
+             "id": "@x0",
+             "valueType": 4
+            }
+           },
+           {
+            "touchExpression": {
+             "name": {
+              "$name": "touch"
+             },
+             "defaultValue": "@position",
+             "min": 0,
+             "max": "@duration",
+             "expression": [
+              "(touchX() - @x0 - 8) / (componentWidth() - 16) * @duration"
+             ],
+             "touchMode": 6
+            }
+           },
+           {
+            "variable": {
+             "name": {
+              "$name": "shown"
+             },
+             "flush": true,
+             "value": "ifElse(@position, @touch, @drag)"
+            }
+           },
+           {
+            "variable": {
+             "name": {
+              "$name": "tx"
+             },
+             "flush": true,
+             "value": "8 + (componentWidth() - 16) * clamp(0, 1, @shown / @duration)"
+            }
+           },
+           {
+            "variable": {
+             "name": {
+              "$name": "cy"
+             },
+             "flush": true,
+             "value": "componentHeight() / 2"
+            }
+           },
+           {
+            "variable": {
+             "name": {
+              "$name": "el"
+             },
+             "flush": true,
+             "value": "floor(clamp(0, max(@duration, @position), @shown))"
+            }
+           },
+           {
+            "variable": {
+             "name": {
+              "$name": "rem"
+             },
+             "flush": true,
+             "value": "max(0, floor(@duration) - @el)"
+            }
+           },
+           {
+            "$if": "theme.mono",
+            "then": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1.5
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 8,
+               "y1": "@cy",
+               "x2": "componentWidth() - 8",
+               "y2": "@cy"
+              }
+             },
+             {
+              "$if": "buffered",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.muted"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawLine": {
+                 "x1": 8,
+                 "y1": "@cy",
+                 "x2": "8 + (componentWidth() - 16) * clamp(0, 1, @buffered / max(@duration, 1))",
+                 "y2": "@cy"
+                }
+               }
+              ]
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@color"
+                },
+                {
+                 "strokeWidth": 3
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 8,
+               "y1": "@cy",
+               "x2": "@tx",
+               "y2": "@cy"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@tx",
+               "cy": "@cy",
+               "radius": "5 + 2 * @drag"
+              }
+             }
+            ],
+            "else": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": "4 + 2 * @p"
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 8,
+               "y1": "@cy",
+               "x2": "componentWidth() - 8",
+               "y2": "@cy"
+              }
+             },
+             {
+              "$if": "buffered",
+              "then": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.muted"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawLine": {
+                 "x1": 8,
+                 "y1": "@cy",
+                 "x2": "8 + (componentWidth() - 16) * clamp(0, 1, @buffered / max(@duration, 1))",
+                 "y2": "@cy"
+                }
+               }
+              ]
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@color"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 8,
+               "y1": "@cy",
+               "x2": "@tx",
+               "y2": "@cy"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "0.22 * @p"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@tx",
+               "cy": "@cy",
+               "radius": "20 * @p"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@tx",
+               "cy": "@cy",
+               "radius": "7 + 3 * @p"
+              }
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "canvas": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": "@barHeight"
+           },
+           {
+            "visibility": "@none"
+           }
+          ],
+          "commands": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.track"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": {
+                "$if": "theme.mono",
+                "then": 1.5,
+                "else": 4
+               }
+              },
+              {
+               "strokeCap": "round"
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 8,
+             "y1": "componentHeight() / 2",
+             "x2": "componentWidth() - 8",
+             "y2": "componentHeight() / 2"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": "@barHeight"
+           },
+           {
+            "semantics": {
+             "contentDescription": "@label",
+             "stateDescription": {
+              "$if": "stateText",
+              "then": "@stateText",
+              "else": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "floor(@hostEl / 60)",
+                   "whole": 3,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": ":"
+                 },
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "@hostEl % 60",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 12
+                 }
+                },
+                "id2": " of "
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "floor(floor(@duration) / 60)",
+                  "whole": 3,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": ":"
+                },
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "floor(@duration) % 60",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 12
+                }
+               }
+              }
+             }
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "$if": "times == 'below'",
+     "then": {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "padding": [
+          8,
+          0
+         ]
+        }
+       ],
+       "verticalAlignment": "center",
+       "children": [
+        {
+         "text": {
+          "value": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "floor(@el / 60)",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": ":"
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "@el % 60",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 12
+           }
+          },
+          "color": "@colors.muted",
+          "fontSize": "@theme.text_sm",
+          "modifiers": [
+           {
+            "visibility": "@short"
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "floor(@el / 3600)",
+               "whole": 3,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": ":"
+             },
+             "id2": {
+              "type": "textFromFloat",
+              "value": "floor(@el / 60) % 60",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 12
+             }
+            },
+            "id2": ":"
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "@el % 60",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 12
+           }
+          },
+          "color": "@colors.muted",
+          "fontSize": "@theme.text_sm",
+          "modifiers": [
+           {
+            "visibility": "@long"
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "horizontalWeight": 1
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": {
+           "type": "textMerge",
+           "id1": "-",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "floor(@rem / 60)",
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": ":"
+            },
+            "id2": {
+             "type": "textFromFloat",
+             "value": "@rem % 60",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 12
+            }
+           }
+          },
+          "color": "@colors.muted",
+          "fontSize": "@theme.text_sm",
+          "modifiers": [
+           {
+            "visibility": "@remShort"
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": {
+           "type": "textMerge",
+           "id1": "-",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "floor(@rem / 3600)",
+                "whole": 3,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": ":"
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "floor(@rem / 60) % 60",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 12
+              }
+             },
+             "id2": ":"
+            },
+            "id2": {
+             "type": "textFromFloat",
+             "value": "@rem % 60",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 12
+            }
+           }
+          },
+          "color": "@colors.muted",
+          "fontSize": "@theme.text_sm",
+          "modifiers": [
+           {
+            "visibility": "@long"
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": "--:--",
+          "color": "@colors.muted",
+          "fontSize": "@theme.text_sm",
+          "modifiers": [
+           {
+            "visibility": "@none"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Write the position as seconds, about once a second: the bar shows what the app last sent and does not advance by itself, so a document with no host stands still",
+  "How following works: a drag state (onTouchDown 1, onTouchUp and onTouchCancel 0) chooses what the thumb shows, the host position or the touch value. A plain Slider has no such state: its touch value wins from the first drag on",
+  "Keep the position variable exported and do not compute it: the release writes it. For an expression, keep a variable and give the expression to the app",
+  "The track is inset 8 dp from the box on both sides so the thumb fits, and the times are inset to match: to line it up with something at margin m, give the bar m - 8",
+  "Do not put it in a scrolling container: touch-up actions fire for the wrong child inside a scroll (U80). A player screen does not scroll; shrink the cover instead",
+  "The elapsed and remaining texts are computed inside the canvas (after the touch expression, the only place the live touch value exists), so the times stay with the finger. They are in the tree after the track: nothing placed BEFORE this call can read them"
+ ]
+}

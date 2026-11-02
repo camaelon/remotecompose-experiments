@@ -1,0 +1,995 @@
+{
+ "id": "CMP-19",
+ "name": "now-playing",
+ "version": 1,
+ "title": "Now playing",
+ "summary": "A full player the app drives: generated cover, title, artist, a seek bar that follows the app and survives a drag, and transport controls. Stacked on a phone, side by side in landscape, compact as a 4x2 and a 2x2 widget.",
+ "prompt": "Build a music player screen: album art, title, artist, a seek bar, play pause, next, previous, shuffle and repeat. It must work on a phone in both orientations and as a home screen widget.",
+ "level": 3,
+ "family": "CMP",
+ "components": [
+  "SeekBar",
+  "TransportControls",
+  "CoverArt",
+  "Equalizer"
+ ],
+ "capabilities": {
+  "primary": [
+   "input.drag",
+   "input.host",
+   "host.variables",
+   "layout.flow"
+  ],
+  "secondary": [
+   "a11y.state",
+   "a11y.labels",
+   "text.dynamic",
+   "input.tap",
+   "anim.value"
+  ]
+ },
+ "use_cases": [
+  "media-player",
+  "widget"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "music",
+  "music player",
+  "podcast",
+  "podcast player",
+  "audiobook",
+  "video",
+  "video player",
+  "player",
+  "now playing",
+  "playback",
+  "seek",
+  "scrub",
+  "seek bar",
+  "album art",
+  "play pause",
+  "transport",
+  "media controls",
+  "media widget",
+  "music widget"
+ ],
+ "teaches": [
+  "The seek bar shows the app's position except while a finger is down; the release writes the position and sends it",
+  "One flow for phone and landscape, its boxes sized from the window; a widget gets its own small tree, shown by visibility",
+  "Each copy of the controls has its own action names, as the Java parser needs",
+  "Choose the layout by what it needs, not by window ratio alone: the stack needs 356 dp of height for a 96 dp cover and the controls, side by side needs 248, and below those the compact tree takes over"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/3/box/children/0/flow/children/2/column/children/1",
+   "shows": "input.drag",
+   "note": "SeekBar: position from the app, drag to seek, follows again"
+  },
+  {
+   "pointer": "/resources/variables/pos",
+   "shows": "host.variables",
+   "note": "the app writes this about once a second"
+  },
+  {
+   "pointer": "/root/3/box/children/0/flow",
+   "shows": "layout.flow",
+   "note": "phone and landscape from one flow"
+  },
+  {
+   "pointer": "/root/3/box/children/0/flow/children/2/column/children/1",
+   "shows": "input.host",
+   "note": "onSeek carries the position to the app"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "pos": {
+    "min": 0,
+    "max": 225,
+    "meaning": "seconds played",
+    "default": 83
+   },
+   "dur": {
+    "min": 0,
+    "max": 3600,
+    "meaning": "length in seconds, 0 unknown",
+    "default": 225
+   },
+   "playing": {
+    "min": 0,
+    "max": 1,
+    "step": 1,
+    "meaning": "1 while playing",
+    "default": 1
+   },
+   "shuf": {
+    "min": 0,
+    "max": 1,
+    "step": 1,
+    "meaning": "shuffle on"
+   },
+   "rep": {
+    "min": 0,
+    "max": 2,
+    "step": 1,
+    "meaning": "0 off, 1 all, 2 one"
+   },
+   "seed": {
+    "min": 0,
+    "max": 50,
+    "meaning": "track number, turns the generated cover"
+   },
+   "title": {
+    "type": "string",
+    "meaning": "track title",
+    "default": "Blue in Green"
+   },
+   "artist": {
+    "type": "string",
+    "meaning": "artist",
+    "default": "Miles Davis"
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "360x640 and taller: square cover, title and artist left with the equalizer right, the seek bar at 1:23 / -2:22, shuffle, previous, a large pause, next, repeat, all centred as one group. Landscape from 460 wide: cover left, the rest right, all five controls; 352 to 460 wide and 248 tall: a smaller cover and three controls. Squarish or under 248 tall, such as 300x300, 320x240 and 320x160: cover beside title, a slim seek bar, three controls. 160x160: a cover strip, title, three controls. Long titles end in an ellipsis. dur 0: an empty track and --:--.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360
+   },
+   {
+    "name": "widget",
+    "width": 320,
+    "height": 160
+   },
+   {
+    "name": "small",
+    "width": 160,
+    "height": 160
+   },
+   {
+    "name": "tablet",
+    "width": 800,
+    "height": 1100
+   },
+   {
+    "name": "paused",
+    "theme": "light",
+    "variables": {
+     "playing": 0,
+     "rep": 2,
+     "shuf": 1
+    }
+   },
+   {
+    "name": "short",
+    "width": 360,
+    "height": 260
+   },
+   {
+    "name": "square",
+    "width": 300,
+    "height": 300
+   },
+   {
+    "name": "phone-land",
+    "width": 568,
+    "height": 320
+   },
+   {
+    "name": "tall",
+    "width": 412,
+    "height": 915
+   }
+  ]
+ },
+ "related": [
+  "SeekBar",
+  "TransportControls",
+  "CoverArt",
+  "Equalizer",
+  "CMP-20"
+ ],
+ "derived": {
+  "components": [
+   "CoverArt",
+   "Equalizer",
+   "SeekBar",
+   "TransportControls"
+  ],
+  "component_instances": 10,
+  "component_modes": {
+   "CoverArt": "expand",
+   "Equalizer": "expand",
+   "SeekBar": "expand",
+   "TransportControls": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 24591,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 1095,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 16,
+   "ANIMATED_FLOAT": 275,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
+   "COMPONENT_VALUE": 22,
+   "CanvasContent": 23,
+   "CoreText": 10,
+   "DATA_FLOAT": 48,
+   "DATA_TEXT": 29,
+   "DRAW_CIRCLE": 23,
+   "DRAW_LINE": 6,
+   "DRAW_PATH": 20,
+   "DRAW_ROUND_RECT": 8,
+   "HEADER": 1,
+   "HostNamedAction": 13,
+   "LAYOUT_BOX": 29,
+   "LAYOUT_CANVAS": 23,
+   "LAYOUT_COLUMN": 10,
+   "LAYOUT_FLOW": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 6,
+   "LayoutComponentContent": 72,
+   "LoopOperation": 12,
+   "MATRIX_RESTORE": 23,
+   "MATRIX_SAVE": 23,
+   "MATRIX_SCALE": 29,
+   "MATRIX_TRANSLATE": 8,
+   "MODIFIER_BACKGROUND": 9,
+   "MODIFIER_CLICK": 11,
+   "MODIFIER_HEIGHT": 52,
+   "MODIFIER_PADDING": 5,
+   "MODIFIER_TOUCH_CANCEL": 2,
+   "MODIFIER_TOUCH_DOWN": 2,
+   "MODIFIER_TOUCH_UP": 2,
+   "MODIFIER_VISIBILITY": 22,
+   "MODIFIER_WIDTH": 69,
+   "NAMED_VARIABLE": 15,
+   "PAINT_VALUES": 47,
+   "PATH_DATA": 8,
+   "RoundedClipRectModifierOperation": 14,
+   "THEME": 18,
+   "TextFromFloat": 18,
+   "TextMerge": 26,
+   "TextSubtext": 5,
+   "TouchExpression": 2,
+   "ValueFloatExpressionChangeActionOperation": 13
+  },
+  "host_variables": [
+   {
+    "name": "album",
+    "type": "string",
+    "value": "Kind of Blue"
+   },
+   {
+    "name": "artist",
+    "type": "string",
+    "value": "Miles Davis"
+   },
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "dur",
+    "type": "float",
+    "value": 225
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "playing",
+    "type": "float",
+    "value": 1
+   },
+   {
+    "name": "pos",
+    "type": "float",
+    "value": 83
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "rep",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "seed",
+    "type": "float",
+    "value": 1
+   },
+   {
+    "name": "shuf",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "title",
+    "type": "string",
+    "value": "Blue in Green"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 4
+  },
+  "audit_findings": [
+   "warning: dead_code",
+   "info: unused_variables",
+   "info: repaint_continuous",
+   "info: spaced_by_with_weight",
+   "info: never_executed"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 7,
+   "click": 5,
+   "area": 0,
+   "touch": 2
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 23180,
+    "component_modes": {
+     "CoverArt": "expand",
+     "Equalizer": "expand",
+     "SeekBar": "expand",
+     "TransportControls": "expand"
+    },
+    "op_count": 1024,
+    "host_variables": [
+     {
+      "name": "album",
+      "type": "string",
+      "value": "Kind of Blue"
+     },
+     {
+      "name": "artist",
+      "type": "string",
+      "value": "Miles Davis"
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "dur",
+      "type": "float",
+      "value": 225
+     },
+     {
+      "name": "monoOutline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "playing",
+      "type": "float",
+      "value": 1
+     },
+     {
+      "name": "pos",
+      "type": "float",
+      "value": 83
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "rep",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "seed",
+      "type": "float",
+      "value": 1
+     },
+     {
+      "name": "shuf",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "title",
+      "type": "string",
+      "value": "Blue in Green"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 23180,
+    "component_modes": {
+     "CoverArt": "expand",
+     "Equalizer": "expand",
+     "SeekBar": "expand",
+     "TransportControls": "expand"
+    },
+    "op_count": 1024,
+    "host_variables": [
+     {
+      "name": "album",
+      "type": "string",
+      "value": "Kind of Blue"
+     },
+     {
+      "name": "artist",
+      "type": "string",
+      "value": "Miles Davis"
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "dur",
+      "type": "float",
+      "value": 225
+     },
+     {
+      "name": "monoOutline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "playing",
+      "type": "float",
+      "value": 1
+     },
+     {
+      "name": "pos",
+      "type": "float",
+      "value": 83
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "rep",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "seed",
+      "type": "float",
+      "value": 1
+     },
+     {
+      "name": "shuf",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "title",
+      "type": "string",
+      "value": "Blue in Green"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "widget": {
+    "render": "render-widget.png",
+    "render_findings": [],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: layout_touch_target",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
+     "info: never_executed"
+    ]
+   },
+   "tablet": {
+    "render": "render-tablet.png",
+    "render_findings": [],
+    "size": [
+     800,
+     1100
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "paused": {
+    "theme": "light",
+    "render": "render-paused.png",
+    "render_findings": []
+   },
+   "short": {
+    "render": "render-short.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     360,
+     260
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "square": {
+    "render": "render-square.png",
+    "render_findings": [],
+    "size": [
+     300,
+     300
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: layout_touch_target",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "phone-land": {
+    "render": "render-phone-land.png",
+    "render_findings": [],
+    "size": [
+     568,
+     320
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "tall": {
+    "render": "render-tall.png",
+    "render_findings": [],
+    "size": [
+     412,
+     915
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "CoverArt",
+   "Equalizer",
+   "H",
+   "SeekBar",
+   "TransportControls",
+   "W",
+   "acs",
+   "actionType",
+   "ah",
+   "alpha",
+   "anim",
+   "apiLevel",
+   "aw",
+   "background",
+   "bar",
+   "barCover",
+   "barHeight",
+   "bh",
+   "big",
+   "bottom",
+   "box",
+   "bw",
+   "canvas",
+   "ch",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "componentValue",
+   "contentDescription",
+   "coverart1_bx",
+   "coverart1_by",
+   "coverart1_cx",
+   "coverart1_cy",
+   "coverart1_s",
+   "coverart1_u",
+   "coverart2_bx",
+   "coverart2_by",
+   "coverart2_cx",
+   "coverart2_cy",
+   "coverart2_s",
+   "coverart2_u",
+   "coverart3_bx",
+   "coverart3_by",
+   "coverart3_cx",
+   "coverart3_cy",
+   "coverart3_s",
+   "coverart3_u",
+   "cw",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "defaultValue",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawRoundRect",
+   "dur",
+   "duration",
+   "dx",
+   "dy",
+   "enabled",
+   "equalizer1_h0",
+   "equalizer1_h1",
+   "equalizer1_h2",
+   "equalizer1_h3",
+   "equalizer1_s",
+   "equalizer1_tick",
+   "equalizer2_h0",
+   "equalizer2_h1",
+   "equalizer2_h2",
+   "equalizer2_h3",
+   "equalizer2_s",
+   "equalizer2_tick",
+   "ex",
+   "export",
+   "expression",
+   "five",
+   "flags",
+   "flow",
+   "flush",
+   "fontSize",
+   "fontWeight",
+   "fw",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "horizontalArrangement",
+   "horizontalWeight",
+   "icon_music_note_rounded_filled",
+   "icon_pause_rounded_filled",
+   "icon_play_arrow_rounded_filled",
+   "icon_repeat_one_rounded_filled",
+   "icon_repeat_rounded_filled",
+   "icon_shuffle_rounded_filled",
+   "icon_skip_next_rounded_filled",
+   "icon_skip_previous_rounded_filled",
+   "id",
+   "id1",
+   "id2",
+   "label",
+   "land",
+   "lcs",
+   "left",
+   "len",
+   "light",
+   "max",
+   "maxLines",
+   "min",
+   "modifiers",
+   "muted",
+   "name",
+   "onClick",
+   "onNext",
+   "onPlayPause",
+   "onPrevious",
+   "onPrimary",
+   "onRepeat",
+   "onSeek",
+   "onShuffle",
+   "onSurface",
+   "onTouchCancel",
+   "onTouchDown",
+   "onTouchUp",
+   "ops",
+   "overflow",
+   "padding",
+   "paint",
+   "path",
+   "paths",
+   "pcs",
+   "pivotX",
+   "pivotY",
+   "playing",
+   "port",
+   "pos",
+   "position",
+   "primary",
+   "profiles",
+   "radius",
+   "rep",
+   "repeat",
+   "resources",
+   "right",
+   "root",
+   "roundedRect",
+   "row",
+   "rsv",
+   "rx",
+   "ry",
+   "save",
+   "sb",
+   "scale",
+   "secAt",
+   "secondaryAt",
+   "seed",
+   "seekbar1_cy",
+   "seekbar1_drag",
+   "seekbar1_el",
+   "seekbar1_has",
+   "seekbar1_hostEl",
+   "seekbar1_long",
+   "seekbar1_none",
+   "seekbar1_rem",
+   "seekbar1_short",
+   "seekbar1_shown",
+   "seekbar1_touch",
+   "seekbar1_tx",
+   "seekbar1_x0",
+   "seekbar2_cy",
+   "seekbar2_drag",
+   "seekbar2_el",
+   "seekbar2_has",
+   "seekbar2_hostEl",
+   "seekbar2_long",
+   "seekbar2_none",
+   "seekbar2_rem",
+   "seekbar2_short",
+   "seekbar2_shown",
+   "seekbar2_touch",
+   "seekbar2_tx",
+   "seekbar2_x0",
+   "semantics",
+   "shuf",
+   "shuffle",
+   "size",
+   "spacedBy",
+   "start",
+   "stateDescription",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "target",
+   "text",
+   "textAlign",
+   "textSubtext",
+   "times",
+   "tiny",
+   "top",
+   "topH",
+   "touchExpression",
+   "touchMode",
+   "track",
+   "translate",
+   "transportcontrols1_fits",
+   "transportcontrols1_roomy",
+   "transportcontrols2_fits",
+   "transportcontrols2_repeat",
+   "transportcontrols2_roomy",
+   "transportcontrols2_shuffle",
+   "transportcontrols3_fits",
+   "transportcontrols3_repeat",
+   "transportcontrols3_roomy",
+   "transportcontrols3_shuffle",
+   "type",
+   "value",
+   "valueType",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalArrangement",
+   "verticalWeight",
+   "visibility",
+   "vtype",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "input.drag": [
+    "touchExpression"
+   ],
+   "input.host": [
+    "hostNamedAction"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "layout.flow": [
+    "flow"
+   ],
+   "a11y.state": [
+    "stateDescription"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "anim.value": [
+    "anim"
+   ]
+  },
+  "built_at": "2026-11-02T02:08:15.269Z"
+ },
+ "pitfalls": []
+}

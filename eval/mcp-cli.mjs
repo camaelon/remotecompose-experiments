@@ -5,7 +5,7 @@
 //   node eval/mcp-cli.mjs call <server> <tool> ARGS    ARGS: inline JSON or @file.json
 // Text results print to stdout; images are saved under ./out/ and their paths printed. Paths in
 // ARGS are relative to the current directory (MCP_ROOT), so run it from the eval run's folder.
-import { readFileSync, writeFileSync, mkdirSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, appendFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 const R = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "mcp");
@@ -13,6 +13,18 @@ const SERVERS = { "remotecompose": "remotecompose-server.mjs", "rc-examples": "e
                   "json2rc": "json2rc-server.mjs", "guide": "guide-server.mjs" };
 process.env.MCP_ROOT ??= process.cwd();
 process.env.MCP_ALLOW_NO_AUTH = "1";
+// RC_TRACE=file: one JSON line per call, for eval/run-trace.py and by-hand reading: what was asked
+// (documents as their size), what came back, and for a kit what it offered.
+function trace({ tool, args, ms, res, error }) {
+    if (!process.env.RC_TRACE) return;
+    const small = Object.fromEntries(Object.entries(args).map(([k, v]) => { const s = typeof v === "string" ? v : JSON.stringify(v); return [k, s.length > 300 ? `<${s.length} chars>` : v]; }));
+    const items = res ? (Array.isArray(res) ? res : res.content ?? [res]) : [];
+    const text = items.filter((c) => c.type === "text").map((c) => c.text).join("\n");
+    const line = { at: new Date().toISOString(), tool, args: small, ms, ...(error ? { error } : {}), result_chars: text.length, images: items.filter((c) => c.type === "image").length,
+        no_faults: /NO FAULTS FOUND/.test(text), warnings: (text.match(/\bwarning\b/gi) ?? []).length };
+    if (tool === "build_kit") { try { const k = JSON.parse(text); line.kit = { structure: k.structure?.id, model: k.layout_model?.id, components: (k.components ?? []).map((c) => c.name), examples: (k.examples ?? []).map((e) => e.id), rules: (k.rules ?? k.design_rules ?? []).map((r) => r.rule) }; } catch {} }
+    appendFileSync(process.env.RC_TRACE, JSON.stringify(line) + "\n");
+}
 const load = async (s) => (await import(path.join(R, SERVERS[s]))).definition;
 const [cmd, server, tool, raw] = process.argv.slice(2);
 if (cmd === "list") {
@@ -37,7 +49,9 @@ if (cmd === "list") {
     const args = raw ? JSON.parse(raw.startsWith("@") ? readFileSync(raw.slice(1), "utf8") : raw) : {};
     // A tool error is what an MCP client shows: the message, not a stack trace.
     let res;
-    try { res = await t.handler(args); } catch (e) { console.log(`Error: ${e?.message ?? e}`); process.exit(1); }
+    const started = Date.now();
+    try { res = await t.handler(args); } catch (e) { trace({ tool, args, ms: Date.now() - started, error: String(e?.message ?? e) }); console.log(`Error: ${e?.message ?? e}`); process.exit(1); }
+    trace({ tool, args, ms: Date.now() - started, res });
     mkdirSync("out", { recursive: true });
     let n = 0;
     const stamp = Date.now();

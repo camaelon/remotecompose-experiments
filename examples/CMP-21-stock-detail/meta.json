@@ -1,0 +1,939 @@
+{
+ "id": "CMP-21",
+ "name": "stock-detail",
+ "version": 1,
+ "title": "Stock detail: price, change, chart and stats",
+ "summary": "A stock screen from short calls: symbol, price, change since previous close, an intraday PriceChart against that close, and open, high, low and volume. Stacks on a phone, goes side by side in landscape and 4x2, and keeps price, change and line at 2x2.",
+ "prompt": "A stock detail screen: ticker, price, change today, a chart of today against previous close, and open, high, low and volume. Side by side in landscape, and working as a 4x2 and 2x2 widget.",
+ "level": 2,
+ "family": "CMP",
+ "components": [
+  "CompactNumber",
+  "Delta",
+  "PriceChart",
+  "Stat"
+ ],
+ "capabilities": {
+  "primary": [
+   "layout.stack",
+   "host.variables",
+   "data.array"
+  ],
+  "secondary": [
+   "expr.array",
+   "expr.system",
+   "a11y.labels",
+   "text.dynamic"
+  ]
+ },
+ "use_cases": [
+  "finance",
+  "chart",
+  "dashboard",
+  "widget"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "stock",
+  "ticker",
+  "portfolio",
+  "crypto",
+  "price",
+  "market",
+  "finance",
+  "investment",
+  "chart",
+  "analytics",
+  "revenue",
+  "holdings",
+  "watchlist",
+  "trading",
+  "stock detail",
+  "stock price",
+  "share price",
+  "quote",
+  "price chart",
+  "previous close",
+  "volume",
+  "open high low",
+  "stats",
+  "nasdaq",
+  "equity"
+ ],
+ "teaches": [
+  "The host sends one array and a previous close; price, change, percent, open, high and low all come from it, so they can't disagree",
+  "The same tree stacks or sits side by side through lengths computed from windowWidth() and windowHeight(), and drops stats, then name, when short",
+  "CompactNumber, Delta and PriceChart do the rounding, the signs and the axis, so there is no formatting here at all"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/variables/wide",
+   "shows": "expr.system",
+   "note": "stacked or side by side"
+  },
+  {
+   "pointer": "/resources/floatArrays/prices",
+   "shows": "data.array",
+   "note": "the host's one series"
+  },
+  {
+   "pointer": "/root/0",
+   "shows": "host.variables",
+   "note": "the symbol, a host string"
+  },
+  {
+   "pointer": "/root/2/column/children/0",
+   "shows": "layout.stack",
+   "note": "hero, chart and stats placed by spacer lengths in one box"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "prices": {
+    "type": "float_array",
+    "meaning": "today's prices, oldest first; up to 78 five-minute samples"
+   },
+   "prev": {
+    "meaning": "previous close",
+    "min": 0,
+    "max": 100000
+   },
+   "volume": {
+    "meaning": "shares traded today",
+    "min": 0,
+    "max": 10000000000
+   },
+   "symbol": {
+    "type": "string",
+    "meaning": "ticker",
+    "default": "AAPL"
+   },
+   "company": {
+    "type": "string",
+    "meaning": "company name",
+    "default": "Apple Inc."
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Phone: AAPL and name, $192.45, +$4.80 (+2.56%) today, green chart above a dashed 187.65, tag 192.45 and marker at now, then Open 188.40, High 194.25, Low 188.40, Volume 38.4M. Landscape: hero and stats left, chart right. 4x2: hero left, chart right, no stats. 2x2: hero over the line, no axes. With falling: red, down arrow, tag in red.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360
+   },
+   {
+    "name": "w4x2",
+    "width": 320,
+    "height": 160
+   },
+   {
+    "name": "w2x2",
+    "width": 160,
+    "height": 160
+   },
+   {
+    "name": "falling",
+    "variables": {
+     "prev": 196
+    }
+   }
+  ]
+ },
+ "related": [
+  "PriceChart",
+  "Delta",
+  "CompactNumber",
+  "CMP-17",
+  "CMP-22"
+ ],
+ "pitfalls": [
+  "High and low here are the samples' own; if the host has the real session high and low, send them and use those in the stats",
+  "There's no range switcher (1D, 1W, 1M): the host would swap the array, and the x labels are fixed when the document is built",
+  "Sample data is invented"
+ ],
+ "derived": {
+  "components": [
+   "CompactNumber",
+   "Delta",
+   "PriceChart",
+   "Stat"
+  ],
+  "component_instances": 8,
+  "component_modes": {
+   "CompactNumber": "expand",
+   "Delta": "expand",
+   "PriceChart": "expand",
+   "Stat": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 16037,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 717,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 6,
+   "ANIMATED_FLOAT": 213,
+   "CLIP_RECT": 5,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 7,
+   "CoreText": 16,
+   "DATA_FLOAT": 6,
+   "DATA_TEXT": 32,
+   "DRAW_CIRCLE": 5,
+   "DRAW_LINE": 8,
+   "DRAW_PATH": 7,
+   "DRAW_ROUND_RECT": 4,
+   "DRAW_TEXT_ANCHOR": 16,
+   "DataListFloat": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 10,
+   "LAYOUT_CANVAS": 7,
+   "LAYOUT_COLUMN": 4,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 12,
+   "LayoutComponentContent": 44,
+   "LoopOperation": 16,
+   "MATRIX_RESTORE": 5,
+   "MATRIX_SAVE": 5,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 24,
+   "MODIFIER_PADDING": 2,
+   "MODIFIER_VISIBILITY": 9,
+   "MODIFIER_WIDTH": 32,
+   "NAMED_VARIABLE": 12,
+   "PAINT_VALUES": 41,
+   "PathExpression": 3,
+   "THEME": 21,
+   "TextFromFloat": 20,
+   "TextLength": 9,
+   "TextMeasure": 5,
+   "TextMerge": 59,
+   "TextSubtext": 18
+  },
+  "host_variables": [
+   {
+    "name": "company",
+    "type": "string",
+    "value": "Apple Inc."
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "prev",
+    "type": "float",
+    "value": 187.649994
+   },
+   {
+    "name": "prices",
+    "type": "float_array",
+    "value": [
+     188.399994,
+     188.779999,
+     189.380005,
+     189.110001,
+     188.800003,
+     189.009995,
+     189.789993,
+     190.020004,
+     189.600006,
+     189.339996,
+     189.380005,
+     189.830002,
+     189.889999,
+     189.800003,
+     189.770004,
+     189.899994,
+     189.660004,
+     189.720001,
+     189.889999,
+     190.630005,
+     190.669998,
+     191.130005,
+     190.770004,
+     191.190002,
+     191.320007,
+     191.160004,
+     191.210007,
+     191.639999,
+     191.570007,
+     192.059998,
+     192.75,
+     193.399994,
+     194.050003,
+     193.509995,
+     193.630005,
+     193.330002,
+     193.699997,
+     193.710007,
+     193.789993,
+     193.960007,
+     193.699997,
+     193.720001,
+     193.410004,
+     194.25,
+     194.050003,
+     194.039993,
+     193.300003,
+     192.679993,
+     192.320007,
+     192.630005,
+     192.929993,
+     193.029999,
+     192.75,
+     193.5,
+     193.059998,
+     192.690002,
+     192.880005,
+     192.449997
+    ]
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "symbol",
+    "type": "string",
+    "value": "AAPL"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   },
+   {
+    "name": "volume",
+    "type": "float",
+    "value": 38420000
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: deep_expressions",
+   "info: expression_entries"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 14482,
+    "component_modes": {
+     "CompactNumber": "expand",
+     "Delta": "expand",
+     "PriceChart": "expand",
+     "Stat": "expand"
+    },
+    "op_count": 629,
+    "host_variables": [
+     {
+      "name": "company",
+      "type": "string",
+      "value": "Apple Inc."
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "prev",
+      "type": "float",
+      "value": 187.649994
+     },
+     {
+      "name": "prices",
+      "type": "float_array",
+      "value": [
+       188.399994,
+       188.779999,
+       189.380005,
+       189.110001,
+       188.800003,
+       189.009995,
+       189.789993,
+       190.020004,
+       189.600006,
+       189.339996,
+       189.380005,
+       189.830002,
+       189.889999,
+       189.800003,
+       189.770004,
+       189.899994,
+       189.660004,
+       189.720001,
+       189.889999,
+       190.630005,
+       190.669998,
+       191.130005,
+       190.770004,
+       191.190002,
+       191.320007,
+       191.160004,
+       191.210007,
+       191.639999,
+       191.570007,
+       192.059998,
+       192.75,
+       193.399994,
+       194.050003,
+       193.509995,
+       193.630005,
+       193.330002,
+       193.699997,
+       193.710007,
+       193.789993,
+       193.960007,
+       193.699997,
+       193.720001,
+       193.410004,
+       194.25,
+       194.050003,
+       194.039993,
+       193.300003,
+       192.679993,
+       192.320007,
+       192.630005,
+       192.929993,
+       193.029999,
+       192.75,
+       193.5,
+       193.059998,
+       192.690002,
+       192.880005,
+       192.449997
+      ]
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "symbol",
+      "type": "string",
+      "value": "AAPL"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "volume",
+      "type": "float",
+      "value": 38420000
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 14482,
+    "component_modes": {
+     "CompactNumber": "expand",
+     "Delta": "expand",
+     "PriceChart": "expand",
+     "Stat": "expand"
+    },
+    "op_count": 629,
+    "host_variables": [
+     {
+      "name": "company",
+      "type": "string",
+      "value": "Apple Inc."
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "prev",
+      "type": "float",
+      "value": 187.649994
+     },
+     {
+      "name": "prices",
+      "type": "float_array",
+      "value": [
+       188.399994,
+       188.779999,
+       189.380005,
+       189.110001,
+       188.800003,
+       189.009995,
+       189.789993,
+       190.020004,
+       189.600006,
+       189.339996,
+       189.380005,
+       189.830002,
+       189.889999,
+       189.800003,
+       189.770004,
+       189.899994,
+       189.660004,
+       189.720001,
+       189.889999,
+       190.630005,
+       190.669998,
+       191.130005,
+       190.770004,
+       191.190002,
+       191.320007,
+       191.160004,
+       191.210007,
+       191.639999,
+       191.570007,
+       192.059998,
+       192.75,
+       193.399994,
+       194.050003,
+       193.509995,
+       193.630005,
+       193.330002,
+       193.699997,
+       193.710007,
+       193.789993,
+       193.960007,
+       193.699997,
+       193.720001,
+       193.410004,
+       194.25,
+       194.050003,
+       194.039993,
+       193.300003,
+       192.679993,
+       192.320007,
+       192.630005,
+       192.929993,
+       193.029999,
+       192.75,
+       193.5,
+       193.059998,
+       192.690002,
+       192.880005,
+       192.449997
+      ]
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "symbol",
+      "type": "string",
+      "value": "AAPL"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "volume",
+      "type": "float",
+      "value": 38420000
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "w4x2": {
+    "render": "render-w4x2.png",
+    "render_findings": [],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": [
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "w2x2": {
+    "render": "render-w2x2.png",
+    "render_findings": [],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": [
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "falling": {
+    "render": "render-falling.png",
+    "render_findings": []
+   }
+  },
+  "json_keys": [
+   "$if",
+   "$slot",
+   "CompactNumber",
+   "Delta",
+   "H",
+   "PriceChart",
+   "Stat",
+   "W",
+   "alpha",
+   "amount",
+   "apiLevel",
+   "background",
+   "baseline",
+   "body",
+   "bottom",
+   "box",
+   "cH",
+   "cLeft",
+   "cTop",
+   "cW",
+   "canvas",
+   "caption",
+   "chg",
+   "children",
+   "clipRect",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "commit",
+   "compactnumber1_a",
+   "compactnumber1_dd",
+   "compactnumber1_fr",
+   "compactnumber1_full",
+   "compactnumber1_m",
+   "compactnumber1_neg",
+   "compactnumber1_q",
+   "compactnumber1_r",
+   "compactnumber1_s",
+   "compactnumber1_shortv",
+   "compactnumber1_t",
+   "compactnumber1_ti",
+   "compactnumber2_a",
+   "compactnumber2_dd",
+   "compactnumber2_m",
+   "compactnumber2_neg",
+   "compactnumber2_q",
+   "compactnumber2_r",
+   "compactnumber2_s",
+   "compactnumber2_t",
+   "compactnumber2_ti",
+   "components",
+   "content",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "decimals",
+   "delta1_amt",
+   "delta1_dn",
+   "delta1_fl",
+   "delta1_mag",
+   "delta1_up",
+   "doc",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "end",
+   "error",
+   "export",
+   "expressionX",
+   "expressionY",
+   "fill",
+   "first",
+   "flags",
+   "floatArrays",
+   "fontSize",
+   "fontWeight",
+   "from",
+   "fs",
+   "gap",
+   "hasName",
+   "hasStats",
+   "hasToday",
+   "header",
+   "height",
+   "heroH",
+   "heroW",
+   "high",
+   "horizontalAlignment",
+   "id",
+   "id1",
+   "id2",
+   "ih",
+   "index",
+   "iw",
+   "label",
+   "left",
+   "len",
+   "light",
+   "linearGradient",
+   "loop",
+   "low",
+   "maxLines",
+   "mode",
+   "modifiers",
+   "muted",
+   "n",
+   "name",
+   "onPrimary",
+   "onSurface",
+   "ops",
+   "overflow",
+   "pad",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "params",
+   "path",
+   "pathExpression",
+   "pct",
+   "points",
+   "prefix",
+   "prev",
+   "price",
+   "prices",
+   "profiles",
+   "radius",
+   "required",
+   "resources",
+   "right",
+   "root",
+   "row",
+   "rx",
+   "ry",
+   "sTop",
+   "sW",
+   "save",
+   "semantics",
+   "shader",
+   "size",
+   "slots",
+   "spacedBy",
+   "start",
+   "statsH",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "success",
+   "summary",
+   "surface",
+   "text",
+   "textLength",
+   "textMeasure",
+   "textSize",
+   "textSubtext",
+   "then",
+   "top",
+   "track",
+   "type",
+   "until",
+   "value",
+   "values",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "vis_1",
+   "visibility",
+   "volume",
+   "vtype",
+   "weight",
+   "whole",
+   "wide",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "xLabels",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "expr.array": [
+    "arrayMax(",
+    "arrayMin(",
+    "arrayLength(",
+    "arrayGet("
+   ],
+   "expr.system": [
+    "fontSize()",
+    "windowWidth",
+    "windowHeight",
+    "componentWidth",
+    "componentHeight"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ]
+  },
+  "built_at": "2026-11-02T02:08:20.240Z"
+ }
+}

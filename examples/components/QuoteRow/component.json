@@ -1,0 +1,534 @@
+{
+ "component": "QuoteRow",
+ "version": 1,
+ "summary": "One row of a watchlist or holdings list: symbol and name, a trend coloured by direction, the price or value, and its change in a pill. A row is 53 dp, or 32 dp on one line with compact, and folds by itself in a narrow window. Numbers are rounded and signed for you, and it keeps its right edge aligned down a list.",
+ "params": {
+  "symbol": {
+   "type": "string",
+   "required": true,
+   "doc": "The ticker or short name: AAPL, BTC"
+  },
+  "name": {
+   "type": "string",
+   "doc": "The line under it: Apple Inc., 12 shares"
+  },
+  "price": {
+   "type": "float",
+   "required": true,
+   "doc": "The price or value, a literal or a \"@variable\""
+  },
+  "change": {
+   "type": "float",
+   "required": true,
+   "doc": "Its change in percent, signed"
+  },
+  "values": {
+   "type": "float",
+   "doc": "A float array for the trend, \"@name\"; left out, no trend"
+  },
+  "baseline": {
+   "type": "float",
+   "doc": "What the trend compares with, such as previous close"
+  },
+  "prefix": {
+   "type": "string",
+   "default": "$",
+   "doc": "Currency before the price: \"$\", \"€\", \"\""
+  },
+  "decimals": {
+   "type": "float",
+   "default": 2,
+   "static": true,
+   "doc": "Digits after the point of the price: 2, or 4 and more for cheap crypto, 0 for large holdings"
+  },
+  "changeDecimals": {
+   "type": "float",
+   "default": 2,
+   "static": true,
+   "doc": "Digits after the point of the change"
+  },
+  "onClick": {
+   "type": "action",
+   "doc": "Tap action; on the whole row"
+  },
+  "compact": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "One line of 32 dp: symbol, trend, price, change, from 240 dp of window. Under that it folds by itself to 38 dp: symbol above, price and change below. For widgets: 4 rows fit 320x160, 3 fit 160x160. `name` is neither shown nor spoken"
+  },
+  "symbolWidth": {
+   "type": "float",
+   "default": 60,
+   "static": true,
+   "doc": "With compact and a trend: the symbol's column in dp, so the trends line up down the list. A longer symbol is ellipsized; widen it for names (Bitcoin) rather than tickers"
+  }
+ },
+ "locals": {
+  "p": {
+   "$if": "decimals == '0'",
+   "then": 1,
+   "else": {
+    "$if": "decimals == '1'",
+    "then": 10,
+    "else": {
+     "$if": "decimals == '2'",
+     "then": 100,
+     "else": {
+      "$if": "decimals == '3'",
+      "then": 1000,
+      "else": {
+       "$if": "decimals == '4'",
+       "then": 10000,
+       "else": 1000000
+      }
+     }
+    }
+   }
+  },
+  "pr": "round(@price * @p) / @p",
+  "wideEnough": {
+   "$if": "values",
+   "then": "step(windowWidth(), 299)",
+   "else": 0
+  },
+  "fold": {
+   "$if": "compact",
+   "then": "1 - step(windowWidth(), 239.5)",
+   "else": "1 - step(windowWidth(), 149.5)"
+  },
+  "open": "1 - @fold"
+ },
+ "capabilities": [
+  "text.dynamic",
+  "layout.stack",
+  "data.array",
+  "a11y.labels"
+ ],
+ "call": {
+  "QuoteRow": {
+   "symbol": "AAPL",
+   "name": "Apple Inc.",
+   "price": 189.84,
+   "change": 1.25
+  }
+ },
+ "pitfalls": [
+  "Height: a normal row is 53 dp with or without a name, so 3 rows clip at the 4x2 widget's 320x160. For a widget use compact: true, rather than writing your own row: 32 dp a row from 240 dp of window (4 fit 320x160), 38 dp folded under that (3 fit 160x160 and 200x150, and 4 do not). Under about 150 dp price and change wrap too, about 55 dp a row: 2 fit 130x130",
+  "Rows are expanded, not patterns (they hold text), and one with a trend is about 2.8 KB: keep to the 5 to 10 a screen shows. For more, RowList on host strings is smaller",
+  "The trend goes under 300 dp of window. A normal row keeps symbol, name, price and change on two lines down to 150 dp, but only 2 rows fit 160x160. Under 150 dp it folds to about 68 dp, symbol above price above change, without the name: 1 full row at 130x130. In a wide layout, put these rows in one column of a split, don't stretch them: the far right is a long way from the name",
+  "A row does not draw its own divider or padding: put them in a column with spacedBy, or a Divider between",
+  "A price above 7 digits loses its cents: a float holds no more",
+  "The trend is spoken as the symbol and \"trend\": \"AAPL trend\". The direction comes from the change beside it",
+  "The fold reads the window, not the row's own width: in a narrow pane of a wide window it does not fold, so give that pane enough room or a smaller symbolWidth"
+ ],
+ "body": {
+  "$if": "compact",
+  "then": {
+   "column": {
+    "modifiers": [
+     "fillMaxWidth"
+    ],
+    "children": [
+     {
+      "box": {
+       "modifiers": [
+        {
+         "visibility": "@fold"
+        },
+        {
+         "padding": {
+          "top": 4
+         }
+        }
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "@symbol",
+          "fontSize": 14,
+          "fontWeight": 600,
+          "color": "@colors.onSurface",
+          "maxLines": 1,
+          "overflow": "ellipsis",
+          "modifiers": [
+           {
+            "visibility": "@fold"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "$if": "onClick",
+         "then": {
+          "onClick": "@onClick"
+         }
+        },
+        {
+         "heightIn": [
+          "ifElse(32, 20, @fold)",
+          200
+         ]
+        }
+       ],
+       "children": [
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "$if": "values",
+            "then": {
+             "box": {
+              "modifiers": [
+               {
+                "visibility": "@open"
+               },
+               {
+                "width": "@symbolWidth"
+               }
+              ],
+              "children": [
+               {
+                "text": {
+                 "value": "@symbol",
+                 "fontSize": 14,
+                 "fontWeight": 600,
+                 "color": "@colors.onSurface",
+                 "maxLines": 1,
+                 "overflow": "ellipsis"
+                }
+               }
+              ]
+             }
+            },
+            "else": {
+             "text": {
+              "value": "@symbol",
+              "fontSize": 14,
+              "fontWeight": 600,
+              "color": "@colors.onSurface",
+              "maxLines": 1,
+              "overflow": "ellipsis",
+              "modifiers": [
+               {
+                "visibility": "@open"
+               }
+              ]
+             }
+            }
+           },
+           {
+            "$if": "values",
+            "then": {
+             "box": {
+              "modifiers": [
+               {
+                "visibility": "@wideEnough"
+               },
+               {
+                "padding": {
+                 "start": 4
+                }
+               }
+              ],
+              "children": [
+               {
+                "TrendSparkline": {
+                 "values": "@values",
+                 "baseline": "@baseline",
+                 "width": 48,
+                 "height": 24,
+                 "label": {
+                  "type": "textMerge",
+                  "id1": "@symbol",
+                  "id2": " trend"
+                 }
+                }
+               }
+              ]
+             }
+            }
+           }
+          ]
+         }
+        },
+        {
+         "flow": {
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "text": {
+             "value": {
+              "$if": "prefix",
+              "then": {
+               "type": "textMerge",
+               "id1": "@prefix",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@pr",
+                "whole": 9,
+                "decimal": "@decimals",
+                "flags": 23
+               }
+              },
+              "else": {
+               "type": "textFromFloat",
+               "value": "@pr",
+               "whole": 9,
+               "decimal": "@decimals",
+               "flags": 23
+              }
+             },
+             "fontSize": 14,
+             "fontWeight": 600,
+             "color": "@colors.onSurface",
+             "maxLines": 1
+            }
+           },
+           {
+            "box": {
+             "horizontalAlignment": "end",
+             "verticalAlignment": "center",
+             "modifiers": [
+              {
+               "width": "ifElse(72, 66, @fold)"
+              }
+             ],
+             "children": [
+              {
+               "Delta": {
+                "value": "@change",
+                "style": "pill",
+                "decimals": "@changeDecimals",
+                "fontSize": 11,
+                "fontWeight": 600
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  "else": {
+   "column": {
+    "modifiers": [
+     "fillMaxWidth"
+    ],
+    "children": [
+     {
+      "box": {
+       "modifiers": [
+        {
+         "visibility": "@fold"
+        }
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "@symbol",
+          "fontSize": 15,
+          "fontWeight": 600,
+          "color": "@colors.onSurface",
+          "maxLines": 1,
+          "overflow": "ellipsis",
+          "modifiers": [
+           {
+            "visibility": "@fold"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "$if": "onClick",
+         "then": {
+          "onClick": "@onClick"
+         }
+        },
+        {
+         "padding": {
+          "top": 8,
+          "bottom": 8
+         }
+        }
+       ],
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "padding": {
+             "end": 8
+            }
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@symbol",
+             "fontSize": 15,
+             "fontWeight": 600,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "modifiers": [
+              {
+               "visibility": "@open"
+              }
+             ]
+            }
+           },
+           {
+            "$if": "name",
+            "then": {
+             "text": {
+              "value": "@name",
+              "fontSize": 12,
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "overflow": "ellipsis",
+              "modifiers": [
+               {
+                "visibility": "@open"
+               },
+               {
+                "padding": {
+                 "top": 2
+                }
+               }
+              ]
+             }
+            }
+           }
+          ]
+         }
+        },
+        {
+         "$if": "values",
+         "then": {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@wideEnough"
+            },
+            {
+             "padding": {
+              "end": 12
+             }
+            }
+           ],
+           "children": [
+            {
+             "TrendSparkline": {
+              "values": "@values",
+              "baseline": "@baseline",
+              "width": 56,
+              "height": 28,
+              "label": {
+               "type": "textMerge",
+               "id1": "@symbol",
+               "id2": " trend"
+              }
+             }
+            }
+           ]
+          }
+         }
+        },
+        {
+         "column": {
+          "horizontalAlignment": "end",
+          "children": [
+           {
+            "text": {
+             "value": {
+              "$if": "prefix",
+              "then": {
+               "type": "textMerge",
+               "id1": "@prefix",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@pr",
+                "whole": 9,
+                "decimal": "@decimals",
+                "flags": 23
+               }
+              },
+              "else": {
+               "type": "textFromFloat",
+               "value": "@pr",
+               "whole": 9,
+               "decimal": "@decimals",
+               "flags": 23
+              }
+             },
+             "fontSize": 15,
+             "fontWeight": 600,
+             "color": "@colors.onSurface",
+             "maxLines": 1
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "padding": {
+                "top": 3
+               }
+              }
+             ],
+             "children": [
+              {
+               "Delta": {
+                "value": "@change",
+                "style": "pill",
+                "decimals": "@changeDecimals",
+                "fontSize": 11,
+                "fontWeight": 600
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ }
+}
