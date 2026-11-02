@@ -39,6 +39,8 @@ const [file, out] = a;
 const flag = (n, d) => { const i = a.indexOf('--' + n); return i >= 0 ? a[i + 1] : d; };
 const { RemoteComposeBuffer, CoreDocument, CanvasPaintContext, WebRemoteContext } =
     await import('./build-node/node-entry.js');
+// --ss N|auto: software 3D supersampling (CanvasPaintContext.supersample3D; default 1 = off).
+if (flag('ss', null) !== null) CanvasPaintContext.supersample3D = flag('ss') === 'auto' ? 'auto' : Number(flag('ss'));
 const data = readFileSync(file);
 const doc = new CoreDocument();
 doc.initFromBuffer(RemoteComposeBuffer.fromArrayBuffer(

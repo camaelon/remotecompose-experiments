@@ -2327,13 +2327,35 @@ export class CanvasPaintContext extends PaintContext {
     /** Texture generation last uploaded to GL, so an unchanged texture is not re-uploaded. */
     private d3glTexGen = -1;
     private d3Blit: CanvasRenderingContext2D | null = null;
+    /** The supersampling factor the 3D buffers were last sized with. */
+    private d3Super = 1;
+
+    /**
+     * Software 3D antialiasing: the 3D buffers are rendered this many times larger per axis
+     * and composited scaled down with smoothing (supersampling; the rasterizer itself has no
+     * coverage AA, so edges were fully aliased). 2x costs about 2.5-3.5x the 3D frame time
+     * (SHW-15 at 1280x800: 40 -> 136 ms), so it is off by default (1). 2 turns it on;
+     * "auto" uses 2 only up to about a megapixel of canvas (a phone or a window at density 1).
+     * RC.CanvasPaintContext.supersample3D, or per context.
+     */
+    static supersample3D: number | 'auto' = 1;
+    supersample3D: number | 'auto' = CanvasPaintContext.supersample3D;
+
+    private superFactor(): number {
+        const v = this.supersample3D;
+        if (v === 'auto') return this.ctx.canvas.width * this.ctx.canvas.height <= 1_050_000 ? 2 : 1;
+        return Math.max(1, Math.trunc(Number(v)) || 1);
+    }
 
     private ensure3D(): SoftwarePaint3DContext {
-        const w = this.ctx.canvas.width;
-        const h = this.ctx.canvas.height;
+        const k = this.superFactor();
+        const w = this.ctx.canvas.width * k;
+        const h = this.ctx.canvas.height * k;
         if (this.d3 === null) {
             this.d3 = new SoftwarePaint3DContext();
         }
+        this.d3.setSupersample(k);
+        this.d3Super = k;
         this.d3.setSize(w, h);
         if (this.d3Blit === null
             || this.d3Blit.canvas.width !== w || this.d3Blit.canvas.height !== h) {
@@ -2458,7 +2480,9 @@ export class CanvasPaintContext extends PaintContext {
         const n = ctx3d.buildCanvasVertices(meshId, this.d3glMesh, smooth);
         if (n < 3) return true;   // nothing survived culling; not a failure
 
-        const w = ctx3d.getWidth(), h = ctx3d.getHeight();
+        // (GL has its own MSAA: it renders at the window size, not the supersampled one.)
+        const k = this.d3Super;
+        const w = ctx3d.getWidth() / k, h = ctx3d.getHeight() / k;
         gl.beginFrame(w, h);
         const tex = ctx3d.getTextureData();
         gl.setTexture(tex.pixels, tex.width, tex.height);
@@ -2498,8 +2522,19 @@ export class CanvasPaintContext extends PaintContext {
             d[i * 4 + 3] = (p >>> 24) & 0xFF;
         }
         blit.putImageData(img, 0, 0);
-        // Drawn under the live transform, matching the reference's Canvas.drawBitmap(b, 0, 0).
-        this.ctx.drawImage(blit.canvas as unknown as CanvasImageSource, 0, 0);
+        // Drawn under the live transform, matching the reference's Canvas.drawBitmap(b, 0, 0);
+        // a supersampled buffer is scaled down to the window with smoothing.
+        const k = this.d3Super;
+        if (k === 1) {
+            this.ctx.drawImage(blit.canvas as unknown as CanvasImageSource, 0, 0);
+        } else {
+            const smooth = this.ctx.imageSmoothingEnabled, q = this.ctx.imageSmoothingQuality;
+            this.ctx.imageSmoothingEnabled = true;
+            this.ctx.imageSmoothingQuality = 'high';
+            this.ctx.drawImage(blit.canvas as unknown as CanvasImageSource, 0, 0, w / k, h / k);
+            this.ctx.imageSmoothingEnabled = smooth;
+            this.ctx.imageSmoothingQuality = q;
+        }
     }
 
 }
