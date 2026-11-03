@@ -142,6 +142,12 @@ function jsonButtons(e, variant, up) {
     return out;
 }
 
+/** meta.prefer_theme ("light" | "dark"), read from the example's meta.json (no rebuild needed). */
+function preferTheme(e) {
+    try { const t = JSON.parse(readFileSync(path.join(EXAMPLES_DIR, e.folder, "meta.json"), "utf8")).prefer_theme; return t === "dark" || t === "light" ? t : null; }
+    catch { return null; }
+}
+
 async function playground(e, variant) {
     const rcPath = path.join(EXAMPLES_DIR, e.folder, variant ? `doc.${variant}.rc` : "doc.rc");
     const mtime = statSync(rcPath).mtimeMs;
@@ -178,10 +184,16 @@ async function playground(e, variant) {
         rcBase64: rcBytes.toString("base64"),
         config: {
             title: `${e.id}${variant ? ` (${variant})` : ""} · ${e.title ?? e.id}`, layout: "fill", width, height, controls: true,
+            // The Kobento logo, top left: back to the site's front page (the domain root).
+            home: { href: "/", label: "Kobento", title: "Kobento home", logo: MARK },
+            // The inspector (inspector/dist, served at <base>/inspector/) on this very document.
+            inspectHref: `${variant ? "../../../" : "../../"}inspector/?url=${encodeURIComponent(`../rc/${e.id}${variant ? `/${variant}` : ""}.rc`)}`,
             rcBytes: rcBytes.length, fileName: `${e.folder.split("/").pop()}${variant ? `.${variant}` : ""}.rc`,
             start: "auto", document: { width, height },
             info: vars.map(({ name, type, value }) => ({ name, type, value })),
-            theme: "auto", density: dp ? "device" : 1, variables: [],
+            // (meta.prefer_theme: "dark" opens a dark-only or dark-first document in dark, not the
+            // visitor's system theme, so the playground around it matches; #t= still overrides.)
+            theme: variant ? "auto" : preferTheme(e) ?? "auto", density: dp ? "device" : 1, variables: [],
             declared: Object.fromEntries(vars.filter((v) => WEB_SETTABLE.has(v.type) && !v.themed).map((v) => [v.name, v.type])),
             urlVariables: true,
             // Pages are /play/<id>/ and /play/<id>/<variant>/: links are relative to either.
@@ -323,7 +335,7 @@ for (const b of chips) b.addEventListener("click", () => {
 const FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">`;
 
 // The Kobento mark: four rounded tiles (the logo's colours), inline so it needs no file.
-const MARK = `<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="2" y="2" width="16.5" height="16.5" rx="5" fill="#9C7DDE"/><rect x="21.5" y="2" width="16.5" height="16.5" rx="5" fill="#5999E9"/><rect x="2" y="21.5" width="16.5" height="16.5" rx="5" fill="#64C198"/><rect x="21.5" y="21.5" width="16.5" height="16.5" rx="5" fill="#EAA945"/></svg>`;
+const MARK = `<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="2" y="2" width="16.5" height="16.5" rx="5" fill="#a27be5"/><rect x="21.5" y="2" width="16.5" height="16.5" rx="5" fill="#409bf0"/><rect x="2" y="21.5" width="16.5" height="16.5" rx="5" fill="#36c495"/><rect x="21.5" y="21.5" width="16.5" height="16.5" rx="5" fill="#f6a525"/></svg>`;
 
 /** The site's sections: the landing page is at the root, every other one a folder below it. */
 function siteNav(current) {
@@ -501,6 +513,8 @@ function folderOf(id) {
     try { return readdirSync(EXAMPLES_DIR).find((d) => d.startsWith(`${id}-`)) ?? null; } catch { return null; }
 }
 
+const INSPECTOR_DIR = path.resolve(EXAMPLES_DIR, "..", "inspector", "dist");
+
 // The landing page's header plays this document (the animated logo) in the web player.
 const LOGO_DOC = "SHW-32";
 
@@ -651,7 +665,7 @@ export async function publicRoute(req, url, res) {
     const seesGenerated = async () => !accountsEnabled() || Boolean((await requestAccount(req).catch(() => null))?.admin);
     if (/^\/(play|img|thumb|json|rc)\/GEN-/.test(url.pathname) && !(await seesGenerated())) return send(req, res, 404, "text/plain", "not found\n");
     if (await oauthRoute(req, url, res, { css: CSS, nav: siteNav })) return true;
-    const known = p === "/" || p === "" || /^\/(components|advanced|layouts|structures|showcases|demos|examples|play|img|thumb|json|rc)(\/|$)/.test(p);
+    const known = p === "/" || p === "" || /^\/(components|advanced|layouts|structures|showcases|demos|examples|play|img|thumb|json|rc|inspector)(\/|$)/.test(p);
     if (!known) return false;
     if (req.method !== "GET" && req.method !== "HEAD") {
         res.writeHead(405, { Allow: "GET, HEAD" });
@@ -659,13 +673,24 @@ export async function publicRoute(req, url, res) {
         return true;
     }
     if (/^\/(|components\/|advanced\/|layouts\/|structures\/|showcases\/|demos\/)$/.test(p)) warmThumbs();
+    // The inspector (inspector/dist), as it is published on GitHub Pages: ?url=<rc> loads one.
+    if (p === "/inspector") { res.writeHead(301, { Location: `inspector/${url.search}` }); res.end(); return true; }
+    const im = /^\/inspector\/(.*)$/.exec(p);
+    if (im) {
+        const rel = im[1] || "index.html";
+        const file = path.resolve(INSPECTOR_DIR, rel);
+        if (!file.startsWith(INSPECTOR_DIR + path.sep) || !existsSync(file) || !statSync(file).isFile()) return send(req, res, 404, "text/plain", "not found\n");
+        const type = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".rc": "application/octet-stream", ".png": "image/png", ".svg": "image/svg+xml" }[path.extname(file)] ?? "application/octet-stream";
+        return send(req, res, 200, type, readFileSync(file));
+    }
     // The landing page: what Kobento is, under its animated logo.
     if (p === "/" || p === "") return send(req, res, 200, "text/html; charset=utf-8", await landingPage());
     // A document's .rc, for the players embedded in the pages.
-    const rm = /^\/rc\/([^/.]+)\.rc$/.exec(p);
+    // (rc/<id>.rc the document, rc/<id>/<look>.rc a look with a document of its own.)
+    const rm = /^\/rc\/([^/.]+)(?:\/([a-z][\w-]*))?\.rc$/.exec(p);
     if (rm) {
         const folder = folderOf(decodeURIComponent(rm[1]));
-        const file = folder && path.join(EXAMPLES_DIR, folder, "doc.rc");
+        const file = folder && path.join(EXAMPLES_DIR, folder, rm[2] ? `doc.${rm[2]}.rc` : "doc.rc");
         if (!file || !existsSync(file)) return send(req, res, 404, "text/plain", "not found\n");
         return send(req, res, 200, "application/octet-stream", readFileSync(file), url.searchParams.has("v") ? { "Cache-Control": "public, max-age=31536000, immutable" } : {});
     }

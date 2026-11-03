@@ -239,6 +239,8 @@ const PLAYGROUND_CSS = `
   .group { display: flex; align-items: center; gap: 4px; }
   .group > .lbl { color: var(--muted); margin-right: 2px; }
   .sep { width: 1px; align-self: stretch; background: var(--line); }
+  .home { display: inline-flex; align-items: center; gap: 6px; color: var(--text); text-decoration: none; font-weight: 700; white-space: nowrap; }
+  .home svg { width: 18px; height: 18px; flex: none; }
   .num { width: 62px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); }
   select { padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--field); }
   .btn {
@@ -254,6 +256,7 @@ const PLAYGROUND_CSS = `
     padding: 3px 8px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line);
   }
   .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  a.btn { color: var(--text); text-decoration: none; display: inline-flex; align-items: center; }
   .btn.primary:hover { filter: brightness(1.08); }
   #stage {
     grid-area: stage; overflow: auto; position: relative;
@@ -558,11 +561,13 @@ function playgroundPage(bundle, rcBase64, config) {
 </head>
 <body>
 <header id="bar">
+  ${config.home ? `<a class="home" href="${escapeHtml(config.home.href ?? "/")}" title="${escapeHtml(config.home.title ?? "Home")}">${config.home.logo ?? ""}<span>${escapeHtml(config.home.label ?? "Home")}</span></a><span class="sep"></span>` : ""}
   <h1 title="${t}">${t}</h1>
   <div id="modes" class="seg" role="group" aria-label="Look: theme, or a monochrome version of the document"></div>
   <div class="group">
     <span class="rc-size" title="${escapeHtml(sizeTitle)}">${escapeHtml(formatBytes(config.rcBytes ?? 0))} .rc</span>
     <button id="download" class="btn primary" title="Download the document as ${escapeHtml(fileName)} (${escapeHtml(sizeTitle)})">Download</button>
+    ${config.inspectHref ? `<a class="btn" href="${escapeHtml(config.inspectHref)}" target="_blank" rel="noopener" title="Open this document in the RemoteCompose inspector: its operations, layout, variables and bytes">Inspect</a>` : ""}
   </div>
   <div class="group" title="Size of the box the document is laid out in, in CSS pixels">
     <span class="lbl">Size</span>
