@@ -13,6 +13,7 @@
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { siteFooter } from "./privacy-web.mjs";
 import { accounts, accountsEnabled, csrfFor, readCookie } from "./accounts.mjs";
 import { esc, readForm, sameOrigin } from "./account-web.mjs";
 import { formatBytes } from "./web-page.mjs";
@@ -125,6 +126,7 @@ function streamPage({ site, items, sort, acct, sid, total }) {
 <div class="sortbar">${sortLink("new", "Newest")}${sortLink("top", "Top")}<span class="note">${note}</span></div>
 </header>
 <main>${cards || `<p class="empty">Nothing in the stream yet. Publish a document with the publish tool, then post it from your account page.</p>`}</main>
+${siteFooter("../")}
 <script>${STREAM_SCRIPT}</script>
 </body></html>`;
 }

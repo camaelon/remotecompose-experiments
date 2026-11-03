@@ -35,6 +35,7 @@
 // per-session token too. Register and sign-in are rate-limited per address. The MCP endpoints
 // ignore cookies: they take the token.
 
+import { siteFooter } from "./privacy-web.mjs";
 import { Accounts, accounts, accountsEnabled, csrfFor, emailVerify, RateLimiter, readCookie, SESSION_COOKIE, signupOpen } from "./accounts.mjs";
 import { linkEmail, sendMail } from "./mail.mjs";
 import { existsSync, readFileSync } from "node:fs";
@@ -270,6 +271,7 @@ function shell({ css, nav, title, sub, body }) {
 <p class="sub">${sub}</p>
 </header>
 <main class="acct">${body}</main>
+${siteFooter(nav.includes('href="../../') ? "../../" : "../")}
 <script>${COPY_SCRIPT}</script>
 </body></html>`;
 }
@@ -647,6 +649,7 @@ ${open ? `<p class="muted">${verify ? "We email you a link to confirm the addres
 <form class="stack" method="post" action="register">
 <label class="f">Email<input type="email" name="email" maxlength="254" required autocomplete="email" value="${esc(values.email)}"></label>
 <label class="f">Name<input type="text" name="name" maxlength="80" autocomplete="name" value="${esc(values.name)}"></label>
+<p class="muted">By creating an account you accept the <a href="../privacy/">privacy notice</a>.</p>
 <button class="btn" type="submit">Create account</button></form>`
             : `<p class="note">Registration is closed on this server for now. If you already have a token, sign in with it.</p>`}
 </section>`,

@@ -46,6 +46,7 @@ import { accountRoute } from "./account-web.mjs";
 import { featuredSection, STREAM_CSS, streamRoute } from "./stream-web.mjs";
 import { compileAppScript, scriptsOffered } from "./app-script.mjs";
 import { oauthRoute } from "./oauth.mjs";
+import { FOOTER_CSS, privacyPage, siteFooter } from "./privacy-web.mjs";
 import { accountsEnabled, requestAccount } from "./accounts.mjs";
 
 const WEB_SETTABLE = new Set(["float", "int", "color", "string", "float_array"]);
@@ -281,7 +282,7 @@ main { max-width:1280px; margin:0 auto; padding:8px 16px 48px; display:grid; gap
 .modes button[aria-pressed=true] { border-color:var(--accent); color:var(--ink); }
 .modes img { width:100%; height:44px; object-fit:contain; display:block; }
 .empty { grid-column:1/-1; color:var(--muted); text-align:center; padding:48px 0; }
-`;
+${FOOTER_CSS}`;
 
 const SCRIPT = `
 const q = document.getElementById("q"), cards = [...document.querySelectorAll(".card")];
@@ -381,6 +382,7 @@ ${sizes ? `<select id="sort" aria-label="Order"><option value="">Smallest first<
 ${modes ? `<select id="mode" aria-label="Render"><option value="">Default render</option><option value="light">Light</option><option value="dark">Dark</option><option value="mono-dark">Mono dark (always-on, OLED)</option><option value="mono-light">Mono light (e-ink)</option></select>` : ""}</div>
 </header>
 ${lead}<main>${lead ? '<h2 class="cat">Showcases</h2>' : ""}${cards.join("\n")}<p id="none" class="empty" hidden>Nothing matches.</p></main>
+${siteFooter("../")}
 <script>${SCRIPT}</script>
 </body></html>`;
 }
@@ -609,6 +611,7 @@ ${hero}
 <h2>Open source</h2>
 <p>The code is on ${link("https://github.com/camaelon/remotecompose-experiments", "GitHub")}: the players, the components, the MCP servers and this site.</p>
 </main>
+${siteFooter("")}
 </body></html>`;
 }
 
@@ -679,7 +682,7 @@ export async function publicRoute(req, url, res) {
     const seesGenerated = async () => !accountsEnabled() || Boolean((await requestAccount(req).catch(() => null))?.admin);
     if (/^\/(play|img|thumb|json|rc)\/GEN-/.test(url.pathname) && !(await seesGenerated())) return send(req, res, 404, "text/plain", "not found\n");
     if (await oauthRoute(req, url, res, { css: CSS, nav: siteNav })) return true;
-    const known = p === "/" || p === "" || /^\/(components|advanced|layouts|structures|showcases|demos|examples|play|img|thumb|json|rc|inspector)(\/|$)/.test(p);
+    const known = p === "/" || p === "" || /^\/(components|advanced|layouts|structures|showcases|demos|examples|privacy|play|img|thumb|json|rc|inspector)(\/|$)/.test(p);
     if (!known) return false;
     if (req.method !== "GET" && req.method !== "HEAD") {
         res.writeHead(405, { Allow: "GET, HEAD" });
@@ -715,6 +718,8 @@ export async function publicRoute(req, url, res) {
         if (p === `/${route}`) { res.writeHead(301, { Location: `${route}/${url.search}` }); res.end(); return true; }
         if (p === `/${route}/`) return send(req, res, 200, "text/html; charset=utf-8", await render(), { "Cache-Control": "private, no-cache" });
     }
+    if (p === "/privacy") { res.writeHead(301, { Location: `privacy/${url.search}` }); res.end(); return true; }
+    if (p === "/privacy/") return send(req, res, 200, "text/html; charset=utf-8", privacyPage({ css: CSS, nav: siteNav, fonts: FONTS }));
     if (p === "/structures") { res.writeHead(301, { Location: `structures/${url.search}` }); res.end(); return true; }
     if (p === "/structures/") return send(req, res, 200, "text/html; charset=utf-8", structuresPage());
     // The looks' old names (mono, mono-inverted) in links made before the rename.
