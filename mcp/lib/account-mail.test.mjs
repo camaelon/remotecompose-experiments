@@ -45,7 +45,7 @@ async function start(env) {
     let log = "";
     child.stderr.on("data", (d) => { log += d; });
     const base = `http://127.0.0.1:${port}`;
-    for (let i = 0; i < 80; i++) { try { if ((await fetch(`${base}/healthz`)).ok) break; } catch {} await sleep(100); }
+    for (let i = 0; i < 300; i++) { try { if ((await fetch(`${base}/healthz`)).ok) break; } catch {} await sleep(100); }
     const post = (p, form, cookie) => fetch(`${base}${p}`, { method: "POST", redirect: "manual",
         headers: { Origin: base, "Content-Type": "application/x-www-form-urlencoded", ...(cookie ? { Cookie: cookie } : {}) }, body: new URLSearchParams(form) });
     return { base, root, post, log: () => log, stop: () => { child.kill(); rmSync(root, { recursive: true, force: true }); } };

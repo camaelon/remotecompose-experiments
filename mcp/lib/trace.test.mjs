@@ -79,11 +79,11 @@ test("schema 4 migration from 3, and the 30-day retention of trace bodies", asyn
         const file = path.join(dir, "rc.db");
         const s = await openAccounts(file);
         // Back to schema 3: drop the new columns, as an older server left the file.
-        s.db.exec("DROP INDEX calls_account_client; ALTER TABLE calls DROP COLUMN client; ALTER TABLE calls DROP COLUMN args; ALTER TABLE calls DROP COLUMN result; ALTER TABLE calls DROP COLUMN images; ALTER TABLE calls DROP COLUMN files; PRAGMA user_version = 3;");
+        s.db.exec("DROP INDEX calls_account_client; ALTER TABLE calls DROP COLUMN client; ALTER TABLE calls DROP COLUMN args; ALTER TABLE calls DROP COLUMN result; ALTER TABLE calls DROP COLUMN images; ALTER TABLE calls DROP COLUMN files; ALTER TABLE calls DROP COLUMN meta; ALTER TABLE calls DROP COLUMN thread; ALTER TABLE calls DROP COLUMN thread_how; ALTER TABLE calls DROP COLUMN touched; PRAGMA user_version = 3;");
         s.db.prepare("INSERT INTO calls (ts, account_id, server, tool, ms, ok, summary) VALUES ('2026-01-01T00:00:00.000Z', 1, 's', 't', 1, 1, 'kept')").run();
         s.close();
         const m = await openAccounts(file);
-        assert.equal(m.db.prepare("PRAGMA user_version").get().user_version, 6);
+        assert.equal(m.db.prepare("PRAGMA user_version").get().user_version, 7);
         const cols = m.db.prepare("PRAGMA table_info(calls)").all().map((c) => c.name);
         assert.ok(["client", "args", "result"].every((c) => cols.includes(c)));
         m.recordCall({ accountId: 1, server: "s", tool: "old", ms: 1, ok: true, client: "c1", args: '{"a":1}', result: "x", summary: "old one", ts: "2020-01-01T00:00:00.000Z" });

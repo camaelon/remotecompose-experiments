@@ -180,6 +180,9 @@ const ACCOUNT_CSS = `
 .tl details:first-child { border-top:0; }
 .tl summary { display:grid; grid-template-columns:42px 78px 92px minmax(0,1fr) 84px 64px; gap:8px; align-items:center; padding:7px 12px; cursor:pointer; list-style:none; font-size:13px; }
 .tl summary::-webkit-details-marker { display:none; }
+.th { display:inline-block; min-width:16px; padding:0 4px; margin-right:4px; border-radius:4px; color:#fff; font:700 11px/16px system-ui,sans-serif; text-align:center; }
+.threads td .sw { display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:6px; }
+.threads tr.on td { background:var(--chip); }
 .tl summary:hover { background:var(--chip); }
 .tl .hd { display:grid; grid-template-columns:42px 78px 92px minmax(0,1fr) 84px 64px; gap:8px; padding:7px 12px; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; background:var(--chip); }
 .tl .n, .tl .t { font-variant-numeric:tabular-nums; }
@@ -331,11 +334,83 @@ const GAP_SLOW_MS = 20_000, CALL_SLOW_MS = 5_000;
 
 /** The sessions table: one row per MCP session, linking to its timeline (href(client)). */
 function sessionsTable(list, href) {
+    const link = (x) => href(x.client) + (x.thread ? `${href(x.client).includes("?") ? "&" : "?"}thread=${encodeURIComponent(x.thread)}` : "");
     if (!list.length) return `<p class="muted">No sessions yet. Each MCP client session (one conversation, roughly) shows up here with every call it made.</p>`;
     return `<div class="wrap"><table><thead><tr><th>Started (UTC)</th><th class="n">Duration</th><th class="n">Calls</th><th class="n">Errors</th><th>Tools</th><th>Via</th></tr></thead><tbody>
-${list.map((x) => `<tr><td><a href="${esc(href(x.client))}">${esc(day(x.started))}</a></td><td class="n">${esc(fmtMs(x.duration_ms))}</td><td class="n">${x.calls}</td><td class="n">${x.errors || ""}</td>
+${list.map((x) => `<tr><td><a href="${esc(link(x))}">${esc(day(x.started))}</a>${x.thread ? ` <span class="pill" title="split by the ${esc(x.threadHow)} id the client sent">one conversation</span>` : x.threads > 1 ? ` <span class="pill rep" title="calls from more than one conversation, told apart by their documents and timing">${x.threads} threads</span>` : ""}</td><td class="n">${esc(fmtMs(x.duration_ms))}</td><td class="n">${x.calls}</td><td class="n">${x.errors || ""}</td>
 <td class="w">${Object.entries(x.tools).sort((a, b) => b[1] - a[1]).map(([t, n]) => `${esc(t)}${n > 1 ? ` ×${n}` : ""}`).join(", ")}</td><td class="w">${esc(x.via)}</td></tr>`).join("\n")}
 </tbody></table></div>`;
+}
+
+const THREAD_COLORS = ["#2f6fde", "#d0453a", "#2e9d57", "#b26b00", "#8a4fd6", "#0f8f9a", "#c2407f", "#5d6676"];
+const HOW = { "session-id": "the Mcp-Session-Id the client sent back", lineage: "the documents the calls read and wrote",
+    time: "timing (a call with no document joins the conversation whose last call had just finished)", first: "the first call" };
+const howText = (h) => HOW[h] ?? (h?.startsWith("meta:") ? `the id in the call's _meta (${h.slice(5)})` : h?.startsWith("header:") ? `the request header ${h.slice(7)}` : h);
+
+/** A session's threads in order of first call: [{key, letter, color, calls, ...totals, goal, how}]. */
+function sessionThreads(calls) {
+    const by = new Map();
+    for (const c of calls) {
+        let t = by.get(c.thread);
+        if (!t) {
+            const i = by.size;
+            by.set(c.thread, (t = { key: c.thread, letter: String.fromCharCode(65 + (i % 26)) + (i >= 26 ? Math.floor(i / 26) : ""),
+                color: THREAD_COLORS[i % THREAD_COLORS.length], calls: [], hows: {} }));
+        }
+        t.calls.push(c);
+        t.hows[c.thread_how] = (t.hows[c.thread_how] ?? 0) + 1;
+    }
+    return [...by.values()].map((t) => {
+        const first = t.calls[0], last = t.calls.at(-1);
+        let goal = null;
+        for (const c of t.calls) {
+            let a = null;
+            try { a = c.args ? JSON.parse(c.args) : null; } catch { /* none */ }
+            goal = a?.goal ?? a?.title ?? a?.query ?? null;
+            if (goal) break;
+        }
+        // No goal or title: the first document it worked on.
+        if (!goal) for (const c of t.calls) {
+            goal = c.touched?.find((x) => /\.(json|rc)$/.test(x)) ?? null;
+            if (goal) break;
+        }
+        return { ...t, goal, wall: Date.parse(last.end) - Date.parse(first.start), inside: t.calls.reduce((n, c) => n + c.ms, 0),
+            gaps: t.calls.reduce((n, c) => n + (c.thread_gap_ms ?? 0), 0), started: first.start };
+    });
+}
+
+function threadsPanel(threads, selected, href) {
+    const hows = {};
+    for (const t of threads) for (const [h, n] of Object.entries(t.hows)) hows[h] = (hows[h] ?? 0) + n;
+    return `<section class="panel"><h2>${threads.length} conversations in this session</h2>
+<p class="muted">Their calls arrived under one session (the client did not send back its Mcp-Session-Id). They are told apart by ${Object.entries(hows).sort((a, b) => b[1] - a[1]).map(([h, n]) => `${esc(howText(h))} (${n} call${n === 1 ? "" : "s"})`).join(", ")}. Gaps below are measured within each conversation: the real thinking time.</p>
+<div class="wrap"><table class="threads"><thead><tr><th>Thread</th><th>First goal or document</th><th>Started (UTC)</th><th class="n">Calls</th><th class="n">Wall</th><th class="n">In tools</th><th class="n">Between calls</th></tr></thead><tbody>
+<tr${selected ? "" : ' class="on"'}><td colspan="7"><a href="${esc(href(null))}">All threads</a></td></tr>
+${threads.map((t) => `<tr${selected === t.key ? ' class="on"' : ""}><td><a href="${esc(href(t.key))}"><span class="sw" style="background:${t.color}"></span>Thread ${t.letter}</a></td><td class="w">${esc(t.goal ?? "–")}</td><td>${esc(day(t.started))}</td>
+<td class="n">${t.calls.length}</td><td class="n">${esc(fmtMs(t.wall))}</td><td class="n">${esc(fmtMs(t.inside))}</td><td class="n">${esc(fmtMs(t.gaps))}</td></tr>`).join("\n")}
+</tbody></table></div></section>`;
+}
+
+/** What the client sent, over the session's calls: to find an id that names a conversation. */
+function signalsPanel(calls) {
+    const n = calls.length, withMeta = calls.filter((c) => c.meta);
+    if (!withMeta.length) return "";
+    const count = (f) => { const m = new Map(); for (const c of withMeta) for (const k of f(c) ?? []) m.set(k, (m.get(k) ?? 0) + 1); return m; };
+    const distinct = (f) => { const m = new Map(); for (const c of withMeta) for (const [k, v] of Object.entries(f(c) ?? {})) { const s = m.get(k) ?? new Set(); s.add(v); m.set(k, s); } return m; };
+    const headers = count((c) => c.meta.headers), headerIds = distinct((c) => c.meta.ids);
+    const metaKeys = count((c) => c.meta.call_meta?.keys), metaIds = distinct((c) => c.meta.call_meta?.ids);
+    const sent = withMeta.filter((c) => c.meta.mcp_session?.sent).length, known = withMeta.filter((c) => c.meta.mcp_session?.known).length;
+    const infos = [...new Set(withMeta.map((c) => c.meta.client_info).filter(Boolean).map((i) => `${i.name} ${i.version}`.trim()))];
+    const idRow = (k, calls, vals) => `<tr><td><code>${esc(k)}</code></td><td class="n">${calls}</td><td class="n">${vals ? vals.size : ""}</td>
+<td class="w">${vals ? (vals.size === 1 ? "the same on every call: does not tell conversations apart" : vals.size >= calls ? "new on every call: a request id, not a conversation" : `<b>${vals.size} values</b>: could name conversations`) : ""}</td></tr>`;
+    return `<section class="panel"><h2>Client signals</h2>
+<p class="muted">What the client sent with its ${n} calls (names only; id-like values hashed, never credentials). A usable conversation id is a header or <code>_meta</code> key with one value per chat: a few values, not one for every call and not one for all.</p>
+<div class="kv"><div><b>${sent}/${withMeta.length}</b><span>calls sent Mcp-Session-Id back (${known} matched one this server issued)</span></div>
+<div><b>${esc(infos.join(", ") || "–")}</b><span>clientInfo at initialize</span></div></div>
+<div class="cols"><div><h3>_meta keys on tools/call</h3>${metaKeys.size ? `<div class="wrap"><table><thead><tr><th>Key</th><th class="n">Calls</th><th class="n">Values</th><th></th></tr></thead><tbody>${[...metaKeys].map(([k, c]) => idRow(k, c, metaIds.get(k))).join("")}</tbody></table></div>` : `<p class="muted">None.</p>`}
+<h3>Id-like headers</h3>${headerIds.size ? `<div class="wrap"><table><thead><tr><th>Header</th><th class="n">Calls</th><th class="n">Values</th><th></th></tr></thead><tbody>${[...headerIds].map(([k, v]) => idRow(k, headers.get(k) ?? 0, v)).join("")}</tbody></table></div>` : `<p class="muted">None.</p>`}</div>
+<div><h3>All request headers (names)</h3><div class="wrap"><table><tbody>${[...headers].sort((a, b) => a[0].localeCompare(b[0])).map(([k, c]) => `<tr><td><code>${esc(k)}</code></td><td class="n">${c}</td></tr>`).join("")}</tbody></table></div></div></div>
+</section>`;
 }
 
 /** A stored argument or result, pretty-printed when it is JSON. */
@@ -358,7 +433,7 @@ function sessionPublishes(calls) {
 }
 
 /** Everything about one session: what it published, totals, then the timeline. imgUrl(file) -> the picture's URL. */
-function sessionView(calls, imgUrl = (f) => f) {
+function sessionView(calls, imgUrl = (f) => f, tag = null) {
     const first = calls[0], last = calls.at(-1);
     const wall = Date.parse(last.end) - Date.parse(first.start);
     const inside = calls.reduce((n, c) => n + c.ms, 0);
@@ -384,7 +459,9 @@ function sessionView(calls, imgUrl = (f) => f) {
     for (const r of repeats) r.at.forEach((n, j) => repeatOf.set(n, `${j + 1}/${r.at.length}`));
     const slowest = [...calls.map((c, i) => ({ ...c, n: i + 1 }))].sort((a, b) => b.ms - a.ms).slice(0, 5);
     const errors = calls.map((c, i) => ({ ...c, n: i + 1 })).filter((c) => !c.ok);
-    const pct = (x) => (wall > 0 ? (100 * x) / wall : 0).toFixed(1);
+    // (With conversations side by side, their gaps overlap: shares of tools + gaps, not of the wall time.)
+    const base = Math.max(wall, inside + gaps);
+    const pct = (x) => (base > 0 ? (100 * x) / base : 0).toFixed(1);
     const jump = (n) => `<a href="#c${n}">#${n}</a>`;
     const pubs = sessionPublishes(calls);
     const published = pubs.length ? `<section class="panel"><h2>Published in this session</h2>${pubs.reverse().map((x) => `<div class="pubbed" style="margin-bottom:10px">
@@ -394,7 +471,7 @@ ${x.preview ? `<a href="${esc(x.url)}"><img src="${esc(x.preview)}" alt=""></a>`
     const totals = `<section class="panel"><h2>Totals</h2>
 <div class="kv"><div><b>${esc(fmtMs(wall))}</b><span>wall time, first call to last</span></div>
 <div><b>${esc(fmtMs(inside))}</b><span>inside the tools (${pct(inside)}%)</span></div>
-<div><b>${esc(fmtMs(gaps))}</b><span>between calls (${pct(gaps)}%): the assistant thinking, or the user</span></div>
+<div><b>${esc(fmtMs(gaps))}</b><span>between calls (${pct(gaps)}%): the assistant thinking, or the user${inside + gaps > wall ? "; summed over the conversations, which overlap" : ""}</span></div>
 <div><b>${calls.length}</b><span>calls, ${errors.length} error${errors.length === 1 ? "" : "s"}</span></div>
 <div><b>${imageCount}</b><span>pictures the tools returned${skipped ? `, ${skipped} not kept (the session's limit of ${Number(process.env.RC_TRACE_IMAGES ?? 200)} pictures / ${Number(process.env.RC_TRACE_MB ?? 50)} MB)` : ""}</span></div></div>
 <div class="bar2" title="inside the tools / between calls"><i style="width:${pct(inside)}%"></i><i class="g" style="width:${pct(gaps)}%"></i></div>
@@ -406,7 +483,8 @@ ${errors.length ? `<h3>Errors</h3><div class="wrap"><table><tbody>${errors.map((
     const rows = calls.map((c, i) => {
         const n = i + 1, args = pretty(c.args), result = pretty(c.result), files = c.images?.files ?? [];
         const gap = c.gap_ms == null ? "start" : `+${fmtMs(c.gap_ms)}`;
-        return `<details id="c${n}"><summary><span class="n t">#${n}</span><span class="t">${esc(c.start.slice(11, 19))}</span>
+        const tg = tag ? tag(c) : null;
+        return `<details id="c${n}"${tg ? ` style="box-shadow:inset 4px 0 0 ${tg.color}"` : ""}><summary><span class="n t">${tg ? `<span class="th" style="background:${tg.color}" title="thread ${tg.letter}">${tg.letter}</span>` : ""}#${n}</span><span class="t">${esc(c.start.slice(11, 19))}</span>
 <span class="n${(c.gap_ms ?? 0) > GAP_SLOW_MS ? " gapx" : " t"}" title="since the previous call ended">${esc(gap)}</span>
 <span class="tool">${esc(c.server)} · <b>${esc(c.tool)}</b>${fileTags[i].map((f) => ` <span class="pill" title="${esc(f.missing ? `${f.path}: not found when called` : `${f.path}: ${f.bytes} bytes, sha256 ${f.sha}`)}">${esc(f.name)}${f.missing ? " missing" : ` v${f.v}`}</span>`).join("")}${repeatOf.has(n) ? ` <span class="pill rep" title="identical to other calls in this session: same arguments, same file contents">repeat ${repeatOf.get(n)}</span>` : ""}</span>
 <span class="n${c.ms > CALL_SLOW_MS ? " slow" : ""}">${esc(fmtMs(c.ms))}</span><span>${c.ok ? '<span class="pill">ok</span>' : '<span class="pill err2">error</span>'}</span>
@@ -627,9 +705,19 @@ export async function accountRoute(req, url, res, site) {
             res.end(req.method === "HEAD" ? undefined : body);
             return true;
         }
-        return page(`Session ${client}`,
+        // More than one conversation in the session: each its own colour; ?thread= shows one; gaps within each.
+        const threads = sessionThreads(calls);
+        const multi = threads.length > 1;
+        const selected = multi ? threads.find((t) => t.key === url.searchParams.get("thread"))?.key ?? null : null;
+        const tagOf = new Map(threads.map((t) => [t.key, t]));
+        const shown = (selected ? calls.filter((c) => c.thread === selected) : calls).map((c) => (multi ? { ...c, gap_ms: c.thread_gap_ms } : c));
+        const self = `${encodeURIComponent(client)}`;
+        const threadHref = (k) => `${self}${q}${k ? `${q ? "&" : "?"}thread=${encodeURIComponent(k)}` : ""}`;
+        return page(`Session ${client}${selected ? ` · thread ${tagOf.get(selected).letter}` : ""}`,
             `${esc(calls[0].via)}${who.id === acct.id ? "" : ` · ${esc(who.email)}`} · started ${esc(day(calls[0].start))} UTC · <a href="${esc(encodeURIComponent(client))}.json${q}">Download JSON</a> · <a href="./${q}">All sessions</a>`,
-            sessionView(calls, (f) => `${encodeURIComponent(client)}/img/${encodeURIComponent(f)}${q}`),
+            (multi ? threadsPanel(threads, selected, threadHref) : "") +
+            sessionView(shown, (f) => `${encodeURIComponent(client)}/img/${encodeURIComponent(f)}${q}`, multi ? (c) => tagOf.get(c.thread) : null) +
+            signalsPanel(calls),
             cspWithImages(sessionPublishes(calls).map((x) => x.url)));
     }
     if (p === "/account/") {

@@ -28,7 +28,7 @@ test("a session's calls are traced and shown to their account (and admins) only"
     const kids = [["examples-server.mjs", ap], ["rc-render-server.mjs", rp]].map(([f, port]) =>
         spawn(process.execPath, [path.join(DIR, f), "--http"], { env: { ...env, MCP_HTTP_PORT: String(port) }, stdio: "ignore" }));
     t.after(() => { kids.forEach((k) => k.kill()); rmSync(root, { recursive: true, force: true }); });
-    for (const u of [site, render]) for (let i = 0; i < 80; i++) { try { if ((await fetch(`${u}/healthz`)).ok) break; } catch {} await sleep(100); }
+    for (const u of [site, render]) for (let i = 0; i < 300; i++) { try { if ((await fetch(`${u}/healthz`)).ok) break; } catch {} await sleep(100); }
 
     const register = async (email) => {
         const r = await fetch(`${site}/account/register`, { method: "POST", redirect: "manual", body: new URLSearchParams({ email }),

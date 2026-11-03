@@ -19,8 +19,9 @@ import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { deleteTraceImages } from "./trace-images.mjs";
+import { assignThreads } from "./threads.mjs";
 
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 // Session traces (calls.args / calls.result) are kept this long; the rows themselves stay.
 export const TRACE_DAYS = 30;
 // OAuth (lib/oauth.mjs): authorization codes, access and refresh tokens.
@@ -161,7 +162,18 @@ export class Accounts {
             // The input files a call read, as they were then (lib/calllog.mjs traceFiles): {arg: {path, sha, bytes}}.
             this.db.exec("ALTER TABLE calls ADD COLUMN files TEXT;");
         }
-        // (Later migrations: `if (v < 7) { ... }`, then bump SCHEMA_VERSION.)
+        if (v < 7) {
+            // Telling conversations apart (lib/threads.mjs): what the client sent (header names,
+            // hashed id-like values, _meta keys, clientInfo), the thread when an id decided it,
+            // and the files the call touched (for lineage, decided when the session is shown).
+            this.db.exec(`
+                ALTER TABLE calls ADD COLUMN meta TEXT;
+                ALTER TABLE calls ADD COLUMN thread TEXT;
+                ALTER TABLE calls ADD COLUMN thread_how TEXT;
+                ALTER TABLE calls ADD COLUMN touched TEXT;
+            `);
+        }
+        // (Later migrations: `if (v < 8) { ... }`, then bump SCHEMA_VERSION.)
         if (v < SCHEMA_VERSION) this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
     }
 
@@ -376,15 +388,20 @@ export class Accounts {
     // --- usage
 
     recordCall({ accountId, tokenId = null, grantId = null, server, tool, ms, ok, error = null, summary = null,
-                 client = null, args = null, result = null, files = null, ts = now() }) {
+                 client = null, args = null, result = null, files = null, meta = null, thread = null, threadHow = null,
+                 touched = null, ts = now() }) {
         const cap = (v) => (v == null ? null : String(v).slice(0, 20 << 10));
-        return Number(this.db.prepare(`INSERT INTO calls (ts, account_id, token_id, grant_id, server, tool, ms, ok, error, summary, client, args, result, files)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        const js = (v, n) => (v == null ? null : (typeof v === "string" ? v : JSON.stringify(v)).slice(0, n));
+        return Number(this.db.prepare(`INSERT INTO calls (ts, account_id, token_id, grant_id, server, tool, ms, ok, error, summary, client, args, result, files,
+                meta, thread, thread_how, touched)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
             .run(ts, accountId, tokenId, grantId, String(server), String(tool), Math.round(ms), ok ? 1 : 0,
                 error == null ? null : String(error).split("\n")[0].slice(0, 300),
                 summary == null ? null : String(summary).slice(0, 1000),
                 client == null ? null : String(client).slice(0, 40), cap(args), cap(result),
-                files == null ? null : String(files).slice(0, 4000)).lastInsertRowid);
+                files == null ? null : String(files).slice(0, 4000),
+                js(meta, 8000), thread == null ? null : String(thread).slice(0, 80), threadHow == null ? null : String(threadHow).slice(0, 80),
+                js(touched, 4000)).lastInsertRowid);
     }
 
     /** The pictures a call returned ({files, skipped}, lib/trace-images.mjs). */
@@ -411,38 +428,60 @@ export class Accounts {
     /** The account's sessions over the last `days` days, most recent first: started, ended, calls, errors, tools, via. */
     sessions(accountId, { days = TRACE_DAYS, limit = 50 } = {}) {
         const since = new Date(Date.now() - days * 86400_000).toISOString();
-        const rows = this.db.prepare(`SELECT c.client, c.ts, c.ms, c.ok, c.tool, ${this.#viaSql()} AS via
+        const rows = this.db.prepare(`SELECT c.id, c.client, c.ts, c.ms, c.ok, c.tool, c.thread, c.thread_how, c.touched, ${this.#viaSql()} AS via
             FROM calls c LEFT JOIN tokens t ON t.id = c.token_id LEFT JOIN oauth_grants g ON g.id = c.grant_id
                 LEFT JOIN oauth_clients k ON k.id = g.client_id
             WHERE c.account_id = ? AND c.ts >= ? AND c.client IS NOT NULL ORDER BY c.ts`).all(accountId, since);
+        // A session split by an id the client sent (_meta, a header) lists each conversation as its own
+        // row (linking to ?thread=); a split by lineage or time stays one row that says how many threads.
+        const byClient = new Map();
+        for (const r of rows) byClient.set(r.client, [...(byClient.get(r.client) ?? []), r]);
         const by = new Map();
-        for (const r of rows) {
-            const end = Date.parse(r.ts), start = end - r.ms;
-            let s = by.get(r.client);
-            if (!s) by.set(r.client, (s = { client: r.client, start, end, calls: 0, errors: 0, tools: {}, via: r.via }));
-            s.start = Math.min(s.start, start); s.end = Math.max(s.end, end);
-            s.calls++; s.errors += r.ok ? 0 : 1;
-            s.tools[r.tool] = (s.tools[r.tool] ?? 0) + 1;
+        for (const [client, list] of byClient) {
+            const calls = list.map((r) => { const end = Date.parse(r.ts); return { ...r, end, start: end - r.ms, how: r.thread_how, touched: parseJson(r.touched) ?? [] }; })
+                .sort((a, b) => a.start - b.start || a.id - b.id);
+            const threads = assignThreads(calls);
+            calls.forEach((r, i) => {
+                const byId = /^(meta|header):/.test(threads[i].how);
+                const key = byId ? `${client}#${threads[i].thread}` : client;
+                let s = by.get(key);
+                if (!s) by.set(key, (s = { client, thread: byId ? threads[i].thread : null, threadHow: byId ? threads[i].how : null,
+                    start: r.start, end: r.end, calls: 0, errors: 0, tools: {}, via: r.via, threadSet: new Set() }));
+                s.start = Math.min(s.start, r.start); s.end = Math.max(s.end, r.end);
+                s.calls++; s.errors += r.ok ? 0 : 1;
+                s.tools[r.tool] = (s.tools[r.tool] ?? 0) + 1;
+                s.threadSet.add(threads[i].thread);
+            });
         }
         return [...by.values()].sort((a, b) => b.end - a.end).slice(0, limit)
-            .map((s) => ({ ...s, started: new Date(s.start).toISOString(), ended: new Date(s.end).toISOString(), duration_ms: s.end - s.start }));
+            .map(({ threadSet, ...s }) => ({ ...s, threads: threadSet.size, started: new Date(s.start).toISOString(), ended: new Date(s.end).toISOString(), duration_ms: s.end - s.start }));
     }
 
     /** One session's calls in order (at most `limit`), with start times and the gap since the previous call ended. */
     sessionCalls(accountId, client, { limit = 1000 } = {}) {
-        const rows = this.db.prepare(`SELECT c.id, c.ts, c.server, c.tool, c.ms, c.ok, c.error, c.args, c.result, c.images, c.files, ${this.#viaSql()} AS via
+        const rows = this.db.prepare(`SELECT c.id, c.ts, c.server, c.tool, c.ms, c.ok, c.error, c.args, c.result, c.images, c.files,
+                c.meta, c.thread, c.thread_how, c.touched, ${this.#viaSql()} AS via
             FROM calls c LEFT JOIN tokens t ON t.id = c.token_id LEFT JOIN oauth_grants g ON g.id = c.grant_id
                 LEFT JOIN oauth_clients k ON k.id = g.client_id
             WHERE c.account_id = ? AND c.client = ? ORDER BY c.ts, c.id LIMIT ?`).all(accountId, String(client), limit);
+        // In start order; each call's thread (lib/threads.mjs) and the gaps: since the previous call
+        // of the session ended, and since the previous call of its own thread ended (the thinking).
+        const calls = rows.map((r) => {
+            const end = Date.parse(r.ts);
+            return { ...r, endMs: end, startMs: end - r.ms, images: parseJson(r.images), files: parseJson(r.files), meta: parseJson(r.meta),
+                touched: parseJson(r.touched) ?? [], ok: !!r.ok };
+        }).sort((a, b) => a.startMs - b.startMs || a.id - b.id);
+        const threads = assignThreads(calls.map((c) => ({ id: c.id, start: c.startMs, end: c.endMs, thread: c.thread, how: c.thread_how, touched: c.touched })));
         let prevEnd = null;
-        return rows.map((r) => {
-            const end = Date.parse(r.ts), start = end - r.ms;
-            const gap = prevEnd == null ? null : Math.max(0, start - prevEnd);
-            prevEnd = prevEnd == null ? end : Math.max(prevEnd, end);
-            let images = null, files = null;
-            try { images = r.images ? JSON.parse(r.images) : null; } catch { /* none */ }
-            try { files = r.files ? JSON.parse(r.files) : null; } catch { /* none */ }
-            return { ...r, images, files, ok: !!r.ok, start: new Date(start).toISOString(), end: r.ts, gap_ms: gap };
+        const threadEnd = new Map();
+        return calls.map(({ endMs, startMs, ...c }, i) => {
+            const t = threads[i];
+            const gap = prevEnd == null ? null : Math.max(0, startMs - prevEnd);
+            prevEnd = prevEnd == null ? endMs : Math.max(prevEnd, endMs);
+            const te = threadEnd.get(t.thread);
+            threadEnd.set(t.thread, Math.max(te ?? -Infinity, endMs));
+            return { ...c, thread: t.thread, thread_how: t.how, start: new Date(startMs).toISOString(), end: c.ts, gap_ms: gap,
+                thread_gap_ms: te == null ? null : Math.max(0, startMs - te) };
         });
     }
 
@@ -628,6 +667,11 @@ export class Accounts {
     }
 
     deletePage(id) { this.db.prepare("DELETE FROM pages WHERE id = ?").run(String(id)); }
+}
+
+function parseJson(s) {
+    if (s == null) return null;
+    try { return JSON.parse(s); } catch { return null; }
 }
 
 let shared;   // undefined: not opened yet; null: accounts are off

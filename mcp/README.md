@@ -139,7 +139,11 @@ Anyone who has that URL can use the server, so treat it like a password.
   accounts list. The pictures the tools returned (renders, contact sheets) are kept too, under
   `MCP_ROOT/traces/` (at most 960 px wide; 200 pictures / 50 MB per session, `RC_TRACE_IMAGES`,
   `RC_TRACE_MB`), shown on the timeline and served only to the account. A session that published
-  shows the page at the top. Each published page gets a `preview.png` (its document rendered
+  shows the page at the top. A client that does not send back its `Mcp-Session-Id` (ChatGPT)
+  lands all its chats in one session: the page then splits them into threads (by a
+  conversation id in `_meta` or a header if the client sends one, else by the documents the
+  calls read and wrote, else by timing), and its **Client signals** panel shows what the client
+  sends (header names, `_meta` keys, how many distinct values each id-like one had). Each published page gets a `preview.png` (its document rendered
   at publish, light theme), public like the page, used by the page cards.
 - **OAuth (connect by signing in).** With accounts on, every MCP endpoint also follows the
   MCP authorization spec: a request without a token gets a 401 whose `WWW-Authenticate`

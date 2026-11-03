@@ -17,6 +17,7 @@ import { callDetails, summarizeArgs, summarizeResult, traceArgs, traceFiles, tra
 import { ADMIN_KEY_ACCOUNT, accounts, accountsEnabled } from "./accounts.mjs";
 import { oauthEnabled, resourceMetadataUrl, wellKnown } from "./oauth.mjs";
 import { saveTraceImages } from "./trace-images.mjs";
+import { metaSignals, requestSignals, threadFromSignals, touchedPaths } from "./threads.mjs";
 
 const DEFAULT_PROTOCOL = "2025-06-18";
 const MAX_BODY = 32 << 20;   // inline JSON documents and base64 .rc files can be large
@@ -35,6 +36,19 @@ function usageSummary(args, content) {
     catch { return null; }
 }
 
+/**
+ * What the client sent with this call (never a secret) and, when an id decides it, its thread:
+ * the echoed Mcp-Session-Id, else a conversation id from _meta or a header. Lineage and time
+ * (lib/threads.mjs) are worked out over the whole session when it is shown, from `touched`.
+ */
+function threadOf(ctx, args, content, files) {
+    const meta = { ...(ctx.signals ?? {}), ...(ctx.callMeta ? { call_meta: ctx.callMeta } : {}) };
+    const text = Array.isArray(content) ? content.filter((c) => c?.type === "text").map((c) => c.text).join("\n") : "";
+    const touched = touchedPaths({ files, args, result: text, root: workspaceRoot() });
+    const byId = ctx.sessionEchoed ? { thread: `s:${ctx.client}`, how: "session-id" } : threadFromSignals(meta);
+    return { meta, touched, thread: byId?.thread ?? null, threadHow: byId?.how ?? null };
+}
+
 /** One row in the calls table for a tools/call made with an account (or the admin key). */
 async function recordUsage(server, ctx, tool, ms, ok, error, args, content, files = null) {
     if (!ctx.account) return;
@@ -44,7 +58,7 @@ async function recordUsage(server, ctx, tool, ms, ok, error, args, content, file
             error: error == null ? null : String(error?.message ?? error), summary: usageSummary(args, content),
             // The session trace: which MCP session, and the whole call (capped, no secrets).
             client: ctx.client ?? null, args: traceArgs(args), result: traceResult(content, error),
-            files: files ? JSON.stringify(files) : null });
+            files: files ? JSON.stringify(files) : null, ...threadOf(ctx, args, content, files) });
         // The pictures it returned, as files the session page shows (private to the account).
         const images = callId ? saveTraceImages({ accountId: ctx.account.id, client: ctx.client, callId, content }) : null;
         if (images) store.setCallImages(callId, images);
@@ -93,6 +107,8 @@ function createHandler({ name, version, instructions, tools }) {
             case "tools/call": {
                 const tool = byName.get(params?.name);
                 if (!tool) return err(id, -32602, `unknown tool: ${params?.name}`);
+                // This call's own _meta (keys; id-like values hashed) joins the request's signals.
+                ctx = { ...ctx, callMeta: metaSignals(params?._meta) };
                 const started = Date.now();
                 // The files it reads, before it runs (it may rewrite them): their versions in the trace.
                 const files = ctx.account ? traceFiles(params.arguments) : null;
@@ -210,6 +226,10 @@ function serveHttp(def, handle, port) {
     const matches = (s) => timingSafeEqual(digest(s), tokenDigest);
     const accountUrl = process.env.RC_ACCOUNT_URL || "";
     const withOAuth = oauthEnabled();
+    // Session ids this process issued (initialize), and what each client said it was: the
+    // session page's "Client signals". In memory: a restart forgets them (then "not ours").
+    const issued = new Set();
+    const clientInfos = new Map();
     if (withAccounts) {
         // Open (and migrate) the database now, so a missing node:sqlite stops the start, not a call.
         accounts().then(() => log(`${name}: accounts on`), (e) => { log(`refusing to start: ${e.message}`); process.exit(1); });
@@ -306,7 +326,21 @@ function serveHttp(def, handle, port) {
         const session = isInit ? randomUUID() : sent;
         const addr = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "").split(",")[0].trim();
         const ua = String(req.headers["user-agent"] ?? "").slice(0, 80);
-        const ctx = { client: session ? session.slice(0, 8) : "~" + createHash("sha1").update((req.headers.authorization ? String(req.headers.authorization) : addr) + "|" + ua).digest("hex").slice(0, 6), ua,
+        const fallback = "~" + createHash("sha1").update((req.headers.authorization ? String(req.headers.authorization) : addr) + "|" + ua).digest("hex").slice(0, 6);
+        const echoed = !isInit && Boolean(sent);
+        if (isInit) {
+            issued.add(session);
+            if (issued.size > 20_000) issued.delete(issued.values().next().value);
+            const ci = msgs.find((m) => m?.method === "initialize")?.params?.clientInfo;
+            if (ci && typeof ci === "object") {
+                const info = { name: String(ci.name ?? "").slice(0, 80), version: String(ci.version ?? "").slice(0, 40) };
+                clientInfos.set(session.slice(0, 8), info); clientInfos.set(fallback, info);
+                if (clientInfos.size > 20_000) clientInfos.delete(clientInfos.keys().next().value);
+            }
+        }
+        const signals = { ...requestSignals(req, { sent: echoed, known: echoed && issued.has(sent) }),
+            client_info: clientInfos.get(session ? session.slice(0, 8) : fallback) ?? null };
+        const ctx = { client: session ? session.slice(0, 8) : fallback, ua, signals, sessionEchoed: echoed,
             ...(account ? { account: { id: account.id, email: account.email, admin: account.admin, tokenId: account.tokenId ?? null,
                 ...(account.grantId ? { grantId: account.grantId, via: account.via } : {}) } } : {}) };   // (a proxying client changes address call to call; its token does not, and only a hash of it is logged)
         const out = (await Promise.all(msgs.map((m) => handle(m, ctx)))).filter(Boolean);

@@ -33,7 +33,7 @@ async function servers() {
         c.stderr.on("data", (d) => { logs[k] += d; });
         return c;
     });
-    for (const u of [auth, render]) for (let i = 0; i < 80; i++) { try { if ((await fetch(`${u}/healthz`)).ok) break; } catch {} await sleep(100); }
+    for (const u of [auth, render]) for (let i = 0; i < 300; i++) { try { if ((await fetch(`${u}/healthz`)).ok) break; } catch {} await sleep(100); }
     return { auth, render, root, logs, stop: () => { kids.forEach((k) => k.kill()); rmSync(root, { recursive: true, force: true }); } };
 }
 

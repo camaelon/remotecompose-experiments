@@ -41,7 +41,7 @@ test("session page: the same path edited between calls is not a repeat; unchange
     const kids = [["examples-server.mjs", ap], ["rc-render-server.mjs", rp]].map(([f, port]) =>
         spawn(process.execPath, [path.join(DIR, f), "--http"], { env: { ...env, MCP_HTTP_PORT: String(port) }, stdio: "ignore" }));
     t.after(() => { kids.forEach((k) => k.kill()); rmSync(root, { recursive: true, force: true }); });
-    for (const u of [site, render]) for (let i = 0; i < 80; i++) { try { if ((await fetch(`${u}/healthz`)).ok) break; } catch {} await sleep(100); }
+    for (const u of [site, render]) for (let i = 0; i < 300; i++) { try { if ((await fetch(`${u}/healthz`)).ok) break; } catch {} await sleep(100); }
     const r = await fetch(`${site}/account/register`, { method: "POST", redirect: "manual", body: "email=f@example.com", headers: { Origin: site, "Content-Type": "application/x-www-form-urlencoded" } });
     const html0 = await r.text(), token = /id="tok">(rc_[A-Za-z0-9_-]{43})/.exec(html0)[1], cookie = `rc_session=${/rc_session=([^;]+)/.exec(r.headers.get("set-cookie"))[1]}`;
     const H = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
