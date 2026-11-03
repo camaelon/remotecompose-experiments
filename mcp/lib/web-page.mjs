@@ -267,6 +267,16 @@ const PLAYGROUND_CSS = `
   }
   #stage.custom-bg { background-image: none; }
   #wrap { display: flex; min-width: 100%; min-height: 100%; width: max-content; padding: 28px 36px 44px; }
+  /* Fullscreen (?fullscreen=true): only the document, filling the window. */
+  body.fs { grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); grid-template-areas: "stage"; }
+  body.fs #bar, body.fs #panel { display: none; }
+  body.fs #wrap { padding: 0; }
+  body.fs #frame { box-shadow: none; }
+  body.fs .handle, body.fs #size-tag { display: none; }
+  #fs-exit { position: fixed; top: 10px; right: 10px; z-index: 50; display: none; padding: 6px 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--text); opacity: .35; cursor: pointer; font: inherit; }
+  #fs-exit:hover, #fs-exit:focus { opacity: 1; }
+  body.fs #fs-exit { display: block; }
   #frame { position: relative; margin: 0 auto; align-self: flex-start; box-shadow: 0 0 0 1px var(--line), 0 6px 24px rgba(0,0,0,.18); }
   #frame.center { align-self: center; }
   #rc { position: relative; touch-action: none; overflow: hidden; }
@@ -593,8 +603,10 @@ function playgroundPage(bundle, rcBase64, config) {
   <div class="group">
     <button id="copy" class="btn" title="Copy a link to exactly this: size, density, theme and variable values">Copy link</button>
     <button id="toggle" class="btn" aria-pressed="true" title="Show or hide the side panel">Panel</button>
+    <button id="fullscreen" class="btn" title="Fullscreen: only the document, filling the window (adds ?fullscreen=true to the link; Esc to leave)">Fullscreen</button>
   </div>
 </header>
+<button id="fs-exit" type="button" title="Leave fullscreen (Esc)">Exit fullscreen</button>
 <main id="stage"${bgStyle}${config.background ? ' class="custom-bg"' : ""}>
   <div id="wrap">
     <div id="frame">
@@ -698,6 +710,7 @@ ${VARIABLE_ELEMENT_JS}
     Object.keys(S.values).forEach(function (n) {
       if (S.values[n] !== S.defaults[n]) q.set(n, S.values[n]); else q.delete(n);
     });
+    if (S.full) q.set("fullscreen", "true"); else q.delete("fullscreen");
     var h = new URLSearchParams();
     if (S.fill) h.set("fill", "1"); else { h.set("w", S.w); h.set("h", S.h); }
     h.set("d", S.density); h.set("t", C.variant || S.mono || S.theme);
@@ -876,6 +889,23 @@ ${VARIABLE_ELEMENT_JS}
     this.setAttribute("aria-pressed", String(!panel.hidden));
     if (S.fill) fitSoon();
   };
+  // Fullscreen: the document alone, filling the window. ?fullscreen=true in the link opens it
+  // so; from the button it also asks the browser for real fullscreen (needs a click).
+  var fillBefore = null;
+  function setFull(on, fromClick) {
+    if (!!S.full === on) return;
+    S.full = on;
+    document.body.classList.toggle("fs", on);
+    if (on) { fillBefore = S.fill; S.fill = true; } else if (fillBefore !== null) { S.fill = fillBefore; fillBefore = null; }
+    if (on && fromClick && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function () {});
+    if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
+    fitSoon(); syncUrl();
+  }
+  $("fullscreen").onclick = function () { setFull(true, true); };
+  $("fs-exit").onclick = function () { setFull(false); };
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && S.full) setFull(false); });
+  document.addEventListener("fullscreenchange", function () { if (!document.fullscreenElement && S.full) setFull(false); });
+  if (query.get("fullscreen") === "true") setFull(true, false);
   var toastTimer = 0;
   function toast(msg) {
     var t = $("toast");

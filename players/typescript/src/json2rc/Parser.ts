@@ -2972,7 +2972,9 @@ export class Parser {
         case "performhaptic":
             w.buffer.start(177); w.buffer.writeInt(jsonGetInt(req("constant"), "performHaptic")); return true;
         case "playsound": {
-            const id = this.resolveTextId(req("id"));
+            const ref = req("id");
+            const sname = typeof ref === "string" ? ref.replace(/^[@$](sounds\.)?/, "") : undefined;
+            const id = sname !== undefined && this.sounds.has(sname) ? this.sounds.get(sname)! : this.resolveTextId(ref);
             w.buffer.start(141); w.buffer.writeInt(id); return true;
         }
         case "clickarea": {
@@ -3207,9 +3209,9 @@ export class Parser {
         this.computedColors = [];
         for (const key of order) {
             if (!(key in section)) continue;
-            if (!["colors", "paths", "floatArrays", "variables", "bitmaps", "integers"].includes(key)) {
+            if (!["colors", "paths", "floatArrays", "variables", "bitmaps", "integers", "sounds"].includes(key)) {
                 throw new NotImplementedComponent(
-                    `resource type '${key}' (colors/paths/floatArrays/variables/integers/bitmaps only)`);
+                    `resource type '${key}' (colors/paths/floatArrays/variables/integers/bitmaps/sounds only)`);
             }
             this.parseResourceSection(key, section[key]);
         }
@@ -3218,6 +3220,36 @@ export class Parser {
         this.computedColors = [];
     }
     private computedColors: [string, J, J][] = [];
+
+    /** resources.sounds: name -> SoundExpression id, for playSound. */
+    private sounds = new Map<string, number>();
+
+    /**
+     * EXTENSION (not in the reference JSON parser, which can only playSound an id): a
+     * synthesised sound, the reference's SoundExpression (RcScope.soundExpression).
+     * {"type": "tone", "frequency": 880, "duration": 0.05, "waveform": "sine"} with
+     * frequency in Hz, duration in seconds, waveform sine | square | sawtooth | triangle;
+     * "volume" (or "leftVolume"/"rightVolume") and "rate" default to 1. Numbers, "@vars" or
+     * expressions: the players rebuild the tone when one changes.
+     */
+    private declareSound(name: string, value: J): number {
+        if (!value || typeof value !== "object" || Array.isArray(value)) {
+            throw new NotImplementedComponent(`resources.sounds.${name}: expected {"type": "tone", "frequency", "duration", "waveform"}`);
+        }
+        const v = value as Record<string, J>;
+        const type = String(v.type ?? "tone").toLowerCase();
+        if (type !== "tone") throw new NotImplementedComponent(`resources.sounds.${name}: type '${type}' (only "tone")`);
+        const WAVES: Record<string, number> = { sine: 0, square: 1, sawtooth: 2, saw: 2, triangle: 3 };
+        let wave: J = v.waveform ?? 0;
+        if (typeof wave === "string" && wave.toLowerCase() in WAVES) wave = WAVES[wave.toLowerCase()];
+        else if (typeof wave === "string" && !/^[@$]|[()*+\/-]/.test(wave)) {
+            throw new NotImplementedComponent(`resources.sounds.${name}: waveform '${wave}' (sine, square, sawtooth or triangle)`);
+        }
+        const vol = v.volume ?? 1;
+        const params = [asNanBits(10), this.fbits(v.frequency ?? 440), this.fbits(v.duration ?? 0.1), this.fbits(wave)];
+        const left = this.fbits(v.leftVolume ?? vol), right = this.fbits(v.rightVolume ?? vol), rate = this.fbits(v.rate ?? 1);
+        return this.writer.addSoundExpression(left, right, rate, params);
+    }
 
     private addComputedColor(name: string, cfg: J, value: J): void {
         const id = this.computedColorId(name, value);
@@ -3250,6 +3282,12 @@ export class Parser {
 
     private parseResourceSection(key: string, sectionValue: J): void {
         const section: J = { [key]: sectionValue };
+        if (key === "sounds") {
+            for (const [name, , value] of eachResource(sectionValue)) {
+                this.sounds.set(name, this.declareSound(name, value));
+            }
+            return;
+        }
         if (key === "bitmaps") {
             for (const [name, , value] of eachResource(sectionValue)) {
                 this.bitmaps.set(name, this.declareBitmap(name, value));

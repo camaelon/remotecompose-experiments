@@ -1019,6 +1019,22 @@ export class Writer {
     }
 
     /** FloatConstant (DATA_FLOAT); returns asNan(id) bits. */
+    /**
+     * SOUND_EXPRESSION (206): a synthesised sound under a fresh id, as RemoteComposeWriter
+     * addSoundExpression. Volumes, rate and params are float bits (a NaN-boxed id is a variable).
+     */
+    addSoundExpression(leftVolume: number, rightVolume: number, rate: number, params: number[]): number {
+        const id = this.allocDataId();
+        this.buffer.start(206);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(leftVolume);
+        this.buffer.writeInt(rightVolume);
+        this.buffer.writeInt(rate);
+        this.buffer.writeInt(params.length);
+        for (const p of params) this.buffer.writeInt(p);
+        return id;
+    }
+
     addFloatConstant(value: number): number {
         const dataId = this.allocDataId();
         this.buffer.start(OP.DATA_FLOAT);

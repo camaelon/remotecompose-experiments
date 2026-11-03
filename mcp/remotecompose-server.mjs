@@ -280,6 +280,22 @@ Structure
   the SAME action name (five stars sending "rate" with their value): json2rc declares a shared name once before the
   tree. The reference Java parser does not (the second control would send a nameless action until the first is
   tapped, U58), so for a document that must also convert with it, give each control its own name.
+- Sound (a synthesised tone; experimental in androidx, needs the experimental profile bit, which "profiles": 513
+  has): declare it in resources.sounds, a json2rc extension (the reference JSON parser can only play an id):
+  {"tick": {"type": "tone", "frequency": 880, "duration": 0.05, "waveform": "sine"}} (Hz, seconds; waveform sine,
+  square, sawtooth or triangle; "volume" or "leftVolume"/"rightVolume" and "rate" default to 1 and are not used in
+  playback yet). Any of them may be a "@variable" or an expression: the player rebuilds the tone when it changes
+  ("frequency": "@pitch"). Play it with the canvas command {"playSound": {"id": "@tick"}}, inside a
+  conditionalOperations: it plays on EVERY frame its canvas paints while the condition holds, and each play
+  restarts the sound, so make the window short (a few frames). A beat: {"conditionalOperations": {"condition": "lt",
+  "v1": "abs(fract(continuousSec()) - 0.5)", "v2": 0.015, "commands": [{"playSound": {"id": "@tick"}}]}} (the canvas
+  must read the clock to keep painting). On a tap: the button stores the time, {"type": "valueFloatExpressionChange",
+  "target": "@tapT", "value": "timeInMin() * 60 + continuousSec() % 60"} ("tapT": -10 in resources.variables), and
+  the canvas plays while "abs(timeInMin() * 60 + continuousSec() % 60 - @tapT - 0.02)" is under 0.02. Use seconds of
+  the day, not continuousSec() alone: it wraps at the hour and the difference goes negative. Players: the
+  TypeScript player (playground, published pages) plays through Web Audio, after the visitor's first tap (browsers
+  block sound before a gesture); Android plays it with the experimental profile; render pictures and the C++ player
+  are silent: check with inspect (list_operations shows SoundExpression and PlaySound) and the playground.
 - Scrolling: {"column": {"modifiers": ["fillMaxSize", {"verticalScroll": "@scroll"}], "children": [...]}} with
   "scroll": 0 in resources.variables (the scroll position; horizontalScroll likewise). A phone screen longer than its
   height scrolls; a widget never does (it drops or compacts content instead).

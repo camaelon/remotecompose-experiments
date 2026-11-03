@@ -161,10 +161,9 @@ async function playground(e, variant) {
     // pin it to one value (the report's, the dark one), so it is shown, not settable.
     const themed = themedColors(e, variant);
     if (themed.size) vars = vars.map((v) => (themed.has(v.name) ? { ...v, type: "themed color", value: themed.get(v.name), themed: true } : v));
-    // Most examples are drawn in pixels; "device" density would show them at half size on a
-    // 2x screen. Only a document laid out in dp (header densityBehavior) follows the device.
-    let dp = false, source = null;
-    try { source = JSON.parse(readFileSync(path.join(EXAMPLES_DIR, e.folder, "doc.json"), "utf8")); dp = !!source.header?.densityBehavior; } catch { /* keep 1 */ }
+    // The playground opens at density 1 (the Density menu offers the device's).
+    let source = null;
+    try { source = JSON.parse(readFileSync(path.join(EXAMPLES_DIR, e.folder, "doc.json"), "utf8")); } catch { /* none */ }
     // componentTheme "auto": the document switches to mono itself (MONO_VAR and its named
     // colours, with the palettes its own colours give), in place of a separate document.
     const mono = !variant && vars.some((v) => v.name === MONO_VAR) ? { variable: MONO_VAR, palettes: monoPalettes(source ?? {}) } : undefined;
@@ -193,7 +192,7 @@ async function playground(e, variant) {
             info: vars.map(({ name, type, value }) => ({ name, type, value })),
             // (meta.prefer_theme: "dark" opens a dark-only or dark-first document in dark, not the
             // visitor's system theme, so the playground around it matches; #t= still overrides.)
-            theme: variant ? "auto" : preferTheme(e) ?? "auto", density: dp ? "device" : 1, variables: [],
+            theme: variant ? "auto" : preferTheme(e) ?? "auto", density: 1, variables: [],
             declared: Object.fromEntries(vars.filter((v) => WEB_SETTABLE.has(v.type) && !v.themed).map((v) => [v.name, v.type])),
             urlVariables: true,
             // Pages are /play/<id>/ and /play/<id>/<variant>/: links are relative to either.

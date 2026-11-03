@@ -336,10 +336,9 @@ const PACKAGE_WEB_PROPS = {
     },
     density: {
         description:
-            "Display density the document is laid out at: \"device\" (default) uses the viewer's " +
-            "devicePixelRatio — sharp, and right for documents authored in dp; a number pins it. " +
-            "Documents drawn in raw pixels look smaller on high-DPI screens with \"device\"; use 1 " +
-            "for those.",
+            "Display density the document is laid out at: 1 (default), another number, or \"device\" for the " +
+            "viewer's devicePixelRatio (documents drawn in raw pixels then look smaller on high-DPI screens). " +
+            "The viewer can change it in the playground's Density menu.",
         anyOf: [{ type: "number" }, { type: "string", enum: ["device"] }],
     },
     variables: {
@@ -527,7 +526,7 @@ export const definition = {
                         info: (report.namedVariables ?? []).map(({ name, type, value }) => ({ name, type, value })),
                         background: a.background,
                         theme: a.theme ?? "auto",
-                        density: a.density ?? "device",
+                        density: a.density ?? 1,
                         variables,
                         declared: settable,
                         urlVariables: a.url_variables !== false,
