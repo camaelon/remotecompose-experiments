@@ -3798,6 +3798,8 @@
     126: { rawFields: [["mScaleX", "scaleX"], ["mScaleY", "scaleY"], ["mCenterX", "centerX"], ["mCenterY", "centerY"]] },
     127: { rawFields: [["mTranslateX", "translateX"], ["mTranslateY", "translateY"]] },
     128: { rawFields: [["mSkewX", "skewX"], ["mSkewY", "skewY"]] },
+    158: { plain: [["mPathId1", "path1"], ["mPathId2", "path2"]], rawFields: [["mTween", "tween"]] },
+    // PathTween
     181: { plain: [["mPathId", "pathId"]], rawFields: [["mFraction", "fraction"], ["mVOffset", "vOffset"]] },
     133: { fields: [["mX", "x"], ["mY", "y"], ["mPanX", "panX"], ["mPanY", "panY"]], plain: [["mTextID", "textId"], ["mFlags", "flags"]] },
     150: { componentValue: true },
@@ -4002,6 +4004,7 @@
     }
     for (let i = 0; i < bits.length; i++) {
       const raw = bits[i];
+      if (typeof raw !== "number") continue;
       const b = toRawBitsHelper(raw);
       if (isNaNBits2(b)) {
         const id = idFromBits(b);
@@ -4459,10 +4462,10 @@
         const opName2 = getOpName2(op);
         const opCode = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor ? op.constructor.OP_CODE : 0;
         const varId = getOpId2(op);
-        if (opCode === 81 || opName2 === "FloatExpression" || opName2.includes("FloatExpression")) {
+        if (opCode === 81 || opName2 === "FloatExpression" || opName2.includes("FloatExpression") || opCode === 157 || opName2 === "TouchExpression") {
           if (varId !== null && varId !== void 0) {
             const nodeId = `var_${varId}`;
-            const bits = op.mBits || op.bits || op.srcExpression || op.mSrcExpression || op.mFloatExpression || op.mExp || op.exp;
+            const bits = (opCode === 157 ? op.mSrcExp : null) || op.mBits || op.bits || op.srcExpression || op.mSrcExpression || op.mFloatExpression || op.mExp || op.exp;
             const formulaStr = bits ? prettyPrintFloatExpression2(bits) : "";
             let liveVal = state ? state.getFloat(varId) : NaN;
             if (Number.isNaN(liveVal) || liveVal === void 0) liveVal = 0;
@@ -4583,7 +4586,7 @@
         } else if (opCode === 85 || opName2 === "ColorExpression") {
           if (varId !== null && varId !== void 0) {
             const nodeId = `var_${varId}`;
-            getOrCreateNode(nodeId, {
+            const node = getOrCreateNode(nodeId, {
               varId,
               label: `color_${varId}`,
               type: "int_expr",
@@ -4591,6 +4594,15 @@
               value: "Color",
               op
             });
+            for (const cid of [op.mColor1, op.mColor2]) {
+              if (typeof cid !== "number" || cid <= 0 || cid > 1048575) continue;
+              const inNodeId = `var_${cid}`;
+              const inNode = nodeMap.get(inNodeId);
+              if (!inNode) continue;
+              if (!node.inputs.includes(inNodeId)) node.inputs.push(inNodeId);
+              if (!inNode.outputs.includes(nodeId)) inNode.outputs.push(nodeId);
+              edges.push({ from: inNodeId, to: nodeId });
+            }
           }
         }
       });
@@ -4598,8 +4610,71 @@
         if (!op) return;
         const opName2 = getOpName2(op);
         const opCode = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor ? op.constructor.OP_CODE : 0;
-        if ([0, 80, 81, 82, 83, 84, 85, 134, 144, 148, 200, 201, 202, 203, 204, 205, 207, 208, 209, 210, 211, 212, 213, 214, 220].includes(opCode) || getOpVarOutputs(op).length > 0 || opName2 === "Header" || opName2 === "ContainerEnd" || opName2.includes("Layout") || isContainerOp2(op)) return;
+        const isAction = /Action$/.test(opName2) || opCode === 218;
+        if (opCode === 247 && op.mArgIds && op.mArgIds.length) {
+          const targets = [...op.mArgIds].map((v) => {
+            const id = (v & 2139095040) === 2139095040 && (v & 8388607) !== 0 ? v & 8388607 : v;
+            return nodeMap.has(`var_${id}`) ? `var_${id}` : null;
+          }).filter(Boolean);
+          if (targets.length) {
+            const cid = `consumer_247_${opIdx}`;
+            const cn = getOrCreateNode(cid, {
+              varId: null,
+              label: `PatternInflation #${opIdx + 1}`,
+              type: "consumer",
+              formula: `Op #${opIdx + 1} (pattern arguments)`,
+              value: "Consumer",
+              op
+            });
+            for (const target of targets) {
+              if (!cn.inputs.includes(target)) cn.inputs.push(target);
+              const pn = nodeMap.get(target);
+              if (!pn.outputs.includes(cid)) pn.outputs.push(cid);
+              edges.push({ from: target, to: cid });
+            }
+          }
+          return;
+        }
+        if (opCode === 217 && typeof op.mIndexId === "number" && op.mIndexId > 0) {
+          const target = nodeMap.has(`var_${op.mIndexId}`) ? `var_${op.mIndexId}` : null;
+          if (target) {
+            const cid = `consumer_217_${opIdx}`;
+            const cn = getOrCreateNode(cid, {
+              varId: null,
+              label: `StateLayout #${opIdx + 1}`,
+              type: "consumer",
+              formula: `Op #${opIdx + 1} (StateLayout index)`,
+              value: "Consumer",
+              op
+            });
+            if (!cn.inputs.includes(target)) cn.inputs.push(target);
+            const pn = nodeMap.get(target);
+            if (!pn.outputs.includes(cid)) pn.outputs.push(cid);
+            edges.push({ from: target, to: cid });
+          }
+          return;
+        }
+        if ([0, 80, 81, 82, 83, 84, 85, 134, 144, 148, 200, 201, 202, 203, 204, 205, 207, 208, 209, 210, 212, 213, 214, 220].includes(opCode) || !isAction && getOpVarOutputs(op).length > 0 || opName2 === "Header" || opName2 === "ContainerEnd" || opName2.includes("Layout") || isContainerOp2(op)) return;
         const referencedIds = /* @__PURE__ */ new Set();
+        if (opCode === 218 && typeof op.mValueExpressionId === "number") referencedIds.add(op.mValueExpressionId % 4294967296);
+        if (opCode === 166 && Array.isArray(op.mArgs)) {
+          for (const v of op.mArgs) {
+            const ab = typeof v === "number" && Number.isInteger(v) ? v : toRawBitsHelper(v);
+            if ((ab & 2139095040) === 2139095040 && (ab & 8388607) !== 0) referencedIds.add(ab & 8388607);
+          }
+        }
+        if (opCode === 211 && typeof op.mVisibilityId === "number") referencedIds.add(op.mVisibilityId);
+        if (opCode === 224 && op.mAttributes instanceof Map) {
+          for (const attr of op.mAttributes.values()) {
+            if (!attr || !attr.isFloat) continue;
+            const b = attr.bits !== void 0 ? attr.bits : toRawBitsHelper(attr.value);
+            if ((b & 2139095040) === 2139095040 && (b & 8388607) !== 0) referencedIds.add(b & 8388607);
+          }
+        }
+        if (opCode === 158 && typeof op.mTween === "number") {
+          const b = op.mTween >>> 0;
+          if ((b & 2139095040) === 2139095040 && (b & 8388607) !== 0) referencedIds.add(b & 8388607);
+        }
         getOpVarReferences(op).forEach((id) => referencedIds.add(id));
         const bits = op.mBits || op.bits || op.srcExpression || op.mSrcExpression;
         if (bits && Array.isArray(bits)) {
@@ -4624,7 +4699,7 @@
                 }
               }
             }
-          } else if (Array.isArray(val) && key !== "mOps" && key !== "mOperations" && key !== "operations" && key !== "mList" && key !== "list") {
+          } else if ((Array.isArray(val) || ArrayBuffer.isView(val)) && key !== "mOps" && key !== "mOperations" && key !== "operations" && key !== "mList" && key !== "list") {
             getFloatExprVarDependencies(val).forEach((id) => {
               if (nodeMap.has(`var_${id}`) || nodeMap.has(`sys_${id}`)) {
                 referencedIds.add(id);
@@ -8143,97 +8218,134 @@
         }
       } else {
         const f = intBitsToFloat2(b);
-        stack.push(Number.isInteger(f) ? f.toString() : f.toFixed(2));
+        stack.push(Number.isInteger(f) ? f.toString() : String(Number(f.toPrecision(7))));
       }
     }
     return stack.pop() || "";
   }
   function prettyPrintIntegerExpression(mask, exp) {
     if (!exp || exp.length === 0) return "";
+    const OFFSET = 65536;
     const stack = [];
-    const OFFSET = 3211264;
-    function isVar(val) {
-      return (val & 2139095040) === 2139095040 && (val & 8388607) !== 0;
-    }
-    function isOp(val) {
-      const id = val & 8388607;
-      return isVar(val) && id > OFFSET && id <= OFFSET + 79;
-    }
-    function getOp(val) {
-      return (val & 8388607) - OFFSET;
-    }
+    const pop = () => stack.pop() ?? "0";
+    const bin = (sym) => {
+      const b = pop(), a = pop();
+      stack.push(`(${a} ${sym} ${b})`);
+    };
+    const fn2 = (name) => {
+      const b = pop(), a = pop();
+      stack.push(`${name}(${a}, ${b})`);
+    };
+    const fn1 = (name) => {
+      const a = pop();
+      stack.push(`${name}(${a})`);
+    };
     for (let i = 0; i < exp.length; i++) {
-      const val = exp[i];
-      if (isOp(val)) {
-        const op = getOp(val);
-        switch (op) {
-          case 1: {
-            const b = stack.pop() || "0", a = stack.pop() || "0";
-            stack.push(`(${a} + ${b})`);
+      const val = Number(exp[i]);
+      const flagged = (1 << i & mask) !== 0;
+      if (flagged && val >= OFFSET) {
+        switch (val - OFFSET) {
+          case 1:
+            bin("+");
             break;
-          }
-          case 2: {
-            const b = stack.pop() || "0", a = stack.pop() || "0";
-            stack.push(`(${a} - ${b})`);
+          case 2:
+            bin("-");
             break;
-          }
-          case 3: {
-            const b = stack.pop() || "0", a = stack.pop() || "0";
-            stack.push(`(${a} * ${b})`);
+          case 3:
+            bin("*");
             break;
-          }
-          case 4: {
-            const b = stack.pop() || "0", a = stack.pop() || "0";
-            stack.push(`(${a} / ${b})`);
+          case 4:
+            bin("/");
             break;
-          }
-          case 5: {
-            const b = stack.pop() || "0", a = stack.pop() || "0";
-            stack.push(`(${a} % ${b})`);
+          case 5:
+            bin("%");
             break;
-          }
-          case 6: {
-            const b = stack.pop() || "0", a = stack.pop() || "0";
-            stack.push(`min(${a}, ${b})`);
+          case 6:
+            bin("<<");
             break;
-          }
-          case 7: {
-            const b = stack.pop() || "0", a = stack.pop() || "0";
-            stack.push(`max(${a}, ${b})`);
+          case 7:
+            bin(">>");
             break;
-          }
-          case 26: {
-            const c = stack.pop() || "0", b = stack.pop() || "0", a = stack.pop() || "0";
-            stack.push(`(${c} > 0 ? ${b} : ${a})`);
+          case 8:
+            bin(">>>");
             break;
-          }
-          case 27: {
-            const c = stack.pop() || "0", b = stack.pop() || "0", a = stack.pop() || "0";
-            stack.push(`clamp(${a}, ${b}, ${c})`);
+          case 9:
+            bin("|");
             break;
-          }
-          case 44: {
-            const b = stack.pop() || "0", a = stack.pop() || "0";
-            stack.push(`(${a} > ${b})`);
+          case 10:
+            bin("&");
             break;
-          }
-          case 73: {
-            const a = stack.pop() || "0";
+          case 11:
+            bin("^");
+            break;
+          case 12:
+            fn2("copySign");
+            break;
+          case 13:
+            fn2("min");
+            break;
+          case 14:
+            fn2("max");
+            break;
+          case 15: {
+            const a = pop();
             stack.push(`-${a}`);
             break;
           }
+          case 16:
+            fn1("abs");
+            break;
+          case 17: {
+            const a = pop();
+            stack.push(`(${a} + 1)`);
+            break;
+          }
+          case 18: {
+            const a = pop();
+            stack.push(`(${a} - 1)`);
+            break;
+          }
+          case 19:
+            fn1("not");
+            break;
+          case 20:
+            fn1("sign");
+            break;
+          case 21: {
+            const c = pop(), b = pop(), a = pop();
+            stack.push(`clamp(${a}, ${b}, ${c})`);
+            break;
+          }
+          case 22: {
+            const c = pop(), b = pop(), a = pop();
+            stack.push(`(${a} ? ${b} : ${c})`);
+            break;
+          }
+          case 23: {
+            const c = pop(), b = pop(), a = pop();
+            stack.push(`(${a} * ${b} + ${c})`);
+            break;
+          }
+          case 24:
+            stack.push("var1");
+            break;
+          case 25:
+            stack.push("var2");
+            break;
+          case 26:
+            stack.push("var3");
+            break;
           default:
-            stack.push(`op_${op}`);
+            stack.push(`op_${val - OFFSET}`);
             break;
         }
-      } else if (isVar(val)) {
-        const id = val & 8388607;
-        stack.push(`var_${id}`);
+      } else if (flagged) {
+        stack.push(`var_${val}`);
       } else {
-        stack.push(val.toString());
+        stack.push(String(val));
       }
     }
-    return stack.pop() || "";
+    return stack.length === 1 ? stack[0] : stack.join(" ");
   }
   function getEffectiveChildren(op) {
     if (!op || typeof op.getList !== "function") return [];
@@ -8620,7 +8732,8 @@
       if (!op) return;
       const opName2 = getOpName2(op);
       const opCode = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor ? op.constructor.OP_CODE : 0;
-      if ([80, 81, 82, 83, 84, 85, 104, 105, 134, 135, 136, 137, 138, 140, 144, 148, 151, 153, 156, 172, 196].includes(opCode) || opName2.includes("Constant") || opName2.includes("Expression") || opName2.includes("Variable") || opName2.includes("Attribute")) {
+      const isAction = /Action$/.test(opName2);
+      if (!isAction && ([80, 81, 82, 83, 84, 85, 104, 105, 134, 135, 136, 137, 138, 140, 144, 148, 151, 153, 156, 172, 196].includes(opCode) || opName2.includes("Constant") || opName2.includes("Expression") || opName2.includes("Variable") || opName2.includes("Attribute"))) {
         const id = getOpId(op);
         if (id !== null) {
           usageInfo.definedVarIds.add(id);
@@ -8683,7 +8796,7 @@
       if (opCode === 144 || opCode === 82 || opName2.includes("IntegerExpression")) {
         const mask = Number(op.mMask ?? op.mask ?? 0);
         const vals = op.mValues ?? op.values ?? op.srcExpression;
-        if (Array.isArray(vals)) {
+        if (vals && typeof vals.length === "number") {
           for (let i = 0; i < vals.length; i++) {
             const vNum = typeof vals[i] === "bigint" ? Number(vals[i]) : vals[i];
             if ((1 << i & mask) !== 0 && vNum < 65536) {
@@ -8719,7 +8832,7 @@
             if (usageInfo.definedVarIds.has(refId) && !refIds.includes(refId)) {
               refIds.push(refId);
             }
-          } else if (numVal !== opId && (key.endsWith("Id") || key.endsWith("ID") || key.includes("Var") || key.includes("Color") || key.includes("Text") || key.includes("Path") || key.includes("Length") || key.includes("Anim") || key.includes("Shader") || key.includes("Font"))) {
+          } else if (numVal !== opId && (key.endsWith("Id") || key.endsWith("ID") || /Id\d$/.test(key) || key.includes("Var") || key.includes("Color") || key.includes("Text") || key.includes("Path") || key.includes("Length") || key.includes("Anim") || key.includes("Shader") || key.includes("Font"))) {
             if (usageInfo.definedVarIds.has(numVal) && !refIds.includes(numVal)) {
               refIds.push(numVal);
             }
@@ -8778,7 +8891,7 @@
       if (!op) return;
       const opName2 = getOpName2(op);
       const opCode = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor ? op.constructor.OP_CODE : 0;
-      const isScalarVarDef = [80, 81, 82, 83, 84, 85, 104, 105, 134, 135, 136, 137, 138, 140, 144, 148, 151, 153, 156, 172, 196].includes(opCode) || (opName2.includes("Constant") || opName2.includes("Expression") || opName2.includes("Variable") || opName2.includes("Attribute")) && opCode !== 123 && opCode !== 160 && !opName2.includes("Path");
+      const isScalarVarDef = !/Action$/.test(opName2) && ([80, 81, 82, 83, 84, 85, 104, 105, 134, 135, 136, 137, 138, 140, 144, 148, 151, 153, 156, 172, 196].includes(opCode) || (opName2.includes("Constant") || opName2.includes("Expression") || opName2.includes("Variable") || opName2.includes("Attribute")) && opCode !== 123 && opCode !== 160 && !opName2.includes("Path"));
       if (!isScalarVarDef) {
         const refIds = extractReferencedVarIds(op);
         refIds.forEach((id) => {
@@ -8889,7 +9002,7 @@
   }
   function formatNumber(v) {
     if (typeof v !== "number" || isNaN(v)) return "NaN";
-    return Number.isInteger(v) ? v.toString() : v.toFixed(2);
+    return Number.isInteger(v) ? v.toString() : String(Number(v.toPrecision(7)));
   }
   var DIMENSION_MODIFIER_TYPES = {
     0: { name: "EXACT", label: "EXACT (0)", unit: "px", desc: "Fixed size in raw pixels / points" },
@@ -9502,7 +9615,17 @@
       }
       return String(v);
     }
-    return `Path #${outId} = tween(Path #${p1} \u2794 Path #${p2}, fraction=${fmt(tw)})`;
+    let twStr = fmt(tw);
+    if (typeof op.mTween === "number" && Number.isInteger(op.mTween) && typeof op.mTweenOut === "number") {
+      const b = op.mTween >>> 0;
+      if ((b & 2139095040) === 2139095040 && (b & 8388607) !== 0) {
+        const id = b & 8388607;
+        twStr = `${getSystemVarName2(id) || `var_${id}`} (${formatNumber(op.mTweenOut)})`;
+      } else {
+        twStr = formatNumber(op.mTweenOut);
+      }
+    }
+    return `Path #${outId} = tween(Path #${p1} \u2794 Path #${p2}, fraction=${twStr})`;
   }
   function prettyPrintPathData(op) {
     if (!op) return "";
@@ -10665,18 +10788,32 @@
     });
     return found;
   }
-  function analyzeRepaintSchedule(doc, player) {
+  function analyzeRepaintSchedule(doc, player, nowMs = Date.now()) {
     const empty = { available: false, delayMs: -1, verdict: "idle", causes: [], requesters: [] };
     if (!doc || typeof doc.needsRepaint !== "function") return empty;
     const state = getState(doc);
     const delayMs = doc.needsRepaint();
-    const now = Date.now();
+    const now = nowMs;
     const animationTime = player && player.remoteContext && typeof player.remoteContext.getAnimationTime === "function" ? player.remoteContext.getAnimationTime() : NaN;
     const paintCtx = player ? player.paintContext : null;
     const immediateFlag = !!(paintCtx && typeof paintCtx.doesNeedsRepaint === "function" && paintCtx.doesNeedsRepaint());
     const root = doc.mRootLayoutComponent;
     const layoutRepaint = !!(root && typeof root.needsRepaint === "function" && root.needsRepaint());
     const boundsAnimation = !!(root && typeof root.needsBoundsAnimation === "function" && root.needsBoundsAnimation());
+    const animating = [];
+    (function walk(c, depth) {
+      if (!c || depth > 64) return;
+      if (c.mAnimateMeasure || typeof c.needsBoundsAnimation === "function" && c.needsBoundsAnimation() && !(c.mChildrenComponents || []).some((k) => typeof k.needsBoundsAnimation === "function" && k.needsBoundsAnimation())) {
+        animating.push({
+          component: c.constructor && c.constructor.name,
+          id: c.mComponentId,
+          animating: !!c.mAnimateMeasure,
+          visibility: c.mVisibility,
+          layoutVisibility: c.mLayoutVisibility
+        });
+      }
+      for (const ch of c.mChildrenComponents || []) walk(ch, depth + 1);
+    })(root, 0);
     const contSec = listenersOn(state, ID_CONTINUOUS_SEC);
     const timeSec = listenersOn(state, ID_TIME_IN_SEC);
     const timeMin = listenersOn(state, ID_TIME_IN_MIN);
@@ -10711,7 +10848,8 @@
       layoutRepaint || boundsAnimation,
       boundsAnimation ? "Layout bounds animation in progress" : "Layout requested a repaint",
       "every frame",
-      []
+      animating,
+      boundsAnimation ? "The components below are mid-animation between two layouts: a size, position or visibility of theirs differs from one layout pass to the next (a value that changes every frame, or a layout that hides and shows a child on alternate passes)." : void 0
     );
     push(
       "continuousSec",
@@ -10725,14 +10863,14 @@
       "timeInSec",
       timeSec.length > 0,
       `${timeSec.length} operation${timeSec.length === 1 ? " listens" : "s listen"} to $TIME_IN_SEC`,
-      `in ${2 + 1e3 - now % 1e3} ms \u2014 the next second boundary, so at most 1002 ms apart`,
+      `in ${Math.round(2 + 1e3 - now % 1e3)} ms \u2014 the next second boundary, so at most 1002 ms apart`,
       timeSec.map((op) => describeOp(op, "reads timeInSec()"))
     );
     push(
       "timeInMin",
       timeMin.length > 0,
       `${timeMin.length} operation${timeMin.length === 1 ? " listens" : "s listen"} to $TIME_IN_MIN`,
-      `in ${2 + 6e4 - now % 6e4} ms \u2014 the next minute boundary, so at most 60002 ms apart`,
+      `in ${Math.round(2 + 6e4 - now % 6e4)} ms \u2014 the next minute boundary, so at most 60002 ms apart`,
       timeMin.map((op) => describeOp(op, "reads timeInMin()"))
     );
     push(
@@ -11343,17 +11481,35 @@
   function textOf2(doc, id) {
     if (!doc || id === void 0 || id === null || id <= 0) return null;
     try {
+      const ctx = window.currentPlayer?.getRemoteContext?.();
+      const t = ctx && typeof ctx.getText === "function" ? ctx.getText(id) : null;
+      if (t) return t;
+    } catch (e) {
+    }
+    try {
       const t = typeof doc.getText === "function" ? doc.getText(id) : null;
+      if (t) return t;
+    } catch (e) {
+    }
+    try {
+      const ctx = window.currentPlayer?.getRemoteContext?.();
+      const t = ctx && typeof ctx.getText === "function" ? ctx.getText(id) : null;
       return t || null;
     } catch (e) {
       return null;
     }
   }
+  function visibilityIsVisible(v) {
+    if (typeof v !== "number") return true;
+    if (v >> 4 > 0) return (v & 32) === 32;
+    return v === 1;
+  }
   function buildAccessibilityTree(doc) {
     const nodes = [];
     if (!doc) return { nodes, documentDescription: null, hasSemantics: false };
     const root = getRootComponent(doc);
-    walkComponents(root, (comp, depth) => {
+    walkComponents(root, (comp, depth, path) => {
+      if (path && path.some((c) => !visibilityIsVisible(c.mVisibility))) return;
       const mods = modifiersOf(comp);
       const semantics = mods.filter((m) => opCodeOf4(m) === OP_SEMANTICS);
       const clickable = mods.some((m) => {
