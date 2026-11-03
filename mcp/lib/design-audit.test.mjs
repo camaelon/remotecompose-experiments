@@ -174,3 +174,41 @@ test("expandedFindings sees what only expansion reveals", () => {
     assert.ok(codes.includes("shadowed_function"));
     assert.deepEqual(expandedFindings(expanded, [{ code: "inline_visibility" }, { code: "shadowed_function" }]), []);
 });
+
+test("hidden_first_read: a tree variable first read inside a hideable component, read outside it too", () => {
+    const decl = (name, value) => ({ variable: { name, value } });
+    const draw = (v) => ({ drawCircle: { cx: v, cy: 10, radius: 5 } });
+    const hidden = (v) => ({ canvas: { modifiers: [{ size: [50, 50] }, { visibility: "@shown" }], commands: [draw(v)] } });
+    const visible = (v) => ({ canvas: { modifiers: [{ size: [50, 50] }], commands: [draw(v)] } });
+    const resources = { variables: { shown: 0 } };
+    const hit = (doc) => designAudit({ header, resources: doc.resources ?? resources, root: doc.root }).filter((f) => f.code === "hidden_first_read");
+    const t = decl("t", "continuousSec() * 10");
+
+    // Frozen (checked headless in the TS player: t never moved while the first canvas was hidden).
+    const [f] = hit({ root: { column: { children: [t, hidden("@t"), visible("@t")] } } });
+    assert.equal(f?.severity, "warning");
+    assert.match(f.title, /\bt inside a canvas with visibility "@shown"/);
+    assert.match(f.message, /"global"/);
+    // A stateLayout child that is not on show hides it the same way.
+    assert.equal(hit({ root: { column: { children: [t, { stateLayout: { indexId: "@shown", children: [{ box: { children: [visible("@t")] } }, visible("@t")] } }, visible("@t")] } } }).length, 1);
+    // Through another deferred variable: u is written inside the hidden canvas, and t with it.
+    assert.match(hit({ root: { column: { children: [t, decl("u", "@t * 2"), hidden("@u"), visible("@t")] } } })[0].title, /\bt inside/);
+
+    // Updated every frame: written up front, or first read where it is always shown.
+    assert.deepEqual(hit({ root: [t, { column: { children: [hidden("@t"), visible("@t")] } }] }), [], "a root-level variable");
+    assert.deepEqual(hit({ resources: { variables: { shown: 0, t: "continuousSec() * 10" } }, root: { column: { children: [hidden("@t"), visible("@t")] } } }), [], "resources.variables");
+    assert.deepEqual(hit({ root: [{ global: { children: [t] } }, { column: { children: [hidden("@t"), visible("@t")] } }] }), [], "a global block");
+    assert.deepEqual(hit({ root: { column: { children: [t, visible("@t"), hidden("@t")] } } }), [], "first read visible");
+    // Only read inside the hidden part: frozen only while nobody sees it.
+    assert.deepEqual(hit({ root: { column: { children: [t, hidden("@t"), visible(3)] } } }), []);
+    // Measured: a hidden text's own value and a hidden component's own modifiers go on updating;
+    // a text INSIDE a hidden box does not.
+    const tf = { type: "textFromFloat", value: "@t", whole: 3, decimal: 0 };
+    assert.deepEqual(hit({ root: { column: { children: [t, { text: { modifiers: [{ visibility: "@shown" }], text: tf } }, visible("@t")] } } }), [], "a hidden text's own value");
+    assert.deepEqual(hit({ root: { column: { children: [t, { box: { modifiers: [{ visibility: "@shown" }, { width: "@t" }] } }, visible("@t")] } } }), [], "a hidden box's own modifier");
+    assert.equal(hit({ root: { column: { children: [t, { box: { modifiers: [{ visibility: "@shown" }], children: [{ text: { text: tf } }] } }, visible("@t")] } } }).length, 1, "a text in a hidden box");
+    // A constant is not re-evaluated anyway.
+    assert.deepEqual(hit({ root: { column: { children: [decl("k", 4), hidden("@k"), visible("@k")] } } }), []);
+    // The visibility itself is read outside the component it hides.
+    assert.deepEqual(hit({ resources: {}, root: { column: { children: [decl("shown", "step(continuousSec() % 2, 1)"), hidden(1), visible("@shown")] } } }), []);
+});

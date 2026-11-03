@@ -552,6 +552,103 @@ function visibilityFindings(doc) {
     return out;
 }
 
+// A `variable` command inside the layout tree is deferred: json2rc (and the reference parser)
+// writes its expression where it is FIRST READ. When that reader is inside the content of a
+// component that can be hidden (the children or canvas commands of one with a visibility, a
+// stateLayout child), the expression sits there, and hidden content is not painted, so the
+// expression is not re-evaluated, whether time or a host value drives it (Android does the
+// same). Every other reader then sees a frozen value: a 3D engine's crank angle first read by a
+// flow diagram hidden behind the 3D view, and nothing moved. A root-level variable, one in
+// resources.variables or in a root "global" block is written up front and updates every frame.
+// Reads are followed through other deferred variables: a deferred variable's own references
+// are written where IT is written.
+function hiddenFirstReadFindings(doc) {
+    const deferred = new Map();   // name -> referenced names (its expression)
+    const refsOf = (v) => [...JSON.stringify(v ?? "").matchAll(/@([A-Za-z_]\w*)/g)].map((m) => m[1]);
+    const dynamic = (v) => {
+        const x = isObj(v) && "value" in v ? v.value : v;
+        return typeof x === "string" && !/^\s*-?\d*\.?\d+\s*$/.test(x);
+    };
+    // Pass 1: the deferred declarations (inside the tree, not in a global block, a dynamic float or int).
+    const collect = (x, depth, inGlobal) => {
+        if (Array.isArray(x)) { for (const y of x) collect(y, depth, inGlobal); return; }
+        if (!isObj(x)) return;
+        const v = x.variable;
+        if (isObj(v) && typeof v.name === "string" && depth > 0 && !inGlobal && !deferred.has(v.name)
+            && /^(float|int|integer|)$/i.test(String(v.vtype ?? "")) && dynamic(v.value)) deferred.set(v.name, refsOf(v.value));
+        for (const [k, y] of Object.entries(x)) collect(y, depth + 1, inGlobal || k === "global");
+    };
+    if (Array.isArray(doc.root)) for (const item of doc.root) collect(item, isObj(item) && "variable" in item ? 0 : 1, false);
+    else collect(doc.root, 1, false);
+    if (!deferred.size) return [];
+
+    // Pass 2: reads in document order, each with the stack of hideable components around it.
+    const hideables = [];          // id -> a short label
+    const written = new Map();     // name -> the stack where its expression is written
+    const reads = [];              // { name, stack }
+    const read = (name, stack) => {
+        reads.push({ name, stack });
+        if (!deferred.has(name) || written.has(name)) return;
+        written.set(name, stack);
+        for (const r of deferred.get(name)) if (r !== name) read(r, stack);
+    };
+    const walk = (x, stack) => {
+        if (Array.isArray(x)) { for (const y of x) walk(y, stack); return; }
+        if (typeof x === "string") { for (const r of refsOf(x)) read(r, stack); return; }
+        if (!isObj(x)) return;
+        if (isObj(x.variable) && typeof x.variable.name === "string" && deferred.has(x.variable.name)) return;
+        for (const [k, v] of Object.entries(x)) {
+            if (k === "resources" || k === "components") continue;
+            const kind = isObj(v) ? k : null;
+            const node = kind && isObj(v) ? v : null;
+            const mods = node && Array.isArray(node.modifiers) ? node.modifiers : null;
+            const vis = mods?.find((m) => isObj(m) && typeof m.visibility === "string");
+            // (Measured in the TS player: the component's own modifiers and its own text go on
+            // updating while it is hidden; its content, children and canvas commands, does not.)
+            let inner = stack;
+            if (vis) {
+                hideables.push(`a ${kind} with visibility ${JSON.stringify(vis.visibility)}`);
+                inner = [...stack, hideables.length - 1];
+            }
+            if (node && /^statelayout$/i.test(kind) && Array.isArray(node.children)) {
+                for (const [k2, v2] of Object.entries(node)) if (k2 !== "children") walk(v2, stack);
+                node.children.forEach((c, i) => {
+                    hideables.push(`child ${i} of a stateLayout`);
+                    walk(c, [...inner, hideables.length - 1]);
+                });
+                continue;
+            }
+            if (vis) {
+                for (const [k2, v2] of Object.entries(node)) walk(v2, k2 === "children" || k2 === "commands" ? inner : stack);
+                continue;
+            }
+            walk(v, stack);
+        }
+    };
+    walk(doc.root, []);
+
+    const hits = [];
+    for (const [name, stack] of written) {
+        if (!stack.length) continue;
+        const h = stack[stack.length - 1];
+        if (reads.some((r) => r.name === name && !r.stack.includes(h))) hits.push({ name, where: hideables[h] });
+    }
+    if (!hits.length) return [];
+    const byWhere = new Map();
+    for (const { name, where } of hits) byWhere.set(where, [...(byWhere.get(where) ?? []), name]);
+    const detail = [...byWhere].slice(0, 3).map(([w, ns]) => `${ns.slice(0, 8).join(", ")}${ns.length > 8 ? ", …" : ""} inside ${w}`).join("; ");
+    return [{
+        severity: "warning", code: "hidden_first_read",
+        title: `${hits.length} variable(s) first read inside hideable content, and read outside it too (${detail})`,
+        message: "A variable command inside the layout is written where it is FIRST read, here in the content (children or canvas commands) of a " +
+            "component that can be hidden; hidden content is not painted, so the expression is not re-evaluated (on Android too) and every other reader sees a value frozen " +
+            "while it is hidden: an animation that does not move, a value that does not follow a slider. Declare values shared by views that " +
+            "can be hidden up front: in a root {\"global\": {\"children\": [{\"variable\": ...}, ...]}} block (or resources.variables, or a " +
+            "variable command at the root level), which is re-evaluated every frame whatever is shown.",
+        count: hits.length,
+    }];
+}
+
 function layoutFindings(doc) {
     const out = [];
     const { canvases, layout } = scanLayout(doc);
@@ -1142,6 +1239,7 @@ export function designAudit(json) {
         ...colorFindings(doc),
         ...layoutFindings(doc),
         ...visibilityFindings(doc),
+        ...hiddenFirstReadFindings(doc),
         ...wrongKeyFindings(doc),
         ...svgPathFindings(doc),
         ...rootVariableFindings(doc),

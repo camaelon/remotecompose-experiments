@@ -357,6 +357,13 @@ Traps the library hit (the linter catches the first four):
   `{"value": "@target", "anim": 0.75}` whose target changes (Walkthrough's play ticks
   `floor(animationTime() * 2)` only while playing) — it repaints while it eases and goes idle
   when it settles. Keep `continuousSec()` for what never stops (a seconds hand).
+- A tree `variable` (an animated local) is written where it is first read. When that read is
+  inside hidden content (the children or canvas commands of a component with a visibility, a
+  stateLayout child not on show), the value stops updating while it is hidden, for every reader:
+  NavShell's eased selection is first read in the drawer, so at phone width (drawer hidden)
+  the bottom bar's highlight does not follow the tab. check_component reports it
+  (hidden_first_read). Read it first somewhere always shown, or put the hidden part after the
+  shown one.
 - Weights ignore `spacedBy`, in a row and in a column alike: with weighted children, use fixed spacer boxes between them.
 - `border` rounds only with `"shape": 2`; a `cornerRadius` alone draws a square border.
 - There are no colour expressions. To show a state colour, overlay two copies and fade one

@@ -367,6 +367,12 @@ Structure
   block's declarations before the root, but a name is resolved where the JSON READS it: put the block before its
   first reader (a canvas's commands come after its own modifiers, so the canvas holding the global cannot use it in
   its own semantics; use a size-0 canvas placed earlier), or the reader gets the literal "@name".
+- A value shared by views that can be hidden goes in that root "global" block (or resources.variables, or a variable
+  command at the root level), never in a variable command inside the layout. A variable command in the tree is
+  written where it is FIRST read; when that is inside hidden content (the children or canvas commands of a component
+  whose visibility is 0, a stateLayout child not on show), its expression is not re-evaluated while hidden (Android
+  does the same), so every other reader sees it frozen: a 3D engine whose crank angle was first read by a hidden
+  diagram never moved. Time-driven and host-driven values alike. The design warning hidden_first_read names them.
 - Smaller sizes: a widget is resized by its host. Drop content by priority with a collapsibleColumn inside a padded
   box: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers":
   ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [...]}}]}}, with
