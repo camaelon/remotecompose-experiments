@@ -280,22 +280,36 @@ Structure
   the SAME action name (five stars sending "rate" with their value): json2rc declares a shared name once before the
   tree. The reference Java parser does not (the second control would send a nameless action until the first is
   tapped, U58), so for a document that must also convert with it, give each control its own name.
-- Sound (a synthesised tone; experimental in androidx, needs the experimental profile bit, which "profiles": 513
-  has): declare it in resources.sounds, a json2rc extension (the reference JSON parser can only play an id):
-  {"tick": {"type": "tone", "frequency": 880, "duration": 0.05, "waveform": "sine"}} (Hz, seconds; waveform sine,
-  square, sawtooth or triangle; "volume" or "leftVolume"/"rightVolume" and "rate" default to 1 and are not used in
-  playback yet). Any of them may be a "@variable" or an expression: the player rebuilds the tone when it changes
-  ("frequency": "@pitch"). Play it with the canvas command {"playSound": {"id": "@tick"}}, inside a
-  conditionalOperations: it plays on EVERY frame its canvas paints while the condition holds, and each play
-  restarts the sound, so make the window short (a few frames). A beat: {"conditionalOperations": {"condition": "lt",
-  "v1": "abs(fract(continuousSec()) - 0.5)", "v2": 0.015, "commands": [{"playSound": {"id": "@tick"}}]}} (the canvas
-  must read the clock to keep painting). On a tap: the button stores the time, {"type": "valueFloatExpressionChange",
-  "target": "@tapT", "value": "timeInMin() * 60 + continuousSec() % 60"} ("tapT": -10 in resources.variables), and
-  the canvas plays while "abs(timeInMin() * 60 + continuousSec() % 60 - @tapT - 0.02)" is under 0.02. Use seconds of
-  the day, not continuousSec() alone: it wraps at the hour and the difference goes negative. Players: the
-  TypeScript player (playground, published pages) plays through Web Audio, after the visitor's first tap (browsers
-  block sound before a gesture); Android plays it with the experimental profile; render pictures and the C++ player
-  are silent: check with inspect (list_operations shows SoundExpression and PlaySound) and the playground.
+- Sound (synthesised; experimental in androidx, needs the experimental profile bit, which "profiles": 513 has).
+  Declare sounds in resources.sounds, a json2rc extension (the reference JSON parser can only play an id), then
+  play one on a tap: {"onClick": {"type": "playSound", "id": "@chime"}} (with other actions in a list). Kinds:
+  "tone" (the reference's, the only one Android plays today): {"type": "tone", "frequency": 880, "duration": 0.05,
+  "waveform": "sine"}. "synth" (TypeScript player only until it lands upstream; docs/SOUND_PROPOSAL.md): one note
+  with frequency, duration (held, before the release), waveform (sine, square, sawtooth, triangle, noise), attack,
+  decay, sustain (0..1), release (seconds), glideTo (Hz, over the duration), vibratoRate (Hz) and vibratoDepth
+  (semitones), pulseWidth (square, 0..1), cutoff (low-pass Hz), fmRatio and fmIndex (frequency modulation: bells,
+  chimes, metal; the index follows the envelope), echoDelay (s) and echoFeedback (0..0.95). Sustain 0 makes it
+  percussive: it rings through attack + decay whatever the duration. "sequence": a synth voice's notes mixed into one
+  sound, chords by overlapping: {"type": "sequence", "voice": "@bell", "bpm": 240, "notes": [[0, "E6", 0.2], [1,
+  "C6", 0.2], [2, "G5", 0.2], [3, "C6", 0.2, 0.8], [3, "E6", 0.2, 0.5]]} ([start, frequency or note name, duration,
+  gain?]; in beats with "bpm", else seconds; 15 notes at most; the voice declared before it). Frequencies take
+  note names ("A4" = 440, "C#5", "Eb3"). All kinds: "volume" (or "leftVolume"/"rightVolume", stereo when they
+  differ) and "rate" (speed: pitch and times) default to 1; a tone ignores them. Any value may be a "@variable"
+  or an expression: the sound is rebuilt when it changes ("frequency": "@pitch").
+  Recipes: bell {"type": "synth", "frequency": "A5", "attack": 0.002, "decay": 1.2, "sustain": 0, "release": 0.3,
+  "fmRatio": 3.5, "fmIndex": 4}; pluck sawtooth, decay 0.35, sustain 0, cutoff 2200; laser square 1600 gliding to
+  120 in 0.18 s; snare noise at 22050, decay 0.15, sustain 0, cutoff 5000; pad triangle, attack 0.15, release 0.5,
+  vibrato 5 Hz 0.3, echo 0.18 s 0.45.
+  On a beat or a condition instead of a tap: the canvas command {"playSound": {"id": "@tick"}} inside a
+  conditionalOperations. It plays on EVERY frame its canvas paints while the condition holds, each play restarting
+  the sound, so keep the window a few frames: {"conditionalOperations": {"condition": "lt", "v1":
+  "abs(fract(continuousSec()) - 0.5)", "v2": 0.015, "commands": [{"playSound": {"id": "@tick"}}]}} (the canvas must
+  read the clock to keep painting). For elapsed time use seconds of the day (timeInMin() * 60 + continuousSec() %
+  60): continuousSec() alone wraps at the hour. Players: the TypeScript player (playground, published pages) plays
+  through Web Audio after the visitor's first tap (browsers block sound before a gesture); Android plays tones
+  from a canvas, but not yet from a tap (PlaySound is not an action there) nor synth/sequence; render pictures and
+  the C++ player are silent: check with inspect (list_operations shows SoundExpression and PlaySound) and the
+  playground.
 - Scrolling: {"column": {"modifiers": ["fillMaxSize", {"verticalScroll": "@scroll"}], "children": [...]}} with
   "scroll": 0 in resources.variables (the scroll position; horizontalScroll likewise). A phone screen longer than its
   height scrolls; a widget never does (it drops or compacts content instead).
