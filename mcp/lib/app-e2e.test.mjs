@@ -77,6 +77,8 @@ test("app scripts: opt-in per account, then publish with a script", { skip: !exi
     assert.equal(r.isError, true);
     assert.match(r.content[0].text, /app scripts are off for your account/);
     assert.match((await c.call("reference", { topic: "app" })).content[0].text, /off for your account/);
+    assert.ok(!/App scripts are on/.test((await c.call("reference", {})).content[0].text), "no workflow step");
+    assert.ok(!/^\[app\]/m.test((await c.call("reference", { query: "save state between visits" })).content[0].text), "not searched");
     assert.match(await (await fetch(`${base}/account/`, { headers: { Cookie: `rc_session=${sid}` } })).text(), /id="scripts"[\s\S]*?Turn on/);
 
     // On.
@@ -85,7 +87,9 @@ test("app scripts: opt-in per account, then publish with a script", { skip: !exi
         body: new URLSearchParams({ csrf: csrfFor(sid), on: "1" }) })).status, 303);
     c = await connect();
     assert.deepEqual(offered(await c.tools()), { publish: true, app: true });
-    assert.match((await c.call("reference", { topic: "app" })).content[0].text, /declare const rc/);
+    assert.match((await c.call("reference", { topic: "app" })).content[0].text, /STRONGLY prefer a document without a script[\s\S]*declare const rc/);
+    assert.match((await c.call("reference", {})).content[0].text, /App scripts are on for you, and the default is still NO script[\s\S]*publish it with\s+script/, "the workflow's step");
+    assert.match((await c.call("reference", { query: "save state between visits localStorage" })).content[0].text, /^\[app\]/m, "searched");
 
     // A script that does not compile is refused; one with a typo publishes, with the warning.
     r = await c.call("publish", { json_path: "cart.json", script: "const x: number = ;" });

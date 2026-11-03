@@ -149,6 +149,19 @@ Look things up with find (examples, components, capabilities) and get; reference
 component authoring guide and full documentation for every tool. inspect answers questions
 about a document (layout, variables, accessibility, interactions, controls, bytes, runtime).`;
 
+// The workflow's step for callers with app scripts on: logic goes in a script, not the document.
+const WORKFLOW_APP = `
+App scripts are on for you, and the default is still NO script: we strongly prefer documents that stand alone.
+A script runs only on these web pages; on a device the document runs without it. So whatever the document can
+do itself stays in the document: values from the clock or the date, expressions over host variables and touch,
+counters and toggles (valueFloatExpressionChange), formatting (textFromFloat, textMerge), conditional colours and
+visibility, animation. Write a script only for what a document cannot do: data from outside (fetch), state kept
+between visits, or logic the real app would own (a catalogue's prices, a server's answer). Then the document
+declares the host variables it shows (with defaults, so it renders without the script) and sends a
+hostNamedAction for each thing it asks; the script sets the variables and answers the actions. publish it with
+script and fix its dry run's warnings. reference topic "app" has the API, the rules and an example.`;
+const appOn = () => scriptsAllowed(currentCall()?.account ?? null);
+
 const EXPRESSIONS = `Expressions (a string anywhere a number goes: "componentWidth() / 2", "@progress * 360")
 - Operators: + - * / % and unary -, with parentheses. Numbers are floats. There are NO comparison operators (no > < == ):
   a test is step(x, edge) (1 when x > edge) or ifElse(whenFalse, whenTrue, cond) — the CONDITION IS THE LAST ARGUMENT,
@@ -1333,7 +1346,7 @@ tools.push({
         };
     },
     handler: async ({ topic = "workflow", tool: name, query } = {}) => {
-        if (typeof query === "string" && query.trim()) return text(await searchReference(query));
+        if (typeof query === "string" && query.trim()) return text(await searchReference(query, { app: appOn() }));
         if (topic === "app") {
             const account = currentCall()?.account ?? null;
             return text(scriptsAllowed(account) ? APP_GUIDE : `${scriptsOffMessage(account)}. (App scripts: business logic next to a published document.)`);
@@ -1347,7 +1360,7 @@ tools.push({
             if (!list.length) throw new Error(`no tool '${name}'`);
             return text(list.map(describeTool).join("\n\n"));
         }
-        return text(WORKFLOW + "\n\nTools: " + tools.map((t) => t.name).join(", "));
+        return text(WORKFLOW + (appOn() ? "\n" + WORKFLOW_APP : "") + "\n\nTools: " + tools.map((t) => t.name).join(", "));
     },
 });
 
@@ -1392,11 +1405,12 @@ function guide3d() {
 }
 
 /** The reference's paragraphs that best match some words, across every topic. */
-async function searchReference(query) {
+async function searchReference(query, { app = false } = {}) {
     const guide = (await tool(examples, "component_authoring_guide").handler({})).map((c) => c.text ?? "").join("\n");
     // The library's components, one paragraph each: a kit's advice names them ("a TextChoice").
     const library = [...loadLibrary().components.values()].map((c) => `- ${c.component}: ${c.summary ?? ""} Call: ${JSON.stringify(c.call ?? {})}. Full details: get {"id": "${c.component}"}.`).join("\n\n");
-    const topics = { format: FORMAT, expressions: EXPRESSIONS, workflow: WORKFLOW, components: guide, library, "3d": guide3d(),
+    const topics = { format: FORMAT, expressions: EXPRESSIONS, workflow: WORKFLOW + (app ? "\n" + WORKFLOW_APP : ""), components: guide, library, "3d": guide3d(),
+        ...(app ? { app: APP_GUIDE } : {}),
         tools: tools.map(describeTool).join("\n\n") };
     const stem = (w) => w.toLowerCase().replace(/(ies)$/, "y").replace(/(es|s)$/, "");
     const words = [...new Set(String(query).toLowerCase().split(/[^a-z0-9$@#.]+/).filter((w) => w.length > 1).map(stem))];
@@ -1425,7 +1439,7 @@ async function searchReference(query) {
     // Two of the words when any paragraph has them, else any one.
     const need = scored.some((p) => p.hits >= Math.min(words.length, 2)) ? Math.min(words.length, 2) : 1;
     const best = scored.filter((p) => p.hits >= need).sort((a, b) => b.score - a.score).slice(0, 5);
-    if (!best.length) return `Nothing in the reference matches "${query}". Topics: format, expressions, components, workflow, tools.`;
+    if (!best.length) return `Nothing in the reference matches "${query}". Topics: format, expressions, components, workflow, tools${app ? ", app" : ""}.`;
     // (A tool schema paragraph can be long: the matching lines and a little around them.)
     // (A very long paragraph — a tool schema — is cut to a continuous window around its first
     // match: lines picked one by one read as garbled sentences.)

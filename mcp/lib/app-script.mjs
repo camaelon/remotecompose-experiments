@@ -392,7 +392,9 @@ declare const rc: {
 export const SCRIPT_PROPS = {
     script: {
         type: "string",
-        description: "An app script (TypeScript, one file, no imports): the business logic next to the document. It runs " +
+        description: "Leave it out unless the document cannot do the job alone: a script is the exception, and only these web pages run it " +
+            "(on a device the document runs without it). Anything expressions, actions and the clock can do stays in the document. " +
+            "An app script (TypeScript, one file, no imports): the business logic next to the document. It runs " +
             "in the viewer's browser, sandboxed, and drives the document through the global `rc`: rc.set(name, value) " +
             "for host variables, rc.onAction(name, fn) for the document's hostNamedActions, rc.get / rc.onChange for " +
             "values the document changes, rc.storage for state kept in the browser, fetch for public APIs. The document " +
@@ -404,7 +406,8 @@ export const SCRIPT_PROPS = {
 
 /** What a tool's description adds when scripts are on. */
 export const SCRIPT_NOTE = " With script (TypeScript), the page also runs an app script next to the document: host values, " +
-    "answers to its actions, state (reference topic \"app\"); the playground shows it (Script button) and its log (App panel).";
+    "answers to its actions, state (reference topic \"app\"); the playground shows it (Script button) and its log (App panel). " +
+    "Strongly prefer none: only for what the document cannot do itself (fetched data, state across visits, the app's own rules).";
 
 /** Why a script was refused: scripts are off for this caller. */
 export function scriptsOffMessage(account, accountUrl = "") {
@@ -421,6 +424,21 @@ A RemoteCompose document is the UX: what is shown, how it lays out, animates and
 is what the app around it would do: compute values, fetch data, keep state, and answer the document's actions.
 publish takes it as script (TypeScript, one file, no import/export). The page runs it in the viewer's browser,
 in a sandbox (an opaque origin: no cookies, no page access), against the playing document.
+
+First: do you need one? We STRONGLY prefer a document without a script. A script runs only on these web pages;
+on a phone, a watch or a widget the document runs on its own and the host app provides what a script did. So a
+document must work, and look right, with no script at all, and everything it can compute itself it computes
+itself. Much that looks like logic is not, and belongs in the document:
+- values from the clock and the calendar (countdowns, elapsed time, the day's progress, ages, "in 3 days");
+- arithmetic over host variables and touch (a total of quantities times prices the app sends, a percentage, a
+  unit conversion, a slider's value mapped to a label), as expressions or tree variables;
+- counters, toggles, steppers, selections: valueFloatExpressionChange on a variable ("@count + 1");
+- formatting: textFromFloat (decimals, padding), textMerge, TextChoice for words chosen by a number;
+- conditional colours, visibility and layout (step, ifElse, visibility variables), animation and easing.
+Write a script only for what a document cannot do: data from outside (fetch: weather, prices, a feed), state
+kept between visits (a cart, a score, settings), or a rule the real app would own (a catalogue's prices, a
+server's validation). When you do, keep it small: it provides values and answers actions; the document keeps
+every computation it can do.
 
 How they meet: through the document's named host variables and its host actions, nothing else.
 - Values the script provides: declare them in the document as host variables, exported, with a sensible
@@ -454,8 +472,9 @@ document's own value, with a stand-in rc and no network. It reports errors, rc.s
 variable the document lacks (with the nearest name), handlers for actions the document never sends, and actions
 nobody handles. Fix the warnings, then publish again.
 
-Example: a cart. The document has buttons sending hostNamedAction "add" (value "apple", "pear") and "clear", a text
-showing @summary (host string) and a total (host float). The script:
+Example: a cart kept between visits (state a document cannot keep, and prices the app owns). The document has
+buttons sending hostNamedAction "add" (value "apple", "pear") and "clear", a text showing @summary (host string)
+and a total (host float). The script:
 
 type Line = { name: string; price: number };
 const PRICES: Record<string, number> = { apple: 0.5, pear: 0.8 };
