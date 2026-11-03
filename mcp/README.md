@@ -158,7 +158,7 @@ Anyone who has that URL can use the server, so treat it like a password.
     (no token in it) → Connect: a window opens to sign in and Allow.
   - **ChatGPT**: Settings → Apps & Connectors → Advanced → Developer mode on, then Create:
     URL `https://<domain>/mcp`, authentication **OAuth** (it registers itself), then sign in and Allow.
-  - **Claude Code**: `claude mcp add --transport http remotecompose https://<domain>/mcp`, then
+  - **Claude Code**: `claude mcp add --transport http kobento https://<domain>/mcp`, then
     run `/mcp` in Claude Code and pick the server to authenticate in the browser.
   - Clients that take no OAuth still use a token: header, or `https://<domain>/mcp/<token>`.
   Env: `RC_PUBLIC_ORIGIN` (the public origin, set by setup.sh), `RC_MOUNT` (each server's

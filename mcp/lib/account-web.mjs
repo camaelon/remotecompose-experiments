@@ -295,7 +295,7 @@ function freshToken(req, fresh) {
 <code class="token" id="tok">${esc(t)}</code>
 <button type="button" class="link" data-copy="tok">Copy</button>
 <h3>Claude Code</h3>
-${snippet(`claude mcp add --transport http remotecompose ${url} --header "Authorization: Bearer ${t}"`)}
+${snippet(`claude mcp add --transport http kobento ${url} --header "Authorization: Bearer ${t}"`)}
 <h3>claude.ai (Settings → Connectors → Add custom connector) and ChatGPT (Settings → Apps &amp; Connectors, developer mode → Create; authentication: none)</h3>
 <p class="muted">These take only a URL: the token goes in its last segment. Treat the URL like a password.</p>
 ${snippet(`${url}/${t}`)}

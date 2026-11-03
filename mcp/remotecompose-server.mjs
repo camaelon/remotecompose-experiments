@@ -1459,7 +1459,7 @@ async function searchReference(query, { app = false } = {}) {
 }
 
 export const definition = {
-    name: "remotecompose",
+    name: "kobento",
     version: "1.0.0",
     instructions: WORKFLOW,
     tools,
