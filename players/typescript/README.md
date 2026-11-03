@@ -45,6 +45,27 @@ code --install-extension vscode-extension/rc-viewer-0.1.0.vsix
 See [BUILDING.md](BUILDING.md) for the per-deliverable walk-through and
 common-pitfall list.
 
+## Driving a document from an app: `createHostApi`
+
+A document is the UX; the app around it provides host values and answers its actions.
+`createHostApi(player)` (`RC.createHostApi` in the browser bundle,
+`src/web/HostApi.ts`) is that contract by name, what the MCP playground's panel does:
+
+```ts
+const host = RC.createHostApi(handle.player);
+host.variables();                       // { total: "float", summary: "string", accent: "color" }
+host.set("summary", "2 × apple");       // numbers, "#RRGGBB" / "#AARRGGBB", strings, number[]
+host.get("qty");                        // a value the document changed (an exported slider value)
+host.onAction("add", (value) => { … }); // a hostNamedAction the document sent ("*": any)
+host.onChange("qty", (value) => { … }); // a variable that changed, whoever changed it
+host.dispose();
+```
+
+It follows the player across document loads: what it set is applied to each new document
+and its listeners move over. The MCP server's published pages run an app script against it
+in a sandboxed iframe (`mcp/lib/app-script.mjs`); `tests/host_api_test.mjs` checks it
+headless.
+
 ## Layout
 
 ```
