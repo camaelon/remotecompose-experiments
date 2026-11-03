@@ -143,7 +143,7 @@ test("a database file: created, migrated once, shared by two handles", async () 
         const t = one.issueToken(a.id);
         const two = await openAccounts(file);   // another process, in effect
         assert.equal(two.authenticate(t.token).account.email, "f@example.com");
-        assert.equal(two.db.prepare("PRAGMA user_version").get().user_version, 7);
+        assert.equal(two.db.prepare("PRAGMA user_version").get().user_version, 8);
         assert.equal(two.db.prepare("PRAGMA journal_mode").get().journal_mode, "wal");
         assert.ok(existsSync(file));
         assert.equal(accountsEnabled({ RC_DB: file }), true, "on when the database exists");
@@ -266,7 +266,7 @@ test("migration from schema 1: existing accounts are grandfathered as verified",
                  PRAGMA user_version = 1;`);
         v1.close();
         const s = await openAccounts(file);
-        assert.equal(s.db.prepare("PRAGMA user_version").get().user_version, 7);
+        assert.equal(s.db.prepare("PRAGMA user_version").get().user_version, 8);
         const e = s.findAccount("early@example.com");
         assert.equal(e.status, "active");
         assert.equal(e.verified_at, "2026-01-01T00:00:00.000Z");
@@ -281,4 +281,99 @@ test("email verify switch and address normalising", () => {
     assert.equal(emailVerify({ RC_EMAIL_VERIFY: "off" }), false);
     assert.equal(Accounts.normalizeEmail(" A@B.co "), "a@b.co");
     assert.equal(Accounts.normalizeEmail("nope"), null);
+});
+
+test("name: a label (names may repeat), cleared only when nothing is posted", async () => {
+    const s = await fresh();
+    const a = s.createAccount({ email: "pa@example.com" });
+    const b = s.createAccount({ email: "pb@example.com" });
+    assert.equal(s.setName(a.id, "  Ada   Lovelace "), "Ada Lovelace");
+    assert.equal(s.getAccount(a.id).name, "Ada Lovelace");
+    assert.equal(s.setName(b.id, "ada lovelace"), "ada lovelace", "another account may have the same name");
+    assert.throws(() => s.setName(b.id, "x".repeat(41)), /at most 40/);
+    assert.throws(() => s.setName(b.id, "a\u200bb"), /invisible/);
+    assert.equal(s.setName(b.id, "<b>Émile</b>"), "<b>Émile</b>", "stored as typed; pages escape it");
+    s.recordPage({ id: "p".repeat(22), accountId: a.id, title: "Clock", url: "https://x/pages/p/" });
+    s.streamPost({ pageId: "p".repeat(22), account: s.getAccount(a.id), title: "My clock" });
+    assert.throws(() => s.setName(a.id, ""), /remove them first/);
+    assert.equal(s.setName(b.id, ""), "");
+});
+
+test("stream: post own pages under a name, sort by new or top, one vote per account", async () => {
+    const s = await fresh();
+    const a = s.createAccount({ email: "sa@example.com" });
+    const b = s.createAccount({ email: "sb@example.com" });
+    const c = s.createAccount({ email: "sc@example.com" });
+    const [p1, p2, p3] = ["1", "2", "3"].map((d) => d.repeat(22));
+    s.recordPage({ id: p1, accountId: a.id, title: "One", url: "https://x/pages/1/" });
+    s.recordPage({ id: p2, accountId: a.id, title: "Two", url: "https://x/pages/2/" });
+    s.recordPage({ id: p3, accountId: b.id, title: "Three", url: "https://x/pages/3/" });
+    assert.throws(() => s.streamPost({ pageId: p1, account: a, title: "One" }), /Set your name/);
+    s.setName(a.id, "Ann");
+    s.setName(b.id, "Bob");
+    assert.throws(() => s.streamPost({ pageId: p3, account: s.getAccount(a.id), title: "Not mine" }), /own pages/);
+    assert.throws(() => s.streamPost({ pageId: "9".repeat(22), account: s.getAccount(a.id), title: "x" }), /not published/);
+    assert.throws(() => s.streamPost({ pageId: p1, account: s.getAccount(a.id), title: "   " }), /name/);
+    s.streamPost({ pageId: p1, account: s.getAccount(a.id), title: "First" });
+    s.db.prepare("UPDATE stream SET created = ? WHERE page_id = ?").run("2026-01-01T00:00:00.000Z", p1);
+    s.streamPost({ pageId: p2, account: s.getAccount(a.id), title: "Second" });
+    s.db.prepare("UPDATE stream SET created = ? WHERE page_id = ?").run("2026-01-02T00:00:00.000Z", p2);
+    s.streamPost({ pageId: p3, account: s.getAccount(b.id), title: "Third" });
+    assert.deepEqual(s.streamItems().map((i) => i.title), ["Third", "Second", "First"]);
+    // Votes: +1 / -1, a second vote replaces the first, 0 takes it back.
+    assert.equal(s.vote(p1, b.id, 1), true);
+    assert.equal(s.vote(p1, c.id, 1), true);
+    assert.equal(s.vote(p2, b.id, -1), true);
+    assert.equal(s.vote(p2, b.id, 1), true);
+    assert.equal(s.vote(p3, c.id, -1), true);
+    assert.equal(s.vote("9".repeat(22), b.id, 1), false, "not in the stream");
+    assert.throws(() => s.vote(p1, b.id, 2), /\+1 or -1/);
+    const top = s.streamItems({ sort: "top", viewerId: b.id });
+    assert.deepEqual(top.map((i) => [i.title, i.score, i.ups, i.downs, i.my_vote]),
+        [["First", 2, 2, 0, 1], ["Second", 1, 1, 0, 1], ["Third", -1, 0, 1, 0]]);
+    assert.equal(top[0].author, "Ann");
+    assert.equal(top[0].url, "https://x/pages/1/");
+    s.vote(p1, c.id, 0);
+    assert.equal(s.streamItem(p1, c.id).score, 1);
+    assert.equal(s.streamItem(p1, c.id).my_vote, 0);
+    // Renaming keeps the votes; unpublishing a page takes it (and its votes) out.
+    s.streamPost({ pageId: p1, account: s.getAccount(a.id), title: "First, renamed" });
+    assert.equal(s.streamItem(p1).title, "First, renamed");
+    assert.equal(s.streamItem(p1).score, 1);
+    s.deletePage(p1);
+    assert.equal(s.streamItem(p1), null);
+    assert.equal(s.db.prepare("SELECT COUNT(*) AS n FROM votes WHERE page_id = ?").get(p1).n, 0);
+    assert.deepEqual(s.streamOf(a.id).map((i) => i.title), ["Second"]);
+    // The public name follows a rename.
+    s.setName(a.id, "Annie");
+    assert.equal(s.streamItem(p2).author, "Annie");
+});
+
+test("stream: a daily limit per account (admins exempt)", async () => {
+    const s = await fresh();
+    const a = s.createAccount({ email: "lim@example.com" });
+    s.setName(a.id, "Lim");
+    for (let i = 0; i < 11; i++) s.recordPage({ id: String(i).padStart(22, "x"), accountId: a.id, title: `P${i}` });
+    for (let i = 0; i < 10; i++) s.streamPost({ pageId: String(i).padStart(22, "x"), account: s.getAccount(a.id), title: `P${i}` });
+    assert.throws(() => s.streamPost({ pageId: "10".padStart(22, "x"), account: s.getAccount(a.id), title: "P10" }), /last day/);
+    s.streamPost({ pageId: "10".padStart(22, "x"), account: { ...s.getAccount(a.id), admin: true }, title: "P10" });
+    assert.equal(s.streamCount(), 11);
+});
+
+test("schema 8 migrates a version 7 database", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "rc-acc-"));
+    const file = path.join(dir, "rc.db");
+    try {
+        let s = await openAccounts(file);
+        const a = s.createAccount({ email: "old@example.com" });
+        // Back to 7: drop what 8 added.
+        s.db.exec("DROP TABLE stream; DROP TABLE votes; PRAGMA user_version = 7;");
+        s.close();
+        s = await openAccounts(file);
+        assert.equal(s.db.prepare("PRAGMA user_version").get().user_version, 8);
+        assert.equal(s.setName(a.id, "Old"), "Old");
+        assert.equal(s.getAccount(a.id).name, "Old");
+        assert.equal(s.streamCount(), 0);
+        s.close();
+    } finally { rmSync(dir, { recursive: true, force: true }); }
 });

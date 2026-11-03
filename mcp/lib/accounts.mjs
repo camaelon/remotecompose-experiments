@@ -21,7 +21,7 @@ import path from "node:path";
 import { deleteTraceImages } from "./trace-images.mjs";
 import { assignThreads } from "./threads.mjs";
 
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 // Session traces (calls.args / calls.result) are kept this long; the rows themselves stay.
 export const TRACE_DAYS = 30;
 // OAuth (lib/oauth.mjs): authorization codes, access and refresh tokens.
@@ -33,6 +33,8 @@ export const SIGNIN_TTL_MS = 15 * 60_000;
 const PENDING_DAYS = 7;
 const SESSION_DAYS = 30;
 const LAST_USED_EVERY_MS = 60_000;
+/** Items an account may post to the stream in a day (RC_STREAM_PER_DAY). */
+const STREAM_PER_DAY = Number(process.env.RC_STREAM_PER_DAY ?? 10);
 
 const sha256 = (s) => createHash("sha256").update(String(s)).digest("hex");
 const now = () => new Date().toISOString();
@@ -173,7 +175,20 @@ export class Accounts {
                 ALTER TABLE calls ADD COLUMN touched TEXT;
             `);
         }
-        // (Later migrations: `if (v < 8) { ... }`, then bump SCHEMA_VERSION.)
+        if (v < 8) {
+            // The stream (lib/stream-web.mjs): the pages posted to it under a name (shown with the
+            // account's name), and one vote (+1 or -1) per account per item.
+            this.db.exec(`
+                CREATE TABLE IF NOT EXISTS stream (
+                    page_id TEXT PRIMARY KEY, account_id INTEGER NOT NULL, title TEXT NOT NULL, created TEXT NOT NULL);
+                CREATE INDEX IF NOT EXISTS stream_created ON stream(created);
+                CREATE INDEX IF NOT EXISTS stream_account ON stream(account_id);
+                CREATE TABLE IF NOT EXISTS votes (
+                    page_id TEXT NOT NULL, account_id INTEGER NOT NULL, value INTEGER NOT NULL CHECK (value IN (-1, 1)),
+                    created TEXT NOT NULL, PRIMARY KEY (page_id, account_id));
+            `);
+        }
+        // (Later migrations: `if (v < 9) { ... }`, then bump SCHEMA_VERSION.)
         if (v < SCHEMA_VERSION) this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
     }
 
@@ -666,7 +681,102 @@ export class Accounts {
         return r ? r.account_id : null;
     }
 
-    deletePage(id) { this.db.prepare("DELETE FROM pages WHERE id = ?").run(String(id)); }
+    deletePage(id) {
+        this.db.prepare("DELETE FROM pages WHERE id = ?").run(String(id));
+        this.streamRemove(id);
+    }
+
+    // --- public name and the stream
+
+    /**
+     * The account's name: a label shown with what it posts to the stream (the account itself is
+     * its id, tied to its email, so names may repeat). Throws a message meant for the person.
+     * Spaces are collapsed; 1-40 characters, no control characters. Empty clears it, only while
+     * nothing is in the stream.
+     */
+    setName(accountId, name) {
+        name = String(name ?? "").normalize("NFC").replace(/\s+/g, " ").trim();
+        if (!name) {
+            if (this.streamOf(accountId).length) throw new Error("Your items in the stream show your name: remove them first, or choose another name.");
+            this.db.prepare("UPDATE accounts SET name = '' WHERE id = ?").run(accountId);
+            return "";
+        }
+        if (name.length > 40) throw new Error("A name is at most 40 characters.");
+        if (/[\p{Cc}\p{Cf}]/u.test(name)) throw new Error("A name cannot contain control or invisible characters.");
+        this.db.prepare("UPDATE accounts SET name = ? WHERE id = ?").run(name, accountId);
+        return name;
+    }
+
+    /**
+     * Posts a page to the stream under `title` (or renames it there). The page must be the
+     * account's (admins may post any) and the account needs a public name; throws a message.
+     */
+    streamPost({ pageId, account, title }) {
+        pageId = String(pageId ?? "");
+        const owner = this.pageOwner(pageId);
+        if (owner == null) throw new Error("That page is not published (or was unpublished).");
+        if (owner !== account.id && !account.admin) throw new Error("You can only post your own pages.");
+        if (!this.getAccount(account.id)?.name) throw new Error("Set your name first: it is shown with what you post.");
+        title = String(title ?? "").normalize("NFC").replace(/\s+/g, " ").trim().slice(0, 80);
+        if (!title) throw new Error("Give the item a name.");
+        const existing = this.db.prepare("SELECT page_id FROM stream WHERE page_id = ?").get(pageId);
+        if (existing) {
+            this.db.prepare("UPDATE stream SET title = ? WHERE page_id = ?").run(title, pageId);
+            return;
+        }
+        const recent = this.db.prepare("SELECT COUNT(*) AS n FROM stream WHERE account_id = ? AND created > ?")
+            .get(owner, new Date(Date.now() - 86400_000).toISOString()).n;
+        if (recent >= STREAM_PER_DAY && !account.admin) throw new Error(`You posted ${STREAM_PER_DAY} items in the last day: try again tomorrow.`);
+        this.db.prepare("INSERT INTO stream (page_id, account_id, title, created) VALUES (?, ?, ?, ?)").run(pageId, owner, title, now());
+    }
+
+    /** Takes a page out of the stream, with its votes. */
+    streamRemove(pageId) {
+        this.db.prepare("DELETE FROM stream WHERE page_id = ?").run(String(pageId));
+        this.db.prepare("DELETE FROM votes WHERE page_id = ?").run(String(pageId));
+    }
+
+    /** One stream item (with its poster's name as `author`, and its score), or null. */
+    streamItem(pageId, viewerId = null) {
+        return this.#streamRows("WHERE s.page_id = ?", [String(pageId)], viewerId, "s.created DESC", 1)[0] ?? null;
+    }
+
+    /** The stream: sort "new" (newest first) or "top" (score, then newest); `viewerId` adds each item's my_vote. */
+    streamItems({ sort = "new", viewerId = null, limit = 200, offset = 0 } = {}) {
+        const order = sort === "top" ? "score DESC, s.created DESC" : "s.created DESC";
+        return this.#streamRows("", [], viewerId, order, limit, offset);
+    }
+
+    streamCount() { return this.db.prepare("SELECT COUNT(*) AS n FROM stream").get().n; }
+
+    /** The account's items in the stream, newest first. */
+    streamOf(accountId) {
+        return this.#streamRows("WHERE s.account_id = ?", [accountId], null, "s.created DESC", 1000);
+    }
+
+    #streamRows(where, args, viewerId, order, limit, offset = 0) {
+        return this.db.prepare(`
+            SELECT s.page_id, s.account_id, s.title, s.created, a.name AS author, p.url,
+                COALESCE(SUM(v.value), 0) AS score, COALESCE(SUM(v.value = 1), 0) AS ups, COALESCE(SUM(v.value = -1), 0) AS downs,
+                (SELECT value FROM votes WHERE page_id = s.page_id AND account_id = ?) AS my_vote
+            FROM stream s JOIN accounts a ON a.id = s.account_id LEFT JOIN pages p ON p.id = s.page_id
+            LEFT JOIN votes v ON v.page_id = s.page_id
+            ${where} GROUP BY s.page_id ORDER BY ${order} LIMIT ? OFFSET ?`)
+            .all(viewerId ?? -1, ...args, Math.max(1, Math.min(1000, limit)), Math.max(0, offset))
+            .map((r) => ({ ...r, my_vote: r.my_vote ?? 0 }));
+    }
+
+    /** The account's vote on an item: 1, -1, or 0 to take it back. False when the item is not in the stream. */
+    vote(pageId, accountId, value) {
+        pageId = String(pageId ?? "");
+        value = Number(value);
+        if (![1, -1, 0].includes(value)) throw new Error("A vote is +1 or -1 (0 takes it back).");
+        if (!this.db.prepare("SELECT 1 FROM stream WHERE page_id = ?").get(pageId)) return false;
+        if (value === 0) this.db.prepare("DELETE FROM votes WHERE page_id = ? AND account_id = ?").run(pageId, accountId);
+        else this.db.prepare(`INSERT INTO votes (page_id, account_id, value, created) VALUES (?, ?, ?, ?)
+            ON CONFLICT (page_id, account_id) DO UPDATE SET value = excluded.value, created = excluded.created`).run(pageId, accountId, value, now());
+        return true;
+    }
 }
 
 function parseJson(s) {

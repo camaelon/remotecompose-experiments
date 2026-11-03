@@ -83,7 +83,7 @@ test("schema 4 migration from 3, and the 30-day retention of trace bodies", asyn
         s.db.prepare("INSERT INTO calls (ts, account_id, server, tool, ms, ok, summary) VALUES ('2026-01-01T00:00:00.000Z', 1, 's', 't', 1, 1, 'kept')").run();
         s.close();
         const m = await openAccounts(file);
-        assert.equal(m.db.prepare("PRAGMA user_version").get().user_version, 7);
+        assert.equal(m.db.prepare("PRAGMA user_version").get().user_version, 8);
         const cols = m.db.prepare("PRAGMA table_info(calls)").all().map((c) => c.name);
         assert.ok(["client", "args", "result"].every((c) => cols.includes(c)));
         m.recordCall({ accountId: 1, server: "s", tool: "old", ms: 1, ok: true, client: "c1", args: '{"a":1}', result: "x", summary: "old one", ts: "2020-01-01T00:00:00.000Z" });

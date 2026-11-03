@@ -543,6 +543,8 @@ ${usage.errors.map((e) => `<tr><td>${esc(day(e.ts))}</td><td>${esc(e.server)} ·
 ${sessionsTable(store.sessions(acct.id, { limit: 10 }), (c) => `sessions/${encodeURIComponent(c)}`)}
 <p style="margin-top:8px"><a href="sessions/">All sessions</a></p>
 </section>`,
+        namePanel(acct, csrf),
+        streamPanel(store, acct, csrf),
         `<section class="panel"><h2>Your published pages</h2>
 ${pages.length ? `${pageCards(publishedCards(store, acct.id))}<p class="muted" style="margin-top:10px">Anyone with a page's link can open it; the links are unguessable and listed only here. Take one down with the pages / unpublish_page tool.</p>`
             : `<p class="muted">None yet. Pages you publish with the publish (or package_web) tool are listed here.</p>`}
@@ -550,6 +552,36 @@ ${pages.length ? `${pageCards(publishedCards(store, acct.id))}<p class="muted" s
         acct.admin ? adminPanel(store, csrf) : "",
     ].join("\n");
     return body;
+}
+
+/** The account's name: shown with what it posts to the stream. */
+function namePanel(acct, csrf) {
+    return `<section class="panel" id="name"><h2>Name</h2>
+<p class="muted">Shown with the items you post to the <a href="../stream/">stream</a> (your email never is). ${acct.name ? "" : "You have none yet: set one to post."}</p>
+<form class="row" method="post" action="name">${csrf}<label class="f">Your name<input type="text" name="name" maxlength="40" value="${esc(acct.name ?? "")}" placeholder="e.g. Ada, studio-k" ${acct.name ? "" : "required"}></label><button class="btn" type="submit">${acct.name ? "Change" : "Set"}</button></form>
+</section>`;
+}
+
+/** Each published page: post it to the stream under a name, rename it there, or take it out. */
+function streamPanel(store, acct, csrf) {
+    const pages = store.pagesOf(acct.id);
+    const posted = new Map(store.streamOf(acct.id).map((i) => [i.page_id, i]));
+    const rows = pages.map((pg) => {
+        const it = posted.get(pg.id);
+        const name = it?.title ?? pg.title ?? "";
+        const open = pg.url ? `<a href="${esc(pg.url)}">${esc(pg.title || pg.id)}</a>` : esc(pg.title || pg.id);
+        const form = `<form class="row" method="post" action="stream" style="margin:0">${csrf}<input type="hidden" name="page_id" value="${esc(pg.id)}">
+<label class="f">Name in the stream<input type="text" name="title" maxlength="80" value="${esc(name)}" required></label>
+<button class="btn" type="submit"${acct.name ? "" : " disabled"}>${it ? "Rename" : "Post to the stream"}</button></form>`;
+        const state = it ? `<span class="pill">in the stream</span> <span class="muted">score ${it.score} (+${it.ups} / −${it.downs}) · since ${esc(day(it.created).slice(0, 10))}</span>
+<form class="inline" method="post" action="stream/${esc(pg.id)}/remove">${csrf}<button class="link danger" type="submit">Remove from the stream</button></form>` : `<span class="muted">not in the stream</span>`;
+        return `<tr><td class="w">${open}<br>${state}</td><td>${form}</td></tr>`;
+    }).join("\n");
+    return `<section class="panel" id="stream"><h2>Stream</h2>
+<p class="muted">The <a href="../stream/">stream</a> shows the pages people chose to share: anyone can open them, and signed-in people vote on them. Your pages stay unlisted until you post them here.${acct.name ? "" : ' <b>Set your <a href="#name">name</a> first.</b>'}</p>
+${pages.length ? `<div class="wrap"><table><thead><tr><th>Page</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+        : `<p class="muted">You have no published pages yet. Publish one with the publish (or package_web) tool; it then shows up here.</p>`}
+</section>`;
 }
 
 function adminPanel(store, csrf) {
@@ -795,7 +827,21 @@ export async function accountRoute(req, url, res, site) {
         const fresh = store.issueToken(acct.id, label);
         return render(200, { acct, sid, fresh });
     }
-    let m = /^\/account\/apps\/(\d+)\/revoke$/.exec(p);
+    if (p === "/account/name") {
+        try { store.setName(acct.id, form.get("name")); } catch (e) { return render(400, { acct, sid, error: e.message }); }
+        return redirect(res, "./#name");
+    }
+    if (p === "/account/stream") {
+        try { store.streamPost({ pageId: form.get("page_id"), account: acct, title: form.get("title") }); } catch (e) { return render(400, { acct, sid, error: e.message }); }
+        return redirect(res, "./#stream");
+    }
+    let m = /^\/account\/stream\/([A-Za-z0-9_-]{22})\/remove$/.exec(p);
+    if (m) {
+        const it = store.streamItem(m[1]);
+        if (it && (it.account_id === acct.id || acct.admin)) store.streamRemove(m[1]);
+        return redirect(res, "../../#stream");
+    }
+    m = /^\/account\/apps\/(\d+)\/revoke$/.exec(p);
     if (m) {
         store.revokeGrant(Number(m[1]), acct.id);
         return redirect(res, "../../");

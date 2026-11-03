@@ -27,6 +27,7 @@
 //   GET|POST <base>/account/...  accounts, tokens, usage, published pages (lib/account-web.mjs),
 //                               when accounts are on (lib/accounts.mjs)
 //   GET|POST <base>/oauth/...    the OAuth authorization server for every MCP server (lib/oauth.mjs)
+//   GET|POST <base>/stream/...   published pages their owners shared, with votes (lib/stream-web.mjs)
 // <base> is wherever the reverse proxy mounts the server (/examples/ on the VPS); every link is
 // relative, so the pages work under any prefix.
 
@@ -42,6 +43,7 @@ import { compileComponents, jsonToRc } from "./json2rc.mjs";
 import { STRUCTURES } from "./structures.mjs";
 import { thumbnail } from "./thumbs.mjs";
 import { accountRoute } from "./account-web.mjs";
+import { streamRoute } from "./stream-web.mjs";
 import { oauthRoute } from "./oauth.mjs";
 import { accountsEnabled, requestAccount } from "./accounts.mjs";
 
@@ -340,7 +342,7 @@ const MARK = `<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="
 function siteNav(current) {
     const items = [["home", `${MARK}Kobento`, ""], ["showcases", "Showcases", "showcases/"], ["components", "Components", "components/"],
         ["advanced", "Advanced", "advanced/"], ["layouts", "Layouts", "layouts/"], ["structures", "Structures", "structures/"],
-        ["demos", "Demos", "demos/"], ...(accountsEnabled() ? [["account", "Account", "account/"]] : [])];
+        ["demos", "Demos", "demos/"], ...(accountsEnabled() ? [["stream", "Stream", "stream/"], ["account", "Account", "account/"]] : [])];
     return items.map(([k, label, href]) =>
         `<a href="${current === "home" ? (href || "./") : "../" + (href || "")}"${current === k ? ' aria-current="page"' : ""}${k === "home" ? ' class="brand"' : ""}${k === "account" ? ' class="end"' : ""}>${label}</a>`).join("");
 }
@@ -659,6 +661,7 @@ export async function publicRoute(req, url, res) {
         return send(req, res, 200, "text/javascript; charset=utf-8", player.code, { "Cache-Control": "public, max-age=31536000, immutable" });
     }
     if (await accountRoute(req, url, res, { css: CSS, nav: siteNav })) return true;
+    if (await streamRoute(req, url, res, { css: CSS, nav: siteNav, fonts: FONTS })) return true;
     // The generated corpus (eval runs: unreviewed screens built by assistants) is for admins
     // when accounts are on; without accounts (local use) everyone sees it.
     const seesGenerated = async () => !accountsEnabled() || Boolean((await requestAccount(req).catch(() => null))?.admin);
