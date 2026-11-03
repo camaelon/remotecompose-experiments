@@ -67,7 +67,8 @@
   "Mono themes have no motion: s is @selected, the underline, the pill and the highlight jump",
   "Show the matching panel with the same alpha expression on stacked panels (or visibility); the tab bar does not switch content by itself",
   "`onClick` actions are appended to every tab's click list, after the valueFloatChange: a hostNamedAction carrying \"@sel\" (valueType float) sends the tapped index, and tapping the selected tab again sends it too. valueType is a json2rc extension: the Java JSON parser does not write the value",
-  "Accessibility: each tab carries its label (contentDescription), the state (stateDescription, Selected or Not selected) and the click; the whole 48 dp height of each tab is the touch target. The state is cut from \"Not selectedSelected    \" by textSubtext at 12 * (1 - min(1, abs(@selected - i))) and trimmed (as in Chip), in the global section of a 0-size canvas at the head of the bar, so it follows a bound variable at run time. About 120 B per tab, and the named text ops keep the call from compiling to a pattern"
+  "Accessibility: each tab carries its label (contentDescription), the state (stateDescription, Selected or Not selected) and the click; the whole 48 dp height of each tab is the touch target. The state is cut from \"Not selectedSelected    \" by textSubtext at 12 * (1 - min(1, abs(@selected - i))) and trimmed (as in Chip), in the global section of a 0-size canvas at the head of the bar, so it follows a bound variable at run time. About 120 B per tab, and the named text ops keep the call from compiling to a pattern",
+  "Segmented: each tab's tap area is the inset pill (padding 4, clip 20), so the press ripple stays inside the pill's rounded shape."
  ],
  "body": {
   "box": {
@@ -201,6 +202,17 @@
             "weight": 1
            },
            "fillMaxHeight",
+           {
+            "$if": "style == 'segmented'",
+            "then": [
+             {
+              "padding": 4
+             },
+             {
+              "clip": 20
+             }
+            ]
+           },
            {
             "semantics": {
              "contentDescription": "@label",

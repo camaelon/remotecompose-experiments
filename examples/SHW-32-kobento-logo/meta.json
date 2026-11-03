@@ -1,0 +1,615 @@
+{
+ "id": "SHW-32",
+ "name": "kobento-logo",
+ "version": 1,
+ "title": "Animated Kobento logo for a website header",
+ "summary": "The Kobento mark and wordmark as a wide header that tells the brand in about three seconds: four rounded tiles pop into a 2x2 grid one after another with an overshoot, turn into small UI parts (an image tile, two text lines, a toggle whose knob slides, a round play button) while the mark slides left, the wordmark rises letter by letter out of a slot on its baseline, and the parts fold back into the clean mark. Then it rests: no repaint until a tap replays it. The wordmark is drawn from strokes and arcs (a heavy geometric sans), so it looks the same in every player. Light (paper), dark (deep ink, paper wordmark) and two still mono looks with outlined tiles. About 6.2 KB.",
+ "prompt": "Build an animated Kobento logo for the header of the website: the four coloured tiles of the mark pop in, turn into little UI parts for a moment, settle back, and the word Kobento appears beside them; then it rests, and a tap replays it. Wide header, light, dark and mono looks.",
+ "level": 4,
+ "family": "SHW",
+ "hand_built": "A logo is drawing, not layout: one canvas scaled to fit, tiles as eased round rects and the wordmark as stroked lines and arcs, so no font is needed",
+ "capabilities": {
+  "primary": [
+   "anim.stagger",
+   "time.animation",
+   "anim.value"
+  ],
+  "secondary": [
+   "draw.shapes",
+   "draw.arc",
+   "draw.stroke",
+   "draw.transform",
+   "draw.clip",
+   "draw.path",
+   "input.press",
+   "expr.math"
+  ]
+ },
+ "use_cases": [
+  "onboarding",
+  "loading-state",
+  "generative-art"
+ ],
+ "form_factor": "widget-4x1",
+ "keywords": [
+  "logo",
+  "animated logo",
+  "logo animation",
+  "brand",
+  "brand mark",
+  "wordmark",
+  "kobento",
+  "bento",
+  "bento box",
+  "header",
+  "website header",
+  "hero",
+  "landing page",
+  "splash",
+  "intro animation",
+  "tiles",
+  "2x2 grid",
+  "pop in",
+  "overshoot",
+  "back easing",
+  "staggered",
+  "ui parts",
+  "toggle",
+  "play button",
+  "replay on tap",
+  "heavy geometric sans",
+  "stroke lettering"
+ ],
+ "teaches": [
+  "One clock for the whole story: e = animationTime() - @tapAt; every phase is a clamped ramp min(max((e - start) / duration, 0), 1) shaped by a back-out (1 + 2.70158 p^3 + 1.70158 p^2 with p = ramp - 1) for the pops and smoothstep (x^2 (3 - 2x)) for the morphs and the slide",
+  "Rest after the intro: an animated value run = {\"value\": \"@tc\", \"anim\": 3.5}, read by e as 0 * @run, asks for a repaint every frame while it animates: for 3.5 s after the document appears (an animated expression counts from its first evaluation) and for 3.5 s after each tap (tc + 1). Then nothing asks and the header is idle",
+  "Replay on tap without a ripple: onTouchDown sets tapAt = animationTime() (restarting every ramp) and tc = tc + 1 (restarting the frames); onClick would ripple over the logo",
+  "Shapes that become other shapes by interpolating their numbers: the blue tile is two round rects that start on top of each other and part into two text bars, the green one shrinks to a pill with a sliding knob, the orange corner radius grows to half the side (a circle) under a play triangle",
+  "A wordmark without fonts: each letter is butt-capped strokes (lines, a circle, arcs) 15 units wide on a 62-unit x-height; the K's diagonals run past the cap and base lines and a clipRect cuts them flat, as in a type design",
+  "The header is a 720 x 220 sheet scaled by min(W / 720, H / 220) and centred, so it reads the same from 360 x 160 to 1600 x 400",
+  "Four looks: themed page, ink and tile colours for light and dark; {\"$if\": \"theme.mono\"} forks give outlined tiles in onSurface and pin e at 10 (the settled state, no motion)"
+ ],
+ "pitfalls": [
+  "Canvas text has no font weight and its face differs between players (Skia default vs the browser's sans-serif): a logo wordmark drawn as text would not match the brand, strokes do",
+  "An onClick on the canvas paints a ripple in every player (U29); a logo replay uses onTouchDown instead",
+  "wakeIn cannot be used to stop: the players keep the smallest wake ever requested (RemoteComposeState.wakeIn only lowers mRepaintSeconds once a repaint was scheduled, as upstream Java does), so \"0.016 + 3600 * step(e, 3.4)\" keeps repainting at 60 fps forever. A NaN resets it but then no later wakeIn takes. An animated value's own repaint request is what ends",
+  "players/typescript/render.mjs cannot pin animationTime: TimeVariables reads performance.now(), so the frames it renders all sit at t = 0 (a blank intro frame). Drive performance.now to render a mid-animation frame in TS",
+  "Keep stroke joins overlapping by a unit or two (the n's right stem starts above the end of its arch): butt ends that only touch leave a hairline seam when the header is scaled"
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": "animationTime drives the intro (0 to 3.5 s after load or a tap); nothing runs afterwards",
+  "touch": true
+ },
+ "check": {
+  "describe": "Settled (t = 4 s), light: an off-white paper page, the Kobento mark (lavender, blue, green and orange rounded squares in a 2x2 grid) left of a heavy dark-ink geometric wordmark Kobento, the pair centred. pop (0.4 s): lavender tile landed, blue overshooting, orange just appearing, no green, mark centred alone. parts (1.2 s): all four tiles in, a faint image glyph starting on the lavender one. ui (1.8 s): the parts: a white mountains-and-sun image glyph on lavender, blue split into two bars, green a pill with a white knob sliding, orange a circle with a white play triangle, the mark sliding left. word (2.4 s): mark at its place, K-o-b-e up, n rising out of the baseline slot, t and o still hidden below it. Dark: deep ink page, same tiles, paper-coloured wordmark. Mono dark and mono light: outlined tiles and the wordmark in white on black or black on white, settled. narrow 360x160 and wide 1600x400: the same composition scaled.",
+  "render": {
+   "animation_time": 4,
+   "clock": "2026-11-02T20:30:00",
+   "theme": "light"
+  },
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light",
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "dark",
+    "theme": "dark",
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light",
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "pop",
+    "theme": "light",
+    "animation_time": 0.4,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "parts",
+    "theme": "light",
+    "animation_time": 1.2,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "ui",
+    "theme": "dark",
+    "animation_time": 1.8,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "word",
+    "theme": "light",
+    "animation_time": 2.4,
+    "clock": "2026-11-02T20:30:00"
+   },
+   {
+    "name": "narrow",
+    "theme": "light",
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00",
+    "width": 360,
+    "height": 160
+   },
+   {
+    "name": "narrow-ui",
+    "theme": "light",
+    "animation_time": 1.8,
+    "clock": "2026-11-02T20:30:00",
+    "width": 360,
+    "height": 160
+   },
+   {
+    "name": "wide",
+    "theme": "dark",
+    "animation_time": 4,
+    "clock": "2026-11-02T20:30:00",
+    "width": 1600,
+    "height": 400
+   },
+   {
+    "name": "wide-ui",
+    "theme": "light",
+    "animation_time": 1.8,
+    "clock": "2026-11-02T20:30:00",
+    "width": 1600,
+    "height": 400
+   }
+  ]
+ },
+ "related": [
+  "SHW-26",
+  "ANM-03",
+  "ANM-12",
+  "ANM-02"
+ ],
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 6247,
+  "header": {
+   "width": 960,
+   "height": 260
+  },
+  "op_count": 264,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 85,
+   "CLIP_RECT": 2,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 1,
+   "DRAW_ARC": 3,
+   "DRAW_CIRCLE": 5,
+   "DRAW_LINE": 10,
+   "DRAW_PATH": 2,
+   "DRAW_ROUND_RECT": 6,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 14,
+   "MATRIX_RESTORE": 15,
+   "MATRIX_SAVE": 15,
+   "MATRIX_SCALE": 6,
+   "MATRIX_TRANSLATE": 13,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_TOUCH_DOWN": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 7,
+   "PAINT_VALUES": 13,
+   "PATH_DATA": 2,
+   "THEME": 21,
+   "ValueFloatExpressionChangeActionOperation": 2
+  },
+  "host_variables": [
+   {
+    "name": "blue",
+    "type": "color",
+    "value": "#FF409BF0"
+   },
+   {
+    "name": "glyph",
+    "type": "color",
+    "value": "#FFFFFFFF"
+   },
+   {
+    "name": "green",
+    "type": "color",
+    "value": "#FF36C495"
+   },
+   {
+    "name": "ink",
+    "type": "color",
+    "value": "#FFF8F7F3"
+   },
+   {
+    "name": "lav",
+    "type": "color",
+    "value": "#FFA27BE5"
+   },
+   {
+    "name": "orange",
+    "type": "color",
+    "value": "#FFF6A525"
+   },
+   {
+    "name": "page",
+    "type": "color",
+    "value": "#FF121722"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: repaint_continuous"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 5555,
+    "component_modes": {},
+    "motion_removed": 1,
+    "op_count": 211,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "blue",
+      "type": "color",
+      "value": "#FF409BF0"
+     },
+     {
+      "name": "glyph",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "green",
+      "type": "color",
+      "value": "#FF36C495"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FFF8F7F3"
+     },
+     {
+      "name": "lav",
+      "type": "color",
+      "value": "#FFA27BE5"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "orange",
+      "type": "color",
+      "value": "#FFF6A525"
+     },
+     {
+      "name": "page",
+      "type": "color",
+      "value": "#FF121722"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 5555,
+    "component_modes": {},
+    "motion_removed": 1,
+    "op_count": 211,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "blue",
+      "type": "color",
+      "value": "#FF409BF0"
+     },
+     {
+      "name": "glyph",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "green",
+      "type": "color",
+      "value": "#FF36C495"
+     },
+     {
+      "name": "ink",
+      "type": "color",
+      "value": "#FF161C29"
+     },
+     {
+      "name": "lav",
+      "type": "color",
+      "value": "#FFA27BE5"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "orange",
+      "type": "color",
+      "value": "#FFF6A525"
+     },
+     {
+      "name": "page",
+      "type": "color",
+      "value": "#FFF8F7F3"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "pop": {
+    "theme": "light",
+    "render": "render-pop.png",
+    "render_findings": []
+   },
+   "parts": {
+    "theme": "light",
+    "render": "render-parts.png",
+    "render_findings": []
+   },
+   "ui": {
+    "theme": "dark",
+    "render": "render-ui.png",
+    "render_findings": []
+   },
+   "word": {
+    "theme": "light",
+    "render": "render-word.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "theme": "light",
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     360,
+     160
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "narrow-ui": {
+    "theme": "light",
+    "render": "render-narrow-ui.png",
+    "render_findings": [],
+    "size": [
+     360,
+     160
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "wide": {
+    "theme": "dark",
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     1600,
+     400
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "wide-ui": {
+    "theme": "light",
+    "render": "render-wide-ui.png",
+    "render_findings": [],
+    "size": [
+     1600,
+     400
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "$if",
+   "alpha",
+   "anim",
+   "apiLevel",
+   "background",
+   "blue",
+   "bottom",
+   "canvas",
+   "clipRect",
+   "color",
+   "colors",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "drawArc",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawRoundRect",
+   "dx",
+   "dy",
+   "else",
+   "glyph",
+   "green",
+   "header",
+   "height",
+   "img",
+   "ink",
+   "lav",
+   "left",
+   "light",
+   "modifiers",
+   "name",
+   "onTouchDown",
+   "orange",
+   "page",
+   "paint",
+   "path",
+   "paths",
+   "play",
+   "profiles",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "save",
+   "scale",
+   "semantics",
+   "startAngle",
+   "strokeWidth",
+   "style",
+   "sweepAngle",
+   "sx",
+   "sy",
+   "target",
+   "then",
+   "top",
+   "translate",
+   "type",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "anim.stagger": [
+    "animationTime()"
+   ],
+   "time.animation": [
+    "animationTime()",
+    "animationTime"
+   ],
+   "anim.value": [
+    "anim"
+   ],
+   "draw.shapes": [
+    "drawRoundRect",
+    "drawCircle",
+    "drawLine"
+   ],
+   "draw.arc": [
+    "drawArc"
+   ],
+   "draw.stroke": [
+    "strokeWidth"
+   ],
+   "draw.transform": [
+    "save",
+    "scale",
+    "translate"
+   ],
+   "draw.clip": [
+    "clipRect"
+   ],
+   "draw.path": [
+    "drawPath"
+   ],
+   "input.press": [
+    "onTouchDown"
+   ],
+   "expr.math": [
+    "min(",
+    "max("
+   ]
+  },
+  "built_at": "2026-11-03T00:50:05.823Z"
+ },
+ "snippets": [
+  {
+   "pointer": "/root/2/canvas/commands/7/save/commands/2",
+   "shows": "anim.stagger",
+   "note": "the mark: four tiles popping in 0.13 s apart with a back-out overshoot, then morphing into UI parts and back"
+  },
+  {
+   "pointer": "/root/2/canvas/commands/0",
+   "shows": "anim.value",
+   "note": "run = {value: @tc, anim: 3.5}: an animated value asks for frames while it runs (3.5 s after load and after each tap), so the header repaints only during the intro"
+  },
+  {
+   "pointer": "/root/2/canvas/commands/1",
+   "shows": "time.animation",
+   "note": "e = animationTime() - tapAt, the one clock of the story (pinned to 10 in the mono looks)"
+  },
+  {
+   "pointer": "/root/2/canvas/commands/7/save/commands/3/save/commands/3",
+   "shows": "draw.stroke",
+   "note": "the wordmark: butt-capped strokes, lines and arcs, letter K with its own clipRect, all of them rising out of a clipped slot on the baseline"
+  }
+ ]
+}
