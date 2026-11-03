@@ -238,14 +238,14 @@ function serveHttp(def, handle, port) {
         else if (withAccounts && given) {
             const found = (await accounts())?.authenticate(given);
             if (found?.account) { authed = true; account = { ...found.account, tokenId: found.tokenId }; }
-            else if (found?.disabled) disabled = true;
+            else if (found?.disabled) disabled = found.pending ? "this account's email is not confirmed yet" : "this account is disabled";
         }
         if (!authed && !given && !token && withAccounts && process.env.MCP_ALLOW_NO_AUTH === "1") authed = true;
         if (!authed) {
             // Say which of the two went wrong: an empty token is nearly always an unset shell
             // variable or a missing header, not a wrong secret.
             const get = withAccounts && accountUrl ? ` (get one at ${accountUrl})` : "";
-            const why = disabled ? "this account is disabled"
+            const why = disabled ? disabled
                 : given ? `wrong${withAccounts ? " or revoked" : ""} token${get}`
                 : `no token: send "Authorization: Bearer <token>" or put it after ${base}/${get}`;
             return reply(res, 401, { error: `unauthorized: ${why}` }, { "WWW-Authenticate": 'Bearer realm="mcp"' });

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { accountsEnabled, csrfFor, dbPath, openAccounts, RateLimiter, readCookie, signupOpen } from "./accounts.mjs";
+import { Accounts, accountsEnabled, csrfFor, dbPath, emailVerify, openAccounts, RateLimiter, readCookie, signupOpen } from "./accounts.mjs";
 import { sameOrigin } from "./account-web.mjs";
 
 const fresh = (env = {}) => openAccounts(":memory:", env);
@@ -53,7 +53,7 @@ test("a disabled account's tokens and sessions stop working", async () => {
     const t = s.issueToken(a.id);
     const sid = s.createSession(a.id);
     s.setStatus(a.id, "disabled");
-    assert.deepEqual(s.authenticate(t.token), { disabled: true });
+    assert.deepEqual(s.authenticate(t.token), { disabled: true, pending: false });
     assert.equal(s.sessionAccount(sid), null);
     s.setStatus(a.id, "active");
     assert.equal(s.authenticate(t.token).account.id, a.id);
@@ -143,7 +143,7 @@ test("a database file: created, migrated once, shared by two handles", async () 
         const t = one.issueToken(a.id);
         const two = await openAccounts(file);   // another process, in effect
         assert.equal(two.authenticate(t.token).account.email, "f@example.com");
-        assert.equal(two.db.prepare("PRAGMA user_version").get().user_version, 1);
+        assert.equal(two.db.prepare("PRAGMA user_version").get().user_version, 2);
         assert.equal(two.db.prepare("PRAGMA journal_mode").get().journal_mode, "wal");
         assert.ok(existsSync(file));
         assert.equal(accountsEnabled({ RC_DB: file }), true, "on when the database exists");
@@ -170,4 +170,115 @@ test("cookies and same-origin POSTs", () => {
     assert.equal(sameOrigin(req({ referer: "http://mcp.example.com/examples/account/" })), true);
     assert.equal(sameOrigin(req({ referer: "http://evil.example/x" })), false);
     assert.equal(sameOrigin(req({})), false);
+});
+
+test("one-time codes: hash only, single use, expiry, purpose", async () => {
+    const s = await fresh();
+    const a = s.createAccount({ email: "c@example.com" }, { pending: true });
+    const code = s.issueCode(a.id, "verify");
+    assert.match(code, /^[A-Za-z0-9_-]{43}$/);
+    assert.ok(!JSON.stringify(s.db.prepare("SELECT * FROM codes").all()).includes(code), "only the hash is stored");
+    assert.equal(s.redeemCode(code, "signin"), null, "wrong purpose");
+    const v = s.redeemCode(code, "verify");
+    assert.equal(v.status, "active");
+    assert.ok(v.verified_at);
+    assert.equal(s.redeemCode(code, "verify"), null, "single use");
+    const late = s.issueCode(a.id, "signin", -1000);
+    assert.equal(s.redeemCode(late, "signin"), null, "expired");
+    const ok = s.issueCode(a.id, "signin");
+    assert.equal(s.redeemCode(ok, "signin").id, a.id);
+    assert.equal(s.redeemCode(ok, "signin"), null);
+    assert.equal(s.redeemCode("x".repeat(43), "signin"), null);
+    assert.throws(() => s.issueCode(a.id, "other"));
+    // A disabled account's codes do nothing.
+    const d = s.issueCode(a.id, "signin");
+    s.setStatus(a.id, "disabled");
+    assert.equal(s.redeemCode(d, "signin"), null);
+});
+
+test("verifying spends the account's other verification links", async () => {
+    const s = await fresh();
+    const a = s.createAccount({ email: "two@example.com" }, { pending: true });
+    const first = s.issueCode(a.id, "verify"), second = s.issueCode(a.id, "verify");
+    assert.ok(s.redeemCode(second, "verify"));
+    assert.equal(s.redeemCode(first, "verify"), null);
+});
+
+test("a pending account cannot authenticate, sign in by link, or keep a session", async () => {
+    const s = await fresh();
+    const a = s.createAccount({ email: "pend@example.com" }, { pending: true });
+    assert.equal(a.status, "pending");
+    assert.equal(a.verified_at, null);
+    const t = s.issueToken(a.id);   // (none is issued before verification; even if one were)
+    assert.deepEqual(s.authenticate(t.token), { disabled: true, pending: true });
+    assert.equal(s.redeemCode(s.issueCode(a.id, "signin"), "signin"), null);
+    assert.equal(s.sessionAccount(s.createSession(a.id)), null);
+    s.verifyAccount(a.id);
+    assert.equal(s.authenticate(t.token).account.id, a.id);
+    assert.equal(s.verifyAccount(a.id), false, "only once");
+});
+
+test("mail limit: at most RC_MAIL_PER_HOUR codes per account per hour", async () => {
+    const s = await fresh();
+    const a = s.createAccount({ email: "lim@example.com" }, { pending: true });
+    for (let i = 0; i < 3; i++) { assert.ok(s.canMail(a.id)); s.issueCode(a.id, "verify"); }
+    assert.equal(s.canMail(a.id), false);
+    s.db.prepare("UPDATE codes SET created = '2000-01-01T00:00:00.000Z'").run();
+    assert.ok(s.canMail(a.id), "an hour later");
+    const s5 = await fresh({ RC_MAIL_PER_HOUR: "5" });
+    const b = s5.createAccount({ email: "five@example.com" });
+    for (let i = 0; i < 4; i++) s5.issueCode(b.id, "signin");
+    assert.ok(s5.canMail(b.id));
+});
+
+test("pending accounts: deleted after 7 days (never a verified one), admin delete", async () => {
+    const s = await fresh();
+    const old = s.createAccount({ email: "old@example.com" }, { pending: true });
+    const recent = s.createAccount({ email: "new@example.com" }, { pending: true });
+    const real = s.createAccount({ email: "real@example.com" });
+    s.issueCode(old.id, "verify");
+    s.db.prepare("UPDATE accounts SET created = '2000-01-01T00:00:00.000Z' WHERE id IN (?, ?)").run(old.id, real.id);
+    assert.equal(s.listAccounts().find((x) => x.id === old.id).stale, true);
+    assert.equal(s.cleanup(), 1);
+    assert.equal(s.getAccount(old.id), null);
+    assert.equal(s.db.prepare("SELECT COUNT(*) AS n FROM codes WHERE account_id = ?").get(old.id).n, 0);
+    assert.ok(s.getAccount(real.id));
+    assert.equal(s.deletePending(real.id), false);
+    assert.equal(s.deletePending(recent.id), true);
+});
+
+test("migration from schema 1: existing accounts are grandfathered as verified", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "rc-mig-"));
+    try {
+        const file = path.join(dir, "rc.db");
+        const { DatabaseSync } = await import("node:sqlite");
+        const v1 = new DatabaseSync(file);
+        v1.exec(`CREATE TABLE accounts (id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE COLLATE NOCASE, name TEXT NOT NULL DEFAULT '',
+                    created TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled')), is_admin INTEGER NOT NULL DEFAULT 0);
+                 CREATE TABLE tokens (id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL, label TEXT NOT NULL DEFAULT '',
+                    hash TEXT NOT NULL UNIQUE, prefix TEXT NOT NULL, created TEXT NOT NULL, last_used TEXT, revoked TEXT);
+                 CREATE TABLE sessions (hash TEXT PRIMARY KEY, account_id INTEGER NOT NULL, created TEXT NOT NULL, expires TEXT NOT NULL);
+                 CREATE TABLE calls (id INTEGER PRIMARY KEY, ts TEXT NOT NULL, account_id INTEGER NOT NULL, token_id INTEGER,
+                    server TEXT NOT NULL, tool TEXT NOT NULL, ms INTEGER NOT NULL, ok INTEGER NOT NULL, error TEXT, summary TEXT);
+                 CREATE TABLE pages (id TEXT PRIMARY KEY, account_id INTEGER NOT NULL, created TEXT NOT NULL, title TEXT NOT NULL DEFAULT '', url TEXT);
+                 INSERT INTO accounts (email, name, created, status) VALUES ('early@example.com', 'E', '2026-01-01T00:00:00.000Z', 'active'),
+                    ('off@example.com', '', '2026-01-02T00:00:00.000Z', 'disabled');
+                 PRAGMA user_version = 1;`);
+        v1.close();
+        const s = await openAccounts(file);
+        assert.equal(s.db.prepare("PRAGMA user_version").get().user_version, 2);
+        const e = s.findAccount("early@example.com");
+        assert.equal(e.status, "active");
+        assert.equal(e.verified_at, "2026-01-01T00:00:00.000Z");
+        assert.equal(s.findAccount("off@example.com").status, "disabled");
+        assert.equal(s.createAccount({ email: "later@example.com" }, { pending: true }).status, "pending");
+        s.close();
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("email verify switch and address normalising", () => {
+    assert.equal(emailVerify({}), true);
+    assert.equal(emailVerify({ RC_EMAIL_VERIFY: "off" }), false);
+    assert.equal(Accounts.normalizeEmail(" A@B.co "), "a@b.co");
+    assert.equal(Accounts.normalizeEmail("nope"), null);
 });

@@ -131,6 +131,20 @@ Anyone who has that URL can use the server, so treat it like a password.
   `unpublish_page`, the `/pages/` index when signed in; `MCP_PAGE_INDEX=public` keeps the
   old public list). `RC_SIGNUP=closed` stops registration, `RC_ADMIN_EMAILS` names admins.
   See `lib/accounts.mjs` and `lib/account-web.mjs`.
+- **Email.** Registration creates a *pending* account and emails a confirmation link
+  (24 h, once); following it signs the person in and shows their first token. "Email me a
+  sign-in link" sends a 15-minute, single-use link (the way back for a lost token). At most
+  `RC_MAIL_PER_HOUR` (3) links per address per hour; the pages answer the same whether or
+  not the address has an account. `RC_EMAIL_VERIFY=off` gives the token at once instead.
+  Mail goes through [Resend](https://resend.com) (`lib/mail.mjs`, one HTTPS call). To set it up:
+  1. In Resend, **Domains -> Add domain**: your domain (e.g. `kobento.dev`), then add the DNS
+     records it lists (SPF and DKIM, optionally DMARC) and wait for "Verified".
+  2. **API Keys -> Create**, permission "Sending access" (restricted to that domain).
+  3. On the server, in `/etc/rcmcp/common.env`: `RESEND_API_KEY=re_...`, and change
+     `RC_MAIL_FROM` (setup.sh writes `"RemoteCompose <noreply@DOMAIN>"`) if you want another
+     sender; its domain must be the verified one. Then `systemctl restart 'rcmcp@*'`.
+  Until a key is set the links are written to the log (`journalctl -u 'rcmcp@*'`), so a
+  local run works without mail. A refusal from Resend is logged with its message.
 - **Workspace.** `MCP_ROOT` is required. Every path a tool takes is resolved inside it,
   and anything that leads outside it (`..`, an absolute path, a symlink) is refused.
   Paths you get back are relative to it.

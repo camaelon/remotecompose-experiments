@@ -5,17 +5,24 @@
 //   RC_ACCOUNTS=1 turn accounts on (they are also on whenever the database file exists)
 //   RC_SIGNUP=closed      the website refuses new registrations
 //   RC_ADMIN_EMAILS=a,b   these accounts are admins (set on creation and on sign-in)
+//   RC_EMAIL_VERIFY=off   new accounts are active at once (default: pending until the emailed
+//                         link is followed; lib/mail.mjs sends it)
+//   RC_MAIL_PER_HOUR      emails (verification, sign-in links) per account per hour (default 3)
 //
 // Secrets are never stored: a token ("rc_" + 32 random bytes, base64url) and a session id are
 // kept as their SHA-256, and a token's first characters as a visible prefix for lists. A token
-// is checked by looking its hash up (an index lookup: nothing to time). Every query is
-// parameterised.
+// is checked by looking its hash up (an index lookup: nothing to time). The one-time codes in
+// emailed links likewise (32 random bytes, sha256 stored, single use, an expiry). Every query
+// is parameterised.
 
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
+export const VERIFY_TTL_MS = 24 * 3600_000;
+export const SIGNIN_TTL_MS = 15 * 60_000;
+const PENDING_DAYS = 7;
 const SESSION_DAYS = 30;
 const LAST_USED_EVERY_MS = 60_000;
 
@@ -37,6 +44,7 @@ export function accountsEnabled(env = process.env) {
 }
 
 export const signupOpen = (env = process.env) => env.RC_SIGNUP !== "closed";
+export const emailVerify = (env = process.env) => env.RC_EMAIL_VERIFY !== "off";
 
 const adminEmails = (env) => new Set(String(env.RC_ADMIN_EMAILS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean));
 
@@ -87,7 +95,26 @@ export class Accounts {
                 CREATE INDEX IF NOT EXISTS pages_account ON pages(account_id);
             `);
         }
-        // (Later migrations: `if (v < 2) { ALTER TABLE ... }`, then bump SCHEMA_VERSION.)
+        if (v < 2) {
+            // A 'pending' status (registered, email not yet verified) and verified_at. SQLite
+            // cannot change a CHECK in place: the table is rebuilt. Accounts made before
+            // verification existed count as verified (at their creation).
+            this.db.exec(`
+                CREATE TABLE accounts_v2 (
+                    id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE COLLATE NOCASE, name TEXT NOT NULL DEFAULT '',
+                    created TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('pending', 'active', 'disabled')),
+                    is_admin INTEGER NOT NULL DEFAULT 0, verified_at TEXT);
+                INSERT INTO accounts_v2 (id, email, name, created, status, is_admin, verified_at)
+                    SELECT id, email, name, created, status, is_admin, created FROM accounts;
+                DROP TABLE accounts;
+                ALTER TABLE accounts_v2 RENAME TO accounts;
+                CREATE TABLE IF NOT EXISTS codes (
+                    hash TEXT PRIMARY KEY, account_id INTEGER NOT NULL, purpose TEXT NOT NULL CHECK (purpose IN ('verify', 'signin')),
+                    created TEXT NOT NULL, expires TEXT NOT NULL, used TEXT);
+                CREATE INDEX IF NOT EXISTS codes_account ON codes(account_id, created);
+            `);
+        }
+        // (Later migrations: `if (v < 3) { ... }`, then bump SCHEMA_VERSION.)
         if (v < SCHEMA_VERSION) this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
     }
 
@@ -96,21 +123,96 @@ export class Accounts {
     // --- accounts
 
     #row(r) {
-        return r ? { id: r.id, email: r.email, name: r.name, created: r.created, status: r.status, admin: !!r.is_admin } : null;
+        return r ? { id: r.id, email: r.email, name: r.name, created: r.created, status: r.status, admin: !!r.is_admin, verified_at: r.verified_at ?? null } : null;
     }
 
     getAccount(id) { return this.#row(this.db.prepare("SELECT * FROM accounts WHERE id = ?").get(id)); }
     findAccount(email) { return this.#row(this.db.prepare("SELECT * FROM accounts WHERE email = ?").get(String(email ?? "").trim())); }
 
-    /** A new account; throws a message meant for the person registering. */
-    createAccount({ email, name = "" }) {
+    /** The address as accounts store it, or null when it does not look like one. */
+    static normalizeEmail(email) {
+        email = String(email ?? "").trim().toLowerCase();
+        return EMAIL.test(email) && email.length <= 254 ? email : null;
+    }
+
+    /**
+     * A new account; throws a message meant for the person registering. pending: created
+     * 'pending' (it can do nothing until verifyAccount), else active and verified now.
+     */
+    createAccount({ email, name = "" }, { pending = false } = {}) {
         email = String(email ?? "").trim().toLowerCase();
         name = String(name ?? "").trim().slice(0, 80);
         if (!EMAIL.test(email) || email.length > 254) throw new Error("That does not look like an email address.");
         if (this.findAccount(email)) throw new Error("An account with that email already exists: sign in with one of its tokens.");
         const admin = adminEmails(this.env).has(email) ? 1 : 0;
-        const r = this.db.prepare("INSERT INTO accounts (email, name, created, is_admin) VALUES (?, ?, ?, ?)").run(email, name, now(), admin);
+        const t = now();
+        const r = this.db.prepare("INSERT INTO accounts (email, name, created, status, is_admin, verified_at) VALUES (?, ?, ?, ?, ?, ?)")
+            .run(email, name, t, pending ? "pending" : "active", admin, pending ? null : t);
         return this.getAccount(Number(r.lastInsertRowid));
+    }
+
+    /** A pending account becomes active (verified now); true when it was pending. */
+    verifyAccount(id) {
+        return this.db.prepare("UPDATE accounts SET status = 'active', verified_at = ? WHERE id = ? AND status = 'pending'").run(now(), id).changes > 0;
+    }
+
+    /** Deletes a pending account (never a verified one) and its codes; true when it did. */
+    deletePending(id) {
+        const ok = this.db.prepare("DELETE FROM accounts WHERE id = ? AND status = 'pending'").run(id).changes > 0;
+        if (ok) this.db.prepare("DELETE FROM codes WHERE account_id = ?").run(id);
+        return ok;
+    }
+
+    /** Deletes the accounts still pending after `days` days, and every code expired a day ago. */
+    cleanup(days = PENDING_DAYS) {
+        const before = new Date(Date.now() - days * 86400_000).toISOString();
+        const ids = this.db.prepare("SELECT id FROM accounts WHERE status = 'pending' AND created < ?").all(before).map((r) => r.id);
+        for (const id of ids) this.deletePending(id);
+        this.db.prepare("DELETE FROM codes WHERE expires < ?").run(new Date(Date.now() - 86400_000).toISOString());
+        return ids.length;
+    }
+
+    // --- one-time codes (the links in emails)
+
+    /** How many codes were made for the account in the last hour (the mail limit counts them). */
+    codesLastHour(accountId) {
+        return this.db.prepare("SELECT COUNT(*) AS n FROM codes WHERE account_id = ? AND created >= ?")
+            .get(accountId, new Date(Date.now() - 3600_000).toISOString()).n;
+    }
+
+    /** May another email go to the account this hour? (RC_MAIL_PER_HOUR, default 3.) */
+    canMail(accountId) { return this.codesLastHour(accountId) < Number(this.env.RC_MAIL_PER_HOUR ?? 3); }
+
+    /** A new one-time code: 'verify' (24 h) or 'signin' (15 min). Returned once; only its hash is kept. */
+    issueCode(accountId, purpose, ttlMs = purpose === "verify" ? VERIFY_TTL_MS : SIGNIN_TTL_MS) {
+        if (purpose !== "verify" && purpose !== "signin") throw new Error("purpose is verify or signin");
+        const code = randomBytes(32).toString("base64url");
+        const t = Date.now();
+        this.db.prepare("INSERT INTO codes (hash, account_id, purpose, created, expires) VALUES (?, ?, ?, ?, ?)")
+            .run(sha256(code), accountId, purpose, new Date(t).toISOString(), new Date(t + ttlMs).toISOString());
+        return code;
+    }
+
+    /**
+     * Uses a code up: the account it was for, or null (unknown, expired, used, other purpose,
+     * or the account cannot take it: disabled; for 'signin', not active). Single use even when
+     * two requests race: the UPDATE claims it.
+     */
+    redeemCode(code, purpose) {
+        if (typeof code !== "string" || !code || code.length > 100) return null;
+        const t = now();
+        const r = this.db.prepare("SELECT account_id FROM codes WHERE hash = ? AND purpose = ? AND used IS NULL AND expires > ?").get(sha256(code), purpose, t);
+        if (!r) return null;
+        if (this.db.prepare("UPDATE codes SET used = ? WHERE hash = ? AND used IS NULL").run(t, sha256(code)).changes !== 1) return null;
+        const a = this.getAccount(r.account_id);
+        if (!a || a.status === "disabled" || (purpose === "signin" && a.status !== "active")) return null;
+        if (purpose === "verify") {
+            this.verifyAccount(a.id);
+            // The other verification links of the account are spent with it.
+            this.db.prepare("UPDATE codes SET used = ? WHERE account_id = ? AND purpose = 'verify' AND used IS NULL").run(t, a.id);
+            return this.getAccount(a.id);
+        }
+        return a;
     }
 
     /** Re-reads RC_ADMIN_EMAILS for an account (on sign-in): promotes, never demotes. */
@@ -135,7 +237,8 @@ export class Accounts {
             SELECT a.*, (SELECT COUNT(*) FROM tokens t WHERE t.account_id = a.id AND t.revoked IS NULL) AS tokens,
                    (SELECT COUNT(*) FROM calls c WHERE c.account_id = a.id AND c.ts >= ?) AS calls
             FROM accounts a ORDER BY a.created DESC`).all(since)
-            .map((r) => ({ ...this.#row(r), tokens: r.tokens, calls: r.calls }));
+            .map((r) => ({ ...this.#row(r), tokens: r.tokens, calls: r.calls,
+                stale: r.status === "pending" && r.created < new Date(Date.now() - PENDING_DAYS * 86400_000).toISOString() }));
     }
 
     // --- tokens
@@ -170,7 +273,7 @@ export class Accounts {
         const r = this.db.prepare(`SELECT t.id AS token_id, t.revoked, a.* FROM tokens t JOIN accounts a ON a.id = t.account_id WHERE t.hash = ?`)
             .get(sha256(token));
         if (!r || r.revoked) return null;
-        if (r.status !== "active") return { disabled: true };
+        if (r.status !== "active") return { disabled: true, pending: r.status === "pending" };
         this.touchToken(r.token_id);
         return { account: this.#row(r), tokenId: r.token_id };
     }
@@ -276,7 +379,9 @@ export async function accounts() {
     try { sqlite = await import("node:sqlite"); } catch {
         throw new Error(`accounts need node:sqlite (Node 22.13 or later); this is Node ${process.versions.node}`);
     }
-    return (shared = new Accounts(dbPath(), { DatabaseSync: sqlite.DatabaseSync }));
+    shared = new Accounts(dbPath(), { DatabaseSync: sqlite.DatabaseSync });
+    try { shared.cleanup(); } catch { /* busy at start: the next start will do */ }
+    return shared;
 }
 
 /** For tests: a store on an in-memory (or given) database. */

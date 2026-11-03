@@ -3,12 +3,22 @@
 //
 //   GET  account/                    signed out: register / sign in with a token; signed in:
 //                                    tokens, usage, published pages (admins: every account)
-//   POST account/register            email, name -> an account, its first token (shown once), a session
+//   POST account/register            email, name -> a pending account and an emailed verification
+//                                    link; the same "check your email" answer whatever the address
+//                                    (pending: the link again; verified: a sign-in link instead).
+//                                    With RC_EMAIL_VERIFY=off: an account, its first token (shown
+//                                    once) and a session at once
+//   POST account/resend              email -> the link again (per address and per account limits)
+//   GET  account/verify?code=        a button that POSTs the code (mail scanners follow GET links:
+//   POST account/verify              they must not spend it) -> verified, signed in, first token once
+//   POST account/email-signin        email -> an emailed sign-in link (15 min, single use)
+//   GET  account/signin-link?code=   a button that POSTs it ->
+//   POST account/signin-link         a session, then the account page
 //   POST account/signin              token -> a session
 //   POST account/signout
 //   POST account/tokens              label -> a new token, shown once with connection instructions
 //   POST account/tokens/<id>/revoke
-//   POST account/admin/<id>/disable | enable      (admins)
+//   POST account/admin/<id>/disable | enable | resend | delete     (admins; delete: pending only)
 //
 // Sessions: a random id in an HttpOnly, SameSite=Lax cookie on Path=/ (so the deploy server's
 // /pages/ index sees it too), Secure when the request came over https, 30 days, stored hashed.
@@ -16,7 +26,8 @@
 // per-session token too. Register and sign-in are rate-limited per address. The MCP endpoints
 // ignore cookies: they take the token.
 
-import { accounts, accountsEnabled, csrfFor, RateLimiter, readCookie, SESSION_COOKIE, signupOpen } from "./accounts.mjs";
+import { Accounts, accounts, accountsEnabled, csrfFor, emailVerify, RateLimiter, readCookie, SESSION_COOKIE, signupOpen } from "./accounts.mjs";
+import { linkEmail, sendMail } from "./mail.mjs";
 import { escapeHtml } from "./web-page.mjs";
 
 const esc = (s) => escapeHtml(s ?? "");
@@ -26,6 +37,47 @@ const signinLimit = new RateLimiter(Number(process.env.RC_SIGNIN_PER_15MIN ?? 20
 
 const isHttps = (req) => String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim() === "https" || !!req.socket?.encrypted;
 const selfOrigin = (req) => `${isHttps(req) ? "https" : "http"}://${req.headers.host ?? "localhost"}`;
+const log = (...a) => console.error(new Date().toISOString(), ...a);
+
+/** The account pages' absolute address, for links in emails: RC_ACCOUNT_URL, else /account/ at this origin. */
+const accountBase = (req) => (process.env.RC_ACCOUNT_URL || `${selfOrigin(req)}/account/`).replace(/\/*$/, "/");
+
+/** Emails a verification link to a pending account, or a sign-in link to an active one. Not awaited by the
+ *  caller (the answer must not depend on whether the address has an account); failures are logged. */
+function mailLink(store, req, acct, { register = false } = {}) {
+    const verify = acct.status === "pending";
+    const code = store.issueCode(acct.id, verify ? "verify" : "signin");
+    const link = `${accountBase(req)}${verify ? "verify" : "signin-link"}?code=${code}`;
+    const mail = verify
+        ? { subject: "Confirm your email for RemoteCompose", ...linkEmail({
+            heading: "Confirm your email",
+            lines: [`Someone (we hope you) created a RemoteCompose account with ${acct.email}.`,
+                "Confirm the address to get your token for the RemoteCompose MCP servers. The link works once, for 24 hours."],
+            button: "Confirm and get my token", link,
+            footer: "If it was not you, ignore this email: the account is deleted after a week unless confirmed." }) }
+        : { subject: "Your RemoteCompose sign-in link", ...linkEmail({
+            heading: "Sign in to RemoteCompose",
+            lines: [register ? `Someone asked to create an account with ${acct.email}, which already has one. Here is a sign-in link instead.`
+                : `Here is your sign-in link for ${acct.email}.`,
+                "It works once, for 15 minutes. From your account page you can make new tokens and revoke old ones."],
+            button: "Sign in", link,
+            footer: "If you did not ask for it, ignore this email: nothing happens unless the link is opened." }) };
+    return sendMail({ to: acct.email, link, ...mail })
+        .catch((e) => log(`account ${acct.id}: ${e.message}`));
+}
+
+/**
+ * What a register / resend / email-signin request may send, decided without telling the caller:
+ * a new pending account (register only), the link again, a sign-in link, or nothing (no such
+ * account, disabled, or over the per-account limit). Returns the mail's promise or null.
+ */
+function mailFor(store, req, email, { register = false, name = "" } = {}) {
+    let acct = store.findAccount(email);
+    if (!acct && register) acct = store.createAccount({ email, name }, { pending: true });
+    if (!acct || acct.status === "disabled" || !store.canMail(acct.id)) return null;
+    return mailLink(store, req, acct, { register });
+}
+
 const clientIp = (req) => String(req.headers["x-forwarded-for"] ?? req.socket?.remoteAddress ?? "").split(",")[0].trim();
 
 /** A POST from a page of this site: its Origin (or, without one, its Referer) is this origin. */
@@ -101,6 +153,7 @@ pre { background:var(--chip); border-radius:8px; padding:10px 12px; margin:4px 0
 .fresh { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
 .token { font:600 14px ui-monospace,Menlo,monospace; background:var(--chip); padding:8px 12px; border-radius:8px; word-break:break-all; display:block; margin:6px 0 12px; }
 .note { background:color-mix(in srgb, #d08a00 14%, transparent); border-radius:8px; padding:8px 12px; margin:0 0 12px; }
+.ok { background:color-mix(in srgb, #2e9d57 16%, transparent); border-radius:8px; padding:8px 12px; margin:0 0 16px; }
 .err { background:color-mix(in srgb, #d0453a 16%, transparent); border-radius:8px; padding:8px 12px; margin:0 0 16px; }
 .pill { font-size:11px; padding:1px 8px; border-radius:999px; background:var(--chip); color:var(--muted); }
 .pill.off { color:#d0453a; }
@@ -192,7 +245,7 @@ ${rows.map((r) => `<tr><td class="w">${esc(r.name)}</td><td class="n">${r.calls}
 </tbody></table></div>`;
 }
 
-function accountPage(req, { store, acct, sid, fresh, error }) {
+function accountPage(req, { store, acct, sid, fresh, error, notice }) {
     const csrf = `<input type="hidden" name="csrf" value="${csrfFor(sid)}">`;
     const tokens = store.listTokens(acct.id);
     const usage = store.usage(acct.id, 30);
@@ -202,6 +255,7 @@ function accountPage(req, { store, acct, sid, fresh, error }) {
 <td>${t.revoked ? `<span class="pill off">revoked ${esc(day(t.revoked))}</span>` : `<form class="inline" method="post" action="tokens/${t.id}/revoke">${csrf}<button class="link danger" type="submit">Revoke</button></form>`}</td></tr>`).join("\n");
     const body = [
         error ? `<p class="err">${esc(error)}</p>` : "",
+        notice ? `<p class="ok">${esc(notice)}</p>` : "",
         fresh ? freshToken(req, fresh) : "",
         `<section class="panel"><div class="who"><div><b>${esc(acct.name || acct.email)}</b> <span class="muted">${esc(acct.email)}</span>
 ${acct.admin ? ' <span class="pill">admin</span>' : ""}<br><span class="muted">Member since ${esc(day(acct.created).slice(0, 10))}</span></div>
@@ -230,26 +284,64 @@ ${pages.map((p) => `<tr><td class="w">${p.url ? `<a href="${esc(p.url)}">${esc(p
 }
 
 function adminPanel(store, csrf) {
+    const act = (a, what, label, danger) => `<form class="inline" method="post" action="admin/${a.id}/${what}">${csrf}<button class="link${danger ? " danger" : ""}" type="submit">${label}</button></form>`;
     const rows = store.listAccounts(7).map((a) => `<tr><td class="w">${esc(a.email)}${a.admin ? ' <span class="pill">admin</span>' : ""}</td><td class="w">${esc(a.name)}</td><td>${esc(day(a.created))}</td>
-<td class="n">${a.tokens}</td><td class="n">${a.calls}</td><td>${a.status === "active" ? '<span class="pill">active</span>' : '<span class="pill off">disabled</span>'}</td>
-<td><form class="inline" method="post" action="admin/${a.id}/${a.status === "active" ? "disable" : "enable"}">${csrf}<button class="link${a.status === "active" ? " danger" : ""}" type="submit">${a.status === "active" ? "Disable" : "Enable"}</button></form></td></tr>`).join("\n");
+<td>${a.verified_at ? esc(day(a.verified_at).slice(0, 10)) : `<span class="pill${a.stale ? " off" : ""}">pending${a.stale ? ", over 7 days" : ""}</span>`}</td>
+<td class="n">${a.tokens}</td><td class="n">${a.calls}</td><td>${a.status === "disabled" ? '<span class="pill off">disabled</span>' : `<span class="pill">${esc(a.status)}</span>`}</td>
+<td>${a.status === "pending" ? act(a, "resend", "Resend link") + " " + act(a, "delete", "Delete", true)
+        : act(a, a.status === "active" ? "disable" : "enable", a.status === "active" ? "Disable" : "Enable", a.status === "active")}</td></tr>`).join("\n");
     return `<section class="panel"><h2>Accounts (admin)</h2>
-<div class="wrap"><table><thead><tr><th>Email</th><th>Name</th><th>Created (UTC)</th><th class="n">Tokens</th><th class="n">Calls, 7 days</th><th>Status</th><th></th></tr></thead><tbody>
-${rows}</tbody></table></div><p class="muted" style="margin-top:8px">Disabling an account refuses its tokens and ends its sessions; enabling it restores them.</p></section>`;
+<div class="wrap"><table><thead><tr><th>Email</th><th>Name</th><th>Created (UTC)</th><th>Verified</th><th class="n">Tokens</th><th class="n">Calls, 7 days</th><th>Status</th><th></th></tr></thead><tbody>
+${rows}</tbody></table></div><p class="muted" style="margin-top:8px">Disabling an account refuses its tokens and ends its sessions; enabling it restores them. Pending accounts (email not confirmed) are deleted after 7 days on their own.</p></section>`;
+}
+
+/** "Check your email": what register, resend and email-signin answer, whatever the address. */
+function checkEmailPage({ email, error }) {
+    return [
+        error ? `<p class="err">${esc(error)}</p>` : "",
+        `<section class="panel"><h2>A link is on its way to ${esc(email)}</h2>
+<p>If that address can receive mail, it gets a link from us in a minute or two. Open it in this browser to go on.</p>
+<p class="muted">A confirmation link works once for 24 hours, a sign-in link once for 15 minutes. Nothing there? Check the spam folder, then ask again: at most ${Number(process.env.RC_MAIL_PER_HOUR ?? 3)} links an hour go to one address.</p>
+<form class="row" method="post" action="resend" style="margin-top:12px"><input type="hidden" name="email" value="${esc(email)}"><button class="link" type="submit">Send the link again</button></form>
+</section>`,
+        `<p class="muted"><a href="./">Back to sign in</a></p>`,
+    ].join("\n");
+}
+
+/** The page an emailed link opens: one button that POSTs the code (a mail scanner's GET spends nothing). */
+function confirmPage({ action, code, heading, text, button }) {
+    return `<section class="panel"><h2>${esc(heading)}</h2><p class="muted">${esc(text)}</p>
+<form class="stack" method="post" action="${esc(action)}"><input type="hidden" name="code" value="${esc(code)}"><button class="btn" type="submit">${esc(button)}</button></form></section>`;
+}
+
+/** A link that no longer works, with the way to get a new one. */
+function deadLinkPage({ what }) {
+    return `<section class="panel"><h2>This ${esc(what)} link has expired or was already used</h2>
+<p class="muted">Each link works once (confirmation: 24 hours, sign-in: 15 minutes). Ask for a new one:</p>
+<form class="row" method="post" action="email-signin"><label class="f">Email<input type="email" name="email" maxlength="254" required autocomplete="email"></label><button class="btn" type="submit">Email me a new link</button></form>
+</section>`;
 }
 
 function signedOutPage({ error, values = {} }) {
     const open = signupOpen();
+    const verify = emailVerify();
     return [
         error ? `<p class="err">${esc(error)}</p>` : "",
         `<div class="cols">`,
         `<section class="panel"><h2>Create an account</h2>
-${open ? `<p class="muted">You get a token for the MCP servers right away. Your email is not verified yet: it is how you are known here, nothing is sent to it.</p>
+${open ? `<p class="muted">${verify ? "We email you a link to confirm the address; following it signs you in and gives you your token for the MCP servers."
+                : "You get a token for the MCP servers right away. Your email is not verified: it is how you are known here."}</p>
 <form class="stack" method="post" action="register">
 <label class="f">Email<input type="email" name="email" maxlength="254" required autocomplete="email" value="${esc(values.email)}"></label>
 <label class="f">Name<input type="text" name="name" maxlength="80" autocomplete="name" value="${esc(values.name)}"></label>
 <button class="btn" type="submit">Create account</button></form>`
             : `<p class="note">Registration is closed on this server for now. If you already have a token, sign in with it.</p>`}
+</section>`,
+        `<section class="panel"><h2>Email me a sign-in link</h2>
+<p class="muted">Lost your token, or on a new browser? We email you a link that signs you in (once, for 15 minutes). From your account page you can make a new token.</p>
+<form class="stack" method="post" action="email-signin">
+<label class="f">Email<input type="email" name="email" maxlength="254" required autocomplete="email"></label>
+<button class="btn" type="submit">Email me a link</button></form>
 </section>`,
         `<section class="panel"><h2>Sign in with your token</h2>
 <p class="muted">Paste any active token of your account (it starts with <code>rc_</code>). The site then remembers you in this browser for 30 days.</p>
@@ -273,15 +365,27 @@ export async function accountRoute(req, url, res, site) {
     const store = await accounts();
     const render = (status, opts, extra) => html(res, status, shell({
         css: site.css, nav: site.nav("account"),
-        title: opts.acct ? "Your account" : "Account",
-        sub: opts.acct ? "Your tokens for the RemoteCompose MCP servers, what you used them for, and the pages you published."
-            : "An account gives you your own token for the RemoteCompose MCP servers, and shows what you used it for and the pages you published.",
-        body: opts.acct ? accountPage(req, { store, ...opts }) : signedOutPage(opts),
+        title: opts.title ?? (opts.acct ? "Your account" : "Account"),
+        sub: opts.sub ?? (opts.acct ? "Your tokens for the RemoteCompose MCP servers, what you used them for, and the pages you published."
+            : "An account gives you your own token for the RemoteCompose MCP servers, and shows what you used it for and the pages you published."),
+        body: opts.body ?? (opts.acct ? accountPage(req, { store, ...opts }) : signedOutPage(opts)),
     }), extra);
+    const checkEmail = (email, status = 200) => render(status, { title: "Check your email",
+        sub: "One step left: the link we email you.", body: checkEmailPage({ email }) });
 
     const sid = readCookie(req);
     const acct = sid ? store.sessionAccount(sid) : null;
 
+    // The links in emails open a confirmation button (GET spends nothing).
+    if ((p === "/account/verify" || p === "/account/signin-link") && req.method === "GET") {
+        const code = url.searchParams.get("code") ?? "";
+        const verify = p === "/account/verify";
+        return render(200, verify
+            ? { title: "Confirm your email", sub: "One click and you are in.", body: confirmPage({ action: "verify", code,
+                heading: "Confirm your email address", text: "This confirms the address, signs you in in this browser and shows your first token.", button: "Confirm and get my token" }) }
+            : { title: "Sign in", sub: "One click and you are in.", body: confirmPage({ action: "signin-link", code,
+                heading: "Sign in to your account", text: "This signs you in in this browser for 30 days.", button: "Sign in" }) });
+    }
     if (p === "/account/") {
         if (req.method !== "GET" && req.method !== "HEAD") { res.writeHead(405, { Allow: "GET, HEAD" }); res.end(); return true; }
         // A stale cookie (expired, signed out elsewhere, account disabled) is cleared.
@@ -292,6 +396,36 @@ export async function accountRoute(req, url, res, site) {
     let form;
     try { form = await readForm(req); } catch (e) { return html(res, e.status ?? 400, "<!doctype html><p>Bad request.</p>"); }
 
+    if (p === "/account/register" && emailVerify()) {
+        const values = { email: form.get("email") ?? "", name: form.get("name") ?? "" };
+        if (!signupOpen()) return render(403, { error: "Registration is closed on this server." });
+        const email = Accounts.normalizeEmail(values.email);
+        if (!email) return render(400, { error: "That does not look like an email address.", values });
+        if (!registerLimit.hit(clientIp(req))) return render(429, { error: "Too many requests from your address: try again in an hour.", values });
+        mailFor(store, req, email, { register: true, name: values.name });
+        return checkEmail(email);
+    }
+    if (p === "/account/resend" || p === "/account/email-signin") {
+        const email = Accounts.normalizeEmail(form.get("email"));
+        if (!email) return render(400, { error: "That does not look like an email address." });
+        const limiter = p === "/account/resend" ? registerLimit : signinLimit;
+        if (!limiter.hit(clientIp(req))) return render(429, { error: "Too many requests from your address: try again later." });
+        mailFor(store, req, email);
+        return checkEmail(email);
+    }
+    if (p === "/account/verify" || p === "/account/signin-link") {
+        if (!signinLimit.hit(clientIp(req))) return render(429, { error: "Too many sign-in attempts from your address: try again in a few minutes." });
+        const verify = p === "/account/verify";
+        let a = store.redeemCode(String(form.get("code") ?? ""), verify ? "verify" : "signin");
+        if (!a) return render(400, { title: "Link expired", sub: "Ask for a new one below.", body: deadLinkPage({ what: verify ? "confirmation" : "sign-in" }) });
+        a = store.refreshAdmin(a);
+        const newSid = store.createSession(a.id);
+        const set = { "Set-Cookie": cookie(req, newSid, 30 * 86400) };
+        if (!verify) return redirect(res, "./", set);
+        // Verified: the first token, shown once (none is made before), unless it has one already.
+        const fresh = store.listTokens(a.id).length ? null : store.issueToken(a.id, "first token");
+        return render(200, { acct: a, sid: newSid, fresh, notice: "Your email is confirmed and you are signed in." }, set);
+    }
     if (p === "/account/register") {
         const values = { email: form.get("email") ?? "", name: form.get("name") ?? "" };
         if (!signupOpen()) return render(403, { error: "Registration is closed on this server." });
@@ -305,7 +439,8 @@ export async function accountRoute(req, url, res, site) {
     if (p === "/account/signin") {
         if (!signinLimit.hit(clientIp(req))) return render(429, { error: "Too many sign-in attempts from your address: try again in a few minutes." });
         const found = store.authenticate(String(form.get("token") ?? "").trim());
-        if (!found?.account) return render(401, { error: found?.disabled ? "This account is disabled." : "That token is not valid (wrong, or revoked)." });
+        if (!found?.account) return render(401, { error: found?.pending ? "This account's email is not confirmed yet: follow the link we sent, or ask for a new one."
+            : found?.disabled ? "This account is disabled." : "That token is not valid (wrong, or revoked). Lost it? Use \"Email me a sign-in link\"." });
         const a = store.refreshAdmin(found.account);
         const newSid = store.createSession(a.id);
         return redirect(res, "./", { "Set-Cookie": cookie(req, newSid, 30 * 86400) });
@@ -328,9 +463,18 @@ export async function accountRoute(req, url, res, site) {
         store.revokeToken(acct.id, Number(m[1]));
         return redirect(res, "../../");
     }
-    m = /^\/account\/admin\/(\d+)\/(disable|enable)$/.exec(p);
+    m = /^\/account\/admin\/(\d+)\/(disable|enable|resend|delete)$/.exec(p);
     if (m) {
         if (!acct.admin) return html(res, 403, "<!doctype html><p>Admins only.</p>");
+        const target = store.getAccount(Number(m[1]));
+        if (!target) return redirect(res, "../../");
+        if (m[2] === "delete") { store.deletePending(target.id); return redirect(res, "../../"); }
+        if (m[2] === "resend") {
+            if (target.status !== "pending") return redirect(res, "../../");
+            if (!store.canMail(target.id)) return render(429, { acct, sid, error: `${target.email} already had ${Number(process.env.RC_MAIL_PER_HOUR ?? 3)} links this hour.` });
+            await mailLink(store, req, target);
+            return redirect(res, "../../");
+        }
         if (Number(m[1]) === acct.id && m[2] === "disable") return render(400, { acct, sid, error: "You cannot disable your own account." });
         store.setStatus(Number(m[1]), m[2] === "disable" ? "disabled" : "active");
         return redirect(res, "../../");

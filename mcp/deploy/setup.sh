@@ -100,7 +100,12 @@ add_env RC_ACCOUNTS 1
 add_env RC_DB /var/lib/rcmcp/rc.db
 add_env RC_ACCOUNT_URL "https://$DOMAIN/examples/account/"
 add_env RC_MCP_URL "https://$DOMAIN/mcp"
-# (RC_SIGNUP=closed stops registration; RC_ADMIN_EMAILS=a@b,c@d makes those accounts admins.)
+# Email (lib/mail.mjs, through Resend): confirmation links on registration and sign-in links.
+# The sender only; the API key is never written here (RESEND_API_KEY, by hand). Until it is
+# set, the links go to the log instead.
+add_env RC_MAIL_FROM "\"RemoteCompose <noreply@$DOMAIN>\""
+# (RC_SIGNUP=closed stops registration; RC_ADMIN_EMAILS=a@b,c@d makes those accounts admins;
+#  RC_EMAIL_VERIFY=off gives a token at registration, without the confirmation email.)
 # The database is the service user's: every server unit writes it (ReadWritePaths=/var/lib/rcmcp).
 for f in /var/lib/rcmcp/rc.db /var/lib/rcmcp/rc.db-wal /var/lib/rcmcp/rc.db-shm; do [[ -e $f ]] && chown rcmcp:rcmcp "$f"; done
 echo "MCP_HTTP_PORT=8808" > /etc/rcmcp/json2rc.env
@@ -165,3 +170,12 @@ Claude Code:  claude mcp add --transport http remotecompose https://$DOMAIN/mcp 
 claude.ai:    add a custom connector with URL https://$DOMAIN/mcp/$TOKEN
 Logs:         journalctl -u 'rcmcp@*' -f
 EOF
+if ! grep -q '^RESEND_API_KEY=.' /etc/rcmcp/common.env; then
+    cat <<EOF
+
+Email is not set up yet: set RESEND_API_KEY in /etc/rcmcp/common.env (Resend -> API Keys)
+and verify $DOMAIN in Resend (Domains: add the SPF/DKIM DNS records it lists), then restart:
+  systemctl restart 'rcmcp@*'
+Until then sign-in and confirmation links are written to the log (journalctl -u 'rcmcp@*').
+EOF
+fi
