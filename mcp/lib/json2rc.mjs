@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolvePath } from "./workspace.mjs";
 import { expandComponents, usesComponents } from "./components.mjs";
+import { failureHints } from "./convert-hints.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CONVERTER_DIR = process.env.JSON2RC_DIR
@@ -49,7 +50,7 @@ export function jsonToRc(source, baseDir) {
         try {
             if (usesComponents(doc)) source = compileComponents(doc, baseDir).doc;
         } catch (e) {
-            throw new Error(`components: ${e?.message ?? e}`);
+            throw new Error(withHints(`components: ${e?.message ?? e}`, doc));
         }
     }
     try {
@@ -57,8 +58,15 @@ export function jsonToRc(source, baseDir) {
             readFile: (p) => new Uint8Array(readFileSync(resolvePath(path.resolve(baseDir, p), "bitmap file"))),
         });
     } catch (e) {
-        throw new Error(`json2rc failed: ${e?.name ?? "Error"}: ${explainToken(e?.message ?? String(e), source)}`);
+        throw new Error(withHints(`json2rc failed: ${e?.name ?? "Error"}: ${explainToken(e?.message ?? String(e), source)}`, source, doc));
     }
+}
+
+/** The message, then what to do about it (convert-hints.mjs), one hint per line. */
+function withHints(message, source, original = null) {
+    let hints = [];
+    try { hints = failureHints(message, source, original); } catch { /* the bare message is still right */ }
+    return hints.length ? `${message}\n${hints.join("\n")}` : message;
 }
 
 // "Unknown token in expression: @x" says nothing about why: the usual causes are a resources
