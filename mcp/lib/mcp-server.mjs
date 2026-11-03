@@ -15,6 +15,7 @@ import { createInterface } from "node:readline";
 import { workspaceRoot } from "./workspace.mjs";
 import { callDetails, summarizeArgs, summarizeResult } from "./calllog.mjs";
 import { ADMIN_KEY_ACCOUNT, accounts, accountsEnabled } from "./accounts.mjs";
+import { oauthEnabled, resourceMetadataUrl, wellKnown } from "./oauth.mjs";
 
 const DEFAULT_PROTOCOL = "2025-06-18";
 const MAX_BODY = 32 << 20;   // inline JSON documents and base64 .rc files can be large
@@ -38,7 +39,7 @@ async function recordUsage(server, ctx, tool, ms, ok, error, args, content) {
     if (!ctx.account) return;
     try {
         const store = await accounts();
-        store?.recordCall({ accountId: ctx.account.id, tokenId: ctx.account.tokenId ?? null, server, tool, ms, ok,
+        store?.recordCall({ accountId: ctx.account.id, tokenId: ctx.account.tokenId ?? null, grantId: ctx.account.grantId ?? null, server, tool, ms, ok,
             error: error == null ? null : String(error?.message ?? error), summary: usageSummary(args, content) });
     } catch (e) { log(`usage not recorded: ${e?.message ?? e}`); }
 }
@@ -159,6 +160,10 @@ function serveStdio(handle) {
  * or the database present), an account's own token from the website ("rc_..."), as long as
  * it is not revoked and the account is active. MCP_TOKEN then acts as an admin key. Each
  * tools/call made with one is a row in the calls table. Cookies play no part here.
+ * With accounts, OAuth too (lib/oauth.mjs; RC_OAUTH=0 turns it off): an access token "rco_..."
+ * from the authorization server, by header; a 401 then names the protected-resource metadata
+ * (WWW-Authenticate: Bearer resource_metadata=...), which this server also serves under
+ * /.well-known/, so a client can find where to sign in.
  *
  * Env: MCP_HTTP_PORT (default 8808), MCP_HTTP_HOST (default 127.0.0.1 — put TLS in front),
  * MCP_HTTP_PATH (default /mcp), MCP_TOKEN (required unless MCP_ALLOW_NO_AUTH=1),
@@ -195,6 +200,7 @@ function serveHttp(def, handle, port) {
     const tokenDigest = digest(token);
     const matches = (s) => timingSafeEqual(digest(s), tokenDigest);
     const accountUrl = process.env.RC_ACCOUNT_URL || "";
+    const withOAuth = oauthEnabled();
     if (withAccounts) {
         // Open (and migrate) the database now, so a missing node:sqlite stops the start, not a call.
         accounts().then(() => log(`${name}: accounts on`), (e) => { log(`refusing to start: ${e.message}`); process.exit(1); });
@@ -212,6 +218,7 @@ function serveHttp(def, handle, port) {
     const server = createServer(async (req, res) => {
         const url = new URL(req.url, "http://x");
         if (url.pathname === "/healthz") return reply(res, 200, "ok\n");
+        if (withOAuth && wellKnown(req, url, res, { base, name })) return;
         if (def.publicRoute && url.pathname !== base && !url.pathname.startsWith(base + "/")) {
             try {
                 if (await def.publicRoute(req, url, res)) return;
@@ -235,7 +242,11 @@ function serveHttp(def, handle, port) {
         }
         let disabled = false;
         if (token && given && matches(given)) { authed = true; if (withAccounts) account = ADMIN_KEY_ACCOUNT; }
-        else if (withAccounts && given) {
+        else if (withOAuth && given.startsWith("rco_")) {
+            const found = (await accounts())?.authenticateAccess(given);
+            if (found?.account) { authed = true; account = { ...found.account, tokenId: null, grantId: found.grantId, via: found.clientName }; }
+            else if (found?.disabled) disabled = found.pending ? "this account's email is not confirmed yet" : "this account is disabled";
+        } else if (withAccounts && given) {
             const found = (await accounts())?.authenticate(given);
             if (found?.account) { authed = true; account = { ...found.account, tokenId: found.tokenId }; }
             else if (found?.disabled) disabled = found.pending ? "this account's email is not confirmed yet" : "this account is disabled";
@@ -248,7 +259,12 @@ function serveHttp(def, handle, port) {
             const why = disabled ? disabled
                 : given ? `wrong${withAccounts ? " or revoked" : ""} token${get}`
                 : `no token: send "Authorization: Bearer <token>" or put it after ${base}/${get}`;
-            return reply(res, 401, { error: `unauthorized: ${why}` }, { "WWW-Authenticate": 'Bearer realm="mcp"' });
+            // With OAuth the challenge says where to find the authorization server (RFC 9728 5.1).
+            const challenge = withOAuth
+                ? `Bearer realm="mcp", resource_metadata="${resourceMetadataUrl(req, base)}"${given ? ', error="invalid_token"' : ""}`
+                : 'Bearer realm="mcp"';
+            return reply(res, 401, { error: `unauthorized: ${why}` }, { "WWW-Authenticate": challenge,
+                ...(withOAuth ? { "Access-Control-Expose-Headers": "WWW-Authenticate" } : {}) });
         }
         const origin = req.headers.origin;
         if (origin && origins.length && !origins.includes(origin)) {
@@ -282,7 +298,8 @@ function serveHttp(def, handle, port) {
         const addr = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "").split(",")[0].trim();
         const ua = String(req.headers["user-agent"] ?? "").slice(0, 80);
         const ctx = { client: session ? session.slice(0, 8) : "~" + createHash("sha1").update((req.headers.authorization ? String(req.headers.authorization) : addr) + "|" + ua).digest("hex").slice(0, 6), ua,
-            ...(account ? { account: { id: account.id, email: account.email, admin: account.admin, tokenId: account.tokenId ?? null } } : {}) };   // (a proxying client changes address call to call; its token does not, and only a hash of it is logged)
+            ...(account ? { account: { id: account.id, email: account.email, admin: account.admin, tokenId: account.tokenId ?? null,
+                ...(account.grantId ? { grantId: account.grantId, via: account.via } : {}) } } : {}) };   // (a proxying client changes address call to call; its token does not, and only a hash of it is logged)
         const out = (await Promise.all(msgs.map((m) => handle(m, ctx)))).filter(Boolean);
         const headers = isInit ? { "Mcp-Session-Id": session } : {};
         if (!out.length) return reply(res, 202, undefined, headers);   // only notifications / responses

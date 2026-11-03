@@ -26,6 +26,7 @@
 //                               /json/<Name>.component.json)
 //   GET|POST <base>/account/...  accounts, tokens, usage, published pages (lib/account-web.mjs),
 //                               when accounts are on (lib/accounts.mjs)
+//   GET|POST <base>/oauth/...    the OAuth authorization server for every MCP server (lib/oauth.mjs)
 // <base> is wherever the reverse proxy mounts the server (/examples/ on the VPS); every link is
 // relative, so the pages work under any prefix.
 
@@ -41,7 +42,8 @@ import { compileComponents, jsonToRc } from "./json2rc.mjs";
 import { STRUCTURES } from "./structures.mjs";
 import { thumbnail } from "./thumbs.mjs";
 import { accountRoute } from "./account-web.mjs";
-import { accountsEnabled } from "./accounts.mjs";
+import { oauthRoute } from "./oauth.mjs";
+import { accountsEnabled, requestAccount } from "./accounts.mjs";
 
 const WEB_SETTABLE = new Set(["float", "int", "color", "string", "float_array"]);
 const HEADERS = {
@@ -202,13 +204,21 @@ async function playground(e, variant) {
 }
 
 const CSS = `
-:root { --bg:#f6f7f9; --card:#fff; --ink:#1b1f27; --muted:#5d6676; --line:#e2e5ea; --chip:#eef1f5; --accent:#2f6fde; --thumb:#e9ecf0; }
-@media (prefers-color-scheme: dark) { :root { --bg:#0d1118; --card:#161c26; --ink:#e6eaf2; --muted:#8a94a6; --line:#263042; --chip:#1f2734; --accent:#6aaeff; --thumb:#0a0e14; } }
+/* The Kobento palette (kobento-web): paper, ink, muted, line; the tiles' blue for links. */
+:root { --bg:#f8f7f3; --card:#fff; --ink:#161c29; --muted:#687182; --line:#e6e6e2; --chip:#efede6; --accent:#2b7fd9; --thumb:#efede6;
+  --lav:#a27be5; --blue:#409bf0; --green:#36c495; --orange:#f6a525; --pink:#d86f99; --red:#ef5c59; --cream:#f3e9d6; }
+@media (prefers-color-scheme: dark) { :root { --bg:#10141d; --card:#181e2b; --ink:#f1efe9; --muted:#9aa2b1; --line:#283041; --chip:#212838; --accent:#6db1f7; --thumb:#0c1017; } }
 * { box-sizing: border-box; }
-body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 'DM Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif; -webkit-font-smoothing:antialiased; }
+h1, h2, .title, nav a.brand { font-family:Manrope,'DM Sans',system-ui,sans-serif; }
+h1 { letter-spacing:-0.5px; font-weight:800; }
 header { padding:24px 16px 8px; max-width:1280px; margin:0 auto; }
 h1 { margin:0 0 4px; font-size:22px; }
-nav a { color:var(--accent); text-decoration:none; margin-right:16px; }
+nav { display:flex; flex-wrap:wrap; align-items:center; gap:6px 18px; font-size:14px; line-height:20px; }
+nav a { color:var(--accent); text-decoration:none; display:inline-flex; align-items:center; height:24px; }
+nav a.brand { color:var(--ink); font-weight:700; gap:6px; }
+nav a.end { margin-left:auto; }
+nav .mark { width:18px; height:18px; flex:none; }
 nav a[aria-current] { color:var(--ink); font-weight:600; }
 .sub { color:var(--muted); margin:4px 0 12px; }
 .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:12px 0 4px; }
@@ -291,14 +301,16 @@ if (modeSel) {
 // Order by .rc size: the cards carry their bytes.
 const sortSel = document.getElementById("sort");
 if (sortSel) {
-  const main = document.querySelector("main"), none = document.getElementById("none"), byId = cards.slice();
+  // The page comes smallest first; "id" is the order of ids (or names), "large" the reverse of size.
+  const main = document.querySelector("main"), none = document.getElementById("none"), smallest = cards.slice();
   const order = () => {
-    const v = sortSel.value, list = byId.slice();
-    if (v) list.sort((a, b) => (Number(a.dataset.bytes) - Number(b.dataset.bytes)) * (v === "small" ? 1 : -1));
+    const v = sortSel.value, list = smallest.slice();
+    if (v === "large") list.reverse();
+    else if (v === "id") list.sort((a, b) => a.dataset.key.localeCompare(b.dataset.key, "en", { numeric: true }));
     for (const c of list) main.insertBefore(c, none);
     try { localStorage.setItem("rc-sort", v); } catch (e) {}
   };
-  try { sortSel.value = localStorage.getItem("rc-sort") || ""; } catch (e) {}
+  try { const saved = localStorage.getItem("rc-sort") || ""; sortSel.value = saved === "small" ? "" : saved; } catch (e) {}
   sortSel.addEventListener("change", order); if (sortSel.value) order();
 }
 for (const b of chips) b.addEventListener("click", () => {
@@ -308,18 +320,29 @@ for (const b of chips) b.addEventListener("click", () => {
 });
 `;
 
-/** The site's sections; the components page is at the root, every other one a folder below it. */
+const FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">`;
+
+// The Kobento mark: four rounded tiles (the logo's colours), inline so it needs no file.
+const MARK = `<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="2" y="2" width="16.5" height="16.5" rx="5" fill="#9C7DDE"/><rect x="21.5" y="2" width="16.5" height="16.5" rx="5" fill="#5999E9"/><rect x="2" y="21.5" width="16.5" height="16.5" rx="5" fill="#64C198"/><rect x="21.5" y="21.5" width="16.5" height="16.5" rx="5" fill="#EAA945"/></svg>`;
+
+/** The site's sections: the landing page is at the root, every other one a folder below it. */
 function siteNav(current) {
-    const items = [["components", "Components", ""], ["layouts", "Layouts", "layouts/"], ["structures", "Structures", "structures/"],
-        ["showcases", "Showcases", "showcases/"], ["demos", "Demos", "demos/"], ...(accountsEnabled() ? [["account", "Account", "account/"]] : [])];
+    const items = [["home", `${MARK}Kobento`, ""], ["showcases", "Showcases", "showcases/"], ["components", "Components", "components/"],
+        ["advanced", "Advanced", "advanced/"], ["layouts", "Layouts", "layouts/"], ["structures", "Structures", "structures/"],
+        ["demos", "Demos", "demos/"], ...(accountsEnabled() ? [["account", "Account", "account/"]] : [])];
     return items.map(([k, label, href]) =>
-        `<a href="${current === "components" ? (href || "./") : "../" + (href || "")}"${current === k ? ' aria-current="page"' : ""}${k === "account" ? ' style="float:right;margin-right:0"' : ""}>${label}</a>`).join("");
+        `<a href="${current === "home" ? (href || "./") : "../" + (href || "")}"${current === k ? ' aria-current="page"' : ""}${k === "home" ? ' class="brand"' : ""}${k === "account" ? ' class="end"' : ""}>${label}</a>`).join("");
 }
 
 function page({ title, sub, current, families, cards, modes = false, generated = 0, kinds = false, sizes = false }) {
+    // Smallest first by default: the .rc size is what a device downloads. (Cards with no size last.)
+    if (sizes) {
+        const bytesOf = (c) => Number(/data-bytes="(\d+)"/.exec(c)?.[1] ?? 0) || Infinity;
+        cards = cards.map((c, i) => [c, i]).sort((a, b) => bytesOf(a[0]) - bytesOf(b[0]) || a[1] - b[1]).map(([c]) => c);
+    }
     return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)}</title><style>${CSS}</style></head>
+<title>${esc(title)}</title>${FONTS}<style>${CSS}</style></head>
 <body>
 <header>
 <nav>${siteNav(current)}</nav>
@@ -329,7 +352,7 @@ function page({ title, sub, current, families, cards, modes = false, generated =
 ${families.map((f) => `<button type="button" data-family="${esc(f)}" aria-pressed="false">${esc(f)}</button>`).join("")}
 ${kinds ? `<select id="kind" aria-label="How it is built"><option value="">Any build</option><option value="library">Uses library components</option><option value="own">Defines its own components</option><option value="plain">Plain JSON, no components</option></select>` : ""}
 ${generated ? `<label class="gen"><input id="gen" type="checkbox"> ${generated} generated (eval runs)</label>` : ""}
-${sizes ? `<select id="sort" aria-label="Order"><option value="">${current === "demos" || current === "showcases" ? "By id" : "By name"}</option><option value="small">Smallest first</option><option value="large">Largest first</option></select>` : ""}
+${sizes ? `<select id="sort" aria-label="Order"><option value="">Smallest first</option><option value="large">Largest first</option><option value="id">${current === "demos" || current === "showcases" ? "By id" : "By name"}</option></select>` : ""}
 ${modes ? `<select id="mode" aria-label="Render"><option value="">Default render</option><option value="light">Light</option><option value="dark">Dark</option><option value="mono-dark">Mono dark (always-on, OLED)</option><option value="mono-light">Mono light (e-ink)</option></select>` : ""}</div>
 </header>
 <main>${cards.join("\n")}<p id="none" class="empty" hidden>Nothing matches.</p></main>
@@ -364,7 +387,7 @@ function card({ e, base, text, desc, tags, links, build, bytes = 0 }) {
         return `<button type="button" data-mode="${esc(m.name)}" data-src="${src}" data-play="${href}" aria-pressed="false" title="Show the ${esc(m.name)} render"><img src="${small}" alt="" loading="lazy">${esc(m.name)}</button>`;
     }).join("")}</div>` : "";
     const tag = (t) => typeof t === "object" ? `<span class="${t.cls}" title="${esc(t.title)}">${esc(t.text)}</span>` : `<span>${esc(t)}</span>`;
-    return `<a class="card" href="${play}" data-play="${play}" data-family="${esc(e.family ?? "")}" data-kind="${esc(build?.kinds ?? "")}" data-bytes="${bytes}" data-text="${esc(text.toLowerCase())}">
+    return `<a class="card" href="${play}" data-play="${play}" data-family="${esc(e.family ?? "")}" data-kind="${esc(build?.kinds ?? "")}" data-bytes="${bytes}" data-key="${esc(e.id)}" data-text="${esc(text.toLowerCase())}">
 <div class="thumb">${img}</div>${strip}
 <div class="body"><span class="head"><span class="id">${esc(e.id)}</span>${sizeBadge(bytes)}</span>${build ? `<span class="kind ${build.cls}" title="${esc(build.title)}">${esc(build.label)}</span>` : ""}<span class="title">${esc(e.title ?? e.id)}</span>
 <span class="desc">${esc(desc ?? "")}</span>
@@ -387,7 +410,7 @@ function buildKind(e, lib) {
 }
 
 /** The showcases (SHW) or every other example (the demos), by id. */
-function examplesPage(showcases = false) {
+function examplesPage(showcases = false, { generated: withGenerated = true } = {}) {
     const C = loadCatalog();
     const list = C.examples.filter((e) => (e.family === "SHW") === showcases).sort((a, b) => a.id.localeCompare(b.id, "en", { numeric: true }));
     const families = showcases ? [] : [...new Set(list.map((e) => e.family))].sort();
@@ -402,7 +425,7 @@ function examplesPage(showcases = false) {
         links: "",
     }); });
     // The generated corpus, behind its toggle: one document per eval prompt, built with the tools.
-    const gen = showcases ? [] : loadGenerated().filter((g) => existsSync(path.join(EXAMPLES_DIR, g.folder, "doc.json")));
+    const gen = showcases || !withGenerated ? [] : loadGenerated().filter((g) => existsSync(path.join(EXAMPLES_DIR, g.folder, "doc.json")));
     for (const g of gen) cards.push(card({
         e: { ...g, family: "GEN" }, base: "../", bytes: g.bytes ?? 0,
         text: [g.id, g.title, g.prompt, ...(g.keywords ?? []), ...(g.components ?? []), "generated"].join(" "),
@@ -428,11 +451,24 @@ function isLayout(name, def) {
     return def?.layout === true || LAYOUT_EXTRAS.includes(name) || STRUCTURES.some((s) => s.template === name);
 }
 
-/** The leaf components, or (layouts) the ones that arrange other components. */
-function componentsPage(layouts = false) {
+// The basic components: the common parts any UI framework ships with (buttons, toggles,
+// sliders, chips, tabs, list items, cards, app bar, progress, avatars, badges...). Every other
+// leaf component (charts, clocks, maps, 3D, data rows, formatted numbers...) is advanced. A
+// component.json can say "tier": "basic" or "advanced".
+const BASIC = ["Button", "IconButton", "Checkbox", "Switch", "Slider", "Chip", "ChoiceChips", "Stepper", "Tabs",
+    "ListItem", "Card", "Divider", "Icon", "Avatar", "Badge", "Banner", "ProgressBar", "ProgressRing", "TopBar",
+    "ExpandableRow", "Skeleton", "Rating", "PagerDots", "Steps"];
+function tierOf(name, def) {
+    if (isLayout(name, def)) return "layout";
+    return def?.tier ?? (BASIC.includes(name) ? "basic" : "advanced");
+}
+
+/** One kind of component: "basic", "advanced" or "layout" (the ones that arrange others). */
+function componentsPage(kind = "basic") {
+    const layouts = kind === "layout";
     const C = loadCatalog();
-    const names = [...C.library.components.keys()].filter((n) => isLayout(n, C.library.components.get(n)) === layouts).sort();
-    const base = layouts ? "../" : "";
+    const names = [...C.library.components.keys()].filter((n) => tierOf(n, C.library.components.get(n)) === kind).sort();
+    const base = "../";
     const cards = names.map((name) => {
         const def = C.library.components.get(name);
         const demo = C.demos.get(name);
@@ -449,11 +485,104 @@ function componentsPage(layouts = false) {
     const structuresOf = (n) => STRUCTURES.filter((s) => s.template === n).map((s) => s.id);
     if (layouts) cards.forEach((c, i) => { const st = structuresOf(names[i]); if (st.length) cards[i] = c.replace('<span class="links">', `<span class="links"><span>structure: ${esc(st.join(", "))}</span>`); });
     return page({
-        title: layouts ? "RemoteCompose layouts" : "RemoteCompose components", current: layouts ? "layouts" : "components", families: [], cards, modes: true, sizes: true,
-        sub: layouts
+        title: layouts ? "Layouts" : kind === "advanced" ? "Advanced components" : "Components", current: layouts ? "layouts" : kind === "advanced" ? "advanced" : "components", families: [], cards, modes: true, sizes: true,
+        sub: kind === "advanced"
+            ? `${names.length} richer components: charts, clocks, maps, media, diagrams, 3D and more. Each is in light, dark and both monochrome looks, and adapts to its box. Click one to open its demo in the playground.`
+            : layouts
             ? `${names.length} layout components: they arrange other components into a screen or a section and own its adaptation (phone, tablet, wide, short), taking your content through slots and data. Each is in light, dark and both monochrome looks. Click one to open its demo in the playground.`
-            : `${names.length} reusable components to place inside your layouts, each in a light, dark and two monochrome versions: mono dark (light on black, for always-on displays) and mono light (dark on white, for e-ink). Call one by name in any document ({"Gauge": {"value": "@cpu"}}); every tool expands it. Click one to open its demo in the playground.`,
+            : `${names.length} basic components, the common parts of any screen (buttons, switches, sliders, tabs, list items, cards...), each in a light, dark and two monochrome versions: mono dark (light on black, for always-on displays) and mono light (dark on white, for e-ink). Call one by name in any document ({"Gauge": {"value": "@cpu"}}); every tool expands it. Click one to open its demo in the playground.`,
     });
+}
+
+/** An example's folder: from the catalog, else by its id on disk (one built since the catalog). */
+function folderOf(id) {
+    const e = entry(id);
+    if (e?.folder) return e.folder;
+    try { return readdirSync(EXAMPLES_DIR).find((d) => d.startsWith(`${id}-`)) ?? null; } catch { return null; }
+}
+
+// The landing page's header plays this document (the animated logo) in the web player.
+const LOGO_DOC = "SHW-32";
+
+/** The landing page: what Kobento is, in plain words, under its animated logo. */
+async function landingPage() {
+    const C = loadCatalog();
+    const logoFolder = folderOf(LOGO_DOC);
+    const logoRc = logoFolder && path.join(EXAMPLES_DIR, logoFolder, "doc.rc");
+    const player = logoRc && existsSync(logoRc) ? await playerScript() : null;
+    const v = logoRc && existsSync(logoRc) ? statSync(logoRc).mtimeMs.toString(36).replace(".", "") : "";
+    const count = (k) => [...C.library.components.keys()].filter((n) => tierOf(n, C.library.components.get(n)) === k).length;
+    const showcases = C.examples.filter((e) => e.family === "SHW").length;
+    const hero = player
+        ? `<div class="hero-logo" id="logo"><rc-player src="rc/${LOGO_DOC}.rc?v=${v}" theme="auto"></rc-player></div>
+<script src="player/${player.name}"></script>
+<script>
+// Size the player to the page: the logo document is laid out at the width it is given.
+(function () {
+  var box = document.getElementById("logo"), p = box.querySelector("rc-player");
+  function fit() { var w = Math.min(box.clientWidth, 1100), h = Math.round(Math.max(150, w / 3.6));
+    p.setAttribute("width", String(w)); p.setAttribute("height", String(h)); }
+  fit(); var t; window.addEventListener("resize", function () { clearTimeout(t); t = setTimeout(fit, 150); });
+})();
+</script>`
+        : `<div class="hero-logo static">${MARK}<span>Kobento</span></div>`;
+    const link = (href, text) => `<a href="${href}" rel="noopener">${text}</a>`;
+    return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kobento</title><meta name="description" content="Kobento: components and AI tools for building RemoteCompose interfaces.">
+${FONTS}<style>${CSS}
+.landing { max-width:880px; margin:0 auto; padding:8px 16px 64px; }
+.hero-logo { margin:8px 0 8px; display:flex; justify-content:center; min-height:150px; }
+.hero-logo.static { align-items:center; gap:16px; font:800 56px Manrope,'DM Sans',sans-serif; letter-spacing:-2px; }
+.hero-logo.static .mark { width:64px; height:64px; }
+.landing h1 { font-size:clamp(30px,4.6vw,46px); line-height:1.1; letter-spacing:-1.5px; margin:24px 0 12px; }
+.landing h2 { font-size:22px; letter-spacing:-0.5px; margin:40px 0 8px; }
+.landing p, .landing li { font-size:17px; line-height:1.65; color:var(--ink); }
+.landing .lead { font-size:19px; color:var(--muted); }
+.landing ul, .landing ol { padding-left:22px; }
+.landing a { color:var(--accent); }
+.go { display:flex; flex-wrap:wrap; gap:10px; margin:20px 0 4px; }
+.go a { padding:10px 16px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--ink); text-decoration:none; font-weight:600; }
+.go a.primary { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+code { font:13px ui-monospace,Menlo,monospace; background:var(--chip); padding:2px 6px; border-radius:6px; }
+</style></head>
+<body>
+<header><nav>${siteNav("home")}</nav></header>
+<main class="landing" style="display:block">
+${hero}
+<h1>Interfaces for RemoteCompose, built with AI.</h1>
+<p class="lead">Kobento is an implementation of RemoteCompose. It gives you ready-made components and AI tools to build RemoteCompose screens.</p>
+<div class="go">
+  <a class="primary" href="showcases/">See the showcases</a>
+  <a href="components/">Browse the components</a>
+  <a href="account/">Create an account</a>
+</div>
+
+<h2>What is RemoteCompose?</h2>
+<p>RemoteCompose is an Android format for user interfaces. A server sends a small document, and the device draws it: layout, text, animation, touch, light and dark themes. The screen can change without an app update. It runs in apps, widgets and watch faces.</p>
+<p>Read more: ${link("https://developer.android.com/develop/ui/compose/system/remote-compose", "RemoteCompose on Android Developers")} and the ${link("https://developer.android.com/jetpack/androidx/releases/compose-remote", "androidx release notes")}.</p>
+
+<h2>What Kobento gives you</h2>
+<ul>
+  <li><strong>Components.</strong> ${count("basic")} basic parts (buttons, switches, sliders, tabs, cards) and ${count("advanced")} advanced ones (charts, clocks, maps, 3D). Each works in light, dark and two monochrome looks.</li>
+  <li><strong>Layouts.</strong> ${count("layout")} layouts, such as a list with its detail or a dashboard grid. They adapt from a phone to a tablet.</li>
+  <li><strong>AI tools.</strong> MCP servers that let Claude, ChatGPT or another assistant find the right parts, write the document, check it and show you the result.</li>
+  <li><strong>Players.</strong> A web player and a desktop player that draw the same documents, and an ${link("https://camaelon.github.io/remotecompose-experiments/inspector/", "inspector")} that shows what is inside one.</li>
+</ul>
+<p>The ${showcases} showcases show what the format can do: 3D, physics, live data, morphing shapes.</p>
+
+<h2>How to use it</h2>
+<ol>
+  <li><a href="account/">Create an account</a>. We email you a link to confirm your address, and you get access to the MCP servers.</li>
+  <li>Add Kobento to your assistant. In claude.ai or ChatGPT, add a custom connector with the URL <code>${esc(process.env.RC_MCP_URL || "https://mcp.kobento.dev/mcp")}</code>, then sign in when asked. In Claude Code, run <code>claude mcp add --transport http kobento ${esc(process.env.RC_MCP_URL || "https://mcp.kobento.dev/mcp")}</code>. In the Gemini CLI, run <code>gemini mcp add --transport http kobento ${esc(process.env.RC_MCP_URL || "https://mcp.kobento.dev/mcp")}</code>, then <code>/mcp auth kobento</code> to sign in.</li>
+  <li>Describe the screen you want. The assistant builds it from the components, checks it and shows you a picture of it.</li>
+</ol>
+<div class="go"><a class="primary" href="account/">Create an account</a></div>
+
+<h2>Open source</h2>
+<p>The code is on ${link("https://github.com/camaelon/remotecompose-experiments", "GitHub")}: the players, the components, the MCP servers and this site.</p>
+</main>
+</body></html>`;
 }
 
 /** The screen structures (structures.mjs): what a request is shaped like, how each adapts, and where to start. */
@@ -517,23 +646,35 @@ export async function publicRoute(req, url, res) {
         return send(req, res, 200, "text/javascript; charset=utf-8", player.code, { "Cache-Control": "public, max-age=31536000, immutable" });
     }
     if (await accountRoute(req, url, res, { css: CSS, nav: siteNav })) return true;
-    const known = p === "/" || p === "" || /^\/(components|layouts|structures|showcases|demos|examples|play|img|thumb|json)(\/|$)/.test(p);
+    // The generated corpus (eval runs: unreviewed screens built by assistants) is for admins
+    // when accounts are on; without accounts (local use) everyone sees it.
+    const seesGenerated = async () => !accountsEnabled() || Boolean((await requestAccount(req).catch(() => null))?.admin);
+    if (/^\/(play|img|thumb|json|rc)\/GEN-/.test(url.pathname) && !(await seesGenerated())) return send(req, res, 404, "text/plain", "not found\n");
+    if (await oauthRoute(req, url, res, { css: CSS, nav: siteNav })) return true;
+    const known = p === "/" || p === "" || /^\/(components|advanced|layouts|structures|showcases|demos|examples|play|img|thumb|json|rc)(\/|$)/.test(p);
     if (!known) return false;
     if (req.method !== "GET" && req.method !== "HEAD") {
         res.writeHead(405, { Allow: "GET, HEAD" });
         res.end();
         return true;
     }
-    if (/^\/(|components\/|layouts\/|structures\/|showcases\/|demos\/)$/.test(p)) warmThumbs();
-    // Components first: the landing page. Examples have their own page; /components/ (its old
-    // address) still goes to the components.
-    if (p === "/" || p === "") return send(req, res, 200, "text/html; charset=utf-8", componentsPage());
-    if (p === "/components" || p === "/components/") { res.writeHead(301, { Location: `${p.endsWith("/") ? "../" : "./"}${url.search}` }); res.end(); return true; }
+    if (/^\/(|components\/|advanced\/|layouts\/|structures\/|showcases\/|demos\/)$/.test(p)) warmThumbs();
+    // The landing page: what Kobento is, under its animated logo.
+    if (p === "/" || p === "") return send(req, res, 200, "text/html; charset=utf-8", await landingPage());
+    // A document's .rc, for the players embedded in the pages.
+    const rm = /^\/rc\/([^/.]+)\.rc$/.exec(p);
+    if (rm) {
+        const folder = folderOf(decodeURIComponent(rm[1]));
+        const file = folder && path.join(EXAMPLES_DIR, folder, "doc.rc");
+        if (!file || !existsSync(file)) return send(req, res, 404, "text/plain", "not found\n");
+        return send(req, res, 200, "application/octet-stream", readFileSync(file), url.searchParams.has("v") ? { "Cache-Control": "public, max-age=31536000, immutable" } : {});
+    }
     // (/examples/ was the demos' address: it redirects.)
     if (p === "/examples" || p === "/examples/") { res.writeHead(301, { Location: `${p.endsWith("/") ? "../" : ""}demos/${url.search}` }); res.end(); return true; }
-    for (const [route, render] of [["layouts", () => componentsPage(true)], ["showcases", () => examplesPage(true)], ["demos", () => examplesPage(false)]]) {
+    for (const [route, render] of [["components", () => componentsPage("basic")], ["advanced", () => componentsPage("advanced")], ["layouts", () => componentsPage("layout")],
+        ["showcases", () => examplesPage(true)], ["demos", async () => examplesPage(false, { generated: await seesGenerated() })]]) {
         if (p === `/${route}`) { res.writeHead(301, { Location: `${route}/${url.search}` }); res.end(); return true; }
-        if (p === `/${route}/`) return send(req, res, 200, "text/html; charset=utf-8", render());
+        if (p === `/${route}/`) return send(req, res, 200, "text/html; charset=utf-8", await render(), { "Cache-Control": "private, no-cache" });
     }
     if (p === "/structures") { res.writeHead(301, { Location: `structures/${url.search}` }); res.end(); return true; }
     if (p === "/structures/") return send(req, res, 200, "text/html; charset=utf-8", structuresPage());

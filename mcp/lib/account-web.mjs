@@ -18,7 +18,11 @@
 //   POST account/signout
 //   POST account/tokens              label -> a new token, shown once with connection instructions
 //   POST account/tokens/<id>/revoke
+//   POST account/apps/<id>/revoke    disconnects an OAuth app (its grant: access and refresh tokens)
 //   POST account/admin/<id>/disable | enable | resend | delete     (admins; delete: pending only)
+//
+// OAuth (lib/oauth.mjs) sends a visitor who is not signed in here with a cookie (rc_oauth_next)
+// holding the authorization request; any sign-in then goes back to it.
 //
 // Sessions: a random id in an HttpOnly, SameSite=Lax cookie on Path=/ (so the deploy server's
 // /pages/ index sees it too), Secure when the request came over https, 30 days, stored hashed.
@@ -101,6 +105,21 @@ async function readForm(req) {
 function cookie(req, value, maxAge) {
     return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${isHttps(req) ? "; Secure" : ""}`;
 }
+
+/** The authorization request to go back to after signing in (lib/oauth.mjs sets it), or null. */
+export const NEXT_COOKIE = "rc_oauth_next";
+function oauthNext(req) {
+    const v = readCookie(req, NEXT_COOKIE);
+    if (!v) return null;
+    const q = new URLSearchParams(v);
+    return q.get("client_id") ? q : null;
+}
+/** Where a sign-in goes: back to the pending authorization (and the cookie cleared), else the account page. */
+function afterSignin(req, sessionCookie, to = "./") {
+    const next = oauthNext(req);
+    return next ? { to: `../oauth/authorize?${next}`, cookies: [sessionCookie, clearNext(req)] } : { to, cookies: [sessionCookie] };
+}
+const clearNext = (req) => `${NEXT_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${isHttps(req) ? "; Secure" : ""}`;
 
 const HEADERS = {
     "Cache-Control": "no-store",
@@ -251,6 +270,11 @@ function accountPage(req, { store, acct, sid, fresh, error, notice }) {
     const usage = store.usage(acct.id, 30);
     const pages = store.pagesOf(acct.id);
     const live = tokens.filter((t) => !t.revoked);
+    const apps = store.listGrants(acct.id);
+    const host = (u) => { try { return new URL(u).host; } catch { return ""; } };
+    const appRows = apps.map((g) => `<tr><td class="w"><b>${esc(g.client_name || "An app")}</b> <span class="muted">${esc([...new Set(g.redirect_uris.map(host))].join(", "))}</span></td>
+<td>${esc(day(g.created))}</td><td>${esc(day(g.last_used))}</td><td><code>${esc(g.scope)}</code></td>
+<td><form class="inline" method="post" action="apps/${g.id}/revoke">${csrf}<button class="link danger" type="submit">Disconnect</button></form></td></tr>`).join("\n");
     const tokenRows = tokens.map((t) => `<tr><td class="w">${esc(t.label)}</td><td><code>${esc(t.prefix)}…</code></td><td>${esc(day(t.created))}</td><td>${esc(day(t.last_used))}</td>
 <td>${t.revoked ? `<span class="pill off">revoked ${esc(day(t.revoked))}</span>` : `<form class="inline" method="post" action="tokens/${t.id}/revoke">${csrf}<button class="link danger" type="submit">Revoke</button></form>`}</td></tr>`).join("\n");
     const body = [
@@ -263,12 +287,17 @@ ${acct.admin ? ' <span class="pill">admin</span>' : ""}<br><span class="muted">M
         `<section class="panel"><h2>Tokens</h2>
 <p class="muted">Each token connects one client (Claude Code, claude.ai, ChatGPT, a script) to the MCP servers. ${live.length} active.</p>
 ${tokens.length ? `<div class="wrap"><table><thead><tr><th>Label</th><th>Token</th><th>Created (UTC)</th><th>Last used</th><th></th></tr></thead><tbody>${tokenRows}</tbody></table></div>` : ""}
-<form class="row" method="post" action="tokens" style="margin-top:12px">${csrf}<label class="f">New token's label<input type="text" name="label" maxlength="60" placeholder="e.g. laptop, claude.ai" required></label><button class="btn" type="submit">Create token</button></form>
+<form class="row" method="post" action="tokens" style="margin-top:12px">${csrf}<label class="f">New token's label<input type="text" name="label" maxlength="60" placeholder="e.g. laptop, a script" required></label><button class="btn" type="submit">Create token</button></form>
+</section>`,
+        `<section class="panel"><h2>Connected apps</h2>
+<p class="muted">Apps you let in by signing in from them (claude.ai, ChatGPT, Claude Code, …) instead of pasting a token. Disconnecting one ends its access at once; it asks you to sign in again next time.</p>
+${apps.length ? `<div class="wrap"><table><thead><tr><th>App</th><th>Connected (UTC)</th><th>Last used</th><th>Scope</th><th></th></tr></thead><tbody>${appRows}</tbody></table></div>`
+            : `<p class="muted">None yet. In claude.ai or ChatGPT, add a custom connector with the server's URL and no token: it asks you to sign in here.</p>`}
 </section>`,
         `<section class="panel"><h2>Usage, last ${usage.days} days</h2>
 <div class="stats"><div><b>${usage.total}</b><span class="muted">tool calls</span></div><div><b>${usage.errorCount}</b><span class="muted">errors</span></div><div><b>${usage.byTool.length}</b><span class="muted">tools used</span></div></div>
 ${usage.total ? bars(usage.byDay) : ""}
-${usage.total ? `<div class="cols"><div><h3>Per tool</h3>${groupTable(usage.byTool, "Server · tool")}</div><div><h3>Per server</h3>${groupTable(usage.byServer, "Server")}</div></div>` : `<p class="muted">No calls yet. Connect a client with one of your tokens and they show up here.</p>`}
+${usage.total ? `<div class="cols"><div><h3>Per tool</h3>${groupTable(usage.byTool, "Server · tool")}</div><div><h3>Per server</h3>${groupTable(usage.byServer, "Server")}<h3>Per client</h3>${groupTable(usage.byClient, "Token or app")}</div></div>` : `<p class="muted">No calls yet. Connect a client with one of your tokens, or sign in from an app, and they show up here.</p>`}
 ${usage.errors.length ? `<h3>Recent errors</h3><div class="wrap"><table><thead><tr><th>When (UTC)</th><th>Tool</th><th>Error</th></tr></thead><tbody>
 ${usage.errors.map((e) => `<tr><td>${esc(day(e.ts))}</td><td>${esc(e.server)} · ${esc(e.tool)}</td><td class="w">${esc(e.error)}</td></tr>`).join("\n")}</tbody></table></div>` : ""}
 </section>`,
@@ -322,11 +351,12 @@ function deadLinkPage({ what }) {
 </section>`;
 }
 
-function signedOutPage({ error, values = {} }) {
+function signedOutPage({ error, values = {}, connecting = null }) {
     const open = signupOpen();
     const verify = emailVerify();
     return [
         error ? `<p class="err">${esc(error)}</p>` : "",
+        connecting ? `<p class="note"><b>${esc(connecting)}</b> wants to connect to your RemoteCompose account. Sign in (or create an account) and you come back to approve it.</p>` : "",
         `<div class="cols">`,
         `<section class="panel"><h2>Create an account</h2>
 ${open ? `<p class="muted">${verify ? "We email you a link to confirm the address; following it signs you in and gives you your token for the MCP servers."
@@ -368,7 +398,8 @@ export async function accountRoute(req, url, res, site) {
         title: opts.title ?? (opts.acct ? "Your account" : "Account"),
         sub: opts.sub ?? (opts.acct ? "Your tokens for the RemoteCompose MCP servers, what you used them for, and the pages you published."
             : "An account gives you your own token for the RemoteCompose MCP servers, and shows what you used it for and the pages you published."),
-        body: opts.body ?? (opts.acct ? accountPage(req, { store, ...opts }) : signedOutPage(opts)),
+        body: opts.body ?? (opts.acct ? accountPage(req, { store, ...opts })
+            : signedOutPage({ connecting: oauthNext(req) ? (store.getClient(oauthNext(req).get("client_id"))?.name || "An app") : null, ...opts })),
     }), extra);
     const checkEmail = (email, status = 200) => render(status, { title: "Check your email",
         sub: "One step left: the link we email you.", body: checkEmailPage({ email }) });
@@ -420,11 +451,13 @@ export async function accountRoute(req, url, res, site) {
         if (!a) return render(400, { title: "Link expired", sub: "Ask for a new one below.", body: deadLinkPage({ what: verify ? "confirmation" : "sign-in" }) });
         a = store.refreshAdmin(a);
         const newSid = store.createSession(a.id);
-        const set = { "Set-Cookie": cookie(req, newSid, 30 * 86400) };
-        if (!verify) return redirect(res, "./", set);
+        const after = afterSignin(req, cookie(req, newSid, 30 * 86400));
+        if (!verify) return redirect(res, after.to, { "Set-Cookie": after.cookies });
         // Verified: the first token, shown once (none is made before), unless it has one already.
+        // Coming from an app's sign-in: straight back to its consent page, no token needed.
+        if (oauthNext(req)) return redirect(res, after.to, { "Set-Cookie": after.cookies });
         const fresh = store.listTokens(a.id).length ? null : store.issueToken(a.id, "first token");
-        return render(200, { acct: a, sid: newSid, fresh, notice: "Your email is confirmed and you are signed in." }, set);
+        return render(200, { acct: a, sid: newSid, fresh, notice: "Your email is confirmed and you are signed in." }, { "Set-Cookie": after.cookies });
     }
     if (p === "/account/register") {
         const values = { email: form.get("email") ?? "", name: form.get("name") ?? "" };
@@ -443,7 +476,8 @@ export async function accountRoute(req, url, res, site) {
             : found?.disabled ? "This account is disabled." : "That token is not valid (wrong, or revoked). Lost it? Use \"Email me a sign-in link\"." });
         const a = store.refreshAdmin(found.account);
         const newSid = store.createSession(a.id);
-        return redirect(res, "./", { "Set-Cookie": cookie(req, newSid, 30 * 86400) });
+        const after = afterSignin(req, cookie(req, newSid, 30 * 86400));
+        return redirect(res, after.to, { "Set-Cookie": after.cookies });
     }
     // Everything below needs the session, and the form's token tied to it.
     if (!acct) return redirect(res, p.split("/").length > 3 ? "../../" : "./", sid ? { "Set-Cookie": cookie(req, "", 0) } : {});
@@ -458,7 +492,12 @@ export async function accountRoute(req, url, res, site) {
         const fresh = store.issueToken(acct.id, label);
         return render(200, { acct, sid, fresh });
     }
-    let m = /^\/account\/tokens\/(\d+)\/revoke$/.exec(p);
+    let m = /^\/account\/apps\/(\d+)\/revoke$/.exec(p);
+    if (m) {
+        store.revokeGrant(Number(m[1]), acct.id);
+        return redirect(res, "../../");
+    }
+    m = /^\/account\/tokens\/(\d+)\/revoke$/.exec(p);
     if (m) {
         store.revokeToken(acct.id, Number(m[1]));
         return redirect(res, "../../");
@@ -481,3 +520,6 @@ export async function accountRoute(req, url, res, site) {
     }
     return html(res, 404, "<!doctype html><p>Not found.</p>");
 }
+
+// For lib/oauth.mjs: its consent page is one of these pages.
+export { ACCOUNT_CSS, clientIp, cookie, esc, HEADERS, html, isHttps, readForm, redirect, selfOrigin, shell };

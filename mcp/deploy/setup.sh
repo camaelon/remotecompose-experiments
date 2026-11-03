@@ -100,6 +100,9 @@ add_env RC_ACCOUNTS 1
 add_env RC_DB /var/lib/rcmcp/rc.db
 add_env RC_ACCOUNT_URL "https://$DOMAIN/examples/account/"
 add_env RC_MCP_URL "https://$DOMAIN/mcp"
+# OAuth (lib/oauth.mjs): connectors sign in instead of pasting a token. The public origin makes
+# the discovery URLs; each server's mount (RC_MOUNT, in its own env file below) its resource.
+add_env RC_PUBLIC_ORIGIN "https://$DOMAIN"
 # Email (lib/mail.mjs, through Resend): confirmation links on registration and sign-in links.
 # The sender only; the API key is never written here (RESEND_API_KEY, by hand). Until it is
 # set, the links go to the log instead.
@@ -108,15 +111,17 @@ add_env RC_MAIL_FROM "\"RemoteCompose <noreply@$DOMAIN>\""
 #  RC_EMAIL_VERIFY=off gives a token at registration, without the confirmation email.)
 # The database is the service user's: every server unit writes it (ReadWritePaths=/var/lib/rcmcp).
 for f in /var/lib/rcmcp/rc.db /var/lib/rcmcp/rc.db-wal /var/lib/rcmcp/rc.db-shm; do [[ -e $f ]] && chown rcmcp:rcmcp "$f"; done
+# RC_MOUNT: where Caddy mounts each server (the Caddyfile's handle_path), for OAuth's resource URLs.
 echo "MCP_HTTP_PORT=8808" > /etc/rcmcp/json2rc.env
+echo "RC_MOUNT=/json2rc" >> /etc/rcmcp/json2rc.env
 # rc-render returns public links to its renders under its own public base.
-printf 'MCP_HTTP_PORT=8809\nMCP_PUBLIC_URL=https://%s/rc-render\n' "$DOMAIN" > /etc/rcmcp/rc-render.env
+printf 'MCP_HTTP_PORT=8809\nMCP_PUBLIC_URL=https://%s/rc-render\nRC_MOUNT=/rc-render\n' "$DOMAIN" > /etc/rcmcp/rc-render.env
 # The guide reports the public endpoints, so it needs to know the public name.
-printf 'MCP_HTTP_PORT=8810\nMCP_PUBLIC_BASE_URL=https://%s\n' "$DOMAIN" > /etc/rcmcp/guide.env
+printf 'MCP_HTTP_PORT=8810\nMCP_PUBLIC_BASE_URL=https://%s\nRC_MOUNT=/guide\n' "$DOMAIN" > /etc/rcmcp/guide.env
 # rc-deploy publishes pages under its own public base.
-printf 'MCP_HTTP_PORT=8811\nMCP_PUBLIC_URL=https://%s/deploy\n' "$DOMAIN" > /etc/rcmcp/deploy.env
-echo "MCP_HTTP_PORT=8812" > /etc/rcmcp/inspect.env
-echo "MCP_HTTP_PORT=8813" > /etc/rcmcp/examples.env
+printf 'MCP_HTTP_PORT=8811\nMCP_PUBLIC_URL=https://%s/deploy\nRC_MOUNT=/deploy\n' "$DOMAIN" > /etc/rcmcp/deploy.env
+printf 'MCP_HTTP_PORT=8812\nRC_MOUNT=/inspect\n' > /etc/rcmcp/inspect.env
+printf 'MCP_HTTP_PORT=8813\nRC_MOUNT=/examples\n' > /etc/rcmcp/examples.env
 # The front door serves at the domain root: its public routes (example gallery, playgrounds,
 # published pages, rendered images) live there too.
 printf 'MCP_HTTP_PORT=8814\nMCP_PUBLIC_URL=https://%s\n' "$DOMAIN" > /etc/rcmcp/remotecompose.env
@@ -161,6 +166,9 @@ The single-purpose servers are still there:
   https://$DOMAIN/inspect/mcp
   https://$DOMAIN/examples/mcp     example catalog and component library
   https://$DOMAIN/examples/        browse the components, layouts, structures, showcases and demos, public
+Connectors:   claude.ai / ChatGPT: add a custom connector with URL https://$DOMAIN/mcp and no token:
+              it asks to sign in (OAuth). Claude Code: claude mcp add --transport http remotecompose
+              https://$DOMAIN/mcp, then /mcp in Claude Code to sign in.
 Accounts:     https://$DOMAIN/examples/account/   register, get a token, see usage and published pages
               (also at https://$DOMAIN/account/; RC_SIGNUP=closed in /etc/rcmcp/common.env stops sign-ups)
 Admin token (MCP_TOKEN, keep secret; works everywhere as an admin key): $TOKEN

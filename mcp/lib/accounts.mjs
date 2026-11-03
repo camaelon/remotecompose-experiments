@@ -19,7 +19,11 @@ import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
+// OAuth (lib/oauth.mjs): authorization codes, access and refresh tokens.
+export const OAUTH_CODE_TTL_MS = 60_000;
+export const ACCESS_TTL_MS = 3600_000;
+export const REFRESH_TTL_MS = 30 * 86400_000;
 export const VERIFY_TTL_MS = 24 * 3600_000;
 export const SIGNIN_TTL_MS = 15 * 60_000;
 const PENDING_DAYS = 7;
@@ -114,7 +118,29 @@ export class Accounts {
                 CREATE INDEX IF NOT EXISTS codes_account ON codes(account_id, created);
             `);
         }
-        // (Later migrations: `if (v < 3) { ... }`, then bump SCHEMA_VERSION.)
+        if (v < 3) {
+            // OAuth 2.1 (the MCP authorization spec): clients registered dynamically, one-time
+            // authorization codes, a grant per (account, client) consent, and its tokens. A call
+            // made with an OAuth token is attributed to its grant (calls.grant_id).
+            this.db.exec(`
+                CREATE TABLE IF NOT EXISTS oauth_clients (
+                    id TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', redirect_uris TEXT NOT NULL, created TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS oauth_codes (
+                    hash TEXT PRIMARY KEY, client_id TEXT NOT NULL, account_id INTEGER NOT NULL, redirect_uri TEXT NOT NULL,
+                    challenge TEXT NOT NULL, resource TEXT, scope TEXT NOT NULL DEFAULT 'mcp',
+                    created TEXT NOT NULL, expires TEXT NOT NULL, used TEXT, grant_id INTEGER);
+                CREATE TABLE IF NOT EXISTS oauth_grants (
+                    id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL, client_id TEXT NOT NULL, resource TEXT,
+                    scope TEXT NOT NULL DEFAULT 'mcp', created TEXT NOT NULL, revoked TEXT, last_used TEXT);
+                CREATE INDEX IF NOT EXISTS oauth_grants_account ON oauth_grants(account_id);
+                CREATE TABLE IF NOT EXISTS oauth_tokens (
+                    hash TEXT PRIMARY KEY, grant_id INTEGER NOT NULL, kind TEXT NOT NULL CHECK (kind IN ('access', 'refresh')),
+                    created TEXT NOT NULL, expires TEXT NOT NULL, revoked TEXT);
+                CREATE INDEX IF NOT EXISTS oauth_tokens_grant ON oauth_tokens(grant_id);
+                ALTER TABLE calls ADD COLUMN grant_id INTEGER;
+            `);
+        }
+        // (Later migrations: `if (v < 4) { ... }`, then bump SCHEMA_VERSION.)
         if (v < SCHEMA_VERSION) this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
     }
 
@@ -168,7 +194,13 @@ export class Accounts {
         const before = new Date(Date.now() - days * 86400_000).toISOString();
         const ids = this.db.prepare("SELECT id FROM accounts WHERE status = 'pending' AND created < ?").all(before).map((r) => r.id);
         for (const id of ids) this.deletePending(id);
-        this.db.prepare("DELETE FROM codes WHERE expires < ?").run(new Date(Date.now() - 86400_000).toISOString());
+        const dayAgo = new Date(Date.now() - 86400_000).toISOString();
+        this.db.prepare("DELETE FROM codes WHERE expires < ?").run(dayAgo);
+        this.db.prepare("DELETE FROM oauth_codes WHERE expires < ?").run(dayAgo);
+        this.db.prepare("DELETE FROM oauth_tokens WHERE expires < ?").run(dayAgo);
+        // Clients registered a month ago that never got a grant (registration is open).
+        this.db.prepare("DELETE FROM oauth_clients WHERE created < ? AND id NOT IN (SELECT client_id FROM oauth_grants)")
+            .run(new Date(Date.now() - 30 * 86400_000).toISOString());
         return ids.length;
     }
 
@@ -315,9 +347,9 @@ export class Accounts {
 
     // --- usage
 
-    recordCall({ accountId, tokenId = null, server, tool, ms, ok, error = null, summary = null }) {
-        this.db.prepare("INSERT INTO calls (ts, account_id, token_id, server, tool, ms, ok, error, summary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .run(now(), accountId, tokenId, String(server), String(tool), Math.round(ms), ok ? 1 : 0,
+    recordCall({ accountId, tokenId = null, grantId = null, server, tool, ms, ok, error = null, summary = null }) {
+        this.db.prepare("INSERT INTO calls (ts, account_id, token_id, grant_id, server, tool, ms, ok, error, summary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .run(now(), accountId, tokenId, grantId, String(server), String(tool), Math.round(ms), ok ? 1 : 0,
                 error == null ? null : String(error).split("\n")[0].slice(0, 300),
                 summary == null ? null : String(summary).slice(0, 1000));
     }
@@ -339,8 +371,148 @@ export class Accounts {
         const byServer = group("server");
         const errors = this.db.prepare(`SELECT ts, server, tool, error FROM calls WHERE account_id = ? AND ts >= ? AND ok = 0 ORDER BY ts DESC LIMIT 10`)
             .all(accountId, sinceDate).map((r) => ({ ...r }));
+        // Which client made them: a token (by its label) or a connected app (via its name).
+        const byClient = q(`SELECT CASE WHEN c.grant_id IS NOT NULL THEN 'via ' || COALESCE(NULLIF(k.name, ''), 'an app')
+                                        WHEN c.token_id IS NOT NULL THEN 'token: ' || COALESCE(t.label, '?') ELSE 'admin key' END AS name,
+                COUNT(*) AS calls, SUM(1 - c.ok) AS errors, CAST(AVG(c.ms) AS INTEGER) AS avg_ms
+            FROM calls c LEFT JOIN tokens t ON t.id = c.token_id LEFT JOIN oauth_grants g ON g.id = c.grant_id
+                LEFT JOIN oauth_clients k ON k.id = g.client_id
+            WHERE c.account_id = ? AND c.ts >= ? GROUP BY name ORDER BY calls DESC, name`);
         const total = byDay.reduce((n, d) => n + d.calls, 0);
-        return { days, total, errorCount: byDay.reduce((n, d) => n + d.errors, 0), byDay, byTool, byServer, errors };
+        return { days, total, errorCount: byDay.reduce((n, d) => n + d.errors, 0), byDay, byTool, byServer, byClient, errors };
+    }
+
+    // --- OAuth: clients, codes, grants, tokens (the protocol checks are in lib/oauth.mjs)
+
+    /** A dynamically registered public client (no secret): {id, name, redirect_uris, created}. */
+    registerClient({ name = "", redirectUris }) {
+        const id = "rcc_" + randomBytes(16).toString("base64url");
+        const t = now();
+        this.db.prepare("INSERT INTO oauth_clients (id, name, redirect_uris, created) VALUES (?, ?, ?, ?)")
+            .run(id, String(name).slice(0, 100), JSON.stringify(redirectUris), t);
+        return { id, name: String(name).slice(0, 100), redirect_uris: redirectUris, created: t };
+    }
+
+    getClient(id) {
+        if (typeof id !== "string" || id.length > 100) return null;
+        const r = this.db.prepare("SELECT * FROM oauth_clients WHERE id = ?").get(id);
+        return r ? { id: r.id, name: r.name, redirect_uris: JSON.parse(r.redirect_uris), created: r.created } : null;
+    }
+
+    /** A one-time authorization code (60 s; only its hash kept) for a consent just given. */
+    createAuthCode({ clientId, accountId, redirectUri, challenge, resource = null, scope = "mcp" }, ttlMs = OAUTH_CODE_TTL_MS) {
+        const code = randomBytes(32).toString("base64url");
+        const t = Date.now();
+        this.db.prepare(`INSERT INTO oauth_codes (hash, client_id, account_id, redirect_uri, challenge, resource, scope, created, expires)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(sha256(code), clientId, accountId, redirectUri, challenge, resource, scope,
+            new Date(t).toISOString(), new Date(t + ttlMs).toISOString());
+        return code;
+    }
+
+    /**
+     * Claims a code: its row once ({...row}), then never again. A second use of a code that
+     * already produced tokens revokes that grant (RFC 6749 10.5: the code may have leaked).
+     * Returns null for an unknown code, {reused: true} for a used one, {expired: true}.
+     */
+    claimAuthCode(code) {
+        if (typeof code !== "string" || !code || code.length > 100) return null;
+        const h = sha256(code);
+        const r = this.db.prepare("SELECT * FROM oauth_codes WHERE hash = ?").get(h);
+        if (!r) return null;
+        if (r.used || this.db.prepare("UPDATE oauth_codes SET used = ? WHERE hash = ? AND used IS NULL").run(now(), h).changes !== 1) {
+            if (r.grant_id) this.revokeGrant(r.grant_id);
+            return { reused: true };
+        }
+        if (r.expires < now()) return { expired: true };
+        return { ...r, hash: h };
+    }
+
+    /** A grant for a code just exchanged, and its first tokens: {grantId, access, refresh, expiresIn}. */
+    grantFromCode(row, { accessTtlMs = ACCESS_TTL_MS, refreshTtlMs = REFRESH_TTL_MS } = {}) {
+        const r = this.db.prepare("INSERT INTO oauth_grants (account_id, client_id, resource, scope, created) VALUES (?, ?, ?, ?, ?)")
+            .run(row.account_id, row.client_id, row.resource, row.scope, now());
+        const grantId = Number(r.lastInsertRowid);
+        this.db.prepare("UPDATE oauth_codes SET grant_id = ? WHERE hash = ?").run(grantId, row.hash);
+        return { grantId, scope: row.scope, ...this.#grantTokens(grantId, accessTtlMs, refreshTtlMs) };
+    }
+
+    #grantTokens(grantId, accessTtlMs, refreshTtlMs) {
+        const access = "rco_" + randomBytes(32).toString("base64url");
+        const refresh = "rcr_" + randomBytes(32).toString("base64url");
+        const t = Date.now(), ins = this.db.prepare("INSERT INTO oauth_tokens (hash, grant_id, kind, created, expires) VALUES (?, ?, ?, ?, ?)");
+        ins.run(sha256(access), grantId, "access", new Date(t).toISOString(), new Date(t + accessTtlMs).toISOString());
+        ins.run(sha256(refresh), grantId, "refresh", new Date(t).toISOString(), new Date(t + refreshTtlMs).toISOString());
+        return { access, refresh, expiresIn: Math.round(accessTtlMs / 1000) };
+    }
+
+    /**
+     * The refresh_token grant, rotating: the old refresh token is revoked and a new pair issued.
+     * A refresh token used twice revokes its whole grant (someone else has a copy).
+     * Returns {grantId, access, refresh, expiresIn, scope} or {error: "invalid_grant", why}.
+     */
+    refreshGrant(refresh, clientId, { accessTtlMs = ACCESS_TTL_MS, refreshTtlMs = REFRESH_TTL_MS } = {}) {
+        if (typeof refresh !== "string" || !refresh.startsWith("rcr_") || refresh.length > 100) return { error: "invalid_grant", why: "unknown refresh token" };
+        const h = sha256(refresh);
+        const r = this.db.prepare(`SELECT t.*, g.client_id, g.revoked AS grant_revoked, g.scope, a.status
+            FROM oauth_tokens t JOIN oauth_grants g ON g.id = t.grant_id JOIN accounts a ON a.id = g.account_id
+            WHERE t.hash = ? AND t.kind = 'refresh'`).get(h);
+        if (!r) return { error: "invalid_grant", why: "unknown refresh token" };
+        if (r.client_id !== clientId) return { error: "invalid_grant", why: "the refresh token was issued to another client" };
+        if (r.grant_revoked) return { error: "invalid_grant", why: "the grant was revoked" };
+        if (r.revoked) { this.revokeGrant(r.grant_id); return { error: "invalid_grant", why: "refresh token reused: the grant is revoked" }; }
+        if (r.expires < now()) return { error: "invalid_grant", why: "the refresh token expired" };
+        if (r.status !== "active") return { error: "invalid_grant", why: "the account is not active" };
+        if (this.db.prepare("UPDATE oauth_tokens SET revoked = ? WHERE hash = ? AND revoked IS NULL").run(now(), h).changes !== 1) {
+            this.revokeGrant(r.grant_id);
+            return { error: "invalid_grant", why: "refresh token reused: the grant is revoked" };
+        }
+        return { grantId: r.grant_id, scope: r.scope, ...this.#grantTokens(r.grant_id, accessTtlMs, refreshTtlMs) };
+    }
+
+    /**
+     * Who an OAuth access token ("rco_...") acts for: {account, grantId, clientName}, {disabled},
+     * or null (unknown, expired, revoked, grant revoked). Marks the grant used, once a minute.
+     */
+    authenticateAccess(token) {
+        if (typeof token !== "string" || !token.startsWith("rco_") || token.length > 100) return null;
+        const r = this.db.prepare(`SELECT t.expires, t.revoked AS token_revoked, g.id AS grant_id, g.revoked AS grant_revoked,
+                k.name AS client_name, a.*
+            FROM oauth_tokens t JOIN oauth_grants g ON g.id = t.grant_id JOIN accounts a ON a.id = g.account_id
+                LEFT JOIN oauth_clients k ON k.id = g.client_id
+            WHERE t.hash = ? AND t.kind = 'access'`).get(sha256(token));
+        if (!r || r.token_revoked || r.grant_revoked || r.expires < now()) return null;
+        if (r.status !== "active") return { disabled: true, pending: r.status === "pending" };
+        const key = "g" + r.grant_id, t = Date.now();
+        if (t - (this.lastUsed.get(key) ?? 0) >= LAST_USED_EVERY_MS) {
+            this.lastUsed.set(key, t);
+            try { this.db.prepare("UPDATE oauth_grants SET last_used = ? WHERE id = ?").run(new Date(t).toISOString(), r.grant_id); } catch { /* busy */ }
+        }
+        return { account: this.#row(r), grantId: r.grant_id, clientName: r.client_name ?? "" };
+    }
+
+    /** Revokes a grant and every token of it; with accountId, only that account's. True when it did. */
+    revokeGrant(grantId, accountId = null) {
+        const t = now();
+        const ok = this.db.prepare(`UPDATE oauth_grants SET revoked = ? WHERE id = ? AND revoked IS NULL${accountId == null ? "" : " AND account_id = ?"}`)
+            .run(...[t, Number(grantId), ...(accountId == null ? [] : [accountId])]).changes > 0;
+        if (ok) this.db.prepare("UPDATE oauth_tokens SET revoked = ? WHERE grant_id = ? AND revoked IS NULL").run(t, Number(grantId));
+        return ok;
+    }
+
+    /** RFC 7009: revoking either token of a grant revokes the grant. Unknown tokens are no error. */
+    revokeOAuthToken(token, clientId = null) {
+        if (typeof token !== "string" || token.length > 100) return false;
+        const r = this.db.prepare("SELECT t.grant_id, g.client_id FROM oauth_tokens t JOIN oauth_grants g ON g.id = t.grant_id WHERE t.hash = ?").get(sha256(token));
+        if (!r || (clientId && r.client_id !== clientId)) return false;
+        return this.revokeGrant(r.grant_id);
+    }
+
+    /** The account's connected apps: its live grants, newest first. */
+    listGrants(accountId) {
+        return this.db.prepare(`SELECT g.id, g.client_id, g.resource, g.scope, g.created, g.last_used, k.name AS client_name, k.redirect_uris
+            FROM oauth_grants g LEFT JOIN oauth_clients k ON k.id = g.client_id
+            WHERE g.account_id = ? AND g.revoked IS NULL ORDER BY g.created DESC, g.id DESC`).all(accountId)
+            .map((r) => ({ ...r, redirect_uris: r.redirect_uris ? JSON.parse(r.redirect_uris) : [] }));
     }
 
     // --- published pages

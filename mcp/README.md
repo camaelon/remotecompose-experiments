@@ -131,6 +131,24 @@ Anyone who has that URL can use the server, so treat it like a password.
   `unpublish_page`, the `/pages/` index when signed in; `MCP_PAGE_INDEX=public` keeps the
   old public list). `RC_SIGNUP=closed` stops registration, `RC_ADMIN_EMAILS` names admins.
   See `lib/accounts.mjs` and `lib/account-web.mjs`.
+- **OAuth (connect by signing in).** With accounts on, every MCP endpoint also follows the
+  MCP authorization spec: a request without a token gets a 401 whose `WWW-Authenticate`
+  names the discovery documents (`/.well-known/oauth-protected-resource/<mount>/mcp`,
+  `/.well-known/oauth-authorization-server`), and the client registers itself, sends you to
+  sign in on the account site (token, emailed link or a new account) and asks you to Allow
+  it. It then holds an access token (1 h) and a rotating refresh token (30 days); you see and
+  disconnect it under **Connected apps** on your account page. One authorization server
+  serves every MCP server, so a connection made for one works on all of them. `rc_` tokens
+  and `MCP_TOKEN` work as before; `RC_OAUTH=0` turns OAuth off. To connect:
+  - **claude.ai**: Settings → Connectors → Add custom connector → URL `https://<domain>/mcp`
+    (no token in it) → Connect: a window opens to sign in and Allow.
+  - **ChatGPT**: Settings → Apps & Connectors → Advanced → Developer mode on, then Create:
+    URL `https://<domain>/mcp`, authentication **OAuth** (it registers itself), then sign in and Allow.
+  - **Claude Code**: `claude mcp add --transport http remotecompose https://<domain>/mcp`, then
+    run `/mcp` in Claude Code and pick the server to authenticate in the browser.
+  - Clients that take no OAuth still use a token: header, or `https://<domain>/mcp/<token>`.
+  Env: `RC_PUBLIC_ORIGIN` (the public origin, set by setup.sh), `RC_MOUNT` (each server's
+  path under it, also set by setup.sh); locally both default to the request's own origin.
 - **Email.** Registration creates a *pending* account and emails a confirmation link
   (24 h, once); following it signs the person in and shows their first token. "Email me a
   sign-in link" sends a 15-minute, single-use link (the way back for a lost token). At most

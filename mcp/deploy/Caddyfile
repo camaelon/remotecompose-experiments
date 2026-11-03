@@ -22,6 +22,12 @@
 #                                      on Path=/, so the /pages/ indexes (root and /deploy/) see it;
 #                                      Caddy passes Host and sets X-Forwarded-Proto/-For, which the
 #                                      CSRF check, the Secure flag and the rate limit rely on.
+#   https://DOMAIN/.well-known/oauth-protected-resource[/<mount>/mcp]   OAuth discovery (lib/oauth.mjs):
+#   https://DOMAIN/.well-known/oauth-authorization-server               the front door answers for every
+#   https://DOMAIN/.well-known/openid-configuration                     server (RC_PUBLIC_ORIGIN and the
+#                                      mounts make the URLs); a 401 from any MCP endpoint points a client
+#                                      here. The authorization server's own endpoints are the account
+#                                      site's: /examples/oauth/{authorize,token,register,revoke}.
 #
 # No `log` directive on purpose: an access log would record the token for clients that pass
 # it in the URL.
@@ -29,6 +35,14 @@ DOMAIN {
 	# Compress what the servers don't already (they compress pages and the player script
 	# themselves; an encoded response passes through as it is).
 	encode zstd gzip
+	# OAuth discovery documents live at the root whatever the MCP path (RFC 8414, RFC 9728):
+	# said explicitly so a later catch-all can't take them.
+	handle /.well-known/oauth-* {
+		reverse_proxy 127.0.0.1:8814
+	}
+	handle /.well-known/openid-configuration* {
+		reverse_proxy 127.0.0.1:8814
+	}
 	handle_path /json2rc/* {
 		reverse_proxy 127.0.0.1:8808
 	}
