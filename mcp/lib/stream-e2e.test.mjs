@@ -124,7 +124,12 @@ test("stream: post, list, vote, sort, remove", async (t) => {
     assert.ok(page.indexOf("My clock") < page.indexOf("Weather"), "highest score first");
     assert.match(page, /Top<\/a>/);
     assert.match(page, new RegExp(`id="s-${P1}"[\\s\\S]*?aria-pressed="true" aria-label="Vote up"`), "bob sees his up vote");
-    assert.match(page, /You are <b>Bob<\/b>/);
+    assert.match(page, /You are <b>Bob<\/b> \(<a href="\.\.\/account\/#name">change<\/a>\)/);
+    // Changing it: the stream shows the new name at once.
+    assert.equal((await s.post("/account/name", { csrf: csrfFor(bob), name: "Robert" }, bob)).status, 303);
+    assert.match(await (await s.get("/account/", bob)).text(), /<b>Robert<\/b>[^\n]*Change name/);
+    await s.post("/account/name", { csrf: csrfFor(ann), name: "Ann Karenina" }, ann);
+    assert.match(await (await s.get("/stream/")).text(), /by Ann Karenina/);
 
     // The account page shows the score and offers rename and remove.
     acctPage = await (await s.get("/account/", ann)).text();
@@ -138,4 +143,40 @@ test("stream: post, list, vote, sort, remove", async (t) => {
     assert.equal((await s.post(`/account/stream/${P1}/remove`, { csrf: csrfFor(ann) }, ann)).status, 303);
     assert.equal((await s.post(`/stream/${P2}/remove`, { csrf: csrfFor(boss) }, boss)).status, 303);
     assert.match(await (await s.get("/stream/")).text(), /Nothing in the stream yet/);
+});
+
+test("showcases: an admin marks a stream item; the Showcases page shows it first", async (t) => {
+    const s = await start();
+    t.after(() => s.stop());
+    const reg = async (email, name) => sidOf(await s.post("/account/register", { email, name }));
+    const ann = await reg("ann@example.com", "Ann"), boss = await reg("boss@example.com", "Boss");
+    const st = await openAccounts(path.join(s.root, "rc.db"));
+    const annId = st.findAccount("ann@example.com").id;
+    st.close();
+    const P = "f".repeat(22);
+    await publish(s, annId, P, "Orbit");
+    await s.post("/account/stream", { csrf: csrfFor(ann), page_id: P, title: "Orbits, live" }, ann);
+
+    let show = await (await s.get("/showcases/")).text();
+    assert.ok(!show.includes("From the stream"), "nothing marked yet");
+    assert.match(await (await s.get("/stream/", boss)).text(), /Make showcase<\/button>/);
+    assert.ok(!(await (await s.get("/stream/", ann)).text()).includes("Make showcase"), "not offered to others");
+    assert.equal((await s.post(`/stream/${P}/feature`, { csrf: csrfFor(ann), value: "1" }, ann)).status, 403);
+    assert.equal((await s.post(`/stream/${P}/feature`, { csrf: csrfFor(boss), value: "1" }, boss)).status, 303);
+
+    show = await (await s.get("/showcases/")).text();
+    assert.match(show, /From the stream/);
+    assert.ok(show.indexOf("Orbits, live") < show.indexOf('<h2 class="cat">Showcases</h2>'), "before the catalog's");
+    assert.match(show, /by Ann/);
+    assert.match(show, new RegExp(`href="${s.base}/pages/${P}/"`));
+    const stream = await (await s.get("/stream/", boss)).text();
+    assert.match(stream, /class="star">Showcase/);
+    assert.match(stream, /Unshowcase<\/button>/);
+
+    await s.post(`/stream/${P}/feature`, { csrf: csrfFor(boss), value: "0" }, boss);
+    assert.ok(!(await (await s.get("/showcases/")).text()).includes("From the stream"));
+    // Marked, then taken out of the stream by its owner: off the Showcases page too.
+    await s.post(`/stream/${P}/feature`, { csrf: csrfFor(boss), value: "1" }, boss);
+    await s.post(`/account/stream/${P}/remove`, { csrf: csrfFor(ann) }, ann);
+    assert.ok(!(await (await s.get("/showcases/")).text()).includes("From the stream"));
 });

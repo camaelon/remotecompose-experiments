@@ -43,7 +43,7 @@ import { compileComponents, jsonToRc } from "./json2rc.mjs";
 import { STRUCTURES } from "./structures.mjs";
 import { thumbnail } from "./thumbs.mjs";
 import { accountRoute } from "./account-web.mjs";
-import { streamRoute } from "./stream-web.mjs";
+import { featuredSection, STREAM_CSS, streamRoute } from "./stream-web.mjs";
 import { oauthRoute } from "./oauth.mjs";
 import { accountsEnabled, requestAccount } from "./accounts.mjs";
 
@@ -347,7 +347,7 @@ function siteNav(current) {
         `<a href="${current === "home" ? (href || "./") : "../" + (href || "")}"${current === k ? ' aria-current="page"' : ""}${k === "home" ? ' class="brand"' : ""}${k === "account" ? ' class="end"' : ""}>${label}</a>`).join("");
 }
 
-function page({ title, sub, current, families, cards, modes = false, generated = 0, kinds = false, sizes = false }) {
+function page({ title, sub, current, families, cards, modes = false, generated = 0, kinds = false, sizes = false, lead = "" }) {
     // Smallest first by default: the .rc size is what a device downloads. (Cards with no size last.)
     if (sizes) {
         const bytesOf = (c) => Number(/data-bytes="(\d+)"/.exec(c)?.[1] ?? 0) || Infinity;
@@ -355,7 +355,7 @@ function page({ title, sub, current, families, cards, modes = false, generated =
     }
     return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)}</title>${FONTS}<style>${CSS}</style></head>
+<title>${esc(title)}</title>${FONTS}<style>${CSS}${lead ? STREAM_CSS : ""}</style></head>
 <body>
 <header>
 <nav>${siteNav(current)}</nav>
@@ -368,7 +368,7 @@ ${generated ? `<label class="gen"><input id="gen" type="checkbox"> ${generated} 
 ${sizes ? `<select id="sort" aria-label="Order"><option value="">Smallest first</option><option value="large">Largest first</option><option value="id">${current === "demos" || current === "showcases" ? "By id" : "By name"}</option></select>` : ""}
 ${modes ? `<select id="mode" aria-label="Render"><option value="">Default render</option><option value="light">Light</option><option value="dark">Dark</option><option value="mono-dark">Mono dark (always-on, OLED)</option><option value="mono-light">Mono light (e-ink)</option></select>` : ""}</div>
 </header>
-<main>${cards.join("\n")}<p id="none" class="empty" hidden>Nothing matches.</p></main>
+${lead}<main>${lead ? '<h2 class="cat">Showcases</h2>' : ""}${cards.join("\n")}<p id="none" class="empty" hidden>Nothing matches.</p></main>
 <script>${SCRIPT}</script>
 </body></html>`;
 }
@@ -423,7 +423,7 @@ function buildKind(e, lib) {
 }
 
 /** The showcases (SHW) or every other example (the demos), by id. */
-function examplesPage(showcases = false, { generated: withGenerated = true } = {}) {
+function examplesPage(showcases = false, { generated: withGenerated = true, lead = "" } = {}) {
     const C = loadCatalog();
     const list = C.examples.filter((e) => (e.family === "SHW") === showcases).sort((a, b) => a.id.localeCompare(b.id, "en", { numeric: true }));
     const families = showcases ? [] : [...new Set(list.map((e) => e.family))].sort();
@@ -450,7 +450,7 @@ function examplesPage(showcases = false, { generated: withGenerated = true } = {
     const badge = "The badge is the size of the .rc document a device downloads (green under 8 KB, amber under 24 KB, red above). Click one to open it in the playground.";
     return page({
         title: showcases ? "RemoteCompose showcases" : "RemoteCompose demos", current: showcases ? "showcases" : "demos", families, cards,
-        modes: list.some((e) => e.derived?.renders), generated: gen.length, kinds: !showcases, sizes: true,
+        modes: list.some((e) => e.derived?.renders), generated: gen.length, kinds: !showcases, sizes: true, lead,
         sub: showcases
             ? `${list.length} showcases: what the format can do (3D, shaders, particles, physics, morphing, live data), each in light, dark and both monochrome looks. ${badge}`
             : `${list.length} focused demos, one technique or screen each, every one byte-identical to the Java parser's output. ${badge}`,
@@ -699,7 +699,7 @@ export async function publicRoute(req, url, res) {
     // (/examples/ was the demos' address: it redirects.)
     if (p === "/examples" || p === "/examples/") { res.writeHead(301, { Location: `${p.endsWith("/") ? "../" : ""}demos/${url.search}` }); res.end(); return true; }
     for (const [route, render] of [["components", () => componentsPage("basic")], ["advanced", () => componentsPage("advanced")], ["layouts", () => componentsPage("layout")],
-        ["showcases", () => examplesPage(true)], ["demos", async () => examplesPage(false, { generated: await seesGenerated() })]]) {
+        ["showcases", async () => examplesPage(true, { lead: await featuredSection("../") })], ["demos", async () => examplesPage(false, { generated: await seesGenerated() })]]) {
         if (p === `/${route}`) { res.writeHead(301, { Location: `${route}/${url.search}` }); res.end(); return true; }
         if (p === `/${route}/`) return send(req, res, 200, "text/html; charset=utf-8", await render(), { "Cache-Control": "private, no-cache" });
     }

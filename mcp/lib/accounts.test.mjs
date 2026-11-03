@@ -143,7 +143,7 @@ test("a database file: created, migrated once, shared by two handles", async () 
         const t = one.issueToken(a.id);
         const two = await openAccounts(file);   // another process, in effect
         assert.equal(two.authenticate(t.token).account.email, "f@example.com");
-        assert.equal(two.db.prepare("PRAGMA user_version").get().user_version, 8);
+        assert.equal(two.db.prepare("PRAGMA user_version").get().user_version, 9);
         assert.equal(two.db.prepare("PRAGMA journal_mode").get().journal_mode, "wal");
         assert.ok(existsSync(file));
         assert.equal(accountsEnabled({ RC_DB: file }), true, "on when the database exists");
@@ -266,7 +266,7 @@ test("migration from schema 1: existing accounts are grandfathered as verified",
                  PRAGMA user_version = 1;`);
         v1.close();
         const s = await openAccounts(file);
-        assert.equal(s.db.prepare("PRAGMA user_version").get().user_version, 8);
+        assert.equal(s.db.prepare("PRAGMA user_version").get().user_version, 9);
         const e = s.findAccount("early@example.com");
         assert.equal(e.status, "active");
         assert.equal(e.verified_at, "2026-01-01T00:00:00.000Z");
@@ -360,7 +360,7 @@ test("stream: a daily limit per account (admins exempt)", async () => {
     assert.equal(s.streamCount(), 11);
 });
 
-test("schema 8 migrates a version 7 database", async () => {
+test("schema 9 migrates a version 7 database", async () => {
     const dir = mkdtempSync(path.join(tmpdir(), "rc-acc-"));
     const file = path.join(dir, "rc.db");
     try {
@@ -370,10 +370,28 @@ test("schema 8 migrates a version 7 database", async () => {
         s.db.exec("DROP TABLE stream; DROP TABLE votes; PRAGMA user_version = 7;");
         s.close();
         s = await openAccounts(file);
-        assert.equal(s.db.prepare("PRAGMA user_version").get().user_version, 8);
+        assert.equal(s.db.prepare("PRAGMA user_version").get().user_version, 9);
         assert.equal(s.setName(a.id, "Old"), "Old");
         assert.equal(s.getAccount(a.id).name, "Old");
         assert.equal(s.streamCount(), 0);
         s.close();
     } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("showcases: an admin's mark on a stream item, newest mark first; gone with the item", async () => {
+    const s = await fresh();
+    const a = s.createAccount({ email: "f@example.com", name: "F" });
+    const [p1, p2] = ["d", "e"].map((c) => c.repeat(22));
+    for (const id of [p1, p2]) { s.recordPage({ id, accountId: a.id, title: id, url: `https://x/pages/${id}/` }); s.streamPost({ pageId: id, account: a, title: id }); }
+    assert.deepEqual(s.featuredItems(), []);
+    assert.equal(s.streamFeature(p1, true), true);
+    s.db.prepare("UPDATE stream SET featured = ? WHERE page_id = ?").run("2026-01-01T00:00:00.000Z", p1);
+    assert.equal(s.streamFeature(p2, true), true);
+    assert.deepEqual(s.featuredItems().map((i) => i.page_id), [p2, p1]);
+    assert.ok(s.streamItem(p1).featured);
+    assert.equal(s.streamFeature("9".repeat(22), true), false, "not in the stream");
+    assert.equal(s.streamFeature(p2, false), true);
+    assert.equal(s.streamItem(p2).featured, null);
+    s.streamRemove(p1);
+    assert.deepEqual(s.featuredItems(), []);
 });

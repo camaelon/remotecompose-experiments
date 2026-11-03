@@ -21,7 +21,7 @@ import path from "node:path";
 import { deleteTraceImages } from "./trace-images.mjs";
 import { assignThreads } from "./threads.mjs";
 
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 // Session traces (calls.args / calls.result) are kept this long; the rows themselves stay.
 export const TRACE_DAYS = 30;
 // OAuth (lib/oauth.mjs): authorization codes, access and refresh tokens.
@@ -188,7 +188,14 @@ export class Accounts {
                     created TEXT NOT NULL, PRIMARY KEY (page_id, account_id));
             `);
         }
-        // (Later migrations: `if (v < 9) { ... }`, then bump SCHEMA_VERSION.)
+        if (v < 9) {
+            // An admin's mark on a stream item: shown on the Showcases page (when, so the newest first).
+            // (Only if missing: a database put back to an older version still has it.)
+            if (!this.db.prepare("PRAGMA table_info(stream)").all().some((c) => c.name === "featured")) {
+                this.db.exec("ALTER TABLE stream ADD COLUMN featured TEXT;");
+            }
+        }
+        // (Later migrations: `if (v < 10) { ... }`, then bump SCHEMA_VERSION.)
         if (v < SCHEMA_VERSION) this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
     }
 
@@ -756,7 +763,7 @@ export class Accounts {
 
     #streamRows(where, args, viewerId, order, limit, offset = 0) {
         return this.db.prepare(`
-            SELECT s.page_id, s.account_id, s.title, s.created, a.name AS author, p.url,
+            SELECT s.page_id, s.account_id, s.title, s.created, s.featured, a.name AS author, p.url,
                 COALESCE(SUM(v.value), 0) AS score, COALESCE(SUM(v.value = 1), 0) AS ups, COALESCE(SUM(v.value = -1), 0) AS downs,
                 (SELECT value FROM votes WHERE page_id = s.page_id AND account_id = ?) AS my_vote
             FROM stream s JOIN accounts a ON a.id = s.account_id LEFT JOIN pages p ON p.id = s.page_id
@@ -764,6 +771,21 @@ export class Accounts {
             ${where} GROUP BY s.page_id ORDER BY ${order} LIMIT ? OFFSET ?`)
             .all(viewerId ?? -1, ...args, Math.max(1, Math.min(1000, limit)), Math.max(0, offset))
             .map((r) => ({ ...r, my_vote: r.my_vote ?? 0 }));
+    }
+
+    /**
+     * Marks a stream item as a showcase (on) or not: the Showcases page shows marked items.
+     * Admins only (the caller checks). False when the item is not in the stream.
+     */
+    streamFeature(pageId, on) {
+        const r = this.db.prepare(`UPDATE stream SET featured = ${on ? "?" : "NULL"} WHERE page_id = ?`)
+            .run(...(on ? [now(), String(pageId)] : [String(pageId)]));
+        return r.changes > 0;
+    }
+
+    /** The items marked as showcases, the most recently marked first. */
+    featuredItems() {
+        return this.#streamRows("WHERE s.featured IS NOT NULL", [], null, "s.featured DESC", 100);
     }
 
     /** The account's vote on an item: 1, -1, or 0 to take it back. False when the item is not in the stream. */

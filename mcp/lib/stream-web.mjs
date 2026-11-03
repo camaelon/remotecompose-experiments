@@ -6,6 +6,8 @@
 //                                        With Accept: application/json it answers the item's new
 //                                        score instead of redirecting (the page's script uses it)
 //   POST <base>/stream/<page id>/remove  admins: take an item out (owners do it from their account)
+//   POST <base>/stream/<page id>/feature value=1|0: admins mark an item as a showcase, or not;
+//                                        the Showcases page lists marked items (featuredSection)
 // Posting, renaming and removing one's own items, and the account's name, are on the account page
 // (lib/account-web.mjs). The data is in the accounts store (lib/accounts.mjs, schema 8).
 
@@ -47,8 +49,16 @@ const STREAM_CSS = `
 .votes button:disabled { cursor:default; opacity:.5; }
 .votes .score { min-width:2.5em; text-align:center; font-weight:700; font-variant-numeric:tabular-nums; }
 .votes .split { color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; }
-.votes .admin { margin-left:auto; }
+.votes .admin { margin-left:auto; display:flex; gap:4px; }
 .votes .admin button { width:auto; padding:0 8px; font-size:12px; color:#d0453a; }
+.votes .admin button.feature { color:var(--accent); }
+.sitem .star { align-self:flex-start; font-size:11px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:#b26b00; background:color-mix(in srgb, #f6a525 22%, transparent); border-radius:6px; padding:1px 6px; }
+.lead { max-width:1280px; margin:0 auto; padding:4px 16px 8px; }
+.lead h2 { font-size:16px; margin:8px 0 2px; }
+.lead p { color:var(--muted); margin:0 0 10px; font-size:13px; }
+.lead p a { color:var(--accent); text-decoration:none; }
+.lead .grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); }
+.lead + main h2.cat { grid-column:1/-1; font-size:16px; margin:12px 0 0; }
 `;
 
 // Votes without a reload: the form posts as it would, asking for JSON back. (The forms work
@@ -88,10 +98,11 @@ function itemCard(it, { csrf, signedIn, admin, sort }) {
         : `${btn(1, "up", "Vote up (sign in to vote)", "▲")}<span class="score">${it.score}</span>${btn(-1, "down", "Vote down (sign in to vote)", "▼")}`;
     return `<article class="sitem" id="s-${esc(it.page_id)}">
 <a href="${esc(it.url)}"><div class="thumb">${preview}</div>
-<div class="body"><span class="title">${esc(it.title)}</span><span class="by">by ${esc(it.author)}</span>
+<div class="body">${it.featured ? '<span class="star">Showcase</span>' : ""}<span class="title">${esc(it.title)}</span><span class="by">by ${esc(it.author)}</span>
 <span class="meta">${[size, docSize, day(it.created)].filter(Boolean).map(esc).join(" · ")}</span></div></a>
 <div class="votes">${vote}<span class="split">+${it.ups} / −${it.downs}</span>
-${admin ? `<form class="admin" method="post" action="${esc(it.page_id)}/remove">${csrf}<button type="submit">Remove</button></form>` : ""}</div>
+${admin ? `<div class="admin"><form method="post" action="${esc(it.page_id)}/feature${sort === "top" ? "?sort=top" : ""}">${csrf}<input type="hidden" name="value" value="${it.featured ? 0 : 1}"><button class="feature" type="submit" title="${it.featured ? "Take it off the Showcases page" : "Show it on the Showcases page"}">${it.featured ? "Unshowcase" : "Make showcase"}</button></form>
+<form method="post" action="${esc(it.page_id)}/remove">${csrf}<button type="submit">Remove</button></form></div>` : ""}</div>
 </article>`;
 }
 
@@ -99,7 +110,7 @@ function streamPage({ site, items, sort, acct, sid, total }) {
     const csrf = sid ? `<input type="hidden" name="csrf" value="${csrfFor(sid)}">` : "";
     const sortLink = (k, label) => `<a href="./${k === "new" ? "" : "?sort=" + k}"${sort === k ? ' aria-current="page"' : ""}>${label}</a>`;
     const note = acct
-        ? (acct.name ? `You are <b>${esc(acct.name)}</b> · <a href="../account/#stream">Post your pages</a>`
+        ? (acct.name ? `You are <b>${esc(acct.name)}</b> (<a href="../account/#name">change</a>) · <a href="../account/#stream">Post your pages</a>`
             : `<a href="../account/#name">Set your name</a> to post your pages`)
         : `<a href="../account/">Sign in</a> to vote and to post your pages`;
     const cards = items.map((it) => itemCard(it, { csrf, signedIn: !!acct, admin: !!acct?.admin, sort })).join("\n");
@@ -143,7 +154,7 @@ export async function streamRoute(req, url, res, site) {
             .map((it) => ({ ...it, meta: pageMeta(it.page_id) })).filter((it) => it.meta && it.url);
         return reply(res, 200, "text/html; charset=utf-8", streamPage({ site, items, sort, acct, sid, total: items.length }));
     }
-    const m = /^\/stream\/([A-Za-z0-9_-]{22})\/(vote|remove)$/.exec(p);
+    const m = /^\/stream\/([A-Za-z0-9_-]{22})\/(vote|remove|feature)$/.exec(p);
     if (!m) return reply(res, 404, "text/plain", "not found\n");
     if (req.method !== "POST") { res.writeHead(405, { Allow: "POST" }); res.end(); return true; }
     const wantsJson = /application\/json/.test(String(req.headers.accept ?? ""));
@@ -157,9 +168,10 @@ export async function streamRoute(req, url, res, site) {
     let form;
     try { form = await readForm(req); } catch (e) { return reply(res, e.status ?? 400, "text/plain", "Bad request.\n"); }
     if (form.get("csrf") !== csrfFor(sid)) return reply(res, 403, "text/plain", "Refused: the page is stale. Reload it and try again.\n");
-    if (m[2] === "remove") {
+    if (m[2] === "remove" || m[2] === "feature") {
         if (!acct.admin) return reply(res, 403, "text/plain", "Admins only.\n");
-        store.streamRemove(m[1]);
+        if (m[2] === "remove") store.streamRemove(m[1]);
+        else store.streamFeature(m[1], form.get("value") !== "0");
         return back();
     }
     let ok;
@@ -171,3 +183,28 @@ export async function streamRoute(req, url, res, site) {
     }
     return back();
 }
+
+/**
+ * The Showcases page's "From the stream" section: the items an admin marked, as stream cards
+ * without votes (a card opens the page's playground). Empty when there are none or accounts
+ * are off. `base` is the way from the page to the site's root ("../").
+ */
+export async function featuredSection(base = "../") {
+    if (!accountsEnabled()) return "";
+    const store = await accounts();
+    const items = store.featuredItems().map((it) => ({ ...it, meta: pageMeta(it.page_id) })).filter((it) => it.meta && it.url);
+    if (!items.length) return "";
+    const cards = items.map((it) => {
+        const m = it.meta;
+        const preview = m.preview ? `<img src="${esc(it.url)}preview.png" alt="" loading="lazy">` : "<span>no preview</span>";
+        const facts = [m.rc_bytes ? `${formatBytes(m.rc_bytes)} .rc` : "", m.document?.width > 0 ? `${m.document.width}×${m.document.height}` : ""].filter(Boolean);
+        return `<article class="sitem"><a href="${esc(it.url)}"><div class="thumb">${preview}</div>
+<div class="body"><span class="title">${esc(it.title)}</span><span class="by">by ${esc(it.author)}</span>
+<span class="meta">${facts.map(esc).join(" · ")}</span></div></a></article>`;
+    }).join("\n");
+    return `<section class="lead"><h2>From the stream</h2>
+<p>Made by people with Kobento and chosen for the showcases. More in the <a href="${base}stream/">stream</a>.</p>
+<div class="grid">${cards}</div></section>`;
+}
+
+export { STREAM_CSS };

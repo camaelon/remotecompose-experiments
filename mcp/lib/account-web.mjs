@@ -518,7 +518,7 @@ function accountPage(req, { store, acct, sid, fresh, error, notice }) {
         error ? `<p class="err">${esc(error)}</p>` : "",
         notice ? `<p class="ok">${esc(notice)}</p>` : "",
         fresh ? freshToken(req, fresh) : "",
-        `<section class="panel"><div class="who"><div><b>${esc(acct.name || acct.email)}</b> <span class="muted">${esc(acct.email)}</span>
+        `<section class="panel"><div class="who"><div><b>${esc(acct.name || acct.email)}</b> <span class="muted">${esc(acct.email)}</span> <a href="#name">${acct.name ? "Change name" : "Set your name"}</a>
 ${acct.admin ? ' <span class="pill">admin</span>' : ""}<br><span class="muted">Member since ${esc(day(acct.created).slice(0, 10))}</span></div>
 <form class="inline" method="post" action="signout">${csrf}<button class="link" type="submit">Sign out</button></form></div></section>`,
         `<section class="panel"><h2>Tokens</h2>
