@@ -921,6 +921,54 @@ function outline(nodes, indent = "") {
 }
 
 // Lists that need the whole op list are built after it exists.
+// Every variable id the document defines or reads (what interact compares).
+function variableIds() {
+    return [...new Set([
+        ...graph().nodes.filter((n) => n.type !== "consumer").map((n) => n.varId),
+        ...CL.getVariableUsageInfo(doc, ops).definedVarIds,
+    ])].filter((x) => typeof x === "number" && Number.isFinite(x));
+}
+
+/**
+ * What input changed in session S, against a baseline session on the same timeline without
+ * it: variables (by id, with formula), host (named) variables, and components whose box or
+ * visibility differs.
+ */
+function inputDiff(S, base, ids) {
+    const after = S.values(ids), baseline = base.values(ids);
+    const g = new Map(graph().nodes.map((n) => [n.varId, n]));
+    const named = S.namedVars();
+    const changed = ids.filter((id) => JSON.stringify(after.get(id)) !== JSON.stringify(baseline.get(id)))
+        .map((id) => {
+            const n = g.get(id);
+            const nv = named.find((v) => v.id === id);
+            const a = after.get(id), b = baseline.get(id);
+            const which = a.f !== b.f ? "f" : "i";
+            return { id, name: nv?.name ?? VP.getSystemVarName?.(id) ?? O.names?.[id] ?? null, type: which === "f" ? "float" : "int",
+                     formula: n?.formula || (n?.op ? exprOf(n.op) : null) || null,
+                     without_input: b[which], with_input: a[which] };
+        });
+    const hostBase = new Map(base.namedVars().map((v) => [v.name, v.value]));
+    const hostChanged = named.filter((v) => JSON.stringify(v.value) !== JSON.stringify(hostBase.get(v.name)))
+        .map((v) => ({ name: v.name, without_input: hostBase.get(v.name) ?? null, with_input: v.value }));
+
+    // Layout: components whose box or visibility differs from the baseline's.
+    const la = LI.extractLayoutComponents(S.doc), lb = LI.extractLayoutComponents(base.doc);
+    const box = (c) => [round(c.globalX, 1), round(c.globalY, 1), round(c.width, 1), round(c.height, 1), c.op?.mVisibility];
+    let layoutChanges;
+    if (la.length !== lb.length) {
+        layoutChanges = { structure_changed: true, components_without_input: lb.length, components_with_input: la.length };
+    } else {
+        const diffs = la.map((c, i) => ({ c, b: lb[i] })).filter(({ c, b }) => JSON.stringify(box(c)) !== JSON.stringify(box(b)));
+        layoutChanges = { changed: diffs.length, components: diffs.slice(0, 25).map(({ c, b }) => ({
+            component: c.name, id: c.cid,
+            without_input: { x: box(b)[0], y: box(b)[1], w: box(b)[2], h: box(b)[3], visibility: box(b)[4] },
+            with_input: { x: box(c)[0], y: box(c)[1], w: box(c)[2], h: box(c)[3], visibility: box(c)[4] },
+        })) };
+    }
+    return { changed, hostChanged, layoutChanges };
+}
+
 const TASKS = {
     summary() {
         const bc = byteCategories();
@@ -1053,10 +1101,7 @@ const TASKS = {
         // same waits but no input. What differs between them was caused by the input, not
         // by time passing (animations, clocks).
         const base = await createSession();
-        const ids = [...new Set([
-            ...graph().nodes.filter((n) => n.type !== "consumer").map((n) => n.varId),
-            ...CL.getVariableUsageInfo(doc, ops).definedVarIds,
-        ])].filter((x) => typeof x === "number" && Number.isFinite(x));
+        const ids = variableIds();
         const log = [];
         for (const [k, raw] of (O.actions ?? []).entries()) {
             const a = normalizeAction(raw);
@@ -1106,36 +1151,7 @@ const TASKS = {
         const settle = Math.max(1, Math.round((O.settle ?? 0.5) * fps));
         main.frames(settle); base.frames(settle);
 
-        const after = main.values(ids), baseline = base.values(ids);
-        const g = new Map(graph().nodes.map((n) => [n.varId, n]));
-        const changed = ids.filter((id) => JSON.stringify(after.get(id)) !== JSON.stringify(baseline.get(id)))
-            .map((id) => {
-                const n = g.get(id);
-                const nv = namedVars().find((v) => v.id === id);
-                const a = after.get(id), b = baseline.get(id);
-                const which = a.f !== b.f ? "f" : "i";
-                return { id, name: nv?.name ?? VP.getSystemVarName?.(id) ?? O.names?.[id] ?? null, type: which === "f" ? "float" : "int",
-                         formula: n?.formula || (n?.op ? exprOf(n.op) : null) || null,
-                         without_input: b[which], with_input: a[which] };
-            });
-        const hostBase = new Map(base.namedVars().map((v) => [v.name, v.value]));
-        const hostChanged = namedVars().filter((v) => JSON.stringify(v.value) !== JSON.stringify(hostBase.get(v.name)))
-            .map((v) => ({ name: v.name, without_input: hostBase.get(v.name) ?? null, with_input: v.value }));
-
-        // Layout: components whose box or visibility differs from the baseline's.
-        const la = LI.extractLayoutComponents(doc), lb = LI.extractLayoutComponents(base.doc);
-        const box = (c) => [round(c.globalX, 1), round(c.globalY, 1), round(c.width, 1), round(c.height, 1), c.op?.mVisibility];
-        let layoutChanges;
-        if (la.length !== lb.length) {
-            layoutChanges = { structure_changed: true, components_without_input: lb.length, components_with_input: la.length };
-        } else {
-            const diffs = la.map((c, i) => ({ c, b: lb[i] })).filter(({ c, b }) => JSON.stringify(box(c)) !== JSON.stringify(box(b)));
-            layoutChanges = { changed: diffs.length, components: diffs.slice(0, 25).map(({ c, b }) => ({
-                component: c.name, id: c.cid,
-                without_input: { x: box(b)[0], y: box(b)[1], w: box(b)[2], h: box(b)[3], visibility: box(b)[4] },
-                with_input: { x: box(c)[0], y: box(c)[1], w: box(c)[2], h: box(c)[3], visibility: box(c)[4] },
-            })) };
-        }
+        const { changed, hostChanged, layoutChanges } = inputDiff(main, base, ids);
 
         const result = {
             layout_size: [width, height], steps: log, seconds: round((main.frame - 1) / fps, 3),
@@ -1153,6 +1169,135 @@ const TASKS = {
         };
         if (O.include_layout) result.outline = outline(layoutTree(O.max_depth).tree).join("\n");
         return result;
+    },
+    // Every control once, each in a fresh session: tap a click target, drag a touch-driven
+    // value (a slider, a pager) across its component, fire a named click area. What each one
+    // changed against one baseline that ran the same frames without input, and what looks wrong.
+    async controls() {
+        const targets = IA.collectInteractionTargets(doc).filter((t) => !(typeof t.componentId === "number" && hiddenComponentIds().has(t.componentId)));
+        withLayoutBounds(targets);
+        const limit = Math.max(1, Math.min(60, O.limit ?? 30));
+        let nodes = [];
+        try { frames(2); nodes = accessibility().nodes; } catch {}
+        const comps = (() => { try { return layoutComponents(); } catch { return []; } })();
+        const ids = variableIds();
+        // Every exercise lasts the same number of frames, so one baseline serves them all.
+        const settle = Math.max(1, Math.round((O.settle ?? 0.5) * fps));
+        const STEPS = 8, TOTAL = STEPS + 2 + settle;
+        const base = await createSession();
+        base.frames(TOTAL);
+        const named = new Map(main.namedVars().map((v) => [v.id, v]));
+        const nameOfVar = (id) => named.get(id)?.name ?? O.names?.[id] ?? `#${id}`;
+        // The component a touch expression belongs to (its canvas), for where to drag.
+        const boxOf = (op) => {
+            for (let c = op?.mComponent ?? null, n = 0; c && n < 8; c = c.mParent ?? c.getParent?.() ?? null, n++) {
+                const hit = comps.find((x) => x.op === c && x.width > 0 && x.height > 0);
+                if (hit) return { x: hit.globalX, y: hit.globalY, w: hit.width, h: hit.height, id: hit.cid, name: hit.name };
+            }
+            return null;
+        };
+        const words = (t, box) => {
+            const id = t.componentId ?? box?.id;
+            const n = nodes.find((x) => x.id === id);
+            const own = [t.contentDescription, n?.content_description, n?.text, ...(n?.merged ?? [])];
+            // (A slider's canvas often has no words of its own: the texts inside its box.)
+            const inside = box && !n?.content_description ? nodes.filter((x) => x.bounds && x.bounds.x >= box.x - 0.5 && x.bounds.y >= box.y - 0.5
+                && x.bounds.x + x.bounds.w <= box.x + box.w + 0.5 && x.bounds.y + x.bounds.h <= box.y + box.h + 0.5).map((x) => x.content_description ?? x.text) : [];
+            return [...new Set([...own, ...inside].filter(Boolean).map(String))];
+        };
+        const fmt = (v) => (typeof v === "number" ? round(v, 3) : v);
+        const report = [];
+        for (const [i, t] of targets.slice(0, limit).entries()) {
+            const touchBox = t.kind === "touch" ? boxOf(t.op) : null;
+            const label = words(t, touchBox);
+            const entry = { target: i, kind: t.kind, label: label[0] ?? null,
+                ...(label.length > 1 ? { words: label.slice(1, 4) } : {}),
+                component: t.componentName ?? touchBox?.name ?? null,
+                ...(O.paths?.[t.componentId ?? touchBox?.id] ? { path: O.paths[t.componentId ?? touchBox?.id] } : {}) };
+            const suspicious = [];
+            // One exercise: run `act` in a fresh session, pad to TOTAL frames, compare.
+            const exercise = async (act) => {
+                const S = await createSession();
+                const sent = [];
+                try { S.doc.addActionCallback?.({ onAction: (name, value) => sent.push({ name, value: value ?? null }) }); } catch {}
+                const start = S.frame;
+                const handled = act(S);
+                S.frames(Math.max(0, TOTAL - (S.frame - start)));
+                return { handled, sent, ...inputDiff(S, base, ids) };
+            };
+            let r = null;
+            try {
+                if (t.kind === "area") {
+                    entry.action = `fire click area ${t.areaId}`;
+                    r = await exercise((S) => { const h = S.doc.performClick?.(S.ctx, t.areaId, "") === true; S.paint(); return h; });
+                } else if (t.kind === "click") {
+                    if (!t.bounds) throw new Error("no bounds to tap");
+                    entry.action = `tap ${round(t.bounds.cx)},${round(t.bounds.cy)}`;
+                    if (t.dispatchable === false) suspicious.push(`a ${t.clickTypeName}: this player dispatches single taps only, so it was not exercised`);
+                    else r = await exercise((S) => S.tap(t.bounds.cx, t.bounds.cy) === true);
+                } else {
+                    // A touch-driven value: drag across its component, the long way first
+                    // (a slider, a pager's swipe), then the other way if that moved nothing.
+                    const b = touchBox ?? { x: 0, y: 0, w: width, h: height };
+                    if (!touchBox) entry.note = "its component was not found: dragged across the whole document";
+                    const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+                    // (Towards the start: a scroll at its top moves when the finger goes up, a
+                    // pager goes to its next page on a swipe left; a slider moves either way.)
+                    const across = [b.x + b.w * 0.8, cy, b.x + b.w * 0.2, cy], up = [cx, b.y + b.h * 0.8, cx, b.y + b.h * 0.2];
+                    const ways = b.w >= b.h ? [across, up] : [up, across];
+                    const min = t.op?.mOutMin, max = t.op?.mOutMax;
+                    if (Number.isFinite(min) && Number.isFinite(max) && max > min && Math.max(Math.abs(min), Math.abs(max)) < 1e5) entry.range = [fmt(min), fmt(max)];
+                    for (const d of ways) {
+                        entry.action = `drag ${d.map((v) => round(v)).join(",")}`;
+                        r = await exercise((S) => { S.drag(...d, STEPS); return undefined; });
+                        if (r.changed.length || r.hostChanged.length || r.sent.length || r.layoutChanges.changed || r.layoutChanges.structure_changed) break;
+                    }
+                    // The dragged value itself, against its declared range.
+                    const own = r?.changed.find((c) => c.id === t.varId);
+                    entry.variable = nameOfVar(t.varId);
+                    if (own && entry.range && (own.with_input < min - 1e-3 || own.with_input > max + 1e-3)) suspicious.push(`${entry.variable} = ${fmt(own.with_input)}, outside its range ${min}..${max}`);
+                }
+            } catch (e) { entry.error = String(e?.message ?? e).slice(0, 200); }
+            if (r) {
+                if (r.handled === false) suspicious.push("the tap reached nothing (not handled)");
+                // (The touch position and velocity change with any touch: not an effect.)
+                const touchVar = (name) => /^TOUCH_/.test(String(name ?? ""));
+                const all = [...r.hostChanged.map((c) => ({ name: c.name, before: c.without_input, after: c.with_input })),
+                    ...r.changed.filter((c) => !r.hostChanged.some((h) => h.name === c.name)).map((c) => ({ name: c.name, id: c.id, before: fmt(c.without_input), after: fmt(c.with_input) }))]
+                    .filter((c) => !touchVar(c.name));
+                // Named variables are listed; the converter's unnamed intermediates are counted.
+                const vars = all.filter((c) => c.name), unnamed = all.length - vars.length;
+                const max = O.max_variables ?? 8;
+                entry.changed = vars.slice(0, max).map((c) => `${c.name}: ${JSON.stringify(c.before)} → ${JSON.stringify(c.after)}`);
+                if (vars.length > max || unnamed) entry.changed.push(`… ${vars.length > max ? `${vars.length - max} more named, ` : ""}${unnamed} unnamed value(s) derived from them`);
+                for (const c of vars) if (typeof c.after === "number" && !Number.isFinite(c.after)) suspicious.push(`${c.name} became ${c.after}`);
+                const L = r.layoutChanges;
+                if (L.structure_changed) entry.layout = `the component tree changed (${L.components_without_input} → ${L.components_with_input} components)`;
+                else if (L.changed) {
+                    const vis = L.components.filter((c) => c.without_input.visibility !== c.with_input.visibility);
+                    const name = (c) => O.paths?.[c.id] ?? c.component;
+                    const shown = vis.filter((c) => c.with_input.visibility !== 0 && c.without_input.visibility === 0).map(name);
+                    const hidden = vis.filter((c) => c.with_input.visibility === 0 && c.without_input.visibility !== 0).map(name);
+                    entry.layout = [`${L.changed} component(s) moved or resized`, ...(shown.length ? [`shown: ${shown.slice(0, 4).join(", ")}`] : []),
+                        ...(hidden.length ? [`hidden: ${hidden.slice(0, 4).join(", ")}`] : [])].join("; ");
+                }
+                if (r.sent.length) entry.host_actions = r.sent.slice(0, 6).map((h) => (h.value === null ? h.name : `${h.name}(${JSON.stringify(h.value)})`));
+                const effect = all.length || r.sent.length || L.changed || L.structure_changed;
+                if (!effect && !entry.error) suspicious.push(t.kind === "touch" ? "dragging it changed nothing (a scroll whose content fits, or a drag it does not take)"
+                    : "no effect: no variable, layout or host action changed (already in that state, e.g. the selected option?)");
+                if (!entry.changed.length) delete entry.changed;
+            }
+            if (suspicious.length) entry.suspicious = suspicious;
+            report.push(entry);
+        }
+        const flagged = report.filter((e) => e.suspicious || e.error).length;
+        return {
+            layout_size: [width, height], controls: targets.length, exercised: report.length,
+            ...(targets.length > report.length ? { not_exercised: `${targets.length - report.length} more controls (limit: ${limit})` } : {}),
+            summary: report.length ? `${report.length} control(s) tried, each once in a fresh state; ${flagged} look wrong.` : "nothing in the document responds to input.",
+            each: "each control was exercised from the document's starting state; changes are against the same timeline without input (time-driven changes excluded)",
+            results: report,
+        };
     },
     runtime() {
         // The frames first: the verdict reads the state after them, and the per-frame samples

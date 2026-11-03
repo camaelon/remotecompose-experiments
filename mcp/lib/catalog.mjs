@@ -645,7 +645,8 @@ function buildKitCore({ goal = "", capabilities = [], max_examples = 4, structur
             needs ? `Write the component(s) in needs_component first and check_component each with a sweep until every rendered state is right.` : null,
             CALENDAR_MATH.test(goal) ? "Week numbers, month lengths, leap years and dates N days away are formulas in `reference expressions` (Calendar arithmetic): compute them as named variables from dayOfYear()/weekDay()/dayOfMonth(), then check with render clocks at year and month boundaries." : null,
             "Assemble one document structured like layout_model (components for layout and text, canvases only for drawings): library and inline component calls, the examples' techniques, values computed in the document rather than pasted.",
-            "convert it (check: true), render it and look at the image, and audit it (it flags glyph icons, repeated subtrees, hard-coded dates and colours).",
+            "convert it with looks and sizes (or check: true): it returns the contact sheet of those renders, which is what the document looks like now (look at it; no separate render of the same sizes), and audits it (it flags glyph icons, repeated subtrees, hard-coded dates and colours).",
+            "If it has controls (taps, sliders, a pager), inspect {\"task\": \"controls\"} (rc-inspect: try_controls) tries each once from a fresh start and reports what it changed and what looks wrong: one call, not an interact per control.",
             "Components expand automatically in every tool.",
         ].filter(Boolean),
     };

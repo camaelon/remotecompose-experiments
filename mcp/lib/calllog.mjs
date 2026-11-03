@@ -10,6 +10,8 @@
 // MCP_LOG_CALLS=0 turns the details off (the "<tool> ok <ms>" line stays).
 
 import { createHash } from "node:crypto";
+import { readFileSync, statSync } from "node:fs";
+import { resolvePath } from "./workspace.mjs";
 
 const DETAILS = process.env.MCP_LOG_CALLS !== "0";
 const KEEP_TEXT = new Set(["goal", "query", "prompt", "id", "name", "kind", "task", "topic", "action", "tool",
@@ -172,4 +174,29 @@ export function traceResult(content, error, cap = TRACE_CAP) {
     }).join("\n\n");
     text = scrub(text);
     return text.length <= cap ? text : text.slice(0, cap - 60) + `\n…[cut: ${text.length} characters in all]`;
+}
+
+// The input files a call names (json_path, rc_path, path, input_path, ...: any "*_path" or "path"
+// argument but the outputs), as they were when the call started: their content hash and size.
+// Two calls with the same arguments read different documents when the file changed between
+// them; the session page tells those apart (a version per path), and only calls whose files
+// match too count as repeats.
+const OUTPUT = /^(output|out|png|save|html)_?/i;
+const MAX_HASH = 64 << 20;
+
+/** {argName: {path, sha, bytes} | {path, missing: true}}, or null when the call names no file. */
+export function traceFiles(args) {
+    if (!args || typeof args !== "object") return null;
+    const out = {};
+    for (const [k, v] of Object.entries(args)) {
+        if (typeof v !== "string" || !v || !(k === "path" || /_path$/.test(k)) || OUTPUT.test(k)) continue;
+        try {
+            const abs = resolvePath(v, k);
+            const st = statSync(abs);
+            if (!st.isFile()) continue;
+            out[k] = st.size > MAX_HASH ? { path: v, bytes: st.size, sha: `size-${st.size}-${st.mtimeMs}` }
+                : { path: v, bytes: st.size, sha: createHash("sha256").update(readFileSync(abs)).digest("hex").slice(0, 16) };
+        } catch { out[k] = { path: v, missing: true }; }   // outside the workspace, or not there: recorded as such
+    }
+    return Object.keys(out).length ? out : null;
 }

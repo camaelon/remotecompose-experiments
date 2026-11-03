@@ -5,7 +5,7 @@
 #
 # Idempotent: re-run it after `git pull` to rebuild and restart. It
 #   - installs the build/runtime packages (and Caddy, for TLS),
-#   - copies this checkout to /opt/remotecompose-experiments and builds rc2image there,
+#   - copies this checkout to /opt/remotecompose-experiments and builds rc2image and rc2layout there,
 #   - creates the `rcmcp` user and the workspace /var/lib/rcmcp,
 #   - writes /etc/rcmcp/*.env, generating a token the first time,
 #   - builds the TypeScript web player once (rc-deploy embeds it in the pages it makes),
@@ -60,10 +60,12 @@ if [[ "$SRC" != "$DEST" ]]; then
         "$SRC/" "$DEST/"
 fi
 
-echo "== build rc2image"
+echo "== build rc2image and rc2layout"
+# rc2layout is the C++ player's layout dump: inspect task=engines compares it with the
+# TypeScript layout (and convert's check reports whether the two players agree).
 cmake -S "$DEST/players/cpp" -B "$DEST/players/cpp/build" \
       -DCMAKE_BUILD_TYPE=Release -DRCX_BUILD_APPS=OFF -DRCX_BUILD_TESTS=OFF
-cmake --build "$DEST/players/cpp/build" --target rc2image -j"$(nproc)"
+cmake --build "$DEST/players/cpp/build" --target rc2image rc2layout -j"$(nproc)"
 
 echo "== web player"
 # The services cannot write the checkout, so the bundle is built here, as root, once.

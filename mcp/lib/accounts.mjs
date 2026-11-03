@@ -20,7 +20,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { deleteTraceImages } from "./trace-images.mjs";
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 // Session traces (calls.args / calls.result) are kept this long; the rows themselves stay.
 export const TRACE_DAYS = 30;
 // OAuth (lib/oauth.mjs): authorization codes, access and refresh tokens.
@@ -157,7 +157,11 @@ export class Accounts {
             // The pictures a call returned, kept as files (lib/trace-images.mjs): {files, skipped}.
             this.db.exec("ALTER TABLE calls ADD COLUMN images TEXT;");
         }
-        // (Later migrations: `if (v < 6) { ... }`, then bump SCHEMA_VERSION.)
+        if (v < 6) {
+            // The input files a call read, as they were then (lib/calllog.mjs traceFiles): {arg: {path, sha, bytes}}.
+            this.db.exec("ALTER TABLE calls ADD COLUMN files TEXT;");
+        }
+        // (Later migrations: `if (v < 7) { ... }`, then bump SCHEMA_VERSION.)
         if (v < SCHEMA_VERSION) this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
     }
 
@@ -372,14 +376,15 @@ export class Accounts {
     // --- usage
 
     recordCall({ accountId, tokenId = null, grantId = null, server, tool, ms, ok, error = null, summary = null,
-                 client = null, args = null, result = null, ts = now() }) {
+                 client = null, args = null, result = null, files = null, ts = now() }) {
         const cap = (v) => (v == null ? null : String(v).slice(0, 20 << 10));
-        return Number(this.db.prepare(`INSERT INTO calls (ts, account_id, token_id, grant_id, server, tool, ms, ok, error, summary, client, args, result)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        return Number(this.db.prepare(`INSERT INTO calls (ts, account_id, token_id, grant_id, server, tool, ms, ok, error, summary, client, args, result, files)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
             .run(ts, accountId, tokenId, grantId, String(server), String(tool), Math.round(ms), ok ? 1 : 0,
                 error == null ? null : String(error).split("\n")[0].slice(0, 300),
                 summary == null ? null : String(summary).slice(0, 1000),
-                client == null ? null : String(client).slice(0, 40), cap(args), cap(result)).lastInsertRowid);
+                client == null ? null : String(client).slice(0, 40), cap(args), cap(result),
+                files == null ? null : String(files).slice(0, 4000)).lastInsertRowid);
     }
 
     /** The pictures a call returned ({files, skipped}, lib/trace-images.mjs). */
@@ -425,7 +430,7 @@ export class Accounts {
 
     /** One session's calls in order (at most `limit`), with start times and the gap since the previous call ended. */
     sessionCalls(accountId, client, { limit = 1000 } = {}) {
-        const rows = this.db.prepare(`SELECT c.id, c.ts, c.server, c.tool, c.ms, c.ok, c.error, c.args, c.result, c.images, ${this.#viaSql()} AS via
+        const rows = this.db.prepare(`SELECT c.id, c.ts, c.server, c.tool, c.ms, c.ok, c.error, c.args, c.result, c.images, c.files, ${this.#viaSql()} AS via
             FROM calls c LEFT JOIN tokens t ON t.id = c.token_id LEFT JOIN oauth_grants g ON g.id = c.grant_id
                 LEFT JOIN oauth_clients k ON k.id = g.client_id
             WHERE c.account_id = ? AND c.client = ? ORDER BY c.ts, c.id LIMIT ?`).all(accountId, String(client), limit);
@@ -434,9 +439,10 @@ export class Accounts {
             const end = Date.parse(r.ts), start = end - r.ms;
             const gap = prevEnd == null ? null : Math.max(0, start - prevEnd);
             prevEnd = prevEnd == null ? end : Math.max(prevEnd, end);
-            let images = null;
+            let images = null, files = null;
             try { images = r.images ? JSON.parse(r.images) : null; } catch { /* none */ }
-            return { ...r, images, ok: !!r.ok, start: new Date(start).toISOString(), end: r.ts, gap_ms: gap };
+            try { files = r.files ? JSON.parse(r.files) : null; } catch { /* none */ }
+            return { ...r, images, files, ok: !!r.ok, start: new Date(start).toISOString(), end: r.ts, gap_ms: gap };
         });
     }
 

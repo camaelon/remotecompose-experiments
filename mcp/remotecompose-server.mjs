@@ -28,7 +28,7 @@ import { NO_MENU, structureLines } from "./lib/structures.mjs";
 import { loadCatalog, exampleDoc } from "./lib/catalog.mjs";
 import { changedCells, fitsSize, imageHash, loadPlan, planPathOf, savePlan, splitSample, layoutFaults, visibleLeaves, tapEvents, dragEvents, tapSettle, setVariables, compareExpected, findTapTarget, summarizeInspection, targetWords } from "./lib/checks.mjs";
 import { RC2IMAGE, runRc2image } from "./lib/rc2image.mjs";
-import { enginesTool } from "./lib/engines.mjs";
+import { enginesTool, rc2layoutAvailable } from "./lib/engines.mjs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -135,15 +135,18 @@ The workflow for a new document:
    or emoji as icons, and never paste the same drawing once per occurrence.
 3. Assemble the document: components (library and inline), the examples' snippets, values
    computed in the document (from the clock, host variables, expressions) rather than pasted.
-4. convert (with check: true) to validate it, render to look at it (other states too: other
-   dates, values, light and dark, a narrow and a wide size), and audit it: the audit flags
-   glyph icons, repeated subtrees, hard-coded dates and colours, and expressions Android
-   rejects (over 32 entries). Fix and repeat.
+4. convert with looks and sizes (or check: true) to validate it. It returns the contact sheet
+   of those renders, which is what the document looks like now: look at it rather than
+   rendering the same looks and sizes again (render only other states: dates, values). It also
+   audits it: the audit flags glyph icons, repeated subtrees, hard-coded dates and colours, and
+   expressions Android rejects (over 32 entries). Fix and repeat.
+   Controls: one inspect {"task": "controls"} taps, drags or swipes every control once, from a
+   fresh start, and says what each changed and what looks wrong; no interact per control.
 5. publish to package it as a web page (a playground) when the user wants to see or share it.
 
 Look things up with find (examples, components, capabilities) and get; reference has the
 component authoring guide and full documentation for every tool. inspect answers questions
-about a document (layout, variables, accessibility, interactions, bytes, runtime).`;
+about a document (layout, variables, accessibility, interactions, controls, bytes, runtime).`;
 
 const EXPRESSIONS = `Expressions (a string anywhere a number goes: "componentWidth() / 2", "@progress * 360")
 - Operators: + - * / % and unary -, with parentheses. Numbers are floats. There are NO comparison operators (no > < == ):
@@ -840,27 +843,28 @@ async function inspectionNotes(kept, sizes, faultLines = []) {
     try {
         const src = { json_path: kept };
         const [first] = sizes;
-        const targetsBySize = [];
-        for (const [width, height] of sizes.filter(([w]) => w)) {
-            const { targets, nodes } = await targetsAt(src, width, height, undefined, loadPlan(resolveIn(planPathOf(kept)))?.clock);
-            targetsBySize.push({ size: [width, height], targets, nodes });
-        }
         const planClock = loadPlan(resolveIn(planPathOf(kept)))?.clock;
         const at = { ...(first?.[0] ? { width: first[0], height: first[1] } : {}), ...(planClock !== undefined ? { clock: planClock } : {}) };
+        const given = sizes.filter(([w]) => w);
+        // Every size at once: the inspections queue for the inspector's own slots (lib/inspector.mjs),
+        // and the engine comparisons (two processes each) run two at a time.
+        const [targetsBySize, engineResults, repaint, layouts] = await Promise.all([
+            Promise.all(given.map(async ([width, height]) => ({ size: [width, height], ...(await targetsAt(src, width, height, undefined, planClock)) }))),
+            // (A layout one player cannot run is no verdict: the rest of the summary stands.)
+            inPool(given, async ([width, height]) => {
+                try { return JSON.parse((await enginesTool.handler({ ...src, width, height })).find((c) => c.type === "text").text); }
+                catch { return { compared: false }; }
+            }, 2),
+            inspectJson("inspect_runtime", { ...src, ...at }).then((r) => r.repaint?.verdict),
+            Promise.all(given.map(([width, height]) => inspectJson("inspect_layout", { ...src, width, height, format: "json" }))),
+        ]);
         const nodes = targetsBySize[0]?.nodes ?? (await inspectJson("inspect_accessibility", { ...src, ...at })).nodes;
-        const engines = [];
-        for (const [width, height] of sizes.filter(([w]) => w)) {
-            const e = JSON.parse((await enginesTool.handler({ ...src, width, height })).find((c) => c.type === "text").text);
-            engines.push({ size: [width, height], structural: Array.isArray(e.structural) ? e.structural.length : Number(e.structural) || 0 });
-        }
-        const repaint = (await inspectJson("inspect_runtime", { ...src, ...at })).repaint?.verdict;
+        // (Without the C++ layout tool nothing was compared: no verdict either way.)
+        const engines = engineResults.map((e, i) => ({ e, size: given[i] })).filter(({ e }) => e.compared !== false)
+            .map(({ e, size }) => ({ size, structural: Array.isArray(e.structural) ? e.structural.length : Number(e.structural) || 0 }));
         const lines = summarizeInspection({ nodes, targetsBySize, engines, repaint });
         // What otherwise only looking at the pictures shows.
-        const perSize = [];
-        for (const s of targetsBySize) {
-            const l = await inspectJson("inspect_layout", { ...src, width: s.size[0], height: s.size[1], format: "json" });
-            perSize.push({ size: s.size, leaves: visibleLeaves(l.tree ?? []), targets: s.targets });
-        }
+        const perSize = targetsBySize.map((s, i) => ({ size: s.size, leaves: visibleLeaves(layouts[i].tree ?? []), targets: s.targets }));
         const faults = layoutFaults(perSize);
         if (faults.dropped.length) lines.push(`dropped compared with the largest size (intended?): ${faults.dropped.join("; ")}`);
         faultLines.push(...faults.warnings);
@@ -879,11 +883,45 @@ function removeFinalSheets(kept) {
     for (const f of readdirSync(dir)) if (f.startsWith(stem) && f.endsWith(".png")) rmSync(path.join(dir, f), { force: true });
 }
 
+/**
+ * What a check's pictures are, said before them: a model that does not know convert showed the
+ * document renders the same sizes again (a ChatGPT session did, twice).
+ */
+export function picturesNote(shown) {
+    const summary = shown.find((c) => c.type === "text" && c.text.startsWith("Checked "))?.text ?? "";
+    const m = /^Checked (\d+) render\(s\): (\d+) shown, (\d+) unchanged/.exec(summary);
+    const images = shown.filter((c) => c.type === "image").length;
+    if (!m) return [];
+    const [, total, n, same] = m.map(Number);
+    if (!images || !n) return [{ type: "text", text: `Pictures: none changed since the last check (${total} render(s)), so the contact sheet you saw last is still what the document looks like. No render call is needed for these looks and sizes.` }];
+    return [{ type: "text", text: `Pictures: the contact sheet${images > 1 ? `s (${images})` : ""} below ${images > 1 ? "show" : "shows"} ${n} render(s) of THIS version, each captioned with its size and look${same ? ` (${same} unchanged since the last check left out)` : ""}. ` +
+        "This is what the document looks like now: do not call render for the same looks and sizes; render only a look, size or state this check did not cover." }];
+}
+
+/** The sheets of a check that showed every render, written as <stem>-final-sheet.png (-2, ...). */
+export function writeFinalSheets(kept, shown) {
+    const summary = shown.find((c) => c.type === "text" && c.text.startsWith("Checked "))?.text ?? "";
+    const m = /^Checked (\d+) render\(s\): (\d+) shown, 0 unchanged/.exec(summary);
+    const images = shown.filter((c) => c.type === "image");
+    // (Only a complete check: pictures left out as unchanged, or a capped one, need a full render.)
+    if (!m || m[1] !== m[2] || !images.length || shown.some((c) => c.type === "text" && /renders asked, the first/.test(c.text))) return null;
+    const stem = kept.replace(/\.json$/i, "") + "-final-sheet";
+    return images.map((im, i) => {
+        const name = `${stem}${i ? `-${i + 1}` : ""}.png`;
+        writeFileSync(resolveIn(name), Buffer.from(im.data, "base64"));
+        return name;
+    });
+}
+
 /** A clean check: say so, and write the full contact sheet so no further render is needed. */
-async function finishNote(kept) {
-    const rendered = await tools.find((x) => x.name === "render").handler({ json_path: kept, again: true, show_all: true, output_path: kept.replace(/\.json$/i, "") + "-final.png" });
-    const line = rendered.find((c) => c.type === "text" && c.text.startsWith("contact sheet:"))?.text ?? "";
-    const files = (/→ (.+)$/.exec(line)?.[1] ?? "").split(", ").filter(Boolean);
+async function finishNote(kept, shown = []) {
+    // The check's own pictures when it showed them all; else a full render of the saved check.
+    let files = writeFinalSheets(kept, shown);
+    if (!files) {
+        const rendered = await tools.find((x) => x.name === "render").handler({ json_path: kept, again: true, show_all: true, output_path: kept.replace(/\.json$/i, "") + "-final.png" });
+        const line = rendered.find((c) => c.type === "text" && c.text.startsWith("contact sheet:"))?.text ?? "";
+        files = (/→ (.+)$/.exec(line)?.[1] ?? "").split(", ").filter(Boolean);
+    }
     const links = workspaceRoot() && process.env.MCP_PUBLIC_URL ? files.map((f) => { try { return publishImage(resolveIn(f)); } catch { return null; } }).filter(Boolean) : [];
     return [{ type: "text", text: `NO FAULTS FOUND at any size, look or sample. That is not proof: look at the pictures too. If nothing needs changing you are done. Full contact sheet: ${files.join(", ")}${links.length ? ` (${links.join(", ")})` : ""}.` }];
 }
@@ -953,10 +991,11 @@ const tools = [
             "design rules for the goal (a UI is laid out with column/row/text and library components, not drawn " +
             "on one canvas). " +
             "Convert a RemoteCompose JSON document to a binary .rc (component calls expand " +
-            "automatically). check: true also parses and runs the document like a player and reports " +
-            "problems; it also renders it unless render: false and reports the render's findings and pixel " +
-            "statistics, not the image (call render to see it). expanded: true returns the plain JSON that " +
-            "component calls become instead of converting.",
+            "automatically). check: true, or looks / sizes / samples, also renders the document and RETURNS THE " +
+            "PICTURES: one contact-sheet image of every render, each captioned with its size and look, plus " +
+            "the render findings, the audit, the tap targets and what a screen reader announces. Those pictures " +
+            "are the document as it now looks: no separate render call is needed for the same looks and sizes. " +
+            "expanded: true returns the plain JSON that component calls become instead of converting.",
         inputSchema: {
             type: "object",
             properties: {
@@ -965,12 +1004,12 @@ const tools = [
                 set: { type: "object", description: "Starting values of the document's named variables, {\"stop\": \"Central\", \"d1Min\": 4}: its sample data, without text edits." },
                 ...tool(json2rc, "json2rc").inputSchema.properties,
                 ...tool(examples, "expand_components").inputSchema.properties,
-                check: { type: "boolean", description: "Also check the result: with no looks given, renders light and dark at a phone (360x640), a landscape phone (640x360) and a small widget (240x240) besides the document's size, audits it and reports what looking would find." },
+                check: { type: "boolean", description: "Also check the result: with no looks given, renders light and dark at a phone (360x640), a landscape phone (640x360) and a small widget (240x240), returns those pictures as one contact sheet, audits it and reports what looking would find." },
                 render: { type: "boolean", description: "With check: also render it (default true)." },
                 expanded: { type: "boolean", description: "Return the expanded JSON instead of converting." },
                 edits: { type: "array", items: { type: "object", properties: { old: { type: "string" }, new: { type: "string" }, all: { type: "boolean" } }, required: ["old", "new"] },
                     description: "With json_path: change the stored document instead of sending it all again, then convert it. Each {\"old\": text, \"new\": text}; old must occur once (or \"all\": true). The file is updated in place. All or nothing: on any failure nothing changes." },
-                looks: { type: "array", items: { type: "string", enum: ["light", "dark", "mono-dark", "mono-light"] }, description: "Convert and check in ONE call: also returns the contact sheets, render findings, audit warnings, what a screen reader announces, the tap targets, whether the players agree and the repaint verdict, for these looks, with sizes, samples and every_look as in render. Remembered: later edits of this document repeat the check by themselves. When nothing is wrong it says NO FAULTS FOUND and writes the full contact sheet. Prefer this to separate render, audit and inspect calls." },
+                looks: { type: "array", items: { type: "string", enum: ["light", "dark", "mono-dark", "mono-light"] }, description: "Convert and check in ONE call: also returns the contact sheet IMAGE (every look at every size, captioned: what the document looks like now, so no render call is needed for them), render findings, audit warnings, what a screen reader announces, the tap targets, whether the players agree and the repaint verdict, for these looks, with sizes, samples and every_look as in render. Remembered: later edits of this document repeat the check by themselves. When nothing is wrong it says NO FAULTS FOUND and writes the full contact sheet. Prefer this to separate render, audit and inspect calls." },
                 sizes: { type: "array", items: { type: "array", items: { type: "number" } }, description: "With looks: the [width, height] sizes to check." },
                 samples: { type: "array", items: { type: "object" }, description: "With looks: data cases and taps, as in render: host values, \"$tap\", \"$wait\", \"$expect\", \"$clock\", and \"$size\": [w, h] to run a case at one size only (a tap on something only that size shows)." },
                 clocks: { type: "array", items: { anyOf: [{ type: "string" }, { type: "number" }] }, description: "With looks: pinned clocks, each one a data case; with samples, each sample at each clock." },
@@ -1052,20 +1091,24 @@ const tools = [
             const verify = kept && (looks?.length || recheck === true || (edits?.length && recheck !== false && saved?.looks));
             if (recheck === true && !looks?.length && !saved?.looks) throw new Error("convert: no saved check to repeat: give looks (and sizes, samples) once");
             if (verify) {
+                // The sizes the check covers (what the render saves in the plan): the audits need
+                // nothing else, so they run while the renders do (separate slots: rc2image
+                // processes and inspector workers). The inspection reads the plan the render
+                // writes, so it follows the render; only it writes (its notes).
+                const checkSizes = (looks?.length ? sizes : saved?.sizes)?.filter?.((s) => Array.isArray(s) && s[0] > 0 && s[1] > 0);
+                const auditSizes = checkSizes?.length ? checkSizes : [[undefined, undefined]];
+                const audited = Promise.all(auditSizes.map(([width, height]) => tool(inspect, "audit").handler({ json_path: kept, ...(width ? { width, height } : {}) })
+                    .then((a) => ({ a }), (e) => ({ e }))));
                 const shown = await tools.find((x) => x.name === "render").handler({ json_path: kept, show_all,
                     ...(looks?.length ? { looks, sizes, samples, clocks, every_look } : { again: true }) });
-                const plan = loadPlan(resolveIn(planPathOf(kept)));
-                const auditSizes = plan?.sizes?.length ? plan.sizes : [[undefined, undefined]];
                 const findings = new Map();
-                for (const [width, height] of auditSizes) {
-                    try {
-                        const a = await tool(inspect, "audit").handler({ json_path: kept, ...(width ? { width, height } : {}) });
-                        for (const f of JSON.parse(a[0].text).findings ?? []) if (["error", "warning"].includes(f.severity) && !findings.has(f.code)) findings.set(f.code, f);
-                    } catch (e) { findings.set("audit_failed", { severity: "warning", code: "audit_failed", title: errorLine(e) }); }
+                const faultLines = [];
+                const [audits, inspected] = await Promise.all([audited, inspectionNotes(kept, auditSizes, faultLines)]);
+                for (const { a, e } of audits) {
+                    if (e) { findings.set("audit_failed", { severity: "warning", code: "audit_failed", title: errorLine(e) }); continue; }
+                    for (const f of JSON.parse(a[0].text).findings ?? []) if (["error", "warning"].includes(f.severity) && !findings.has(f.code)) findings.set(f.code, f);
                 }
                 const audit = findings.size ? `audit:\n${[...findings.values()].map((f) => `${f.severity}: [${f.code}] ${f.title}`).join("\n")}` : "audit: no errors or warnings.";
-                const faultLines = [];
-                const inspected = await inspectionNotes(kept, auditSizes, faultLines);
                 if (faultLines.length) inspected.push({ type: "text", text: faultLines.join("\n") });
                 // Finished? Then the deliverable is ready too, with no further call.
                 const summary = shown.find((c) => c.type === "text" && c.text.startsWith("Checked "))?.text ?? "";
@@ -1074,9 +1117,9 @@ const tools = [
                 const clean = /, 0 warning\(s\)/.test(summary) && ![...findings.keys()].some((c) => c !== "dead_code") && !faultLines.length;
                 // (A sheet from an earlier clean check must not pass for this version, nor an extra page outlive a smaller check.)
                 removeFinalSheets(kept);
-                const finish = clean ? await finishNote(kept) : [];
+                const finish = clean ? await finishNote(kept, shown) : [];
                 // (The design warnings are already in json2rc's result.)
-                return [...out, ...hint, ...shown.filter((c) => !(c.type === "text" && c.text.startsWith("Design warnings"))), { type: "text", text: audit }, ...inspected, ...finish];
+                return [...out, ...hint, ...picturesNote(shown), ...shown.filter((c) => !(c.type === "text" && c.text.startsWith("Design warnings"))), { type: "text", text: audit }, ...inspected, ...finish];
             }
             if (!check) return [...out, ...hint];   // json2rc already appends the design warnings
             const { input_path: _, output_path: __, include_base64: ___, ...vargs } = args;
@@ -1172,9 +1215,13 @@ const tools = [
             "Answer a question about a document (.rc or JSON). task: summary (default; what it is, sizes, " +
             "top findings), layout (the laid-out component tree with bounds), structure, variables, " +
             "theme, accessibility, interactions (click and touch targets), interact (run actions: taps, " +
-            "variable changes, then report), runtime (repaint and per-frame cost), bytes (what the size " +
-            "is made of), operations (list, filterable), operation (one, by index) and engines (do the C++ " +
-            "player render uses and the TypeScript one inspect uses lay it out alike? the components they disagree on).",
+            "variable changes, then report), controls (EVERY control tried once, each from a fresh start, in ONE " +
+            "call: per control its label, the variables it changed before → after, what it showed, hid or moved, " +
+            "the host actions it sent, and what looks wrong: no effect, a tap that reached nothing, a value out of " +
+            "its range; use it instead of an interact per control), runtime (repaint and per-frame cost), bytes (what the size " +
+            "is made of), operations (list, filterable), operation (one, by index) and engines " +
+            (rc2layoutAvailable() ? "(do the C++ player render uses and the TypeScript one inspect uses lay it out alike? the components they disagree on)."
+                : "(the TypeScript player's layout at a size; the C++ comparison is not available on this server)."),
         choices: {
             summary: tool(inspect, "inspect_summary"),
             layout: tool(inspect, "inspect_layout"),
@@ -1184,6 +1231,7 @@ const tools = [
             accessibility: tool(inspect, "inspect_accessibility"),
             interactions: tool(inspect, "list_interactions"),
             interact: tool(inspect, "interact"),
+            controls: tool(inspect, "try_controls"),
             runtime: tool(inspect, "inspect_runtime"),
             bytes: tool(inspect, "inspect_bytes"),
             operations: tool(inspect, "list_operations"),

@@ -261,6 +261,21 @@ export const definition = {
                      { what: "Swipe a list up", arguments: { rc_path: "docs/list.rc", actions: [{ drag: [180, 600, 180, 200] }, { wait: 1 }] } },
                  ] }),
 
+        tool("try_controls", "Try every control once",
+            "Check every control in ONE call: each interaction target (what list_interactions lists) is " +
+            "exercised once from the document's starting state, in a fresh session: a tap on a click " +
+            "target, a drag across a touch-driven value (a slider, a pager's swipe; the other direction " +
+            "when the first moves nothing), a named click area fired. Per control: its label, what it did " +
+            "(variables before → after, components shown, hidden or moved, host actions sent) and anything " +
+            "suspicious (no effect, a tap that reached nothing, a value outside its range, NaN, an error). " +
+            "Changes are against the same timeline without input. Use interact for sequences (tap A then B).",
+            "controls", {
+                settle: { type: "number", description: "Seconds simulated after each input before comparing (default 0.5)." },
+                limit: { type: "integer", description: "At most this many controls (default 30, at most 60)." },
+                max_variables: { type: "integer", description: "At most this many changed variables per control (default 8)." },
+            }, { mapOptions: pick("settle", "limit", "max_variables"),
+                 examples: [{ what: "Try every control of a calculator", arguments: { json_path: "docs/bmi.json" } }] }),
+
         tool("inspect_runtime", "Profile a document's frames",
             "What running the document costs and why it repaints: the repaint verdict (continuous, " +
             "scheduled, idle) with the operations causing it; operations executed per frame over a " +

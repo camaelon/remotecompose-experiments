@@ -367,7 +367,18 @@ function sessionView(calls, imgUrl = (f) => f) {
     for (const c of calls) perTool[`${c.server} · ${c.tool}`] = (perTool[`${c.server} · ${c.tool}`] ?? 0) + 1;
     // Identical calls (same tool, same arguments): a loop, or a retry that changed nothing.
     const same = new Map();
-    calls.forEach((c, i) => { if (c.args != null) { const k = `${c.server}|${c.tool}|${c.args}`; same.set(k, [...(same.get(k) ?? []), i + 1]); } });
+    // The files a call read count as arguments: the same path edited in between is a new document.
+    calls.forEach((c, i) => { if (c.args != null) { const k = `${c.server}|${c.tool}|${c.args}|${JSON.stringify(c.files ?? null)}`; same.set(k, [...(same.get(k) ?? []), i + 1]); } });
+    // Each path's versions in the session: the n-th distinct content it had when a call read it.
+    const versions = new Map();   // path -> [sha, ...]
+    const versionOf = (f) => {
+        if (!f || f.missing) return null;
+        const list = versions.get(f.path) ?? [];
+        if (!list.includes(f.sha)) list.push(f.sha);
+        versions.set(f.path, list);
+        return list.indexOf(f.sha) + 1;
+    };
+    const fileTags = calls.map((c) => Object.values(c.files ?? {}).map((f) => ({ name: String(f.path).split("/").pop(), path: f.path, missing: !!f.missing, v: versionOf(f), sha: f.sha, bytes: f.bytes })));
     const repeats = [...same.entries()].filter(([, v]) => v.length > 1).map(([k, v]) => ({ tool: k.split("|").slice(0, 2).join(" · "), at: v }));
     const repeatOf = new Map();
     for (const r of repeats) r.at.forEach((n, j) => repeatOf.set(n, `${j + 1}/${r.at.length}`));
@@ -389,7 +400,7 @@ ${x.preview ? `<a href="${esc(x.url)}"><img src="${esc(x.preview)}" alt=""></a>`
 <div class="bar2" title="inside the tools / between calls"><i style="width:${pct(inside)}%"></i><i class="g" style="width:${pct(gaps)}%"></i></div>
 <div class="cols"><div><h3>Calls per tool</h3><div class="wrap"><table><tbody>${Object.entries(perTool).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<tr><td class="w">${esc(t)}</td><td class="n">${n}</td></tr>`).join("")}</tbody></table></div></div>
 <div><h3>Slowest calls</h3><div class="wrap"><table><tbody>${slowest.map((c) => `<tr><td>${jump(c.n)}</td><td class="w">${esc(c.server)} · ${esc(c.tool)}</td><td class="n${c.ms > CALL_SLOW_MS ? " slow" : ""}">${esc(fmtMs(c.ms))}</td></tr>`).join("")}</tbody></table></div></div></div>
-${repeats.length ? `<h3>Repeated identical calls (same tool, same arguments): possible loops</h3><div class="wrap"><table><tbody>${repeats.map((r) => `<tr><td class="w">${esc(r.tool)}</td><td class="n">×${r.at.length}</td><td class="w">${r.at.map(jump).join(" ")}</td></tr>`).join("")}</tbody></table></div>` : ""}
+${repeats.length ? `<h3>Repeated identical calls (same tool, same arguments, same file contents): possible loops</h3><div class="wrap"><table><tbody>${repeats.map((r) => `<tr><td class="w">${esc(r.tool)}</td><td class="n">×${r.at.length}</td><td class="w">${r.at.map(jump).join(" ")}</td></tr>`).join("")}</tbody></table></div>` : ""}
 ${errors.length ? `<h3>Errors</h3><div class="wrap"><table><tbody>${errors.map((c) => `<tr><td>${jump(c.n)}</td><td>${esc(c.server)} · ${esc(c.tool)}</td><td class="w">${esc(c.error)}</td></tr>`).join("")}</tbody></table></div>` : ""}
 </section>`;
     const rows = calls.map((c, i) => {
@@ -397,7 +408,7 @@ ${errors.length ? `<h3>Errors</h3><div class="wrap"><table><tbody>${errors.map((
         const gap = c.gap_ms == null ? "start" : `+${fmtMs(c.gap_ms)}`;
         return `<details id="c${n}"><summary><span class="n t">#${n}</span><span class="t">${esc(c.start.slice(11, 19))}</span>
 <span class="n${(c.gap_ms ?? 0) > GAP_SLOW_MS ? " gapx" : " t"}" title="since the previous call ended">${esc(gap)}</span>
-<span class="tool">${esc(c.server)} · <b>${esc(c.tool)}</b>${repeatOf.has(n) ? ` <span class="pill rep" title="identical to other calls in this session">repeat ${repeatOf.get(n)}</span>` : ""}</span>
+<span class="tool">${esc(c.server)} · <b>${esc(c.tool)}</b>${fileTags[i].map((f) => ` <span class="pill" title="${esc(f.missing ? `${f.path}: not found when called` : `${f.path}: ${f.bytes} bytes, sha256 ${f.sha}`)}">${esc(f.name)}${f.missing ? " missing" : ` v${f.v}`}</span>`).join("")}${repeatOf.has(n) ? ` <span class="pill rep" title="identical to other calls in this session: same arguments, same file contents">repeat ${repeatOf.get(n)}</span>` : ""}</span>
 <span class="n${c.ms > CALL_SLOW_MS ? " slow" : ""}">${esc(fmtMs(c.ms))}</span><span>${c.ok ? '<span class="pill">ok</span>' : '<span class="pill err2">error</span>'}</span>
 ${files.length ? `<span class="strip">${files.map((f) => `<a href="${esc(imgUrl(f))}" target="_blank" rel="noopener"><img src="${esc(imgUrl(f))}" alt="render" loading="lazy"></a>`).join("")}</span>` : ""}</summary>
 <div class="detail">${c.error ? `<p class="err" style="margin:8px 0">${esc(c.error)}</p>` : ""}

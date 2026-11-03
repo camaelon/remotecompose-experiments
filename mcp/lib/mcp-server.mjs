@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "node:http";
 import { createInterface } from "node:readline";
 import { workspaceRoot } from "./workspace.mjs";
-import { callDetails, summarizeArgs, summarizeResult, traceArgs, traceResult } from "./calllog.mjs";
+import { callDetails, summarizeArgs, summarizeResult, traceArgs, traceFiles, traceResult } from "./calllog.mjs";
 import { ADMIN_KEY_ACCOUNT, accounts, accountsEnabled } from "./accounts.mjs";
 import { oauthEnabled, resourceMetadataUrl, wellKnown } from "./oauth.mjs";
 import { saveTraceImages } from "./trace-images.mjs";
@@ -36,14 +36,15 @@ function usageSummary(args, content) {
 }
 
 /** One row in the calls table for a tools/call made with an account (or the admin key). */
-async function recordUsage(server, ctx, tool, ms, ok, error, args, content) {
+async function recordUsage(server, ctx, tool, ms, ok, error, args, content, files = null) {
     if (!ctx.account) return;
     try {
         const store = await accounts();
         const callId = store?.recordCall({ accountId: ctx.account.id, tokenId: ctx.account.tokenId ?? null, grantId: ctx.account.grantId ?? null, server, tool, ms, ok,
             error: error == null ? null : String(error?.message ?? error), summary: usageSummary(args, content),
             // The session trace: which MCP session, and the whole call (capped, no secrets).
-            client: ctx.client ?? null, args: traceArgs(args), result: traceResult(content, error) });
+            client: ctx.client ?? null, args: traceArgs(args), result: traceResult(content, error),
+            files: files ? JSON.stringify(files) : null });
         // The pictures it returned, as files the session page shows (private to the account).
         const images = callId ? saveTraceImages({ accountId: ctx.account.id, client: ctx.client, callId, content }) : null;
         if (images) store.setCallImages(callId, images);
@@ -93,17 +94,19 @@ function createHandler({ name, version, instructions, tools }) {
                 const tool = byName.get(params?.name);
                 if (!tool) return err(id, -32602, `unknown tool: ${params?.name}`);
                 const started = Date.now();
+                // The files it reads, before it runs (it may rewrite them): their versions in the trace.
+                const files = ctx.account ? traceFiles(params.arguments) : null;
                 try {
                     const content = await callStore.run(ctx, () => tool.handler(params.arguments ?? {}, ctx));
                     const ms = Date.now() - started;
                     log(`${tool.name} ok ${ms}ms` + callDetails({ client: ctx.client, args: params.arguments, content }));
-                    await recordUsage(name, ctx, tool.name, ms, true, null, params.arguments, content);
+                    await recordUsage(name, ctx, tool.name, ms, true, null, params.arguments, content, files);
                     return ok(id, { content });
                 } catch (e) {
                     const ms = Date.now() - started;
                     log(`${tool.name} error ${ms}ms: ${String(e?.message ?? e).split("\n")[0]}` +
                         callDetails({ client: ctx.client, args: params.arguments, error: e?.message ?? e }));
-                    await recordUsage(name, ctx, tool.name, ms, false, e, params.arguments, null);
+                    await recordUsage(name, ctx, tool.name, ms, false, e, params.arguments, null, files);
                     return ok(id, {
                         content: [{ type: "text", text: String(e?.message ?? e) }],
                         isError: true,
