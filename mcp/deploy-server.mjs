@@ -25,8 +25,10 @@ import { DOCUMENT_PROPS, prepareDocument } from "./lib/document.mjs";
 import { compileComponents, jsonToRc } from "./lib/json2rc.mjs";
 import { currentCall, isMain, serve } from "./lib/mcp-server.mjs";
 import { accounts, accountsEnabled, requestAccount } from "./lib/accounts.mjs";
-import { checkReport } from "./lib/rc2image.mjs";
-import { buildPage, formatBytes } from "./lib/web-page.mjs";
+import { checkReport, runRc2image } from "./lib/rc2image.mjs";
+import { keptPng } from "./lib/trace-images.mjs";
+import { PAGE_CARD_CSS, pageCards } from "./lib/page-cards.mjs";
+import { buildPage } from "./lib/web-page.mjs";
 import { blockingFindings } from "./lib/design-audit.mjs";
 import { playerBundle } from "./lib/web-player.mjs";
 import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
@@ -126,17 +128,26 @@ function publishedPages() {
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-function kb(n) { return n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.round(n / 1e3)} KB`; }
+
+/**
+ * The page's preview picture: its document rendered once at publish time (rc2image, the
+ * document's own size, light theme), at most 960 px wide, as pages/<id>/preview.png: public,
+ * like the page. False when it could not be made (the publish goes on without it).
+ */
+async function writePreview(rcPath, width, height, dir) {
+    const out = path.join(dir, "preview.png");
+    try {
+        const { err } = await runRc2image([rcPath, out, String(Math.round(width)), String(Math.round(height)), "--theme", "light"]);
+        if (err || !existsSync(out)) return false;
+        const png = keptPng(readFileSync(out));
+        if (!png) { rmSync(out, { force: true }); return false; }
+        writeFileSync(out, png);
+        return true;
+    } catch { return false; }
+}
 
 function indexHtml(pages, { who = null, signedOut = false } = {}) {
-    const rows = pages.map((p) => `<tr>
-  <td><a href="${esc(p.url)}">${esc(p.title || p.id)}</a></td>
-  <td>${esc(p.source)}</td>
-  <td>${p.controls === false ? "player" : p.controls ? "playground" : "–"}</td>
-  <td class="n">${p.rc_bytes ? esc(formatBytes(p.rc_bytes)) : "–"}</td>
-  <td class="n">${p.bytes ? kb(p.bytes) : ""}</td>
-  <td class="n"><time datetime="${esc(p.created)}">${esc(String(p.created ?? "").replace("T", " ").slice(0, 16))}</time></td>
-</tr>`).join("\n");
+    const cards = pageCards(pages.map((p) => ({ ...p, url: `${p.id}/`, preview: p.preview ? `${p.id}/preview.png` : null })));
     return `<!doctype html>
 <html lang="en">
 <head>
@@ -159,6 +170,10 @@ function indexHtml(pages, { who = null, signedOut = false } = {}) {
   .n { text-align: right; font-variant-numeric: tabular-nums; }
   a { color: var(--accent); text-decoration: none; font-weight: 500; }
   a:hover { text-decoration: underline; }
+  :root { --card: #fff; --thumb: #e9ecf0; }
+  @media (prefers-color-scheme: dark) { :root { --card: #1f1f25; --thumb: #101014; } }
+  .pcard:hover { text-decoration: none; }
+  ${PAGE_CARD_CSS}
 </style>
 </head>
 <body>
@@ -166,12 +181,7 @@ function indexHtml(pages, { who = null, signedOut = false } = {}) {
 <h1>${who && !who.admin ? "Your published pages" : "Published pages"}</h1>
 ${signedOut ? `<p>Published pages are listed for the account that published them. <a href="${esc(ACCOUNT_URL)}">Sign in</a> to see yours. (Each page's own link works for anyone who has it.)</p>`
     : `<p>${pages.length} page${pages.length === 1 ? "" : "s"} published with rc-deploy${who ? (who.admin ? ", every account's (you are an admin)" : ` by ${esc(who.email)}`) : ""}, newest first.${who ? ` <a href="${esc(ACCOUNT_URL)}">Your account</a>` : ""}</p>`}
-${pages.length ? `<div class="wrap"><table>
-<thead><tr><th>Title</th><th>Source</th><th>Kind</th><th class="n">Document</th><th class="n">Page</th><th class="n">Published (UTC)</th></tr></thead>
-<tbody>
-${rows}
-</tbody>
-</table></div>` : ""}
+${pages.length ? cards : ""}
 </main>
 </body>
 </html>
@@ -222,6 +232,13 @@ async function publicRoute(req, url, res) {
         const file = path.join(PAGES_DIR, "_player", pm[1]);
         if (!existsSync(file)) { res.writeHead(404, { "Content-Type": "text/plain" }); res.end("not found\n"); return true; }
         return sendFile(req, res, file, "text/javascript; charset=utf-8", "public, max-age=31536000, immutable");
+    }
+    // A page's preview picture (public, like the page).
+    const vm = /^\/pages\/([A-Za-z0-9_-]{22})\/preview\.png$/.exec(url.pathname);
+    if (vm && PAGES_DIR) {
+        const file = path.join(PAGES_DIR, vm[1], "preview.png");
+        if (!existsSync(file)) { res.writeHead(404, { "Content-Type": "text/plain" }); res.end("not found\n"); return true; }
+        return sendFile(req, res, file, "image/png", "public, max-age=300");
     }
     // A page's JSON documents (the viewer fetches them on click).
     const jm = /^\/pages\/([A-Za-z0-9_-]{22})\/([\w.-]+\.json)$/.exec(url.pathname);
@@ -540,11 +557,14 @@ export const definition = {
                     writeFileSync(path.join(dir, "index.html"), html);
                     if (shared) for (const j of json) writeFileSync(path.join(dir, j.file), j.text);
                     const owner = caller();
+                    const preview = await writePreview(doc.rcPath, docW > 0 ? docW : width, docH > 0 ? docH : height, dir);
                     writeFileSync(path.join(dir, "meta.json"), JSON.stringify({
                         id, title, created: new Date().toISOString(), bytes: result.bytes, rc_bytes: rcBytes.length, controls,
                         source: source ?? (a.json !== undefined ? "inline json" : "inline rc"),
+                        document: { width: docW, height: docH }, preview,
                         ...(owner ? { owner: owner.id } : {}),
                     }));
+                    if (preview) result.preview_url = `${pageUrl(id)}preview.png`;
                     if (owner) (await accounts())?.recordPage({ id, accountId: owner.id, title, url: pageUrl(id) });
                     result.page_id = id;
                     result.url = pageUrl(id);

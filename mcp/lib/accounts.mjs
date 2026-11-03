@@ -18,8 +18,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
+import { deleteTraceImages } from "./trace-images.mjs";
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 5;
+// Session traces (calls.args / calls.result) are kept this long; the rows themselves stay.
+export const TRACE_DAYS = 30;
 // OAuth (lib/oauth.mjs): authorization codes, access and refresh tokens.
 export const OAUTH_CODE_TTL_MS = 60_000;
 export const ACCESS_TTL_MS = 3600_000;
@@ -140,7 +143,21 @@ export class Accounts {
                 ALTER TABLE calls ADD COLUMN grant_id INTEGER;
             `);
         }
-        // (Later migrations: `if (v < 4) { ... }`, then bump SCHEMA_VERSION.)
+        if (v < 4) {
+            // The session trace: the MCP session a call belongs to (ctx.client) and the call in
+            // full (arguments as JSON, the result's text), each capped at 20 KB (lib/calllog.mjs).
+            this.db.exec(`
+                ALTER TABLE calls ADD COLUMN client TEXT;
+                ALTER TABLE calls ADD COLUMN args TEXT;
+                ALTER TABLE calls ADD COLUMN result TEXT;
+                CREATE INDEX IF NOT EXISTS calls_account_client ON calls(account_id, client, ts);
+            `);
+        }
+        if (v < 5) {
+            // The pictures a call returned, kept as files (lib/trace-images.mjs): {files, skipped}.
+            this.db.exec("ALTER TABLE calls ADD COLUMN images TEXT;");
+        }
+        // (Later migrations: `if (v < 6) { ... }`, then bump SCHEMA_VERSION.)
         if (v < SCHEMA_VERSION) this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
     }
 
@@ -201,6 +218,13 @@ export class Accounts {
         // Clients registered a month ago that never got a grant (registration is open).
         this.db.prepare("DELETE FROM oauth_clients WHERE created < ? AND id NOT IN (SELECT client_id FROM oauth_grants)")
             .run(new Date(Date.now() - 30 * 86400_000).toISOString());
+        // Session traces older than TRACE_DAYS: the bodies and pictures go, the usage rows (and summaries) stay.
+        const traceBefore = new Date(Date.now() - TRACE_DAYS * 86400_000).toISOString();
+        for (const r of this.db.prepare("SELECT account_id, client, images FROM calls WHERE ts < ? AND images IS NOT NULL").all(traceBefore)) {
+            try { deleteTraceImages(r.account_id, r.client, JSON.parse(r.images).files, this.env.MCP_ROOT || this.env.RC_TRACE_DIR ? this.env : process.env); } catch { /* unreadable list */ }
+        }
+        this.db.prepare("UPDATE calls SET args = NULL, result = NULL, images = NULL WHERE ts < ? AND (args IS NOT NULL OR result IS NOT NULL OR images IS NOT NULL)")
+            .run(traceBefore);
         return ids.length;
     }
 
@@ -347,11 +371,73 @@ export class Accounts {
 
     // --- usage
 
-    recordCall({ accountId, tokenId = null, grantId = null, server, tool, ms, ok, error = null, summary = null }) {
-        this.db.prepare("INSERT INTO calls (ts, account_id, token_id, grant_id, server, tool, ms, ok, error, summary) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .run(now(), accountId, tokenId, grantId, String(server), String(tool), Math.round(ms), ok ? 1 : 0,
+    recordCall({ accountId, tokenId = null, grantId = null, server, tool, ms, ok, error = null, summary = null,
+                 client = null, args = null, result = null, ts = now() }) {
+        const cap = (v) => (v == null ? null : String(v).slice(0, 20 << 10));
+        return Number(this.db.prepare(`INSERT INTO calls (ts, account_id, token_id, grant_id, server, tool, ms, ok, error, summary, client, args, result)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+            .run(ts, accountId, tokenId, grantId, String(server), String(tool), Math.round(ms), ok ? 1 : 0,
                 error == null ? null : String(error).split("\n")[0].slice(0, 300),
-                summary == null ? null : String(summary).slice(0, 1000));
+                summary == null ? null : String(summary).slice(0, 1000),
+                client == null ? null : String(client).slice(0, 40), cap(args), cap(result)).lastInsertRowid);
+    }
+
+    /** The pictures a call returned ({files, skipped}, lib/trace-images.mjs). */
+    setCallImages(callId, images) {
+        this.db.prepare("UPDATE calls SET images = ? WHERE id = ?").run(images ? JSON.stringify(images) : null, Number(callId));
+    }
+
+    /** Is `file` one of the pictures of a call in this account's session? (The image route's check.) */
+    sessionHasImage(accountId, client, file) {
+        const m = /^(\d+)-\d+\.png$/.exec(String(file));
+        if (!m) return false;
+        const r = this.db.prepare("SELECT images FROM calls WHERE id = ? AND account_id = ? AND client = ?").get(Number(m[1]), accountId, String(client));
+        try { return Boolean(r && JSON.parse(r.images ?? "{}")?.files?.includes(file)); } catch { return false; }
+    }
+
+    // --- sessions (one MCP session = the calls sharing calls.client)
+
+    /** What a call came through: an app ("via Claude"), a token ("token: laptop") or the admin key. */
+    #viaSql() {
+        return `CASE WHEN c.grant_id IS NOT NULL THEN 'via ' || COALESCE(NULLIF(k.name, ''), 'an app')
+                     WHEN c.token_id IS NOT NULL THEN 'token: ' || COALESCE(t.label, '?') ELSE 'admin key' END`;
+    }
+
+    /** The account's sessions over the last `days` days, most recent first: started, ended, calls, errors, tools, via. */
+    sessions(accountId, { days = TRACE_DAYS, limit = 50 } = {}) {
+        const since = new Date(Date.now() - days * 86400_000).toISOString();
+        const rows = this.db.prepare(`SELECT c.client, c.ts, c.ms, c.ok, c.tool, ${this.#viaSql()} AS via
+            FROM calls c LEFT JOIN tokens t ON t.id = c.token_id LEFT JOIN oauth_grants g ON g.id = c.grant_id
+                LEFT JOIN oauth_clients k ON k.id = g.client_id
+            WHERE c.account_id = ? AND c.ts >= ? AND c.client IS NOT NULL ORDER BY c.ts`).all(accountId, since);
+        const by = new Map();
+        for (const r of rows) {
+            const end = Date.parse(r.ts), start = end - r.ms;
+            let s = by.get(r.client);
+            if (!s) by.set(r.client, (s = { client: r.client, start, end, calls: 0, errors: 0, tools: {}, via: r.via }));
+            s.start = Math.min(s.start, start); s.end = Math.max(s.end, end);
+            s.calls++; s.errors += r.ok ? 0 : 1;
+            s.tools[r.tool] = (s.tools[r.tool] ?? 0) + 1;
+        }
+        return [...by.values()].sort((a, b) => b.end - a.end).slice(0, limit)
+            .map((s) => ({ ...s, started: new Date(s.start).toISOString(), ended: new Date(s.end).toISOString(), duration_ms: s.end - s.start }));
+    }
+
+    /** One session's calls in order (at most `limit`), with start times and the gap since the previous call ended. */
+    sessionCalls(accountId, client, { limit = 1000 } = {}) {
+        const rows = this.db.prepare(`SELECT c.id, c.ts, c.server, c.tool, c.ms, c.ok, c.error, c.args, c.result, c.images, ${this.#viaSql()} AS via
+            FROM calls c LEFT JOIN tokens t ON t.id = c.token_id LEFT JOIN oauth_grants g ON g.id = c.grant_id
+                LEFT JOIN oauth_clients k ON k.id = g.client_id
+            WHERE c.account_id = ? AND c.client = ? ORDER BY c.ts, c.id LIMIT ?`).all(accountId, String(client), limit);
+        let prevEnd = null;
+        return rows.map((r) => {
+            const end = Date.parse(r.ts), start = end - r.ms;
+            const gap = prevEnd == null ? null : Math.max(0, start - prevEnd);
+            prevEnd = prevEnd == null ? end : Math.max(prevEnd, end);
+            let images = null;
+            try { images = r.images ? JSON.parse(r.images) : null; } catch { /* none */ }
+            return { ...r, images, ok: !!r.ok, start: new Date(start).toISOString(), end: r.ts, gap_ms: gap };
+        });
     }
 
     /** The account's calls over the last `days` days: per day (oldest first, every day), per tool, per server, recent errors. */

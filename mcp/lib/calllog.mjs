@@ -100,3 +100,76 @@ export function callDetails({ client, args, content, error }) {
     if (s.length > MAX_LINE) s = s.slice(0, MAX_LINE) + "…";
     return " " + s;
 }
+
+// --- the session trace (the account pages' session view): a call's whole arguments and result,
+// documents included (they are what someone retracing a session wants to read), capped.
+
+export const TRACE_CAP = 20 << 10;
+// Our own secrets, should one ever be passed as an argument or echoed in a result.
+const SECRET = /\b(?:rc|rco|rcr)_[A-Za-z0-9_-]{43}\b/g;
+const scrub = (s) => {
+    let out = String(s).replace(SECRET, "[token]");
+    const admin = process.env.MCP_TOKEN;
+    if (admin && admin.length >= 24) out = out.split(admin).join("[token]");
+    return out;
+};
+
+/** Cuts the longest strings in `v` (halving, repeatedly) until its JSON fits `cap`; else a head. */
+function fit(v, cap) {
+    let s = JSON.stringify(v);
+    if (s === undefined) return null;
+    if (s.length <= cap) return s;
+    v = JSON.parse(s);
+    for (let i = 0; i < 40 && s.length > cap; i++) {
+        let best = null;   // [holder, key, length]
+        const walk = (o) => {
+            for (const [k, x] of Object.entries(o)) {
+                if (typeof x === "string") { if (!best || x.length > best[2]) best = [o, k, x.length]; }
+                else if (x && typeof x === "object") walk(x);
+            }
+        };
+        if (v && typeof v === "object") walk(v);
+        if (!best || best[2] < 200) break;
+        const [o, k, n] = best;
+        const keep = Math.max(100, Math.min(Math.floor(n / 2), n - (s.length - cap) - 60));
+        o[k] = o[k].slice(0, keep) + `…[cut ${n - keep} of ${n} characters]`;
+        s = JSON.stringify(v);
+    }
+    if (s.length <= cap) return s;
+    // No long string to cut: the start of the JSON, as a string (escaping grows it: shrink to fit).
+    let n = cap - 200, out;
+    do { out = JSON.stringify({ _truncated: `${s.length} characters of JSON`, head: s.slice(0, n) }); n = Math.floor(n * 0.8); } while (out.length > cap && n > 100);
+    return out;
+}
+
+/** The call's arguments as JSON, at most TRACE_CAP characters (long strings cut first), no secrets. */
+export function traceArgs(args, cap = TRACE_CAP) {
+    try { return scrub(fit(args ?? {}, cap) ?? "{}"); } catch { return null; }
+}
+
+/** A PNG's size from its header (base64), or null. */
+function pngSize(b64) {
+    try {
+        const b = Buffer.from(String(b64).slice(0, 64), "base64");
+        return b.readUInt32BE(0) === 0x89504e47 ? { w: b.readUInt32BE(16), h: b.readUInt32BE(20) } : null;
+    } catch { return null; }
+}
+
+/** What came back, as text: every text item in full, an image as "[image WxH, N KB]"; capped, no secrets. */
+export function traceResult(content, error, cap = TRACE_CAP) {
+    let text;
+    if (error != null) text = `error: ${error?.message ?? error}`;
+    else if (!Array.isArray(content)) text = "";
+    else text = content.map((c) => {
+        if (c?.type === "text") return String(c.text ?? "");
+        if (c?.type === "image") {
+            const size = pngSize(c.data);
+            const kb = Math.round((String(c.data ?? "").length * 3) / 4 / 1024);
+            return `[image ${size ? `${size.w}x${size.h}` : c.mimeType ?? "?"}, ${kb} KB]`;
+        }
+        if (c?.type === "resource" || c?.type === "resource_link") return `[${c.type} ${c.resource?.uri ?? c.uri ?? ""}]`;
+        return `[${c?.type ?? "?"}]`;
+    }).join("\n\n");
+    text = scrub(text);
+    return text.length <= cap ? text : text.slice(0, cap - 60) + `\n…[cut: ${text.length} characters in all]`;
+}

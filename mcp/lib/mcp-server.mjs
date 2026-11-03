@@ -13,9 +13,10 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "node:http";
 import { createInterface } from "node:readline";
 import { workspaceRoot } from "./workspace.mjs";
-import { callDetails, summarizeArgs, summarizeResult } from "./calllog.mjs";
+import { callDetails, summarizeArgs, summarizeResult, traceArgs, traceResult } from "./calllog.mjs";
 import { ADMIN_KEY_ACCOUNT, accounts, accountsEnabled } from "./accounts.mjs";
 import { oauthEnabled, resourceMetadataUrl, wellKnown } from "./oauth.mjs";
+import { saveTraceImages } from "./trace-images.mjs";
 
 const DEFAULT_PROTOCOL = "2025-06-18";
 const MAX_BODY = 32 << 20;   // inline JSON documents and base64 .rc files can be large
@@ -39,8 +40,13 @@ async function recordUsage(server, ctx, tool, ms, ok, error, args, content) {
     if (!ctx.account) return;
     try {
         const store = await accounts();
-        store?.recordCall({ accountId: ctx.account.id, tokenId: ctx.account.tokenId ?? null, grantId: ctx.account.grantId ?? null, server, tool, ms, ok,
-            error: error == null ? null : String(error?.message ?? error), summary: usageSummary(args, content) });
+        const callId = store?.recordCall({ accountId: ctx.account.id, tokenId: ctx.account.tokenId ?? null, grantId: ctx.account.grantId ?? null, server, tool, ms, ok,
+            error: error == null ? null : String(error?.message ?? error), summary: usageSummary(args, content),
+            // The session trace: which MCP session, and the whole call (capped, no secrets).
+            client: ctx.client ?? null, args: traceArgs(args), result: traceResult(content, error) });
+        // The pictures it returned, as files the session page shows (private to the account).
+        const images = callId ? saveTraceImages({ accountId: ctx.account.id, client: ctx.client, callId, content }) : null;
+        if (images) store.setCallImages(callId, images);
     } catch (e) { log(`usage not recorded: ${e?.message ?? e}`); }
 }
 

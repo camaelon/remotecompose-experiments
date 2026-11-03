@@ -131,6 +131,16 @@ Anyone who has that URL can use the server, so treat it like a password.
   `unpublish_page`, the `/pages/` index when signed in; `MCP_PAGE_INDEX=public` keeps the
   old public list). `RC_SIGNUP=closed` stops registration, `RC_ADMIN_EMAILS` names admins.
   See `lib/accounts.mjs` and `lib/account-web.mjs`.
+- **Retracing a session.** Every tool call made with an account is kept with its MCP session,
+  its full arguments (inline documents included) and its result's text, 20 KB each, for 30 days.
+  The account page's **Recent sessions** opens `account/sessions/<session>`: a timeline with
+  the gap before each call (the assistant thinking), durations, repeated identical calls,
+  errors and every argument and result, plus a JSON download. Admins reach anyone's from the
+  accounts list. The pictures the tools returned (renders, contact sheets) are kept too, under
+  `MCP_ROOT/traces/` (at most 960 px wide; 200 pictures / 50 MB per session, `RC_TRACE_IMAGES`,
+  `RC_TRACE_MB`), shown on the timeline and served only to the account. A session that published
+  shows the page at the top. Each published page gets a `preview.png` (its document rendered
+  at publish, light theme), public like the page, used by the page cards.
 - **OAuth (connect by signing in).** With accounts on, every MCP endpoint also follows the
   MCP authorization spec: a request without a token gets a 401 whose `WWW-Authenticate`
   names the discovery documents (`/.well-known/oauth-protected-resource/<mount>/mcp`,

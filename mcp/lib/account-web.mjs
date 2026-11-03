@@ -18,6 +18,11 @@
 //   POST account/signout
 //   POST account/tokens              label -> a new token, shown once with connection instructions
 //   POST account/tokens/<id>/revoke
+//   GET  account/sessions/           your MCP sessions (admins: ?account=<id> for anyone's)
+//   GET  account/sessions/<client>   one session's timeline: every call, the gaps between them
+//                                    (the assistant thinking), arguments and results in full;
+//                                    <client>.json downloads it; <client>/img/<file> is one of
+//                                    its pictures (lib/trace-images.mjs), same access rules
 //   POST account/apps/<id>/revoke    disconnects an OAuth app (its grant: access and refresh tokens)
 //   POST account/admin/<id>/disable | enable | resend | delete     (admins; delete: pending only)
 //
@@ -32,6 +37,11 @@
 
 import { Accounts, accounts, accountsEnabled, csrfFor, emailVerify, RateLimiter, readCookie, SESSION_COOKIE, signupOpen } from "./accounts.mjs";
 import { linkEmail, sendMail } from "./mail.mjs";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { PAGE_CARD_CSS, pageCards } from "./page-cards.mjs";
+import { traceImagePath } from "./trace-images.mjs";
+import { workspaceRoot } from "./workspace.mjs";
 import { escapeHtml } from "./web-page.mjs";
 
 const esc = (s) => escapeHtml(s ?? "");
@@ -130,6 +140,27 @@ const HEADERS = {
     "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
 };
 
+/** The CSP, letting pictures also come from these origins (the deploy server's pages, when elsewhere). */
+function cspWithImages(urls) {
+    const origins = [...new Set(urls.map((u) => { try { return new URL(u).origin; } catch { return null; } }).filter(Boolean))];
+    return { "Content-Security-Policy": HEADERS["Content-Security-Policy"].replace("img-src 'self' data:", `img-src 'self' data:${origins.map((o) => " " + o).join("")}`) };
+}
+
+/** A published page's facts from the shared workspace (pages/<id>/meta.json), or null. */
+function pageMeta(id) {
+    const root = workspaceRoot();
+    if (!root || !/^[A-Za-z0-9_-]{22}$/.test(String(id))) return null;
+    try { return JSON.parse(readFileSync(path.join(root, "pages", id, "meta.json"), "utf8")); } catch { return null; }
+}
+
+/** The account's pages as cards: the facts and preview from each page's meta.json. */
+function publishedCards(store, accountId) {
+    return store.pagesOf(accountId).map((p) => {
+        const m = pageMeta(p.id);
+        return { ...p, rc_bytes: m?.rc_bytes, document: m?.document, preview: m?.preview && p.url ? `${p.url}preview.png` : null };
+    });
+}
+
 function html(res, status, body, extra = {}) {
     const buf = Buffer.from(body);
     res.writeHead(status, { "Content-Type": "text/html; charset=utf-8", "Content-Length": buf.length, ...HEADERS, ...extra });
@@ -144,9 +175,39 @@ function redirect(res, to, extra = {}) {
 }
 
 const ACCOUNT_CSS = `
+.tl { border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+.tl details { border-top:1px solid var(--line); }
+.tl details:first-child { border-top:0; }
+.tl summary { display:grid; grid-template-columns:42px 78px 92px minmax(0,1fr) 84px 64px; gap:8px; align-items:center; padding:7px 12px; cursor:pointer; list-style:none; font-size:13px; }
+.tl summary::-webkit-details-marker { display:none; }
+.tl summary:hover { background:var(--chip); }
+.tl .hd { display:grid; grid-template-columns:42px 78px 92px minmax(0,1fr) 84px 64px; gap:8px; padding:7px 12px; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; background:var(--chip); }
+.tl .n, .tl .t { font-variant-numeric:tabular-nums; }
+.tl .t { color:var(--muted); }
+.tl .tool { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.gapx { color:#b26b00; font-weight:600; }
+.slow { color:#d0453a; font-weight:600; }
+.tl .detail { padding:4px 12px 14px 62px; }
+.tl .strip { grid-column:1 / -1; display:flex; gap:8px; overflow-x:auto; padding:4px 0 2px 50px; }
+.tl .strip img { height:120px; width:auto; border-radius:6px; border:1px solid var(--line); background:var(--thumb); display:block; }
+.tl .full img { max-width:100%; height:auto; border-radius:8px; border:1px solid var(--line); display:block; margin:6px 0; background:var(--thumb); }
+.pubbed { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+.pubbed img { height:140px; width:auto; border-radius:8px; border:1px solid var(--line); background:var(--thumb); }
+${PAGE_CARD_CSS}
+.tl .detail h4 { margin:10px 0 4px; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+pre.body { max-height:60vh; overflow:auto; margin:0; white-space:pre-wrap; overflow-wrap:anywhere; }
+.pill.err2 { color:#d0453a; }
+.pill.rep { color:#b26b00; }
+.kv { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:0 0 12px; }
+.kv div b { display:block; font-size:18px; }
+.kv div span { color:var(--muted); font-size:12px; }
+.bar2 { display:flex; height:10px; border-radius:5px; overflow:hidden; background:var(--chip); margin:4px 0 14px; }
+.bar2 i { display:block; background:var(--accent); }
+.bar2 i.g { background:#d08a00; }
+`; const ACCOUNT_CSS_BASE = `
 main.acct { display:block; }
-main.acct a { color:var(--accent); text-decoration:none; font-weight:500; }
-main.acct a:hover { text-decoration:underline; }
+main.acct a, p.sub a { color:var(--accent); text-decoration:none; font-weight:500; }
+main.acct a:hover, p.sub a:hover { text-decoration:underline; }
 .panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:0 0 16px; }
 .panel h2 { font-size:16px; margin:0 0 10px; }
 .panel p { margin:0 0 10px; }
@@ -197,7 +258,7 @@ for (const b of document.querySelectorAll("[data-copy]")) b.addEventListener("cl
 function shell({ css, nav, title, sub, body }) {
     return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex"><title>${esc(title)}</title><style>${css}${ACCOUNT_CSS}</style></head>
+<meta name="robots" content="noindex"><title>${esc(title)}</title><style>${css}${ACCOUNT_CSS_BASE}${ACCOUNT_CSS}</style></head>
 <body>
 <header>
 <nav>${nav}</nav>
@@ -264,6 +325,93 @@ ${rows.map((r) => `<tr><td class="w">${esc(r.name)}</td><td class="n">${r.calls}
 </tbody></table></div>`;
 }
 
+const fmtMs = (ms) => (ms == null ? "" : ms < 1000 ? `${Math.round(ms)} ms` : ms < 60_000 ? `${(ms / 1000).toFixed(1)} s`
+    : `${Math.floor(ms / 60_000)} min ${Math.round((ms % 60_000) / 1000)} s`);
+const GAP_SLOW_MS = 20_000, CALL_SLOW_MS = 5_000;
+
+/** The sessions table: one row per MCP session, linking to its timeline (href(client)). */
+function sessionsTable(list, href) {
+    if (!list.length) return `<p class="muted">No sessions yet. Each MCP client session (one conversation, roughly) shows up here with every call it made.</p>`;
+    return `<div class="wrap"><table><thead><tr><th>Started (UTC)</th><th class="n">Duration</th><th class="n">Calls</th><th class="n">Errors</th><th>Tools</th><th>Via</th></tr></thead><tbody>
+${list.map((x) => `<tr><td><a href="${esc(href(x.client))}">${esc(day(x.started))}</a></td><td class="n">${esc(fmtMs(x.duration_ms))}</td><td class="n">${x.calls}</td><td class="n">${x.errors || ""}</td>
+<td class="w">${Object.entries(x.tools).sort((a, b) => b[1] - a[1]).map(([t, n]) => `${esc(t)}${n > 1 ? ` ×${n}` : ""}`).join(", ")}</td><td class="w">${esc(x.via)}</td></tr>`).join("\n")}
+</tbody></table></div>`;
+}
+
+/** A stored argument or result, pretty-printed when it is JSON. */
+function pretty(text) {
+    if (text == null) return null;
+    try { return JSON.stringify(JSON.parse(text), null, 2); } catch { return String(text); }
+}
+
+/** The pages a session published: [{url, id, preview}], newest last. */
+function sessionPublishes(calls) {
+    const out = [];
+    for (const c of calls) {
+        if (!c.ok || !/^(package_web|publish)$/.test(c.tool) || !c.result) continue;
+        const m = /"url":\s*"(https?:\/\/[^"]+\/pages\/([A-Za-z0-9_-]{22})\/)"/.exec(c.result);
+        if (!m) continue;
+        const meta = pageMeta(m[2]);
+        out.push({ url: m[1], id: m[2], title: meta?.title ?? m[2], preview: meta?.preview ? `${m[1]}preview.png` : null, live: !!meta });
+    }
+    return out;
+}
+
+/** Everything about one session: what it published, totals, then the timeline. imgUrl(file) -> the picture's URL. */
+function sessionView(calls, imgUrl = (f) => f) {
+    const first = calls[0], last = calls.at(-1);
+    const wall = Date.parse(last.end) - Date.parse(first.start);
+    const inside = calls.reduce((n, c) => n + c.ms, 0);
+    const gaps = calls.reduce((n, c) => n + (c.gap_ms ?? 0), 0);
+    const perTool = {};
+    for (const c of calls) perTool[`${c.server} · ${c.tool}`] = (perTool[`${c.server} · ${c.tool}`] ?? 0) + 1;
+    // Identical calls (same tool, same arguments): a loop, or a retry that changed nothing.
+    const same = new Map();
+    calls.forEach((c, i) => { if (c.args != null) { const k = `${c.server}|${c.tool}|${c.args}`; same.set(k, [...(same.get(k) ?? []), i + 1]); } });
+    const repeats = [...same.entries()].filter(([, v]) => v.length > 1).map(([k, v]) => ({ tool: k.split("|").slice(0, 2).join(" · "), at: v }));
+    const repeatOf = new Map();
+    for (const r of repeats) r.at.forEach((n, j) => repeatOf.set(n, `${j + 1}/${r.at.length}`));
+    const slowest = [...calls.map((c, i) => ({ ...c, n: i + 1 }))].sort((a, b) => b.ms - a.ms).slice(0, 5);
+    const errors = calls.map((c, i) => ({ ...c, n: i + 1 })).filter((c) => !c.ok);
+    const pct = (x) => (wall > 0 ? (100 * x) / wall : 0).toFixed(1);
+    const jump = (n) => `<a href="#c${n}">#${n}</a>`;
+    const pubs = sessionPublishes(calls);
+    const published = pubs.length ? `<section class="panel"><h2>Published in this session</h2>${pubs.reverse().map((x) => `<div class="pubbed" style="margin-bottom:10px">
+${x.preview ? `<a href="${esc(x.url)}"><img src="${esc(x.preview)}" alt=""></a>` : ""}<div><b>${esc(x.title)}</b><br>${x.live ? `<a href="${esc(x.url)}">${esc(x.url)}</a>` : `<span class="muted">${esc(x.url)} (unpublished since)</span>`}</div></div>`).join("")}</section>` : "";
+    const imageCount = calls.reduce((n, c) => n + (c.images?.files?.length ?? 0), 0);
+    const skipped = calls.reduce((n, c) => n + (c.images?.skipped ?? 0), 0);
+    const totals = `<section class="panel"><h2>Totals</h2>
+<div class="kv"><div><b>${esc(fmtMs(wall))}</b><span>wall time, first call to last</span></div>
+<div><b>${esc(fmtMs(inside))}</b><span>inside the tools (${pct(inside)}%)</span></div>
+<div><b>${esc(fmtMs(gaps))}</b><span>between calls (${pct(gaps)}%): the assistant thinking, or the user</span></div>
+<div><b>${calls.length}</b><span>calls, ${errors.length} error${errors.length === 1 ? "" : "s"}</span></div>
+<div><b>${imageCount}</b><span>pictures the tools returned${skipped ? `, ${skipped} not kept (the session's limit of ${Number(process.env.RC_TRACE_IMAGES ?? 200)} pictures / ${Number(process.env.RC_TRACE_MB ?? 50)} MB)` : ""}</span></div></div>
+<div class="bar2" title="inside the tools / between calls"><i style="width:${pct(inside)}%"></i><i class="g" style="width:${pct(gaps)}%"></i></div>
+<div class="cols"><div><h3>Calls per tool</h3><div class="wrap"><table><tbody>${Object.entries(perTool).sort((a, b) => b[1] - a[1]).map(([t, n]) => `<tr><td class="w">${esc(t)}</td><td class="n">${n}</td></tr>`).join("")}</tbody></table></div></div>
+<div><h3>Slowest calls</h3><div class="wrap"><table><tbody>${slowest.map((c) => `<tr><td>${jump(c.n)}</td><td class="w">${esc(c.server)} · ${esc(c.tool)}</td><td class="n${c.ms > CALL_SLOW_MS ? " slow" : ""}">${esc(fmtMs(c.ms))}</td></tr>`).join("")}</tbody></table></div></div></div>
+${repeats.length ? `<h3>Repeated identical calls (same tool, same arguments): possible loops</h3><div class="wrap"><table><tbody>${repeats.map((r) => `<tr><td class="w">${esc(r.tool)}</td><td class="n">×${r.at.length}</td><td class="w">${r.at.map(jump).join(" ")}</td></tr>`).join("")}</tbody></table></div>` : ""}
+${errors.length ? `<h3>Errors</h3><div class="wrap"><table><tbody>${errors.map((c) => `<tr><td>${jump(c.n)}</td><td>${esc(c.server)} · ${esc(c.tool)}</td><td class="w">${esc(c.error)}</td></tr>`).join("")}</tbody></table></div>` : ""}
+</section>`;
+    const rows = calls.map((c, i) => {
+        const n = i + 1, args = pretty(c.args), result = pretty(c.result), files = c.images?.files ?? [];
+        const gap = c.gap_ms == null ? "start" : `+${fmtMs(c.gap_ms)}`;
+        return `<details id="c${n}"><summary><span class="n t">#${n}</span><span class="t">${esc(c.start.slice(11, 19))}</span>
+<span class="n${(c.gap_ms ?? 0) > GAP_SLOW_MS ? " gapx" : " t"}" title="since the previous call ended">${esc(gap)}</span>
+<span class="tool">${esc(c.server)} · <b>${esc(c.tool)}</b>${repeatOf.has(n) ? ` <span class="pill rep" title="identical to other calls in this session">repeat ${repeatOf.get(n)}</span>` : ""}</span>
+<span class="n${c.ms > CALL_SLOW_MS ? " slow" : ""}">${esc(fmtMs(c.ms))}</span><span>${c.ok ? '<span class="pill">ok</span>' : '<span class="pill err2">error</span>'}</span>
+${files.length ? `<span class="strip">${files.map((f) => `<a href="${esc(imgUrl(f))}" target="_blank" rel="noopener"><img src="${esc(imgUrl(f))}" alt="render" loading="lazy"></a>`).join("")}</span>` : ""}</summary>
+<div class="detail">${c.error ? `<p class="err" style="margin:8px 0">${esc(c.error)}</p>` : ""}
+<h4>Arguments</h4>${args == null ? `<p class="muted">Not kept (older than 30 days).</p>` : `<pre class="body">${esc(args)}</pre>`}
+<h4>Result</h4>${result == null ? `<p class="muted">Not kept (older than 30 days).</p>` : `<pre class="body">${esc(result)}</pre>`}
+${files.length ? `<h4>Pictures</h4><div class="full">${files.map((f) => `<a href="${esc(imgUrl(f))}" target="_blank" rel="noopener"><img src="${esc(imgUrl(f))}" alt="render" loading="lazy"></a>`).join("")}</div>` : ""}
+${c.images?.skipped ? `<p class="muted">${c.images.skipped} picture${c.images.skipped === 1 ? "" : "s"} not kept: the session's limit was reached.</p>` : ""}</div></details>`;
+    }).join("\n");
+    return `${published}${totals}
+<section class="panel"><h2>Timeline</h2><p class="muted">Times are UTC. The gap is the time since the previous call ended: the assistant thinking (amber above ${GAP_SLOW_MS / 1000} s). Durations above ${CALL_SLOW_MS / 1000} s are red. Click a call for its arguments and result.</p>
+<div class="tl"><div class="hd"><span>#</span><span>Start</span><span>Gap</span><span>Server · tool</span><span>Took</span><span></span></div>
+${rows}</div></section>`;
+}
+
 function accountPage(req, { store, acct, sid, fresh, error, notice }) {
     const csrf = `<input type="hidden" name="csrf" value="${csrfFor(sid)}">`;
     const tokens = store.listTokens(acct.id);
@@ -301,10 +449,13 @@ ${usage.total ? `<div class="cols"><div><h3>Per tool</h3>${groupTable(usage.byTo
 ${usage.errors.length ? `<h3>Recent errors</h3><div class="wrap"><table><thead><tr><th>When (UTC)</th><th>Tool</th><th>Error</th></tr></thead><tbody>
 ${usage.errors.map((e) => `<tr><td>${esc(day(e.ts))}</td><td>${esc(e.server)} · ${esc(e.tool)}</td><td class="w">${esc(e.error)}</td></tr>`).join("\n")}</tbody></table></div>` : ""}
 </section>`,
+        `<section class="panel"><h2>Recent sessions</h2>
+<p class="muted">One row per MCP session (a conversation in claude.ai or ChatGPT, a Claude Code run), last 30 days. Open one to retrace it call by call.</p>
+${sessionsTable(store.sessions(acct.id, { limit: 10 }), (c) => `sessions/${encodeURIComponent(c)}`)}
+<p style="margin-top:8px"><a href="sessions/">All sessions</a></p>
+</section>`,
         `<section class="panel"><h2>Your published pages</h2>
-${pages.length ? `<div class="wrap"><table><thead><tr><th>Title</th><th>Id</th><th>Published (UTC)</th></tr></thead><tbody>
-${pages.map((p) => `<tr><td class="w">${p.url ? `<a href="${esc(p.url)}">${esc(p.title || p.id)}</a>` : esc(p.title || p.id)}</td><td><code>${esc(p.id)}</code></td><td>${esc(day(p.created))}</td></tr>`).join("\n")}
-</tbody></table></div><p class="muted" style="margin-top:8px">Anyone with a page's link can open it; the links are unguessable and listed only here. Take one down with the pages / unpublish_page tool.</p>`
+${pages.length ? `${pageCards(publishedCards(store, acct.id))}<p class="muted" style="margin-top:10px">Anyone with a page's link can open it; the links are unguessable and listed only here. Take one down with the pages / unpublish_page tool.</p>`
             : `<p class="muted">None yet. Pages you publish with the publish (or package_web) tool are listed here.</p>`}
 </section>`,
         acct.admin ? adminPanel(store, csrf) : "",
@@ -317,10 +468,11 @@ function adminPanel(store, csrf) {
     const rows = store.listAccounts(7).map((a) => `<tr><td class="w">${esc(a.email)}${a.admin ? ' <span class="pill">admin</span>' : ""}</td><td class="w">${esc(a.name)}</td><td>${esc(day(a.created))}</td>
 <td>${a.verified_at ? esc(day(a.verified_at).slice(0, 10)) : `<span class="pill${a.stale ? " off" : ""}">pending${a.stale ? ", over 7 days" : ""}</span>`}</td>
 <td class="n">${a.tokens}</td><td class="n">${a.calls}</td><td>${a.status === "disabled" ? '<span class="pill off">disabled</span>' : `<span class="pill">${esc(a.status)}</span>`}</td>
+<td><a href="sessions/?account=${a.id}">Sessions</a></td>
 <td>${a.status === "pending" ? act(a, "resend", "Resend link") + " " + act(a, "delete", "Delete", true)
         : act(a, a.status === "active" ? "disable" : "enable", a.status === "active" ? "Disable" : "Enable", a.status === "active")}</td></tr>`).join("\n");
     return `<section class="panel"><h2>Accounts (admin)</h2>
-<div class="wrap"><table><thead><tr><th>Email</th><th>Name</th><th>Created (UTC)</th><th>Verified</th><th class="n">Tokens</th><th class="n">Calls, 7 days</th><th>Status</th><th></th></tr></thead><tbody>
+<div class="wrap"><table><thead><tr><th>Email</th><th>Name</th><th>Created (UTC)</th><th>Verified</th><th class="n">Tokens</th><th class="n">Calls, 7 days</th><th>Status</th><th></th><th></th></tr></thead><tbody>
 ${rows}</tbody></table></div><p class="muted" style="margin-top:8px">Disabling an account refuses its tokens and ends its sessions; enabling it restores them. Pending accounts (email not confirmed) are deleted after 7 days on their own.</p></section>`;
 }
 
@@ -417,10 +569,62 @@ export async function accountRoute(req, url, res, site) {
             : { title: "Sign in", sub: "One click and you are in.", body: confirmPage({ action: "signin-link", code,
                 heading: "Sign in to your account", text: "This signs you in in this browser for 30 days.", button: "Sign in" }) });
     }
+    // Sessions: signed in; your own, or (admins) any account's with ?account=<id>.
+    const im = /^\/account\/sessions\/([^/]+)\/img\/([\w.-]+)$/.exec(p);
+    if (im && (req.method === "GET" || req.method === "HEAD")) {
+        const asked = url.searchParams.get("account");
+        const who = !acct ? null : asked == null || Number(asked) === acct.id ? acct : acct.admin ? store.getAccount(Number(asked)) : null;
+        let client = null;
+        try { client = decodeURIComponent(im[1]); } catch { /* bad */ }
+        const file = who && client && store.sessionHasImage(who.id, client, im[2]) ? traceImagePath(who.id, client, im[2]) : null;
+        if (!file || !existsSync(file)) { res.writeHead(404, { ...HEADERS, "Content-Type": "text/plain" }); res.end("not found\n"); return true; }
+        const buf = readFileSync(file);
+        res.writeHead(200, { ...HEADERS, "Content-Type": "image/png", "Content-Length": buf.length, "Cache-Control": "private, max-age=3600" });
+        res.end(req.method === "HEAD" ? undefined : buf);
+        return true;
+    }
+    const sm = /^\/account\/sessions\/(?:([^/]+?)(\.json)?)?$/.exec(p);
+    if (sm && (req.method === "GET" || req.method === "HEAD")) {
+        if (!acct) return redirect(res, "../");
+        const asked = url.searchParams.get("account");
+        const who = asked == null || Number(asked) === acct.id ? acct : acct.admin ? store.getAccount(Number(asked)) : null;
+        const notFound = () => html(res, 404, shell({ css: site.css, nav: site.nav("account").replaceAll('href="../', 'href="../../'),
+            title: "Not found", sub: "", body: `<p class="err">No such session.</p><p><a href="../">Back to your account</a></p>` }));
+        if (!who) return notFound();
+        const q = who.id === acct.id ? "" : `?account=${who.id}`;
+        const nav = site.nav("account").replaceAll('href="../', 'href="../../');
+        const page = (title, sub, body, extra = {}) => html(res, 200, shell({ css: site.css, nav, title, sub, body }), extra);
+        if (!sm[1]) {
+            return page(who.id === acct.id ? "Your sessions" : `Sessions of ${who.email}`, "Every MCP session of the last 30 days, most recent first.",
+                `<section class="panel">${sessionsTable(store.sessions(who.id, { limit: 500 }), (c) => `${encodeURIComponent(c)}${q}`)}</section><p><a href="../">Back to the account page</a></p>`);
+        }
+        let client;
+        try { client = decodeURIComponent(sm[1]); } catch { return notFound(); }
+        const calls = store.sessionCalls(who.id, client);
+        if (!calls.length) return notFound();
+        if (sm[2]) {
+            const body = Buffer.from(JSON.stringify({
+                account: who.email, session: client, via: calls[0].via, started: calls[0].start, ended: calls.at(-1).end,
+                calls: calls.map(({ id: _, args, result, ...c }) => {
+                    let a = args;
+                    try { a = args == null ? null : JSON.parse(args); } catch { /* as text */ }
+                    return { ...c, args: a, result };
+                }),
+            }, null, 1));
+            res.writeHead(200, { ...HEADERS, "Content-Type": "application/json; charset=utf-8", "Content-Length": body.length,
+                "Content-Disposition": `attachment; filename="session-${client.replace(/[^\w-]/g, "_")}.json"` });
+            res.end(req.method === "HEAD" ? undefined : body);
+            return true;
+        }
+        return page(`Session ${client}`,
+            `${esc(calls[0].via)}${who.id === acct.id ? "" : ` · ${esc(who.email)}`} · started ${esc(day(calls[0].start))} UTC · <a href="${esc(encodeURIComponent(client))}.json${q}">Download JSON</a> · <a href="./${q}">All sessions</a>`,
+            sessionView(calls, (f) => `${encodeURIComponent(client)}/img/${encodeURIComponent(f)}${q}`),
+            cspWithImages(sessionPublishes(calls).map((x) => x.url)));
+    }
     if (p === "/account/") {
         if (req.method !== "GET" && req.method !== "HEAD") { res.writeHead(405, { Allow: "GET, HEAD" }); res.end(); return true; }
         // A stale cookie (expired, signed out elsewhere, account disabled) is cleared.
-        return render(200, { acct, sid }, sid && !acct ? { "Set-Cookie": cookie(req, "", 0) } : {});
+        return render(200, { acct, sid }, sid && !acct ? { "Set-Cookie": cookie(req, "", 0) } : acct ? cspWithImages(store.pagesOf(acct.id).map((x) => x.url ?? "")) : {});
     }
     if (req.method !== "POST") { res.writeHead(405, { Allow: "POST" }); res.end(); return true; }
     if (!sameOrigin(req)) return html(res, 403, "<!doctype html><p>Refused: this form must be sent from this site's own pages.</p>");

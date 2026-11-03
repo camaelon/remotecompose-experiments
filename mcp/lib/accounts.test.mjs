@@ -143,7 +143,7 @@ test("a database file: created, migrated once, shared by two handles", async () 
         const t = one.issueToken(a.id);
         const two = await openAccounts(file);   // another process, in effect
         assert.equal(two.authenticate(t.token).account.email, "f@example.com");
-        assert.equal(two.db.prepare("PRAGMA user_version").get().user_version, 3);
+        assert.equal(two.db.prepare("PRAGMA user_version").get().user_version, 5);
         assert.equal(two.db.prepare("PRAGMA journal_mode").get().journal_mode, "wal");
         assert.ok(existsSync(file));
         assert.equal(accountsEnabled({ RC_DB: file }), true, "on when the database exists");
@@ -266,7 +266,7 @@ test("migration from schema 1: existing accounts are grandfathered as verified",
                  PRAGMA user_version = 1;`);
         v1.close();
         const s = await openAccounts(file);
-        assert.equal(s.db.prepare("PRAGMA user_version").get().user_version, 3);
+        assert.equal(s.db.prepare("PRAGMA user_version").get().user_version, 5);
         const e = s.findAccount("early@example.com");
         assert.equal(e.status, "active");
         assert.equal(e.verified_at, "2026-01-01T00:00:00.000Z");
