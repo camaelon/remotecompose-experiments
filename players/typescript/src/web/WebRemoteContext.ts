@@ -245,6 +245,7 @@ export class WebRemoteContext extends RemoteContext {
     private audioContext: AudioContext | null = null;
     private soundBytes = new Map<number, Uint8Array>();
     private soundBuffers = new Map<number, AudioBuffer>();
+    private soundDecoding = new Set<number>();
 
     private getAudioContext(): AudioContext | null {
         try {
@@ -284,12 +285,13 @@ export class WebRemoteContext extends RemoteContext {
 
             const cached = this.soundBuffers.get(id);
             if (cached) {
-                this.startBuffer(ctx, cached);
+                this.startBuffer(ctx, cached, id);
                 return;
             }
 
             const bytes = this.soundBytes.get(id);
-            if (!bytes) return;
+            if (!bytes || this.soundDecoding.has(id)) return;
+            this.soundDecoding.add(id);
 
             // decodeAudioData needs an ArrayBuffer copy of the bytes.
             const arrayBuf = bytes.slice().buffer;
@@ -297,19 +299,33 @@ export class WebRemoteContext extends RemoteContext {
             if (decoded && typeof (decoded as Promise<AudioBuffer>).then === 'function') {
                 (decoded as Promise<AudioBuffer>)
                     .then((buffer) => {
+                        this.soundDecoding.delete(id);
+                        if (this.soundBytes.get(id) !== bytes) return;   // replaced meanwhile
                         this.soundBuffers.set(id, buffer);
-                        this.startBuffer(ctx, buffer);
+                        this.startBuffer(ctx, buffer, id);
                     })
-                    .catch((e) => console.warn(`RemoteCompose: decode sound(${id}) failed`, e));
+                    .catch((e) => { this.soundDecoding.delete(id); console.warn(`RemoteCompose: decode sound(${id}) failed`, e); });
+            } else {
+                this.soundDecoding.delete(id);
             }
         } catch (e) {
+            this.soundDecoding.delete(id);
             console.warn(`RemoteCompose: playSound(${id}) failed`, e);
         }
     }
 
-    private startBuffer(ctx: AudioContext, buffer: AudioBuffer): void {
+    // One voice per sound, as Android's SoundSupport: playing a sound that is still playing
+    // restarts it rather than layering a copy (a playSound in a canvas runs every frame its
+    // condition holds).
+    private soundSources = new Map<number, AudioBufferSourceNode>();
+
+    private startBuffer(ctx: AudioContext, buffer: AudioBuffer, id: number): void {
         try {
+            const previous = this.soundSources.get(id);
+            if (previous) { try { previous.stop(); } catch { /* already ended */ } }
             const source = ctx.createBufferSource();
+            this.soundSources.set(id, source);
+            source.onended = () => { if (this.soundSources.get(id) === source) this.soundSources.delete(id); };
             source.buffer = buffer;
             const gain = ctx.createGain();
             gain.gain.value = 1;
