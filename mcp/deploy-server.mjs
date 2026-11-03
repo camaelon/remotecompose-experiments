@@ -29,6 +29,7 @@ import { checkReport, runRc2image } from "./lib/rc2image.mjs";
 import { keptPng } from "./lib/trace-images.mjs";
 import { PAGE_CARD_CSS, pageCards } from "./lib/page-cards.mjs";
 import { buildPage } from "./lib/web-page.mjs";
+import { checkAppScript, compileAppScript, describeCheck, documentActions, SCRIPT_NOTE, SCRIPT_PROPS, scriptsAllowed, scriptsOffMessage } from "./lib/app-script.mjs";
 import { blockingFindings } from "./lib/design-audit.mjs";
 import { playerBundle } from "./lib/web-player.mjs";
 import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
@@ -451,6 +452,11 @@ export const definition = {
                 : "Returns the HTML file's path.") +
             (workspaceRoot() ? " Paths are relative to the server's workspace." : ""),
         inputSchema: { type: "object", properties: PACKAGE_WEB_PROPS },
+        // With app scripts on for the caller (opt-in), the script options are listed too.
+        view(ctx) {
+            if (!scriptsAllowed(ctx?.account ?? null)) return null;
+            return { description: this.description + SCRIPT_NOTE, inputSchema: { type: "object", properties: { ...PACKAGE_WEB_PROPS, ...SCRIPT_PROPS } } };
+        },
         handler: async (a) => {
             const publish = a.publish ?? CAN_PUBLISH;
             if (publish && !CAN_PUBLISH) {
@@ -490,6 +496,21 @@ export const definition = {
                     variables.push({ name, type, value: coerceVariable(name, type, value) });
                 }
                 const settable = Object.fromEntries(Object.entries(declared).filter(([, t]) => WEB_SETTABLE.has(t)));
+
+                // An app script (opt-in): compiled (a syntax error refuses the publish), then
+                // dry-run against the document's variables and actions (reported, not refused).
+                let app = null, scriptCheck = null;
+                const pageId = publish ? randomBytes(16).toString("base64url") : null;
+                if (a.script !== undefined || a.script_path !== undefined) {
+                    if (!scriptsAllowed(currentCall()?.account ?? null)) throw new Error(scriptsOffMessage(caller(), ACCOUNT_URL.startsWith("http") ? ACCOUNT_URL : ""));
+                    const ts = a.script !== undefined ? String(a.script) : readFileSync(resolvePath(a.script_path, "script_path"), "utf8");
+                    let js;
+                    try { js = compileAppScript(ts); } catch (e) { throw new Error(`script: ${e.message}`); }
+                    let docJson = a.json;
+                    if (docJson === undefined && a.json_path !== undefined) { try { docJson = readFileSync(resolvePath(a.json_path, "json_path"), "utf8"); } catch { docJson = undefined; } }
+                    scriptCheck = await checkAppScript(js, { variables: settable, actions: docJson !== undefined ? documentActions(docJson) : null });
+                    app = { js, ts, key: pageId ?? createHash("sha256").update(ts).digest("base64url").slice(0, 16) };
+                }
 
                 const { width: docW, height: docH } = report.header ?? {};
                 const width = a.width ?? (docW > 0 ? docW : 400);
@@ -533,6 +554,7 @@ export const definition = {
                         ranges: a.variable_ranges ?? {},
                         ...(jsonForPage.length ? { json: jsonForPage } : {}),
                         ...(looks ? { looks } : {}),
+                        ...(app ? { app } : {}),
                     },
                 });
 
@@ -550,17 +572,18 @@ export const definition = {
                     result.html_path = displayPath(out);
                 }
                 if (publish) {
-                    const id = randomBytes(16).toString("base64url");
+                    const id = pageId;
                     const dir = path.join(PAGES_DIR, id);
                     mkdirSync(dir, { recursive: true });
                     writeFileSync(path.join(dir, "index.html"), html);
                     if (shared) for (const j of json) writeFileSync(path.join(dir, j.file), j.text);
+                    if (app) writeFileSync(path.join(dir, "app.ts"), app.ts);
                     const owner = caller();
                     const preview = await writePreview(doc.rcPath, docW > 0 ? docW : width, docH > 0 ? docH : height, dir);
                     writeFileSync(path.join(dir, "meta.json"), JSON.stringify({
                         id, title, created: new Date().toISOString(), bytes: result.bytes, rc_bytes: rcBytes.length, controls,
                         source: source ?? (a.json !== undefined ? "inline json" : "inline rc"),
-                        document: { width: docW, height: docH }, preview,
+                        document: { width: docW, height: docH }, preview, ...(app ? { app: true } : {}),
                         ...(owner ? { owner: owner.id } : {}),
                     }));
                     if (preview) result.preview_url = `${pageUrl(id)}preview.png`;
@@ -572,6 +595,7 @@ export const definition = {
                         result.url_example = `${result.url}?${encodeURIComponent(names[0])}=...`;
                     }
                 }
+                if (scriptCheck) result.script = describeCheck(scriptCheck);
                 if (!result.html_path && !publish) {
                     const out = outputFile("page", ".html");
                     writeFileSync(out, html);

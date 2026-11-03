@@ -43,6 +43,7 @@ import { PAGE_CARD_CSS, pageCards } from "./page-cards.mjs";
 import { traceImagePath } from "./trace-images.mjs";
 import { workspaceRoot } from "./workspace.mjs";
 import { escapeHtml } from "./web-page.mjs";
+import { scriptsOffered } from "./app-script.mjs";
 
 const esc = (s) => escapeHtml(s ?? "");
 const MAX_FORM = 16 << 10;
@@ -544,6 +545,7 @@ ${sessionsTable(store.sessions(acct.id, { limit: 10 }), (c) => `sessions/${encod
 <p style="margin-top:8px"><a href="sessions/">All sessions</a></p>
 </section>`,
         namePanel(acct, csrf),
+        scriptsOffered() ? scriptsPanel(acct, csrf) : "",
         streamPanel(store, acct, csrf),
         `<section class="panel"><h2>Your published pages</h2>
 ${pages.length ? `${pageCards(publishedCards(store, acct.id))}<p class="muted" style="margin-top:10px">Anyone with a page's link can open it; the links are unguessable and listed only here. Take one down with the pages / unpublish_page tool.</p>`
@@ -552,6 +554,14 @@ ${pages.length ? `${pageCards(publishedCards(store, acct.id))}<p class="muted" s
         acct.admin ? adminPanel(store, csrf) : "",
     ].join("\n");
     return body;
+}
+
+/** The opt-in for app scripts: business logic the assistant writes next to a published document. */
+function scriptsPanel(acct, csrf) {
+    return `<section class="panel" id="scripts"><h2>App scripts <span class="pill${acct.scripts ? "" : " off"}">${acct.scripts ? "on" : "off"}</span></h2>
+<p class="muted">A RemoteCompose document is the UX. With app scripts on, the assistant can also write the business logic next to it: a TypeScript script, published with the page, that sets its host values, answers its actions, fetches data and keeps state. It runs in the viewer's browser, sandboxed (no access to the page or your account). The publish tool offers it only when this is on; after changing it, start a new chat (or reconnect the app) so it sees the change.</p>
+<form class="row" method="post" action="scripts">${csrf}<input type="hidden" name="on" value="${acct.scripts ? 0 : 1}"><button class="btn" type="submit">${acct.scripts ? "Turn off" : "Turn on"}</button></form>
+</section>`;
 }
 
 /** The account's name: shown with what it posts to the stream. */
@@ -826,6 +836,11 @@ export async function accountRoute(req, url, res, site) {
         if (store.listTokens(acct.id).filter((t) => !t.revoked).length >= 20) return render(400, { acct, sid, error: "You have 20 active tokens: revoke one first." });
         const fresh = store.issueToken(acct.id, label);
         return render(200, { acct, sid, fresh });
+    }
+    if (p === "/account/scripts") {
+        if (!scriptsOffered()) return html(res, 404, "<!doctype html><p>Not found.</p>");
+        store.setScripts(acct.id, form.get("on") === "1");
+        return redirect(res, "./#scripts");
     }
     if (p === "/account/name") {
         try { store.setName(acct.id, form.get("name")); } catch (e) { return render(400, { acct, sid, error: e.message }); }

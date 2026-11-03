@@ -44,6 +44,7 @@ import { STRUCTURES } from "./structures.mjs";
 import { thumbnail } from "./thumbs.mjs";
 import { accountRoute } from "./account-web.mjs";
 import { featuredSection, STREAM_CSS, streamRoute } from "./stream-web.mjs";
+import { compileAppScript, scriptsOffered } from "./app-script.mjs";
 import { oauthRoute } from "./oauth.mjs";
 import { accountsEnabled, requestAccount } from "./accounts.mjs";
 
@@ -152,7 +153,10 @@ function preferTheme(e) {
 
 async function playground(e, variant) {
     const rcPath = path.join(EXAMPLES_DIR, e.folder, variant ? `doc.${variant}.rc` : "doc.rc");
-    const mtime = statSync(rcPath).mtimeMs;
+    // An app script beside the document (app.ts): run next to it in the playground.
+    const appPath = path.join(EXAMPLES_DIR, e.folder, "app.ts");
+    const hasApp = scriptsOffered() && existsSync(appPath);
+    const mtime = statSync(rcPath).mtimeMs + (hasApp ? statSync(appPath).mtimeMs : 0);
     const key = variant ? `${e.id}/${variant}` : e.id;
     const hit = playCache.get(key);
     if (hit && hit.mtime === mtime) return hit.html;
@@ -178,6 +182,13 @@ async function playground(e, variant) {
             looks = Object.fromEntries(["mono-dark", "mono-light"].map((look) =>
                 [look, Buffer.from(jsonToRc(compileComponents(structuredClone(source), dir, { theme: look }).doc, dir)).toString("base64")]));
         } catch { looks = null; }   // the page still works: the variants' own pages, if any
+    }
+    let app = null;
+    if (hasApp) {
+        const ts = readFileSync(appPath, "utf8");
+        try { app = { ts, js: compileAppScript(ts), key: `example:${e.id}` }; } catch (err) {
+            app = { ts, js: `console.error(${JSON.stringify(`app.ts does not compile: ${err.message}`)});`, key: `example:${e.id}` };
+        }
     }
     const player = await playerScript();
     const html = buildPage({
@@ -205,6 +216,7 @@ async function playground(e, variant) {
             ...(variant ? { variant, mainHref: "../" } : {}),
             ...(mono ? { mono } : {}),
             ...(looks ? { looks } : {}),
+            ...(app ? { app } : {}),
             json: jsonButtons(e, variant, variant ? "../../../" : "../../"),
             // meta.inputs.variables: {name: {type, meaning, default, min, max, step}}
             ranges: Object.fromEntries(Object.entries(e.inputs?.variables ?? {})

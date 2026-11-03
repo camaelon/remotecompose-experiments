@@ -21,7 +21,7 @@ import path from "node:path";
 import { deleteTraceImages } from "./trace-images.mjs";
 import { assignThreads } from "./threads.mjs";
 
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
 // Session traces (calls.args / calls.result) are kept this long; the rows themselves stay.
 export const TRACE_DAYS = 30;
 // OAuth (lib/oauth.mjs): authorization codes, access and refresh tokens.
@@ -195,7 +195,14 @@ export class Accounts {
                 this.db.exec("ALTER TABLE stream ADD COLUMN featured TEXT;");
             }
         }
-        // (Later migrations: `if (v < 10) { ... }`, then bump SCHEMA_VERSION.)
+        if (v < 10) {
+            // App scripts (lib/app-script.mjs) are opt-in per account: the MCP tools offer them
+            // only to accounts that turned them on.
+            if (!this.db.prepare("PRAGMA table_info(accounts)").all().some((c) => c.name === "scripts")) {
+                this.db.exec("ALTER TABLE accounts ADD COLUMN scripts INTEGER NOT NULL DEFAULT 0;");
+            }
+        }
+        // (Later migrations: `if (v < 11) { ... }`, then bump SCHEMA_VERSION.)
         if (v < SCHEMA_VERSION) this.db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
     }
 
@@ -204,7 +211,8 @@ export class Accounts {
     // --- accounts
 
     #row(r) {
-        return r ? { id: r.id, email: r.email, name: r.name, created: r.created, status: r.status, admin: !!r.is_admin, verified_at: r.verified_at ?? null } : null;
+        return r ? { id: r.id, email: r.email, name: r.name, created: r.created, status: r.status, admin: !!r.is_admin,
+            verified_at: r.verified_at ?? null, scripts: !!r.scripts } : null;
     }
 
     getAccount(id) { return this.#row(this.db.prepare("SELECT * FROM accounts WHERE id = ?").get(id)); }
@@ -691,6 +699,11 @@ export class Accounts {
     deletePage(id) {
         this.db.prepare("DELETE FROM pages WHERE id = ?").run(String(id));
         this.streamRemove(id);
+    }
+
+    /** Turns app scripts on or off for the account (the MCP tools then offer them, or not). */
+    setScripts(accountId, on) {
+        this.db.prepare("UPDATE accounts SET scripts = ? WHERE id = ?").run(on ? 1 : 0, accountId);
     }
 
     // --- public name and the stream

@@ -10,6 +10,7 @@
 //     state lives in the URL, so a link reproduces what is on screen.
 
 import { MONO_VAR, monoPalettes } from "./components.mjs";
+import { APP_RUNTIME, appScriptTag } from "./app-script.mjs";
 
 export const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -62,6 +63,61 @@ const COMMON_JS = `
   }
 `;
 
+// The page side of an app script (C.app, lib/app-script.mjs): the script runs in a sandboxed
+// iframe (allow-scripts only: an opaque origin, no cookies, no access to this page) and asks
+// for things by postMessage; this side answers through the player's RC.createHostApi, which
+// only reaches the document's named variables. ?app=off in the URL leaves it out.
+const APP_BRIDGE_JS = `
+  var APP_RUNTIME = ${JSON.stringify(APP_RUNTIME).replace(/<\/(script)/gi, "<\\/$1")};
+  function appOff() { return new URLSearchParams(location.search).get("app") === "off"; }
+  function startApp(handle, hooks) {
+    if (!C.app || !C.app.js || appOff() || !window.RC || !RC.createHostApi) return null;
+    hooks = hooks || {};
+    var api = RC.createHostApi(handle.player);
+    var frame = document.createElement("iframe");
+    frame.setAttribute("sandbox", "allow-scripts");
+    frame.setAttribute("aria-hidden", "true");
+    frame.tabIndex = -1;
+    frame.title = "App script";
+    frame.style.cssText = "position:absolute;width:0;height:0;border:0;visibility:hidden";
+    var KEY = "rc-app:" + (C.app.key || C.title || "");
+    var store = {};
+    try { store = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) {}
+    var log = function (level, text) { if (hooks.log) hooks.log(level, text); else (console[level] || console.log)("App script: " + text); };
+    function post(m) { m.rcHost = 1; try { frame.contentWindow.postMessage(m, "*"); } catch (e) {} }
+    function values() { var v = api.variables(), out = {}; for (var k in v) out[k] = api.get(k); return out; }
+    function whenLoaded(fn, tries) {
+      if (handle.player.getDocument() || (tries || 0) > 100) fn();
+      else setTimeout(function () { whenLoaded(fn, (tries || 0) + 1); }, 50);
+    }
+    window.addEventListener("message", function (ev) {
+      if (ev.source !== frame.contentWindow) return;
+      var m = ev.data;
+      if (!m || m.rcApp !== 1) return;
+      if (m.op === "hello") whenLoaded(function () { post({ op: "init", variables: api.variables(), values: values(), storage: store }); });
+      else if (m.op === "set") {
+        if (api.set(m.name, m.value)) { if (hooks.set) hooks.set(m.name, m.value); }
+        else log("warn", 'rc.set("' + m.name + '", ' + JSON.stringify(m.value) + "): not a value this variable takes");
+      }
+      else if (m.op === "store") {
+        if (m.remove) delete store[m.key]; else store[m.key] = m.value;
+        try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+      }
+      else if (m.op === "log") log(m.level === "warn" || m.level === "error" ? m.level : "log", String(m.text));
+      else if (m.op === "error") { if (hooks.error) hooks.error(m.message, m.stack); else console.error("App script: " + m.message); }
+      else if (m.op === "started" && hooks.started) hooks.started();
+    });
+    api.onAction("*", function (value, name) {
+      if (value && typeof value === "object" && typeof value.length === "number" && typeof value !== "string") value = Array.prototype.slice.call(value);
+      post({ op: "action", name: name, value: value });
+    });
+    api.onChange("*", function (value, name) { post({ op: "change", name: name, value: value }); });
+    frame.srcdoc = "<!doctype html><meta charset=utf-8><script>" + APP_RUNTIME + "<\\/script><script>" + C.app.js + "<\\/script>";
+    document.body.appendChild(frame);
+    return { api: api, stop: function () { api.dispose(); frame.remove(); } };
+  }
+`;
+
 /**
  * config: {
  *   title, layout: "fill" | "fixed", width, height (CSS px; fixed, or the playground's
@@ -99,6 +155,10 @@ const COMMON_JS = `
  *   json: [{label, url | text, file}]  playground only, optional: a JSON button each, opening a
  *                                      viewer (syntax-highlighted, copy, download) on the
  *                                      document fetched from url, or on the text given
+ *   app: {js, ts, key}                 optional: an app script (lib/app-script.mjs compileAppScript's
+ *                                      js, and its TypeScript to show), run sandboxed next to the
+ *                                      document; key names its storage in the viewer's browser.
+ *                                      The playground adds a Script button and an App panel
  * }
  */
 /**
@@ -113,6 +173,11 @@ function bundleTag(bundle) {
 }
 
 export function buildPage({ bundle, rcBase64, config }) {
+    if (config.app?.js) {
+        const app = { js: appScriptTag(config.app.js), key: config.app.key ?? "" };
+        config = { ...config, app,
+            ...(config.controls && config.app.ts ? { json: [...(config.json ?? []), { label: "Script", text: config.app.ts, file: "app.ts", raw: true, title: "Show the app script: the TypeScript that runs next to the document" }] } : {}) };
+    }
     if (config.controls && config.mono === undefined && (config.info ?? []).some((v) => v.name === MONO_VAR)) {
         config = { ...config, mono: { variable: MONO_VAR, palettes: monoPalettes({}) } };
     }
@@ -150,7 +215,7 @@ ${bundleTag(bundle)}
   var C = ${jsonInScript(config)};
   var DATA = "${rcBase64}";
   var host = document.getElementById("rc");
-${COMMON_JS}
+${COMMON_JS}${config.app?.js ? APP_BRIDGE_JS : ""}
   function density() {
     return C.density === "device" ? (window.devicePixelRatio || 1) : C.density;
   }
@@ -189,6 +254,7 @@ ${COMMON_JS}
     handle.player.setDensity(density());
     fit();   // before loading: the load lays the document out at the canvas size
     handle.loadFromBase64(DATA).catch(fail);
+    if (C.app) startApp(handle);
   } catch (e) {
     fail(e);
     return;
@@ -312,6 +378,14 @@ const PLAYGROUND_CSS = `
   #actions .n { font-weight: 600; flex: none; }
   #actions .v { color: var(--muted); overflow-wrap: anywhere; }
   #actions li.fresh { animation: fresh 1.2s ease-out; }
+  .app-state { margin: 0 0 6px; color: var(--muted); font-size: 12px; }
+  #app-log { list-style: none; margin: 0 0 8px; padding: 0; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; max-height: 200px; overflow: auto; }
+  #app-log li { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+  #app-log li .t { color: var(--muted); flex: none; }
+  #app-log li .x { white-space: pre-wrap; overflow-wrap: anywhere; }
+  #app-log li.warn .x { color: #b26b00; }
+  #app-log li.error .x { color: #d0453a; }
+  #app-log li.fresh { animation: fresh 1.2s ease-out; }
   @keyframes fresh { from { background: color-mix(in srgb, #4da3ff 30%, transparent); } to { background: transparent; } }
   .empty { color: var(--muted); margin: 0; }
   dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
@@ -623,7 +697,10 @@ function playgroundPage(bundle, rcBase64, config) {
   <div id="vars"></div>
   <h2>Host actions <button id="actions-clear" class="btn" hidden>Clear</button></h2>
   <ol id="actions"><li class="none">None yet: actions the document sends the app (a tap on a hostNamedAction) show here, newest first, with their value.</li></ol>
-  <h2>Document</h2>
+${config.app?.js ? `  <h2>App <button id="app-toggle" class="btn" type="button"></button></h2>
+  <p id="app-state" class="app-state"></p>
+  <ol id="app-log"></ol>
+` : ""}  <h2>Document</h2>
   <dl id="info"></dl>
 </aside>
 <div id="rc-error" hidden></div>
@@ -646,7 +723,7 @@ ${bundleTag(bundle)}
   var DATA = "${rcBase64}";
   var $ = function (id) { return document.getElementById(id); };
   var host = $("rc"), stage = $("stage"), frame = $("frame");
-${COMMON_JS}
+${COMMON_JS}${config.app?.js ? APP_BRIDGE_JS : ""}
 ${VARIABLE_ELEMENT_JS}
   var MIN = 16, MAX = 4096;
   var clampSize = function (v) { return Math.max(MIN, Math.min(MAX, Math.round(v))); };
@@ -943,6 +1020,7 @@ ${VARIABLE_ELEMENT_JS}
   var JSONS = C.json || [], dlg = $("json-dlg"), pre = $("json-pre"), jsonAt = 0;
   function escH(t) { return t.replace(/[&<>]/g, function (c) { return c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;"; }); }
   function pretty(t) { try { return JSON.stringify(JSON.parse(t), null, 2); } catch (e) { return t; } }
+  function shown(item, t) { return item.raw ? t : pretty(t); }
   function highlight(t) {
     if (t.length > 3000000) return escH(t);   // too big to colour quickly: plain
     var re = /("(?:\\\\.|[^"\\\\])*")(\\s*:)?|\\b(?:true|false|null)\\b|-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?/g;
@@ -958,7 +1036,7 @@ ${VARIABLE_ELEMENT_JS}
   }
   function jsonText(item) {
     if (item._text != null) return Promise.resolve(item._text);
-    if (item.text != null) { item._text = pretty(typeof item.text === "string" ? item.text : JSON.stringify(item.text)); return Promise.resolve(item._text); }
+    if (item.text != null) { item._text = shown(item, typeof item.text === "string" ? item.text : JSON.stringify(item.text)); return Promise.resolve(item._text); }
     return fetch(item.url).then(function (r) {
       if (!r.ok) throw new Error(r.status + " " + r.statusText);
       return r.text();
@@ -1131,6 +1209,36 @@ ${VARIABLE_ELEMENT_JS}
   }
   actClear.onclick = function () { actCount = 0; actClear.hidden = true; actList.innerHTML = '<li class="none">None yet.</li>'; };
 
+  // ── App script: its log and errors, and a switch (?app=off) ──
+  function setupApp() {
+    var log = $("app-log"), state = $("app-state"), toggle = $("app-toggle"), lines = 0;
+    function add(level, text) {
+      var li = document.createElement("li"); li.className = level + " fresh";
+      var t = document.createElement("span"); t.className = "t"; t.textContent = new Date().toTimeString().slice(0, 8);
+      var x = document.createElement("span"); x.className = "x"; x.textContent = text;
+      li.appendChild(t); li.appendChild(x);
+      log.insertBefore(li, log.firstChild);
+      if (++lines > 100) log.removeChild(log.lastChild);
+    }
+    var off = appOff();
+    toggle.textContent = off ? "Turn on" : "Turn off";
+    toggle.title = off ? "Run the app script again" : "Reload without the app script: the document alone, as the panel sets it (adds ?app=off to the link)";
+    toggle.onclick = function () {
+      var q = new URLSearchParams(location.search);
+      if (off) q.delete("app"); else q.set("app", "off");
+      var qs = q.toString();
+      location.href = location.pathname + (qs ? "?" + qs : "") + location.hash;
+    };
+    if (off) { state.textContent = "Off: the document runs without its app script."; return; }
+    state.textContent = "Starting…";
+    startApp(handle, {
+      started: function () { state.textContent = "Running: the app script sets host values and answers the document's actions."; },
+      log: add,
+      error: function (msg) { add("error", msg); state.textContent = "Error: see below."; },
+      set: function (name, value) { if (editors[name]) editors[name].value = Array.isArray(value) ? value.join(", ") : String(value); }
+    });
+  }
+
   // ── Start ──
   if (S.fill === null) {
     // No size asked for: the document's own size when it fits the stage, else fill it.
@@ -1151,6 +1259,7 @@ ${VARIABLE_ELEMENT_JS}
     fail(e);
     return;
   }
+  if (C.app) setupApp();
   new ResizeObserver(function () { if (S.fill) fitSoon(); else frame.classList.toggle("center", S.h < stageBox()[1]); })
     .observe(stage);
   setInterval(showInfo, 1000);

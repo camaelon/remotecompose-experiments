@@ -100,9 +100,13 @@ function createHandler({ name, version, instructions, tools }) {
             case "ping":
                 return ok(id, {});
             case "tools/list":
+                // A tool may show a caller more (view(ctx): {description, inputSchema}), e.g. the
+                // options an account has opted into.
                 return ok(id, {
-                    tools: tools.map(({ name, description, inputSchema, annotations }) =>
-                        ({ name, description, inputSchema, ...(annotations ? { annotations } : {}) })),
+                    tools: tools.map((t) => {
+                        const { name, description, inputSchema, annotations } = { ...t, ...(t.view?.(ctx) ?? {}) };
+                        return { name, description, inputSchema, ...(annotations ? { annotations } : {}) };
+                    }),
                 });
             case "tools/call": {
                 const tool = byName.get(params?.name);
@@ -341,7 +345,7 @@ function serveHttp(def, handle, port) {
         const signals = { ...requestSignals(req, { sent: echoed, known: echoed && issued.has(sent) }),
             client_info: clientInfos.get(session ? session.slice(0, 8) : fallback) ?? null };
         const ctx = { client: session ? session.slice(0, 8) : fallback, ua, signals, sessionEchoed: echoed,
-            ...(account ? { account: { id: account.id, email: account.email, admin: account.admin, tokenId: account.tokenId ?? null,
+            ...(account ? { account: { id: account.id, email: account.email, admin: account.admin, tokenId: account.tokenId ?? null, scripts: Boolean(account.scripts),
                 ...(account.grantId ? { grantId: account.grantId, via: account.via } : {}) } } : {}) };   // (a proxying client changes address call to call; its token does not, and only a hash of it is logged)
         const out = (await Promise.all(msgs.map((m) => handle(m, ctx)))).filter(Boolean);
         const headers = isInit ? { "Mcp-Session-Id": session } : {};

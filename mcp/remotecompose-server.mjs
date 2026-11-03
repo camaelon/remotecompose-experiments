@@ -19,7 +19,8 @@ import { definition as render, publishImage } from "./rc-render-server.mjs";
 import { definition as inspect } from "./inspect-server.mjs";
 import { definition as deploy } from "./deploy-server.mjs";
 import { definition as examples } from "./examples-server.mjs";
-import { serve, isMain } from "./lib/mcp-server.mjs";
+import { serve, isMain, currentCall } from "./lib/mcp-server.mjs";
+import { APP_GUIDE, SCRIPT_NOTE, SCRIPT_PROPS, scriptsAllowed, scriptsOffMessage } from "./lib/app-script.mjs";
 import { readFileSync, writeFileSync, existsSync, readdirSync, rmSync } from "node:fs";
 import { outputFile, displayPath, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
 import { compileComponents } from "./lib/json2rc.mjs";
@@ -1273,13 +1274,17 @@ const tools = [
         const t = tool(deploy, "package_web");
         // The publishing rules (JSON only, playground only, the design gate) are package_web's own,
         // for this server and rc-deploy alike. Here: no controls option, warnings at the top.
-        return { ...t, name: "publish",
-            description: t.description + " A public page is always the playground, made from the JSON (given a .rc that " +
-                "convert wrote, its JSON beside it), and is refused while the document has structural design problems " +
-                "(the result lists the fixes).",
-            inputSchema: { ...t.inputSchema, properties: {
-                ...Object.fromEntries(Object.entries(t.inputSchema.properties).filter(([k]) => k !== "controls")),
-                layout: { type: "string", enum: ["fill", "fixed"], description: "Leave it out: the page fills the window and the document relayouts to it (the viewer can still pick sizes). \"fixed\" only when the user asks for one fixed size." } } },
+        const description = t.description + " A public page is always the playground, made from the JSON (given a .rc that " +
+            "convert wrote, its JSON beside it), and is refused while the document has structural design problems " +
+            "(the result lists the fixes).";
+        const properties = {
+            ...Object.fromEntries(Object.entries(t.inputSchema.properties).filter(([k]) => k !== "controls")),
+            layout: { type: "string", enum: ["fill", "fixed"], description: "Leave it out: the page fills the window and the document relayouts to it (the viewer can still pick sizes). \"fixed\" only when the user asks for one fixed size." } };
+        return { ...t, name: "publish", description,
+            inputSchema: { ...t.inputSchema, properties },
+            // App scripts, for callers who opted in (account page): the script options, and the note.
+            view: (ctx) => scriptsAllowed(ctx?.account ?? null)
+                ? { description: description + SCRIPT_NOTE, inputSchema: { ...t.inputSchema, properties: { ...properties, ...SCRIPT_PROPS } } } : null,
             handler: async ({ controls: _ignored, ...args } = {}) => {
                 // The layout: the page fills the window unless the user asked for a fixed size.
                 args = { layout: "fill", ...args };
@@ -1318,8 +1323,21 @@ tools.push({
             query: { type: "string", description: "Words to look up across every topic (\"step argument order\", \"visibility invisible taps\", \"map region\"): the best-matching paragraphs, each with its topic, instead of a whole topic." },
         },
     },
+    // Topic "app" (app scripts) is listed for callers who opted in.
+    view(ctx) {
+        if (!scriptsAllowed(ctx?.account ?? null)) return null;
+        const p = this.inputSchema.properties;
+        return {
+            description: this.description + " topic \"app\": app scripts, the business logic (TypeScript) published next to a document: the rc API, the rules and an example.",
+            inputSchema: { ...this.inputSchema, properties: { ...p, topic: { ...p.topic, enum: [...p.topic.enum, "app"] } } },
+        };
+    },
     handler: async ({ topic = "workflow", tool: name, query } = {}) => {
         if (typeof query === "string" && query.trim()) return text(await searchReference(query));
+        if (topic === "app") {
+            const account = currentCall()?.account ?? null;
+            return text(scriptsAllowed(account) ? APP_GUIDE : `${scriptsOffMessage(account)}. (App scripts: business logic next to a published document.)`);
+        }
         if (topic === "components") return tool(examples, "component_authoring_guide").handler({});
         if (topic === "format") return text(FORMAT);
         if (topic === "expressions") return text(EXPRESSIONS);
