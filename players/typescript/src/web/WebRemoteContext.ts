@@ -52,6 +52,11 @@ export class WebRemoteContext extends RemoteContext {
         }
     }
 
+    /** The document's named variables: name -> {id, type} (NamedVariable's STRING_TYPE .. FLOAT_ARRAY_TYPE). */
+    getNamedVariables(): Map<string, { id: number; type: number }> {
+        return this.namedVariables;
+    }
+
     getVariableNameMap(): Map<number, string> {
         const map = new Map<number, string>();
         this.namedVariables.forEach(({ id }, name) => map.set(id, name));
