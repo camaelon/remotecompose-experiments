@@ -691,6 +691,8 @@ class Parser {
         this.computedColors = [];
         /** resources.sounds: name -> SoundExpression id, for playSound. */
         this.sounds = new Map();
+        /** resources.sounds: name -> kind ("tone" | "synth" | "sequence"). */
+        this.soundKinds = new Map();
         this.readFile = options.readFile;
     }
     /** Resolve a canvas float field to raw float32 bits (literal, ref or expression). */
@@ -2128,6 +2130,18 @@ class Parser {
                     (0, Writer_1.hostNamedAction)(textId, type, valueId)(w2);
                 });
             }
+            else if (t === "playsound") {
+                // EXTENSION in JSON: PLAY_SOUND inside the click, run when it fires. The TS
+                // player applies a click's operations; the reference runs only ActionOperations,
+                // which PlaySound is not yet (docs/SOUND_PROPOSAL.md).
+                const ref = a.id ?? a.sound;
+                const sname = typeof ref === "string" ? ref.replace(/^[@$](sounds\.)?/, "") : undefined;
+                if (sname === undefined || !this.sounds.has(sname)) {
+                    throw new NotImplementedComponent(`playSound action: "id" names a resources.sounds entry ("@name"; declared: ${[...this.sounds.keys()].join(", ") || "none"})`);
+                }
+                const id = this.sounds.get(sname);
+                actions.push((w2) => { w2.buffer.start(141); w2.buffer.writeInt(id); });
+            }
             else if (t === "valuefloatexpressionchange") {
                 if (target === undefined || target === null) {
                     throw new NotImplementedComponent('valueFloatExpressionChange needs a "target"');
@@ -3489,31 +3503,105 @@ class Parser {
     }
     /**
      * EXTENSION (not in the reference JSON parser, which can only playSound an id): a
-     * synthesised sound, the reference's SoundExpression (RcScope.soundExpression).
-     * {"type": "tone", "frequency": 880, "duration": 0.05, "waveform": "sine"} with
-     * frequency in Hz, duration in seconds, waveform sine | square | sawtooth | triangle;
-     * "volume" (or "leftVolume"/"rightVolume") and "rate" default to 1. Numbers, "@vars" or
-     * expressions: the players rebuild the tone when one changes.
+     * synthesised sound, a SoundExpression. Three kinds:
+     * - {"type": "tone", "frequency", "duration", "waveform"}: the reference's TYPE_TONE.
+     * - {"type": "synth", ...}: TYPE_SYNTH (11, an extension of the players here): a note
+     *   with an envelope, glide, vibrato, pulse width, filter, FM and echo (SYNTH_KEYS).
+     * - {"type": "sequence", "voice": "@synth", "notes": [[start, frequency, duration,
+     *   gain?], ...], "bpm"?}: TYPE_SEQUENCE (12): the voice's notes mixed into one sound;
+     *   with "bpm", start and duration are in beats.
+     * A frequency may be a note name ("A4", "C#5", "Eb3"); any value a number, "@var" or an
+     * expression. "volume" (or "leftVolume"/"rightVolume") and "rate" default to 1.
      */
     declareSound(name, value) {
+        const where = `resources.sounds.${name}`;
         if (!value || typeof value !== "object" || Array.isArray(value)) {
-            throw new NotImplementedComponent(`resources.sounds.${name}: expected {"type": "tone", "frequency", "duration", "waveform"}`);
+            throw new NotImplementedComponent(`${where}: expected {"type": "tone" | "synth" | "sequence", ...}`);
         }
         const v = value;
         const type = String(v.type ?? "tone").toLowerCase();
-        if (type !== "tone")
-            throw new NotImplementedComponent(`resources.sounds.${name}: type '${type}' (only "tone")`);
-        const WAVES = { sine: 0, square: 1, sawtooth: 2, saw: 2, triangle: 3 };
-        let wave = v.waveform ?? 0;
-        if (typeof wave === "string" && wave.toLowerCase() in WAVES)
-            wave = WAVES[wave.toLowerCase()];
-        else if (typeof wave === "string" && !/^[@$]|[()*+\/-]/.test(wave)) {
-            throw new NotImplementedComponent(`resources.sounds.${name}: waveform '${wave}' (sine, square, sawtooth or triangle)`);
-        }
+        const COMMON = ["type", "volume", "leftVolume", "rightVolume", "rate"];
+        const check = (allowed) => {
+            const bad = Object.keys(v).filter((k) => !COMMON.includes(k) && !allowed.includes(k));
+            if (bad.length) {
+                const hint = type === "tone" && bad.some((k) => Parser.SYNTH_KEYS.includes(k)) ? ' ("synth" takes those)' : "";
+                throw new NotImplementedComponent(`${where}: unknown ${bad.map((k) => `'${k}'`).join(", ")} for a ${type}${hint}; it takes ${allowed.join(", ")}`);
+            }
+        };
         const vol = v.volume ?? 1;
-        const params = [(0, WireBuffer_1.asNanBits)(10), this.fbits(v.frequency ?? 440), this.fbits(v.duration ?? 0.1), this.fbits(wave)];
         const left = this.fbits(v.leftVolume ?? vol), right = this.fbits(v.rightVolume ?? vol), rate = this.fbits(v.rate ?? 1);
+        let params;
+        if (type === "tone") {
+            check(["frequency", "duration", "waveform"]);
+            params = [(0, WireBuffer_1.asNanBits)(10), this.fbits(this.noteFrequency(v.frequency ?? 440, where)),
+                this.fbits(v.duration ?? 0.1), this.fbits(this.waveform(v.waveform ?? 0, where, false))];
+        }
+        else if (type === "synth") {
+            check(Parser.SYNTH_KEYS);
+            const given = Parser.SYNTH_KEYS.map((k) => k in v);
+            const last = Math.max(2, given.lastIndexOf(true));
+            params = [(0, WireBuffer_1.asNanBits)(11)];
+            for (let k = 0; k <= last; k++) {
+                const key = Parser.SYNTH_KEYS[k];
+                const raw = key in v ? v[key] : Parser.SYNTH_DEFAULTS[k];
+                params.push(this.fbits(key === "frequency" || key === "glideTo" ? this.noteFrequency(raw, where)
+                    : key === "waveform" ? this.waveform(raw, where, true) : raw));
+            }
+        }
+        else if (type === "sequence") {
+            check(["voice", "notes", "bpm"]);
+            const ref = typeof v.voice === "string" ? v.voice.replace(/^[@$](sounds\.)?/, "") : "";
+            if (!this.sounds.has(ref) || this.soundKinds.get(ref) !== "synth") {
+                const synths = [...this.soundKinds].filter(([, k]) => k === "synth").map(([n]) => n);
+                throw new NotImplementedComponent(`${where}: "voice" names a synth declared before it in resources.sounds ("@name"; ${synths.length ? "declared: " + synths.join(", ") : "none declared yet"})`);
+            }
+            const notes = v.notes;
+            if (!Array.isArray(notes) || !notes.length)
+                throw new NotImplementedComponent(`${where}: "notes" is a list of [start, frequency, duration, gain?]`);
+            if (notes.length > 15)
+                throw new NotImplementedComponent(`${where}: ${notes.length} notes; a sequence holds 15 at most (split it into two sounds)`);
+            const bpm = v.bpm === undefined ? null : Number(v.bpm);
+            if (bpm !== null && !(bpm > 0))
+                throw new NotImplementedComponent(`${where}: "bpm" is a number > 0`);
+            const beats = (x) => bpm === null ? x : typeof x === "number" ? x * 60 / bpm : `(${x}) * ${60 / bpm}`;
+            params = [(0, WireBuffer_1.asNanBits)(12), (0, WireBuffer_1.floatToRawIntBits)(this.sounds.get(ref))];
+            notes.forEach((n, k) => {
+                const a = Array.isArray(n) ? n : n && typeof n === "object"
+                    ? [n.at ?? n.start, n.note ?? n.frequency, n.duration, n.gain] : null;
+                if (!a || a.length < 3 || a[0] === undefined || a[1] === undefined || a[2] === undefined) {
+                    throw new NotImplementedComponent(`${where}: note ${k + 1} is [start, frequency or note name, duration, gain?] (or {"at", "note", "duration", "gain"})`);
+                }
+                params.push(this.fbits(beats(a[0])), this.fbits(this.noteFrequency(a[1], where)), this.fbits(beats(a[2])), this.fbits(a[3] ?? 1));
+            });
+        }
+        else {
+            throw new NotImplementedComponent(`${where}: type '${type}' (tone, synth or sequence)`);
+        }
+        this.soundKinds.set(name, type);
         return this.writer.addSoundExpression(left, right, rate, params);
+    }
+    waveform(w, where, noise) {
+        const WAVES = { sine: 0, square: 1, pulse: 1, sawtooth: 2, saw: 2, triangle: 3, ...(noise ? { noise: 4 } : {}) };
+        if (typeof w === "string" && w.toLowerCase() in WAVES)
+            return WAVES[w.toLowerCase()];
+        if (typeof w === "string" && !/^[@$]|[()*+\/-]/.test(w)) {
+            throw new NotImplementedComponent(`${where}: waveform '${w}' (${Object.keys(WAVES).join(", ")})`);
+        }
+        return w;
+    }
+    /** A note name ("A4" = 440 Hz, "C#5", "Eb3") as its frequency; anything else unchanged. */
+    noteFrequency(x, where) {
+        if (typeof x !== "string")
+            return x;
+        const m = /^\s*([A-Ga-g])([#b♯♭]?)(-?\d)\s*$/.exec(x);
+        if (!m) {
+            if (/^[@$]|[()*+\/-]|^\s*[\d.]+\s*$/.test(x))
+                return x;
+            throw new NotImplementedComponent(`${where}: '${x}' is neither a frequency nor a note name ("A4", "C#5", "Eb3")`);
+        }
+        const SEMI = { c: -9, d: -7, e: -5, f: -4, g: -2, a: 0, b: 2 };
+        const semis = SEMI[m[1].toLowerCase()] + (m[2] === "#" || m[2] === "♯" ? 1 : m[2] ? -1 : 0) + (Number(m[3]) - 4) * 12;
+        return 440 * Math.pow(2, semis / 12);
     }
     addComputedColor(name, cfg, value) {
         const id = this.computedColorId(name, value);
@@ -3818,6 +3906,10 @@ exports.Parser = Parser;
  */
 Parser.RESOURCE_ORDER = ["v_dims", "colors", "paths", "floatArrays", "variables",
     "integers", "matrices", "bitmaps", "sounds"];
+/** TYPE_SYNTH params 1.., by position; their defaults (ToneSynthesizer.SYNTH_DEFAULTS). */
+Parser.SYNTH_KEYS = ["frequency", "duration", "waveform", "attack", "decay", "sustain", "release",
+    "glideTo", "vibratoRate", "vibratoDepth", "pulseWidth", "cutoff", "fmRatio", "fmIndex", "echoDelay", "echoFeedback"];
+Parser.SYNTH_DEFAULTS = [440, 0.2, 0, 0.005, 0, 1, 0.05, 0, 0, 0, 0.5, 0, 0, 0, 0, 0.4];
 /**
  * Generation-library entries wrap the document under a `json` key alongside prose metadata.
  * Without this the parser saw no `root` and emitted a bare 17-byte header.

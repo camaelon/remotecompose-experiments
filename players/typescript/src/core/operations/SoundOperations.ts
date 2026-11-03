@@ -65,6 +65,17 @@ export class SoundExpression extends Operation implements VariableSupport {
     }
 
     static readonly TYPE_TONE = 10;
+    /** EXTENSION, not in the reference: an enveloped note (ToneSynthesizer.synthesizeSynthWav). */
+    static readonly TYPE_SYNTH = 11;
+    /**
+     * EXTENSION: notes played by a synth voice, mixed into one sound. params = [TYPE_SEQUENCE,
+     * voice id (a plain float: the id of a TYPE_SYNTH SoundExpression written earlier), then
+     * (start s, frequency Hz, duration s, gain) per note].
+     */
+    static readonly TYPE_SEQUENCE = 12;
+    private mGain = [1, 1, 1];   // left, right, rate: resolved
+    /** Sequences played with this synth as their voice: rebuilt when it changes. */
+    private mUsers = new Set<SoundExpression>();
 
     write(_buffer: WireBuffer): void { /* stub */ }
 
@@ -82,6 +93,9 @@ export class SoundExpression extends Operation implements VariableSupport {
             const b = this.mParams[i];
             this.mOut[i] = isSoundVariable(b) ? context.getFloat(idFromBits(b)) : intBitsToFloat(b);
         }
+        [this.mLeftVolume, this.mRightVolume, this.mRate].forEach((b, i) => {
+            this.mGain[i] = isSoundVariable(b) ? context.getFloat(idFromBits(b)) : intBitsToFloat(b);
+        });
     }
 
     apply(context: RemoteContext): void {
@@ -96,6 +110,26 @@ export class SoundExpression extends Operation implements VariableSupport {
             this.mLastKey = key;
             const wav = ToneSynthesizer.synthesizeWav(this.mOut[1], this.mOut[2], this.mOut[3]);
             context.loadSound(this.mId, wav);
+        } else if (typeId === SoundExpression.TYPE_SYNTH) {
+            // Unlike the tone, the synth uses the volumes (a gain per channel) and the rate
+            // (speed: pitch and times together).
+            context.putObject(this.mId, this);          // a sequence's voice is found by id
+            const key = `${Array.from(this.mOut.subarray(1)).join("|")}|${this.mGain.join("|")}`;
+            if (key === this.mLastKey) return;
+            this.mLastKey = key;
+            context.loadSound(this.mId, ToneSynthesizer.synthesizeSynthWav(
+                this.mOut.subarray(1), this.mGain[0], this.mGain[1], this.mGain[2]));
+            for (const user of this.mUsers) user.markDirty();
+        } else if (typeId === SoundExpression.TYPE_SEQUENCE && this.mParams.length >= 2) {
+            const voice = context.getObject(Math.round(this.mOut[1]));
+            if (!(voice instanceof SoundExpression) || idFromBits(voice.mParams[0]) !== SoundExpression.TYPE_SYNTH) return;
+            voice.mUsers.add(this);
+            const voiceParams = voice.mOut.subarray(1);
+            const key = `${Array.from(voiceParams).join("|")}#${Array.from(this.mOut.subarray(2)).join("|")}|${this.mGain.join("|")}`;
+            if (key === this.mLastKey) return;
+            this.mLastKey = key;
+            context.loadSound(this.mId, ToneSynthesizer.synthesizeSequenceWav(
+                voiceParams, this.mOut.subarray(2), this.mGain[0], this.mGain[1], this.mGain[2]));
         }
     }
 
