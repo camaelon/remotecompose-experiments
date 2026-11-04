@@ -451,12 +451,13 @@ export class LayoutComponent extends Component {
     }
 
     override animatingBounds(context: RemoteContext): void {
+        // super walks the operation list, which holds the children (inside the content
+        // component), as Java's Component.animatingBounds does. Walking mChildrenComponents
+        // again here visited each child twice per level: 2^depth calls, a 14-deep tree took
+        // 1.25M calls and ~320 ms per frame while bounds animated (a resize).
         super.animatingBounds(context);
         this.updateComponentValues(context, this.mWidth, this.mHeight);
         this.layoutModifiers(this.mWidth, this.mHeight);
-        for (const child of this.mChildrenComponents) {
-            child.animatingBounds(context);
-        }
     }
 
     /** Walk modifiers reducing dimensions by padding and passing to decorators.
