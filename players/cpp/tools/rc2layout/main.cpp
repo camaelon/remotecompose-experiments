@@ -21,6 +21,7 @@
 // something moved but not which component owns it, and antialiasing hides small offsets
 // while shouting about irrelevant ones.
 
+#include "rccore/Compression.h"
 #include "rccore/WireBuffer.h"
 #include "rccore/CoreDocument.h"
 #include "rccore/RemoteContext.h"
@@ -73,6 +74,8 @@ int main(int argc, char* argv[]) {
                                std::istreambuf_iterator<char>());
     ifs.close();
     if (data.empty()) { std::cerr << "Error: empty file\n"; return 1; }
+    try { rccore::decompressInPlace(data); }
+    catch (const rccore::CompressionError& e) { std::cerr << "Error: " << e.what() << "\n"; return 1; }
 
     rccore::WireBuffer buffer(data.data(), data.size());
     rccore::CoreDocument doc;

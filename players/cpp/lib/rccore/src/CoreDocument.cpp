@@ -1,5 +1,6 @@
 #include <functional>
 #include "rccore/CoreDocument.h"
+#include "rccore/Compression.h"
 #include "rccore/Loom.h"
 #include "rccore/WireBuffer.h"
 #include "rccore/Operations.h"
@@ -38,7 +39,14 @@ bool CoreDocument::initFromBuffer(WireBuffer& buffer) {
     // largest VariableProvider id (from START_VARIABLE_ID + 1 = 43), so inflated ids are the
     // reference's exactly.
     int maxId = 43;
-    if (!readOperationTree(buffer, mOperations, &maxId)) return false;
+    // A compressed document (Header.COMPRESS) is decompressed first, once, as androidx's
+    // RemoteComposeBuffer.inflateFromBuffer does: everything after reads the original.
+    if (isCompressed(buffer.data(), size_t(buffer.getSize()))) {
+        try { decompressDocument(buffer.data(), size_t(buffer.getSize()), mDecompressed); }
+        catch (const CompressionError& e) { fprintf(stderr, "rccore: %s\n", e.what()); return false; }
+        WireBuffer plain(mDecompressed.data(), mDecompressed.size());
+        if (!readOperationTree(plain, mOperations, &maxId)) return false;
+    } else if (!readOperationTree(buffer, mOperations, &maxId)) return false;
     mCurrentId = maxId + 10;
 
     // Expand every template call (Loom), as LoomManager.expandAll does after nesting.

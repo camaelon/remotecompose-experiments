@@ -545,6 +545,7 @@ export { createPlayer, RcPlayerElement, base64ToArrayBuffer };
 export { WebCustomHost, parseEmbedConfig, fitInto } from './CustomHosts';
 export { pinClock } from '../core/ClockPin';
 export { createHostApi } from './HostApi';
+export { decompressDocument, isCompressed } from '../core/Compression';
 export type { HostApi, HostType, HostValue } from './HostApi';
 export { createSnapshot } from '../core/RemoteClock';
 export type { EmbedResolver } from './CustomHosts';

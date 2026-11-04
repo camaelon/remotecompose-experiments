@@ -103,6 +103,8 @@ private:
     void computeTranslate(float w, float h, float sx, float sy, float* translateOutput);
 
     std::vector<std::unique_ptr<Operation>> mOperations;
+    // A compressed document (Header.COMPRESS) decompressed by initFromBuffer: its bytes live here.
+    std::vector<uint8_t> mDecompressed;
     // Scroll modifiers with a constant position that took the current touch down: they
     // scroll themselves under drag (ScrollModifierOperation.onTouchDrag).
     std::vector<class ModifierScroll*> mScrollCaptures;

@@ -12,6 +12,7 @@
  * buffer alone: exactly what the TypeScript player composites onto its canvas, and therefore
  * directly comparable.
  */
+#include "rccore/Compression.h"
 #include "rccore/CoreDocument.h"
 #include "rccore/PaintBundle.h"
 #include "rccore/PaintContext.h"
@@ -120,6 +121,8 @@ int main(int argc, char** argv) {
     if (!in) { std::cerr << "cannot open " << argv[1] << "\n"; return 2; }
     std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(in)),
                                std::istreambuf_iterator<char>());
+    try { rccore::decompressInPlace(bytes); }
+    catch (const rccore::CompressionError& e) { std::cerr << e.what() << "\n"; return 2; }
     WireBuffer buffer(bytes.data(), bytes.size());
     CoreDocument doc;
     if (!doc.initFromBuffer(buffer)) { std::cerr << "failed to parse\n"; return 1; }

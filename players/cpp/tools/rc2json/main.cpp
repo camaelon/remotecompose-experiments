@@ -1,3 +1,4 @@
+#include "rccore/Compression.h"
 #include "rccore/WireBuffer.h"
 #include "rccore/OpcodeRegistry.h"
 
@@ -934,6 +935,9 @@ static std::vector<uint8_t> readFile(const std::string& path) {
     std::vector<uint8_t> data(static_cast<size_t>(std::max<std::streamoff>(f.tellg(), 0)));
     f.seekg(0);
     if (!data.empty()) f.read(reinterpret_cast<char*>(data.data()), data.size());
+    // A compressed document (Header.COMPRESS) is dumped as its operations.
+    try { rccore::decompressInPlace(data); }
+    catch (const rccore::CompressionError& e) { std::cerr << "Error: " << e.what() << std::endl; exit(1); }
     return data;
 }
 
