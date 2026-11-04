@@ -55,7 +55,7 @@ variables, `componentWidth()`/`componentHeight()`.
 
 ## Bitmaps
 
-`resources.bitmaps` declares named images and `texture3D` references them by name. Whatever
+`resources.bitmaps` declares named images. Canvas commands draw them (`drawBitmap`, `drawBitmapInt`, `drawScaledBitmap`, `image` is `@name` or a numeric id), and `texture3D` and shader inputs reference them by name. The Java parser has the three draw commands but no `resources.bitmaps`: its images come from the host (`defineBitmap`), so byte equality can only be checked with a numeric id. `drawBitmap` needs `right` and `bottom` here: the reference asks the platform for the image's size, and there is none. Whatever
 the source, the bytes are embedded in the `.rc`: a document that still needs an external file
 to render is not a document.
 

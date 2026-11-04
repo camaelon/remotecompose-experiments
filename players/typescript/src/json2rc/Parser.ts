@@ -2157,6 +2157,33 @@ export class Parser {
             w.drawSector(f("left"), f("top"), f("right"), f("bottom"), f("startAngle"), f("sweepAngle"));
             return;
         }
+        if (t === "drawbitmap" || t === "drawbitmapint") {
+            const image = this.bitmapId(command.image);
+            const cd = () => (command.contentDescription == null ? 0 : w.addText(String(command.contentDescription)));
+            if (t === "drawbitmapint" || "srcLeft" in command) {
+                const whole = (k: string) => {
+                    if (!(k in command)) throw new NotImplementedComponent(`${command.type}: missing required field '${k}'`);
+                    return Math.trunc(Number(command[k]));
+                };
+                const src = ["srcLeft", "srcTop", "srcRight", "srcBottom"].map(whole);
+                const dst = ["dstLeft", "dstTop", "dstRight", "dstBottom"].map(whole);
+                w.drawBitmapInt(image, src, dst, cd());
+                return;
+            }
+            // (The reference asks the platform for the size when right and bottom are missing; there is no platform here.)
+            const box = ["left", "top", "right", "bottom"].map(f);
+            w.drawBitmap(image, box[0], box[1], box[2], box[3], cd());
+            return;
+        }
+        if (t === "drawscaledbitmap") {
+            const image = this.bitmapId(command.image);
+            const src = ["srcLeft", "srcTop", "srcRight", "srcBottom"].map(f);
+            const dst = ["dstLeft", "dstTop", "dstRight", "dstBottom"].map(f);
+            const factor = "scaleFactor" in command ? f("scaleFactor") : this.fbits(1);
+            const cd = command.contentDescription == null ? 0 : w.addText(String(command.contentDescription));
+            w.drawBitmapScaled(image, src, dst, Math.trunc(Number(command.scaleType ?? 0)), factor, cd);
+            return;
+        }
         if (t === "drawtextanchored") {
             w.drawTextAnchored(this.resolveTextId(command.text), f("x"), f("y"),
                                f("panX"), f("panY"), Number(command.flags ?? 0));
@@ -3109,6 +3136,15 @@ export class Parser {
         const name = String(command.name);
         const named = Boolean(command.export);
         if (vtype === "color") {
+            // EXTENSION: a computed colour ({"argb": [...]} / {"hsv": [...]}) as a tree
+            // variable, written where it is first used, so it can read values declared in the
+            // tree before it (a Slider's live value), which resources.colors cannot.
+            const v = command.value;
+            if (v && typeof v === "object" && !Array.isArray(v) && (Array.isArray(v.hsv) || Array.isArray(v.argb))) {
+                const id = this.computedColorId(name, v);
+                if (named) this.writer.setColorName(id, name);
+                return floatToRawIntBits(id);
+            }
             const color = this.resolveColor(command.value);
             const id = named ? this.writer.addNamedColor(name, color) : this.writer.addColor(color);
             return floatToRawIntBits(id);              // held as a plain float, as the reference
@@ -3305,6 +3341,13 @@ export class Parser {
     }
 
     private addComputedColor(name: string, cfg: J, value: J): void {
+        const id = this.computedColorId(name, value);
+        if (cfg === null || cfg.export !== false) this.writer.setColorName(id, name);
+        this.colors.set(name, id);
+    }
+
+    /** A computed colour written here, its id. */
+    private computedColorId(name: string, value: J): number {
         // EXTENSION (not in the reference JSON parser): a colour computed at run time,
         // the reference's ColorExpression. {"hsv": [h, s, v], "alpha": 0..255} with h,
         // s, v in 0..1, or {"argb": [a, r, g, b]} in 0..1 — each a number, a "@var" or
@@ -3323,8 +3366,7 @@ export class Parser {
             const p1 = aIsVar ? (6 | ((aBits & 0x3fffff) << 16)) : (5 | (Math.round(Number(comps[0]) * 1024) << 16));
             id = this.writer.addColorExpression(p1, this.fbits(comps[1]), this.fbits(comps[2]), this.fbits(comps[3]));
         }
-        if (cfg === null || cfg.export !== false) this.writer.setColorName(id, name);
-        this.colors.set(name, id);
+        return id;
     }
 
     private parseResourceSection(key: string, sectionValue: J): void {
