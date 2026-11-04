@@ -325,32 +325,42 @@ function pageDocument(file) {
     return bytes;
 }
 
-// A published page is served as it is on disk, brought up to date:
-// - it names the player it was published with (../_player/<hash>.js) and gets the current one,
-//   so player fixes reach pages already published (the old bundles stay on disk: a page
-//   someone saved still finds its player);
-// - a playground (it has the Download button) gains an Inspect button opening the document in
-//   the inspector, when this server also serves the inspector (definition.inspector, set by
-//   the server that includes this one).
+// A published page is served rebuilt from what it stores (its config `var C` and document
+// `var DATA`) with the current page template and player, so fixes to either reach pages
+// already published: the old player bundles stay on disk for a page someone saved. A
+// playground also gets an Inspect button when this server serves the inspector
+// (definition.inspector, set by the server that includes this one). A page that cannot be
+// rebuilt (an old side-loaded app script, or no config) is served as it is, with only its
+// player reference brought up to date.
 async function pageRewrite(id) {
     let name = null;
     try { name = sharedBundle(await playerBundle()); } catch {}
     const inspector = definition.inspector === true;
-    if (!name && !inspector) return null;
     return {
         key: `${name}|${inspector}`,
         apply: (buf) => {
             const s = buf.toString("utf8");
-            let out = name ? s.replace(/\.\.\/_player\/[0-9a-f]{16}\.js/g, () => `../_player/${name}`) : s;
-            if (inspector && !/>Inspect<\/a>/.test(out)) {
-                const fileName = /"fileName":"([\w.-]+?\.rc)"/.exec(out)?.[1] ?? "document.rc";
-                const href = `../../inspector/?url=${encodeURIComponent(`../pages/${id}/${fileName}`)}`;
-                out = out.replace(/(<button id="download"[^>]*>[^<]*<\/button>)/, (b) =>
-                    `${b}\n    <a class="btn" href="${href}" target="_blank" rel="noopener" title="Open this document in the RemoteCompose inspector: its operations, layout, variables and bytes">Inspect</a>`);
-            }
+            try {
+                const out = rebuildPage(s, { id, player: name, inspector });
+                if (out) return Buffer.from(out, "utf8");
+            } catch {}
+            const out = name ? s.replace(/\.\.\/_player\/[0-9a-f]{16}\.js/g, () => `../_player/${name}`) : s;
             return out === s ? buf : Buffer.from(out, "utf8");
         },
     };
+}
+
+/** The page HTML rebuilt from its stored config and document, or null when it cannot be. */
+export function rebuildPage(html, { id, player, inspector }) {
+    const c = /\n {2}var C = (\{.*\});\n {2}var DATA = "([A-Za-z0-9+/=]*)";\n/.exec(html);
+    const src = player ? `../_player/${player}` : /<script src="(\.\.\/_player\/[0-9a-f]{16}\.js)"><\/script>/.exec(html)?.[1];
+    if (!c || !src) return null;
+    let config = JSON.parse(c[1]);
+    if (config.app && !config.app.embedded) return null;   // a side-loaded script: kept as published
+    if (config.controls && inspector && !config.inspectHref) {
+        config = { ...config, inspectHref: `../../inspector/?url=${encodeURIComponent(`../pages/${id}/${config.fileName || "document.rc"}`)}` };
+    }
+    return buildPage({ bundle: { src }, rcBase64: c[2], config });
 }
 
 const PACKAGE_WEB_PROPS = {

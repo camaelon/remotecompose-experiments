@@ -690,10 +690,11 @@ function playgroundPage(bundle, rcBase64, config) {
   <div class="group">
     <button id="copy" class="btn" title="Copy a link to exactly this: size, density, theme and variable values">Copy link</button>
     <button id="toggle" class="btn" aria-pressed="true" title="Show or hide the side panel">Panel</button>
-    <button id="fullscreen" class="btn" title="Fullscreen: only the document, filling the window (adds ?fullscreen=true to the link; Esc to leave)">Fullscreen</button>
+    <button id="window" class="btn" title="Only the document, filling the browser window (adds ?fullscreen=true to the link; Esc to leave)">Window</button>
+    <button id="fullscreen" class="btn" title="Real fullscreen: only the document, filling the screen (Esc to leave)">Fullscreen</button>
   </div>
 </header>
-<button id="fs-exit" type="button" title="Leave fullscreen (Esc)">Exit fullscreen</button>
+<button id="fs-exit" type="button" title="Back to the playground (Esc)">Exit</button>
 <main id="stage"${bgStyle}${config.background ? ' class="custom-bg"' : ""}>
   <div id="wrap">
     <div id="frame">
@@ -979,8 +980,9 @@ ${VARIABLE_ELEMENT_JS}
     this.setAttribute("aria-pressed", String(!panel.hidden));
     if (S.fill) fitSoon();
   };
-  // Fullscreen: the document alone, filling the window. ?fullscreen=true in the link opens it
-  // so; from the button it also asks the browser for real fullscreen (needs a click).
+  // The document alone, filling the window: the Window button, or ?fullscreen=true in the link
+  // (in the query or the #hash). The Fullscreen button also asks the browser for real
+  // fullscreen, which needs a click, so a link cannot.
   var fillBefore = null;
   function setFull(on, fromClick) {
     if (!!S.full === on) return;
@@ -991,11 +993,12 @@ ${VARIABLE_ELEMENT_JS}
     if (!on && document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
     fitSoon(); syncUrl();
   }
+  $("window").onclick = function () { setFull(true, false); };
   $("fullscreen").onclick = function () { setFull(true, true); };
   $("fs-exit").onclick = function () { setFull(false); };
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && S.full) setFull(false); });
   document.addEventListener("fullscreenchange", function () { if (!document.fullscreenElement && S.full) setFull(false); });
-  if (query.get("fullscreen") === "true") setFull(true, false);
+  if (/^(true|1)$/.test(query.get("fullscreen") || hash.get("fullscreen") || "")) setFull(true, false);
   var toastTimer = 0;
   function toast(msg) {
     var t = $("toast");
