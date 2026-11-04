@@ -360,6 +360,8 @@ const PLAYGROUND_CSS = `
   #frame.center { align-self: center; }
   #rc { position: relative; touch-action: none; overflow: hidden; }
   #rc canvas { display: block; }
+  .chk { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); white-space: nowrap; cursor: pointer; user-select: none; }
+  .chk input { margin: 0; }
   .handle { position: absolute; z-index: 2; touch-action: none; }
   .handle::after { content: ""; position: absolute; background: var(--muted); border-radius: 2px; opacity: .55; }
   .handle:hover::after, .handle.active::after { background: var(--accent); opacity: 1; }
@@ -674,6 +676,7 @@ function playgroundPage(bundle, rcBase64, config) {
     <button id="swap" class="btn" title="Swap width and height">⇄</button>
     <select id="preset" aria-label="Size preset"></select>
     <button id="fit" class="btn" aria-pressed="false" title="Follow the window: the document fills the area and re-lays out as it changes">Fill</button>
+    <label class="chk" title="Animate the layout while the size changes (components ease to their new bounds). Off: each size is laid out at once, as the inspector does: much faster on big documents"><input id="anim-resize" type="checkbox"> Animate</label>
   </div>
   <span class="sep"></span>
   <div class="group">
@@ -817,7 +820,7 @@ ${VARIABLE_ELEMENT_JS}
             stage.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)];
   }
 
-  var handle, fitFrame = 0;
+  var handle, fitFrame = 0, lastPw = 0, lastPh = 0, quietTimer = 0;
   function fit() {
     cancelAnimationFrame(fitFrame);
     fitFrame = 0;
@@ -826,8 +829,24 @@ ${VARIABLE_ELEMENT_JS}
     host.style.width = S.w + "px";
     host.style.height = S.h + "px";
     frame.classList.toggle("center", S.h < stageBox()[1]);
-    if (handle) handle.resize(Math.max(1, Math.round(S.w * d)), Math.max(1, Math.round(S.h * d)));
+    var pw = Math.max(1, Math.round(S.w * d)), ph = Math.max(1, Math.round(S.h * d));
+    if (handle && (pw !== lastPw || ph !== lastPh)) {
+      if (lastPw) quietLayout();
+      lastPw = pw; lastPh = ph;
+    }
+    if (handle) handle.resize(pw, ph);
     showSize();
+  }
+  // A size change lays out at once, without the layout's bounds animation (unless Animate is
+  // checked), as the inspector does while its stage is dragged: easing every component to its
+  // new bounds on each step of a drag is what made big documents crawl. Animations come back
+  // once the size has been still for a moment.
+  function quietLayout() {
+    var ctx = handle && handle.player.getRemoteContext && handle.player.getRemoteContext();
+    if (!ctx || !ctx.setAnimationEnabled || $("anim-resize").checked) return;
+    ctx.setAnimationEnabled(false);
+    clearTimeout(quietTimer);
+    quietTimer = setTimeout(function () { ctx.setAnimationEnabled(true); }, 300);
   }
   function fitSoon() { if (!fitFrame) fitFrame = requestAnimationFrame(fit); }
 
