@@ -44,7 +44,11 @@ const hex = (c) => "#" + ((c >>> 0).toString(16).toUpperCase().padStart(8, "0"))
 // ── Loading and driving ──────────────────────────────────────────────
 
 const density = O.density ?? 1;
-const u8 = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+// A compressed document (Header.COMPRESS) is analysed as its operations: the panels read byte
+// offsets in the uncompressed original, which is what the player parses too.
+const raw = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+const compressedBytes = RC.isCompressed?.(raw) ? raw.length : null;
+const u8 = compressedBytes !== null ? RC.decompressDocument(raw) : raw;
 // The load lays the document out at the canvas size, so the canvas must already have the
 // requested size. Without width/height that is the header's, read from a first load.
 if (u8.length < 4 || u8[0] !== 0) {
@@ -979,7 +983,7 @@ const TASKS = {
         let theme = null;
         try { const t = TE.extractDocumentThemeTokens(doc); theme = { named_colors: t.totalColorTokens, has_theme_sections: t.hasThemeOps }; } catch {}
         return {
-            header: header(), layout_size: [width, height], density, bytes: u8.length, operations: ops.length,
+            header: header(), layout_size: [width, height], density, bytes: u8.length, ...(compressedBytes !== null ? { compressed_bytes: compressedBytes } : {}), operations: ops.length,
             top_operations: opcodeHistogram().slice(0, 12),
             byte_categories: bc.categories,
             components: { total: tm.totalComponents, max_depth: tm.maxDepth },
