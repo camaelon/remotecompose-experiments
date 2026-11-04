@@ -145,6 +145,10 @@ The workflow for a new document:
    Controls: one inspect {"task": "controls"} taps, drags or swipes every control once, from a
    fresh start, and says what each changed and what looks wrong; no interact per control.
 5. publish to package it as a web page (a playground) when the user wants to see or share it.
+   To change a page already published, keep its link: pages {"action": "get", "page_id"} gives
+   back the JSON it was published from (json_path), edit that, then publish with json_path and
+   the same page_id. pages also lists the user's pages, shares one to the public stream or takes
+   it out (only when the user asks), and unpublishes (confirm first: it cannot be undone).
 
 Look things up with find (examples, components, capabilities) and get; reference has the
 component authoring guide and full documentation for every tool. inspect answers questions
@@ -1318,8 +1322,13 @@ const tools = [
     })(),
     dispatcher({
         name: "pages", title: "Published pages", selector: "action", fallback: "list",
-        description: "The pages published with publish: action \"list\" (default) or \"unpublish\" (with page_id).",
-        choices: { list: tool(deploy, "list_pages"), unpublish: tool(deploy, "unpublish_page") },
+        description: "Manage the pages published with publish. action \"list\" (default): yours, with URLs and stream status. " +
+            "\"get\" (page_id): one page's metadata, .rc URL, and the JSON it was published from (also saved as json_path) " +
+            "and app script: edit it, then publish with json_path and page_id to replace the page in place (same URL). " +
+            "\"share\" (page_id, optional title): post it to the public stream, only when the user asks. \"unshare\" (page_id): " +
+            "take it out of the stream. \"unpublish\" (page_id): take it down for good (cannot be undone; confirm with the user).",
+        choices: { list: tool(deploy, "list_pages"), get: tool(deploy, "get_page"), share: tool(deploy, "share_page"),
+                   unshare: tool(deploy, "unshare_page"), unpublish: tool(deploy, "unpublish_page") },
     }),
 ];
 

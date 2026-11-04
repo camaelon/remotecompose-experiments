@@ -90,6 +90,19 @@ const caller = () => (ACCOUNTS ? currentCall()?.account ?? null : null);
 const owns = (account, meta) => !account || account.admin || (meta?.owner != null && meta.owner === account.id);
 
 const pageUrl = (id) => `${PUBLIC_URL}/pages/${id}/`;
+/** How long after publishing a document the same one published again gets the replace hint. */
+const TWIN_WINDOW_MS = 30 * 60_000;
+
+/** A published page of the caller's: {id, dir, meta}. Someone else's reads as no page at all. */
+function ownPage(pageId) {
+    if (!CAN_PUBLISH) throw new Error("this server does not publish pages");
+    const id = String(pageId ?? "");
+    const dir = PAGE_ID.test(id) ? path.join(PAGES_DIR, id) : null;
+    if (!dir || !existsSync(dir) || !statSync(dir).isDirectory()) throw new Error(`no published page ${id} (list_pages lists yours)`);
+    const meta = readMeta(id);
+    if (!owns(caller(), meta)) throw new Error(`no published page ${id} of yours (list_pages lists yours)`);
+    return { id, dir, meta };
+}
 
 // The engine stores these types; the web player can override all but long and arrays.
 const WEB_SETTABLE = new Set(["float", "int", "color", "string", "float_array"]);
@@ -434,6 +447,11 @@ const PACKAGE_WEB_PROPS = {
               (INDEX_PUBLIC ? `, and it is listed in the public index at ${PUBLIC_URL}/pages/.` : ".")
             : "Host the page at a public URL. Not available on this server (needs HTTP mode and MCP_PUBLIC_URL).",
     },
+    page_id: {
+        type: "string",
+        description: "Replace this page of yours in place (an id from list_pages or an earlier publish): the same URL " +
+            "shows the new document and options, and a stream post of it stays. Without it, publishing makes a new page.",
+    },
 };
 
 /**
@@ -534,6 +552,9 @@ export const definition = {
                                 "pass publish: false and output_path to get the file");
             }
             if (publish) a = publishable(a);
+            // Replacing a page: it must exist and be the caller's (checked before any work).
+            const replacing = a.page_id !== undefined ? ownPage(a.page_id) : null;
+            if (replacing && !publish) throw new Error("page_id replaces a published page: it needs publish (not publish: false)");
             const controls = publish ? true : a.controls !== false;
             const layout = a.layout ?? "fill";
             if (layout !== "fill" && layout !== "fixed") throw new Error('layout is "fill" or "fixed"');
@@ -596,7 +617,7 @@ export const definition = {
                 // An app script (opt-in): compiled (a syntax error refuses the publish), then
                 // dry-run against the document's variables and actions (reported, not refused).
                 let app = null, scriptCheck = null;
-                const pageId = publish ? randomBytes(16).toString("base64url") : null;
+                const pageId = publish ? (replacing?.id ?? randomBytes(16).toString("base64url")) : null;
                 if (embedded) {
                     scriptCheck = await checkAppScript(embedded.js, { variables: settable, actions: documentActions(a.json ?? readJson()) });
                     // (The page reads the script from the document; ts is what its Script button shows.)
@@ -665,20 +686,39 @@ export const definition = {
                 if (publish) {
                     const id = pageId;
                     const dir = path.join(PAGES_DIR, id);
+                    // A replaced page starts from an empty folder: no JSON or script of the old one lingers.
+                    if (replacing) rmSync(dir, { recursive: true, force: true });
                     mkdirSync(dir, { recursive: true });
                     writeFileSync(path.join(dir, "index.html"), html);
                     if (shared) for (const j of json) writeFileSync(path.join(dir, j.file), j.text);
                     if (app) writeFileSync(path.join(dir, "app.ts"), app.ts);
                     const owner = caller();
+                    // The same document published again soon after (a title or theme changed): it is
+                    // most likely meant to replace that page, so the result says how.
+                    const docSha = createHash("sha256").update(rcBytes).digest("hex").slice(0, 32);
+                    const twin = replacing ? null : publishedPages().find((p) => p.id !== id && p.doc_sha === docSha && owns(owner, p)
+                        && (!owner || p.owner === owner.id) && Date.now() - Date.parse(p.updated ?? p.created) < TWIN_WINDOW_MS);
                     const preview = await writePreview(doc.rcPath, docW > 0 ? docW : width, docH > 0 ? docH : height, dir);
                     writeFileSync(path.join(dir, "meta.json"), JSON.stringify({
-                        id, title, created: new Date().toISOString(), bytes: result.bytes, rc_bytes: rcBytes.length, controls,
+                        id, title, created: replacing?.meta?.created ?? new Date().toISOString(),
+                        ...(replacing ? { updated: new Date().toISOString() } : {}), bytes: result.bytes, rc_bytes: rcBytes.length, controls,
                         source: source ?? (given.json !== undefined ? "inline json" : "inline rc"),
-                        document: { width: docW, height: docH }, preview, ...(app ? { app: true } : {}),
-                        ...(owner ? { owner: owner.id } : {}),
+                        document: { width: docW, height: docH }, preview, doc_sha: docSha, ...(app ? { app: true } : {}),
+                        ...(replacing?.meta?.owner != null ? { owner: replacing.meta.owner } : owner ? { owner: owner.id } : {}),
                     }));
                     if (preview) result.preview_url = `${pageUrl(id)}preview.png`;
-                    if (owner) (await accounts())?.recordPage({ id, accountId: owner.id, title, url: pageUrl(id) });
+                    // (An admin replacing someone's page leaves it theirs.)
+                    if (owner && !(replacing && replacing.meta?.owner != null && replacing.meta.owner !== owner.id)) {
+                        (await accounts())?.recordPage({ id, accountId: owner.id, title, url: pageUrl(id) });
+                    }
+                    if (replacing) result.replaced = true;
+                    if (twin) {
+                        result.note = `You published this same document ${Math.max(1, Math.round((Date.now() - Date.parse(twin.updated ?? twin.created)) / 60000))} min ago ` +
+                            `as ${twin.id} (${twin.url}), so two pages now show it. To change a page, publish with page_id: ` +
+                            `it keeps the URL. Unless the user wants both, unpublish one (pages {"action": "unpublish", "page_id": ...}) ` +
+                            `and next time pass page_id.`;
+                        result.same_document_as = twin.id;
+                    }
                     result.page_id = id;
                     result.url = pageUrl(id);
                     const names = Object.keys(own);
@@ -709,8 +749,90 @@ export const definition = {
             if (!CAN_PUBLISH) return [{ type: "text", text: "This server does not publish pages (needs HTTP mode and MCP_PUBLIC_URL)." }];
             const who = caller();
             const result = { pages: publishedPages().filter((p) => owns(who, p)) };
+            // Which are in the stream, under what name.
+            if (ACCOUNTS && who) {
+                const store = await accounts();
+                for (const p of result.pages) {
+                    const it = store?.streamItem(p.id);
+                    if (it) p.stream = { title: it.title, score: it.score };
+                }
+            }
             if (PAGE_INDEX) result.index_url = `${PUBLIC_URL}/pages/`;
             return [{ type: "text", text: JSON.stringify(result, null, 1) }];
+        },
+    }, {
+        name: "get_page",
+        annotations: { title: "Get a published page's document", readOnlyHint: true, openWorldHint: false },
+        description: "A published page of yours: its metadata, URL, the .rc URL, and the JSON it was published from " +
+            "(when it was published from JSON) and its app script, so it can be edited and published again in place " +
+            "(publish with page_id).",
+        inputSchema: {
+            type: "object",
+            properties: { page_id: { type: "string", description: "The id from package_web or list_pages." } },
+            required: ["page_id"],
+        },
+        handler: async ({ page_id }) => {
+            const { id, dir, meta } = ownPage(page_id);
+            const files = readdirSync(dir);
+            const json = files.find((f) => f.endsWith(".json") && f !== "meta.json" && !f.endsWith(".expanded.json"));
+            const result = { ...meta, url: pageUrl(id), rc_url: `${pageUrl(id)}document.rc` };
+            const MAX = 400_000;
+            if (json) {
+                const text = readFileSync(path.join(dir, json), "utf8");
+                result.json_url = `${pageUrl(id)}${json}`;
+                if (text.length <= MAX) {
+                    // A copy in the workspace, to edit and publish again (json_path + page_id).
+                    const out = outputFile(`page-${id}`, ".json");
+                    writeFileSync(out, text);
+                    result.json_path = displayPath(out);
+                    try { result.json = JSON.parse(text); } catch { result.json_text = text; }
+                }
+            } else result.json = null;   // published from an .rc: rc_url has the document
+            if (files.includes("app.ts")) result.app_script = readFileSync(path.join(dir, "app.ts"), "utf8");
+            if (ACCOUNTS) {
+                const it = (await accounts())?.streamItem(id);
+                if (it) result.stream = { title: it.title, score: it.score };
+            }
+            return [{ type: "text", text: JSON.stringify(result, null, 1) }];
+        },
+    }, {
+        name: "share_page",
+        annotations: { title: "Post a page to the stream", readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+        description: "Post a published page of yours to the public stream under a name (or rename it there): anyone can " +
+            "open it there and signed-in people vote on it. Only when the user asks to share it. Needs an account with a " +
+            "public name (set on the account page).",
+        inputSchema: {
+            type: "object",
+            properties: {
+                page_id: { type: "string", description: "The id from package_web or list_pages." },
+                title: { type: "string", description: "The name it is shown under in the stream (at most 80 characters; default: the page's title)." },
+            },
+            required: ["page_id"],
+        },
+        handler: async ({ page_id, title }) => {
+            const { id, meta } = ownPage(page_id);
+            const who = caller();
+            const store = ACCOUNTS ? await accounts() : null;
+            if (!store || !who) throw new Error("the stream needs accounts: this server has none, or you are not signed in");
+            store.streamPost({ pageId: id, account: who, title: title ?? meta?.title ?? "" });
+            const it = store.streamItem(id);
+            return [{ type: "text", text: JSON.stringify({ page_id: id, stream: { title: it?.title }, stream_url: `${PUBLIC_URL}/stream/` }, null, 1) }];
+        },
+    }, {
+        name: "unshare_page",
+        annotations: { title: "Take a page out of the stream", readOnlyHint: false, destructiveHint: true, openWorldHint: true },
+        description: "Take a page of yours out of the public stream (its votes go with it). The page itself stays published.",
+        inputSchema: {
+            type: "object",
+            properties: { page_id: { type: "string", description: "The id from package_web or list_pages." } },
+            required: ["page_id"],
+        },
+        handler: async ({ page_id }) => {
+            const { id } = ownPage(page_id);
+            const store = ACCOUNTS ? await accounts() : null;
+            if (!store?.streamItem(id)) return [{ type: "text", text: `${id} is not in the stream.` }];
+            store.streamRemove(id);
+            return [{ type: "text", text: `Took ${id} out of the stream.` }];
         },
     }, {
         name: "unpublish_page",
@@ -722,12 +844,7 @@ export const definition = {
             required: ["page_id"],
         },
         handler: async ({ page_id }) => {
-            if (!CAN_PUBLISH) throw new Error("this server does not publish pages");
-            const dir = PAGE_ID.test(String(page_id)) ? path.join(PAGES_DIR, page_id) : null;
-            if (!dir || !existsSync(dir) || !statSync(dir).isDirectory()) throw new Error(`no published page ${page_id}`);
-            const meta = readMeta(page_id);
-            // Someone else's page reads as no page at all: its id is not revealed to exist.
-            if (!owns(caller(), meta)) throw new Error(`no published page ${page_id} of yours`);
+            const { dir, meta } = ownPage(page_id);
             rmSync(dir, { recursive: true, force: true });
             if (ACCOUNTS) (await accounts())?.deletePage(page_id);
             return [{ type: "text", text: `Unpublished ${page_id}${meta?.title ? ` (${meta.title})` : ""}.` }];

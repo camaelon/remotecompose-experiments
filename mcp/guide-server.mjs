@@ -84,7 +84,11 @@ const WORKFLOWS = [
                 "variables live, change density/theme — then copy a link to exactly that state. " +
                 "controls: false for the bare player (embedding, kiosks).",
                 "Open the page to check it: it runs the TypeScript engine, which can differ from rc-render's C++ one.",
-                "rc-deploy.list_pages / unpublish_page to manage what is live."],
+                "Manage what is live: rc-deploy.list_pages lists your pages; get_page gives one back (its .rc URL " +
+                "and the JSON it was published from, to edit); package_web with page_id replaces a page in place " +
+                "(same URL); share_page / unshare_page post it to the public stream or take it out (only when the user " +
+                "asks); unpublish_page takes it down for good. On the remotecompose endpoint these are the pages tool's " +
+                "actions (list, get, share, unshare, unpublish) and publish's page_id."],
     },
     {
         title: "Produce the .rc file",
