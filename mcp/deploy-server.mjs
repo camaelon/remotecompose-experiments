@@ -29,7 +29,7 @@ import { checkReport, runRc2image } from "./lib/rc2image.mjs";
 import { keptPng } from "./lib/trace-images.mjs";
 import { PAGE_CARD_CSS, pageCards } from "./lib/page-cards.mjs";
 import { buildPage } from "./lib/web-page.mjs";
-import { checkAppScript, compileAppScript, describeCheck, documentActions, SCRIPT_NOTE, SCRIPT_PROPS, scriptsAllowed, scriptsOffMessage } from "./lib/app-script.mjs";
+import { APP_VAR, checkAppScript, compileAppScript, describeCheck, documentActions, embedAppScript, embeddedAppScript, SCRIPT_NOTE, SCRIPT_PROPS, scriptsAllowed, scriptsOffMessage } from "./lib/app-script.mjs";
 import { blockingFindings } from "./lib/design-audit.mjs";
 import { playerBundle } from "./lib/web-player.mjs";
 import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
@@ -471,6 +471,30 @@ export const definition = {
                 throw new Error('density is "device" or a number > 0');
             }
 
+            // An app script travels in the document (APP_VAR): compiled, then written into the JSON
+            // before it is converted. A JSON that already carries one (republished) is the same.
+            const given = a;
+            let embedded = null, scriptIgnored = false;
+            const readJson = () => (a.json !== undefined ? a.json : a.json_path !== undefined ? readFileSync(resolvePath(a.json_path, "json_path"), "utf8") : undefined);
+            if (a.script !== undefined || a.script_path !== undefined) {
+                if (!scriptsAllowed(currentCall()?.account ?? null)) throw new Error(scriptsOffMessage(caller(), ACCOUNT_URL.startsWith("http") ? ACCOUNT_URL : ""));
+                if (a.json === undefined && a.json_path === undefined) throw new Error("script: the script is written into the document, so publish it from JSON (json or json_path), not from an .rc");
+                const ts = a.script !== undefined ? String(a.script) : readFileSync(resolvePath(a.script_path, "script_path"), "utf8");
+                let js;
+                try { js = compileAppScript(ts); } catch (e) { throw new Error(`script: ${e.message}`); }
+                let obj = readJson();
+                if (typeof obj === "string") { try { obj = JSON.parse(obj); } catch (e) { throw new Error(`the document is not valid JSON (${e.message})`); } }
+                a = { ...a, json: embedAppScript(obj, js), json_path: undefined,
+                      base_dir: a.base_dir ?? (a.json_path !== undefined ? path.dirname(a.json_path) : undefined) };
+                embedded = { js, ts };
+            } else if (a.json !== undefined || a.json_path !== undefined) {
+                let carried = null;
+                try { carried = embeddedAppScript(readJson()); } catch { /* prepareDocument reports it */ }
+                if (carried && scriptsAllowed(currentCall()?.account ?? null)) {
+                    try { embedded = { js: compileAppScript(carried), ts: carried }; } catch (e) { throw new Error(`the document's ${APP_VAR} script: ${e.message}`); }
+                } else if (carried) scriptIgnored = true;
+            }
+
             const doc = prepareDocument(a);
             if (doc.conversionError) throw new Error(doc.conversionError);
             try {
@@ -484,6 +508,8 @@ export const definition = {
                 }
                 const declared = {};
                 for (const v of report.namedVariables ?? []) declared[v.name] = v.type;
+                // The script is not a value: never set from the URL, the panel or variables.
+                delete declared[APP_VAR];
 
                 const variables = [];
                 for (const [name, value] of Object.entries(a.variables ?? {})) {
@@ -501,15 +527,10 @@ export const definition = {
                 // dry-run against the document's variables and actions (reported, not refused).
                 let app = null, scriptCheck = null;
                 const pageId = publish ? randomBytes(16).toString("base64url") : null;
-                if (a.script !== undefined || a.script_path !== undefined) {
-                    if (!scriptsAllowed(currentCall()?.account ?? null)) throw new Error(scriptsOffMessage(caller(), ACCOUNT_URL.startsWith("http") ? ACCOUNT_URL : ""));
-                    const ts = a.script !== undefined ? String(a.script) : readFileSync(resolvePath(a.script_path, "script_path"), "utf8");
-                    let js;
-                    try { js = compileAppScript(ts); } catch (e) { throw new Error(`script: ${e.message}`); }
-                    let docJson = a.json;
-                    if (docJson === undefined && a.json_path !== undefined) { try { docJson = readFileSync(resolvePath(a.json_path, "json_path"), "utf8"); } catch { docJson = undefined; } }
-                    scriptCheck = await checkAppScript(js, { variables: settable, actions: docJson !== undefined ? documentActions(docJson) : null });
-                    app = { js, ts, key: pageId ?? createHash("sha256").update(ts).digest("base64url").slice(0, 16) };
+                if (embedded) {
+                    scriptCheck = await checkAppScript(embedded.js, { variables: settable, actions: documentActions(a.json ?? readJson()) });
+                    // (The page reads the script from the document; ts is what its Script button shows.)
+                    app = { embedded: true, ts: embedded.ts, key: pageId ?? createHash("sha256").update(embedded.ts).digest("base64url").slice(0, 16) };
                 }
 
                 const { width: docW, height: docH } = report.header ?? {};
@@ -518,7 +539,7 @@ export const definition = {
                 for (const [k, v] of [["width", width], ["height", height]]) {
                     if (!(typeof v === "number" && v > 0)) throw new Error(`${k} must be a number > 0`);
                 }
-                const source = a.json_path ?? a.rc_path;
+                const source = given.json_path ?? given.rc_path;
                 const title = a.title ?? (source ? path.basename(source).replace(/\.(rc|rcd|json)$/i, "") : "RemoteCompose document");
                 const rcBytes = readFileSync(doc.rcPath);
                 // The download is named after the source file, else the title.
@@ -544,7 +565,7 @@ export const definition = {
                         start: a.width !== undefined || a.height !== undefined || a.layout === "fixed" ? "size"
                              : a.layout === "fill" ? "fill" : "auto",
                         document: { width: docW, height: docH },
-                        info: (report.namedVariables ?? []).map(({ name, type, value }) => ({ name, type, value })),
+                        info: (report.namedVariables ?? []).filter((v) => v.name !== APP_VAR).map(({ name, type, value }) => ({ name, type, value })),
                         background: a.background,
                         theme: a.theme ?? "auto",
                         density: a.density ?? 1,
@@ -582,7 +603,7 @@ export const definition = {
                     const preview = await writePreview(doc.rcPath, docW > 0 ? docW : width, docH > 0 ? docH : height, dir);
                     writeFileSync(path.join(dir, "meta.json"), JSON.stringify({
                         id, title, created: new Date().toISOString(), bytes: result.bytes, rc_bytes: rcBytes.length, controls,
-                        source: source ?? (a.json !== undefined ? "inline json" : "inline rc"),
+                        source: source ?? (given.json !== undefined ? "inline json" : "inline rc"),
                         document: { width: docW, height: docH }, preview, ...(app ? { app: true } : {}),
                         ...(owner ? { owner: owner.id } : {}),
                     }));
@@ -595,7 +616,8 @@ export const definition = {
                         result.url_example = `${result.url}?${encodeURIComponent(names[0])}=...`;
                     }
                 }
-                if (scriptCheck) result.script = describeCheck(scriptCheck);
+                if (scriptCheck) result.script = `Embedded in the document (${APP_VAR}, ${Buffer.byteLength(embedded.js)} bytes of the .rc). ${describeCheck(scriptCheck)}`;
+                if (scriptIgnored) result.script = `The document carries an app script (${APP_VAR}), but app scripts are off for you: the page does not run it.`;
                 if (!result.html_path && !publish) {
                     const out = outputFile("page", ".html");
                     writeFileSync(out, html);

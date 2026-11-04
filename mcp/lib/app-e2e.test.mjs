@@ -1,6 +1,6 @@
 // App scripts end to end, through the front door: off by default and not listed; the account
 // switch turns them on; publish then takes a script, refuses one that does not compile, reports
-// the dry run, and the page carries the script (sandboxed) and its app.ts.
+// the dry run, and the script travels INSIDE the document (system:__logic__), which the page runs sandboxed.
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -12,6 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { csrfFor } from "./accounts.mjs";
 import { RC2IMAGE } from "./rc2image.mjs";
+import { compileAppScript } from "./app-script.mjs";
 
 const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "remotecompose-server.mjs");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -81,6 +82,17 @@ test("app scripts: opt-in per account, then publish with a script", { skip: !exi
     assert.ok(!/^\[app\]/m.test((await c.call("reference", { query: "save state between visits" })).content[0].text), "not searched");
     assert.match(await (await fetch(`${base}/account/`, { headers: { Cookie: `rc_session=${sid}` } })).text(), /id="scripts"[\s\S]*?Turn on/);
 
+    // A JSON that carries a system:__logic__, published with scripts off: inert, and said so.
+    const doc2 = JSON.parse(readFileSync(path.join(root, "cart.json"), "utf8"));
+    doc2.root.unshift({ variable: { name: "system:__logic__", vtype: "string", value: "rc.set('summary', 'carried');", export: true } });
+    writeFileSync(path.join(root, "carried.json"), JSON.stringify(doc2));
+    r = await c.call("publish", { json_path: "carried.json", title: "Carried" });
+    let carriedText = r.content.map((x) => x.text ?? "").join("\n");
+    assert.ok(!r.isError, carriedText);
+    assert.match(carriedText, /carries an app script \(system:__logic__\), but app scripts are off for you: the page does not run it/);
+    const offPage = await (await fetch(`${base}/pages/${/"page_id": "([^"]+)"/.exec(carriedText)[1]}/`)).text();
+    assert.ok(!/"embedded":true/.test(offPage) && !/setAttribute\("sandbox"/.test(offPage), "no app bridge on the page");
+
     // On.
     assert.equal((await fetch(`${base}/account/scripts`, { method: "POST", redirect: "manual",
         headers: { Origin: base, "Content-Type": "application/x-www-form-urlencoded", Cookie: `rc_session=${sid}` },
@@ -105,6 +117,7 @@ test("app scripts: opt-in per account, then publish with a script", { skip: !exi
     text = r.content.map((x) => x.text ?? "").join("\n");
     assert.ok(!r.isError, text);
     assert.match(text, /Script dry run: sets summary = \\"1 × apple\\"; handles \\"add\\"; uses storage/);
+    assert.match(text, /Embedded in the document \(system:__logic__, \d+ bytes of the \.rc\)/);
     assert.ok(!/Script warnings|Script errors/.test(text), text);
     const id = /"page_id": "([^"]+)"/.exec(text)[1];
     assert.equal(readFileSync(path.join(root, "pages", id, "app.ts"), "utf8"), readFileSync(path.join(root, "cart.ts"), "utf8"));
@@ -114,6 +127,19 @@ test("app scripts: opt-in per account, then publish with a script", { skip: !exi
     assert.ok(!/allow-same-origin/.test(page), "never same-origin");
     assert.match(page, /"label":"Script"/, "the Script button");
     assert.match(page, /id="app-log"/, "the App panel");
-    assert.match(page, /self\.__rcMain = async function/);
+    // The script is in the document, not beside it in the page: the .rc carries the compiled JS.
+    const js = compileAppScript(readFileSync(path.join(root, "cart.ts"), "utf8"));
+    const rc = Buffer.from(/var DATA = "([^"]*)"/.exec(page)[1], "base64").toString("latin1");
+    assert.ok(rc.includes("system:__logic__") && rc.includes("rc.onAction('add'"), "the .rc carries the script");
+    assert.ok(!page.includes(js.slice(0, 40).replace(/</g, "")), "not written into the page beside it");
+    assert.match(page, /"embedded":true/);
+    // Never a value: not settable from the URL, not in the panel.
+    assert.ok(!/"declared":\{[^}]*system:__logic__/.test(page) && !/"name":"system:__logic__"/.test(page), "system:__logic__ is not a settable variable");
+
+    // A JSON that already carries its system:__logic__ (a republish): with scripts on, it is the script.
+    r = await c.call("publish", { json_path: "carried.json", title: "Carried" });
+    text = r.content.map((x) => x.text ?? "").join("\n");
+    assert.ok(!r.isError, text);
+    assert.match(text, /Embedded in the document/, "scripts on: a carried script runs (republish)");
     assert.equal(log.includes("unhandled"), false, log);
 });

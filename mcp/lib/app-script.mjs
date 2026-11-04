@@ -96,6 +96,29 @@ const wrap = (js) => `self.__rcMain = async function () {\n${js}\n};`;
 /** The script as the sandbox's second <script>: wrapped, and safe inside the element. */
 export const appScriptTag = (js) => wrap(js).replace(/<\/(script)/gi, "<\\/$1").replace(/<!--/g, "<\\!--");
 
+// An app script travels INSIDE its document: the compiled JavaScript as an exported root string,
+// APP_VAR. The .rc is then the whole app, wherever it goes; a host that runs scripts reads that
+// string when the document loads (the format has no load-time action to send it), and any other
+// host just carries it. Only a page whose publish allowed scripts runs it, and that page never
+// lets a URL parameter or the variable panel set it.
+export const APP_VAR = "system:__logic__";
+
+/** The document (object) with `js` as its app script, replacing any it had. */
+export function embedAppScript(doc, js) {
+    const root = Array.isArray(doc.root) ? doc.root : doc.root === undefined ? [] : [doc.root];
+    const rest = root.filter((n) => !(n && typeof n === "object" && n.variable?.name === APP_VAR));
+    return { ...doc, root: [{ variable: { name: APP_VAR, vtype: "string", value: js, export: true } }, ...rest] };
+}
+
+/** The app script a JSON document (object or text) carries, or null. */
+export function embeddedAppScript(json) {
+    let doc = json;
+    if (typeof json === "string") { try { doc = JSON.parse(json); } catch { return null; } }
+    const root = Array.isArray(doc?.root) ? doc.root : [doc?.root];
+    const v = root.find((n) => n && typeof n === "object" && n.variable?.name === APP_VAR)?.variable;
+    return typeof v?.value === "string" && v.value.trim() ? v.value : null;
+}
+
 /** The hostNamedAction names (and literal values) a JSON document sends: {name: [values]}. */
 export function documentActions(json) {
     const out = {};
@@ -399,7 +422,8 @@ export const SCRIPT_PROPS = {
             "for host variables, rc.onAction(name, fn) for the document's hostNamedActions, rc.get / rc.onChange for " +
             "values the document changes, rc.storage for state kept in the browser, fetch for public APIs. The document " +
             "stays the UX; the script computes, fetches and remembers. Before writing one, read reference topic \"app\". " +
-            "The result has a dry run of it (errors, unknown variables or actions).",
+            "It is compiled and written INTO the document (an exported root string \"system:__logic__\"), so the .rc carries its own logic; " +
+            "publish from JSON. The result has a dry run of it (errors, unknown variables or actions).",
     },
     script_path: { type: "string", description: "The app script from a file (.ts or .js), instead of script." },
 };

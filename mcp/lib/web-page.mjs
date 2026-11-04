@@ -10,7 +10,7 @@
 //     state lives in the URL, so a link reproduces what is on screen.
 
 import { MONO_VAR, monoPalettes } from "./components.mjs";
-import { APP_RUNTIME, appScriptTag } from "./app-script.mjs";
+import { APP_RUNTIME, APP_VAR, appScriptTag } from "./app-script.mjs";
 
 export const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -70,8 +70,13 @@ const COMMON_JS = `
 const APP_BRIDGE_JS = `
   var APP_RUNTIME = ${JSON.stringify(APP_RUNTIME).replace(/<\/(script)/gi, "<\\/$1")};
   function appOff() { return new URLSearchParams(location.search).get("app") === "off"; }
+  // The script: the document's own (C.app.embedded: the ${APP_VAR} string it carries, read once,
+  // when it has loaded), or one given beside it (C.app.js, the catalog's app.ts).
+  function wrapScript(js) {
+    return ("self.__rcMain = async function () {\\n" + js + "\\n};").replace(/<\\/(script)/gi, "<\\\\/$1").replace(/<!-{2}/g, "<\\\\!--");
+  }
   function startApp(handle, hooks) {
-    if (!C.app || !C.app.js || appOff() || !window.RC || !RC.createHostApi) return null;
+    if (!C.app || !(C.app.js || C.app.embedded) || appOff() || !window.RC || !RC.createHostApi) return null;
     hooks = hooks || {};
     var api = RC.createHostApi(handle.player);
     var frame = document.createElement("iframe");
@@ -112,8 +117,16 @@ const APP_BRIDGE_JS = `
       post({ op: "action", name: name, value: value });
     });
     api.onChange("*", function (value, name) { post({ op: "change", name: name, value: value }); });
-    frame.srcdoc = "<!doctype html><meta charset=utf-8><script>" + APP_RUNTIME + "<\\/script><script>" + C.app.js + "<\\/script>";
-    document.body.appendChild(frame);
+    function launch(js) {
+      frame.srcdoc = "<!doctype html><meta charset=utf-8><script>" + APP_RUNTIME + "<\\/script><script>" + js + "<\\/script>";
+      document.body.appendChild(frame);
+    }
+    if (C.app.js) launch(C.app.js);
+    else whenLoaded(function () {
+      var js = api.get(${JSON.stringify(APP_VAR)});
+      if (typeof js === "string" && js.trim()) launch(wrapScript(js));
+      else log("warn", "the document carries no app script (${APP_VAR})");
+    });
     return { api: api, stop: function () { api.dispose(); frame.remove(); } };
   }
 `;
@@ -173,8 +186,8 @@ function bundleTag(bundle) {
 }
 
 export function buildPage({ bundle, rcBase64, config }) {
-    if (config.app?.js) {
-        const app = { js: appScriptTag(config.app.js), key: config.app.key ?? "" };
+    if (config.app?.js || config.app?.embedded) {
+        const app = config.app.embedded ? { embedded: true, key: config.app.key ?? "" } : { js: appScriptTag(config.app.js), key: config.app.key ?? "" };
         config = { ...config, app,
             ...(config.controls && config.app.ts ? { json: [...(config.json ?? []), { label: "Script", text: config.app.ts, file: "app.ts", raw: true, title: "Show the app script: the TypeScript that runs next to the document" }] } : {}) };
     }
@@ -215,7 +228,7 @@ ${bundleTag(bundle)}
   var C = ${jsonInScript(config)};
   var DATA = "${rcBase64}";
   var host = document.getElementById("rc");
-${COMMON_JS}${config.app?.js ? APP_BRIDGE_JS : ""}
+${COMMON_JS}${config.app ? APP_BRIDGE_JS : ""}
   function density() {
     return C.density === "device" ? (window.devicePixelRatio || 1) : C.density;
   }
@@ -697,7 +710,7 @@ function playgroundPage(bundle, rcBase64, config) {
   <div id="vars"></div>
   <h2>Host actions <button id="actions-clear" class="btn" hidden>Clear</button></h2>
   <ol id="actions"><li class="none">None yet: actions the document sends the app (a tap on a hostNamedAction) show here, newest first, with their value.</li></ol>
-${config.app?.js ? `  <h2>App <button id="app-toggle" class="btn" type="button"></button></h2>
+${config.app ? `  <h2>App <button id="app-toggle" class="btn" type="button"></button></h2>
   <p id="app-state" class="app-state"></p>
   <ol id="app-log"></ol>
 ` : ""}  <h2>Document</h2>
@@ -723,7 +736,7 @@ ${bundleTag(bundle)}
   var DATA = "${rcBase64}";
   var $ = function (id) { return document.getElementById(id); };
   var host = $("rc"), stage = $("stage"), frame = $("frame");
-${COMMON_JS}${config.app?.js ? APP_BRIDGE_JS : ""}
+${COMMON_JS}${config.app ? APP_BRIDGE_JS : ""}
 ${VARIABLE_ELEMENT_JS}
   var MIN = 16, MAX = 4096;
   var clampSize = function (v) { return Math.max(MIN, Math.min(MAX, Math.round(v))); };
