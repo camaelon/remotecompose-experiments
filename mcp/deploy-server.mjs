@@ -202,21 +202,24 @@ function sharedBundle(code) {
 // Compressed copies of served files, by path and mtime: pages and the player bundle compress
 // to about a quarter (brotli), whether or not a proxy in front compresses.
 const compressed = new Map();
-function sendFile(req, res, file, type, cache) {
+// `rewrite` (optional) is {key, apply(buffer) -> buffer}: the served bytes are apply(file's),
+// cached under key as well as the file's mtime.
+function sendFile(req, res, file, type, cache, rewrite = null) {
     const st = statSync(file);
     const accept = String(req.headers["accept-encoding"] ?? "");
     const enc = /\bbr\b/.test(accept) ? "br" : /\bgzip\b/.test(accept) ? "gzip" : null;
+    const read = () => (rewrite ? rewrite.apply(readFileSync(file)) : readFileSync(file));
     let body;
     if (enc) {
-        const key = `${file}|${st.mtimeMs}|${enc}`;
+        const key = `${file}|${st.mtimeMs}|${enc}|${rewrite?.key ?? ""}`;
         body = compressed.get(key);
         if (!body) {
-            const raw = readFileSync(file);
+            const raw = read();
             body = enc === "br" ? brotliCompressSync(raw, { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 9 } }) : gzipSync(raw, { level: 9 });
             if (compressed.size > 200) compressed.clear();
             compressed.set(key, body);
         }
-    } else body = readFileSync(file);
+    } else body = read();
     res.writeHead(200, {
         "Content-Type": type, "Content-Length": body.length, "Cache-Control": cache, "Vary": "Accept-Encoding",
         ...(enc ? { "Content-Encoding": enc } : {}),
@@ -247,6 +250,19 @@ async function publicRoute(req, url, res) {
         const file = path.join(PAGES_DIR, jm[1], jm[2]);
         if (!existsSync(file)) { res.writeHead(404, { "Content-Type": "text/plain" }); res.end("not found\n"); return true; }
         return sendFile(req, res, file, "application/json; charset=utf-8", "public, max-age=300");
+    }
+    // A page's document as an .rc (what the inspector loads): the bytes inlined in the page, so
+    // every page has it, published before this route or not. Any <name>.rc names it.
+    const rm = /^\/pages\/([A-Za-z0-9_-]{22})\/[\w.-]+\.rc$/.exec(url.pathname);
+    if (rm && PAGES_DIR) {
+        const bytes = pageDocument(path.join(PAGES_DIR, rm[1], "index.html"));
+        if (!bytes) { res.writeHead(404, { "Content-Type": "text/plain" }); res.end("not found\n"); return true; }
+        res.writeHead(200, {
+            "Content-Type": "application/octet-stream", "Content-Length": bytes.length, "Cache-Control": "public, max-age=300",
+            "Access-Control-Allow-Origin": "*", "X-Content-Type-Options": "nosniff", "X-Robots-Tag": "noindex",
+        });
+        res.end(req.method === "HEAD" ? undefined : bytes);
+        return true;
     }
     if (PAGE_INDEX && PAGES_DIR && (url.pathname === "/pages" || url.pathname === "/pages/")) {
         if (req.method !== "GET" && req.method !== "HEAD") {
@@ -292,7 +308,49 @@ async function publicRoute(req, url, res) {
         res.end();
         return true;
     }
-    return sendFile(req, res, file, "text/html; charset=utf-8", "no-cache");
+    return sendFile(req, res, file, "text/html; charset=utf-8", "no-cache", await pageRewrite(id));
+}
+
+/** The document bytes inlined in a published page (its `var DATA = "<base64>"`), or null. */
+const pageDocs = new Map();   // file -> {mtime, bytes}
+function pageDocument(file) {
+    if (!existsSync(file)) return null;
+    const mtime = statSync(file).mtimeMs;
+    const hit = pageDocs.get(file);
+    if (hit?.mtime === mtime) return hit.bytes;
+    const m = /\bvar DATA = "([A-Za-z0-9+/=]+)"/.exec(readFileSync(file, "latin1"));
+    const bytes = m ? Buffer.from(m[1], "base64") : null;
+    if (pageDocs.size > 100) pageDocs.clear();
+    pageDocs.set(file, { mtime, bytes });
+    return bytes;
+}
+
+// A published page is served as it is on disk, brought up to date:
+// - it names the player it was published with (../_player/<hash>.js) and gets the current one,
+//   so player fixes reach pages already published (the old bundles stay on disk: a page
+//   someone saved still finds its player);
+// - a playground (it has the Download button) gains an Inspect button opening the document in
+//   the inspector, when this server also serves the inspector (definition.inspector, set by
+//   the server that includes this one).
+async function pageRewrite(id) {
+    let name = null;
+    try { name = sharedBundle(await playerBundle()); } catch {}
+    const inspector = definition.inspector === true;
+    if (!name && !inspector) return null;
+    return {
+        key: `${name}|${inspector}`,
+        apply: (buf) => {
+            const s = buf.toString("utf8");
+            let out = name ? s.replace(/\.\.\/_player\/[0-9a-f]{16}\.js/g, () => `../_player/${name}`) : s;
+            if (inspector && !/>Inspect<\/a>/.test(out)) {
+                const fileName = /"fileName":"([\w.-]+?\.rc)"/.exec(out)?.[1] ?? "document.rc";
+                const href = `../../inspector/?url=${encodeURIComponent(`../pages/${id}/${fileName}`)}`;
+                out = out.replace(/(<button id="download"[^>]*>[^<]*<\/button>)/, (b) =>
+                    `${b}\n    <a class="btn" href="${href}" target="_blank" rel="noopener" title="Open this document in the RemoteCompose inspector: its operations, layout, variables and bytes">Inspect</a>`);
+            }
+            return out === s ? buf : Buffer.from(out, "utf8");
+        },
+    };
 }
 
 const PACKAGE_WEB_PROPS = {

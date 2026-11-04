@@ -1460,6 +1460,9 @@ async function searchReference(query, { app = false } = {}) {
     return best.map((p) => `[${p.topic}]\n${trim(p.text)}`).join("\n\n");
 }
 
+// The examples site serves the inspector (<base>/inspector/), so published pages can link to it.
+deploy.inspector = true;
+
 export const definition = {
     name: "kobento",
     version: "1.0.0",
