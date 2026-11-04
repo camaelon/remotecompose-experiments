@@ -38,7 +38,7 @@
 import { siteFooter } from "./privacy-web.mjs";
 import { Accounts, accounts, accountsEnabled, csrfFor, emailVerify, RateLimiter, readCookie, SESSION_COOKIE, signupOpen } from "./accounts.mjs";
 import { linkEmail, sendMail } from "./mail.mjs";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { PAGE_CARD_CSS, pageCards } from "./page-cards.mjs";
 import { traceImagePath } from "./trace-images.mjs";
@@ -225,6 +225,14 @@ input[type=text], input[type=email], input[type=password] { padding:8px 12px; bo
 button.btn { align-self:flex-start; padding:7px 14px; border:1px solid var(--accent); border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
 button.link { padding:3px 10px; border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--ink); font:inherit; font-size:12px; cursor:pointer; }
 button.link.danger { color:#d0453a; }
+.pact details > summary.link { display:inline-block; list-style:none; padding:3px 10px; border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--ink); font-size:12px; cursor:pointer; }
+.pact details > summary.link::-webkit-details-marker { display:none; }
+.pact details > summary.link.danger { color:#d0453a; }
+.pact details[open] > summary { margin-bottom:6px; }
+.pact details p { margin:0 0 6px; }
+.pact .row { flex-wrap:wrap; gap:6px; }
+.pact .row label.f { flex:1 1 100%; }
+.btn.danger { background:#d0453a; border-color:#d0453a; color:#fff; }
 .row { display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap; }
 .row label.f { flex:1 1 200px; }
 .wrap { overflow-x:auto; }
@@ -524,6 +532,8 @@ function accountPage(req, { store, acct, sid, fresh, error, notice }) {
         `<section class="panel"><div class="who"><div><b>${esc(acct.name || acct.email)}</b> <span class="muted">${esc(acct.email)}</span> <a href="#name">${acct.name ? "Change name" : "Set your name"}</a>
 ${acct.admin ? ' <span class="pill">admin</span>' : ""}<br><span class="muted">Member since ${esc(day(acct.created).slice(0, 10))}</span></div>
 <form class="inline" method="post" action="signout">${csrf}<button class="link" type="submit">Sign out</button></form></div></section>`,
+        namePanel(acct, csrf),
+        scriptsOffered() ? scriptsPanel(acct, csrf) : "",
         `<section class="panel"><h2>Tokens</h2>
 <p class="muted">Each token connects one client (Claude Code, claude.ai, ChatGPT, a script) to the MCP servers. ${live.length} active.</p>
 ${tokens.length ? `<div class="wrap"><table><thead><tr><th>Label</th><th>Token</th><th>Created (UTC)</th><th>Last used</th><th></th></tr></thead><tbody>${tokenRows}</tbody></table></div>` : ""}
@@ -546,13 +556,7 @@ ${usage.errors.map((e) => `<tr><td>${esc(day(e.ts))}</td><td>${esc(e.server)} ·
 ${sessionsTable(store.sessions(acct.id, { limit: 10 }), (c) => `sessions/${encodeURIComponent(c)}`)}
 <p style="margin-top:8px"><a href="sessions/">All sessions</a></p>
 </section>`,
-        namePanel(acct, csrf),
-        scriptsOffered() ? scriptsPanel(acct, csrf) : "",
-        streamPanel(store, acct, csrf),
-        `<section class="panel"><h2>Your published pages</h2>
-${pages.length ? `${pageCards(publishedCards(store, acct.id))}<p class="muted" style="margin-top:10px">Anyone with a page's link can open it; the links are unguessable and listed only here. Take one down with the pages / unpublish_page tool.</p>`
-            : `<p class="muted">None yet. Pages you publish with the publish (or package_web) tool are listed here.</p>`}
-</section>`,
+        pagesPanel(store, acct, csrf, pages),
         acct.admin ? adminPanel(store, csrf) : "",
     ].join("\n");
     return body;
@@ -574,25 +578,35 @@ function namePanel(acct, csrf) {
 </section>`;
 }
 
-/** Each published page: post it to the stream under a name, rename it there, or take it out. */
-function streamPanel(store, acct, csrf) {
-    const pages = store.pagesOf(acct.id);
+/**
+ * The account's published pages as cards, each with its actions: post it to the stream under a
+ * name (or rename it there), take it out of the stream, delete it (behind a confirmation).
+ */
+function pagesPanel(store, acct, csrf, pages) {
+    if (!pages.length) {
+        return `<section class="panel" id="pages"><h2>Your published pages</h2>
+<p class="muted">None yet. Pages you publish with the publish (or package_web) tool are listed here.</p></section>`;
+    }
     const posted = new Map(store.streamOf(acct.id).map((i) => [i.page_id, i]));
-    const rows = pages.map((pg) => {
+    const actions = (pg) => {
         const it = posted.get(pg.id);
-        const name = it?.title ?? pg.title ?? "";
-        const open = pg.url ? `<a href="${esc(pg.url)}">${esc(pg.title || pg.id)}</a>` : esc(pg.title || pg.id);
-        const form = `<form class="row" method="post" action="stream" style="margin:0">${csrf}<input type="hidden" name="page_id" value="${esc(pg.id)}">
-<label class="f">Name in the stream<input type="text" name="title" maxlength="80" value="${esc(name)}" required></label>
-<button class="btn" type="submit"${acct.name ? "" : " disabled"}>${it ? "Rename" : "Post to the stream"}</button></form>`;
-        const state = it ? `<span class="pill">in the stream</span> <span class="muted">score ${it.score} (+${it.ups} / −${it.downs}) · since ${esc(day(it.created).slice(0, 10))}</span>
-<form class="inline" method="post" action="stream/${esc(pg.id)}/remove">${csrf}<button class="link danger" type="submit">Remove from the stream</button></form>` : `<span class="muted">not in the stream</span>`;
-        return `<tr><td class="w">${open}<br>${state}</td><td>${form}</td></tr>`;
-    }).join("\n");
-    return `<section class="panel" id="stream"><h2>Stream</h2>
-<p class="muted">The <a href="../stream/">stream</a> shows the pages people chose to share: anyone can open them, and signed-in people vote on them. Your pages stay unlisted until you post them here.${acct.name ? "" : ' <b>Set your <a href="#name">name</a> first.</b>'}</p>
-${pages.length ? `<div class="wrap"><table><thead><tr><th>Page</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
-        : `<p class="muted">You have no published pages yet. Publish one with the publish (or package_web) tool; it then shows up here.</p>`}
+        const id = esc(pg.id);
+        const nameForm = (label) => `<form class="row" method="post" action="stream" style="margin:0">${csrf}<input type="hidden" name="page_id" value="${id}">
+<label class="f">Name in the stream<input type="text" name="title" maxlength="80" value="${esc(it?.title ?? pg.title ?? "")}" required></label>
+<button class="btn" type="submit"${acct.name ? "" : " disabled"}>${label}</button></form>`;
+        const stream = it
+            ? `<div><span class="pill">in the stream</span> <span class="muted">score ${it.score} (+${it.ups} / −${it.downs}) · since ${esc(day(it.created).slice(0, 10))}</span></div>
+<details><summary class="link">Rename in the stream</summary>${nameForm("Rename")}</details>
+<form class="inline" method="post" action="stream/${id}/remove">${csrf}<button class="link danger" type="submit">Remove from the stream</button></form>`
+            : `<details><summary class="link">Post to the stream</summary>${nameForm("Post")}${acct.name ? "" : '<p class="muted">Set your <a href="#name">name</a> first: it is shown with what you post.</p>'}</details>`;
+        const del = `<details class="confirm"><summary class="link danger">Delete…</summary>
+<p class="muted">The page is deleted and its link stops working${it ? "; it leaves the stream with its votes" : ""}. This cannot be undone.</p>
+<form class="inline" method="post" action="pages/${id}/delete">${csrf}<button class="btn danger" type="submit">Delete permanently</button></form></details>`;
+        return stream + del;
+    };
+    return `<section class="panel" id="pages"><h2>Your published pages</h2>
+<p class="muted">Anyone with a page's link can open it; the links are unguessable and listed only here, until you post a page to the <a href="../stream/">stream</a>, where anyone can open it and signed-in people vote on it.${acct.name ? "" : ' To post, set your <a href="#name">name</a> first.'}</p>
+${pageCards(publishedCards(store, acct.id), { actions })}
 </section>`;
 }
 
@@ -851,13 +865,24 @@ export async function accountRoute(req, url, res, site) {
     }
     if (p === "/account/stream") {
         try { store.streamPost({ pageId: form.get("page_id"), account: acct, title: form.get("title") }); } catch (e) { return render(400, { acct, sid, error: e.message }); }
-        return redirect(res, "./#stream");
+        return redirect(res, "./#pages");
     }
     let m = /^\/account\/stream\/([A-Za-z0-9_-]{22})\/remove$/.exec(p);
     if (m) {
         const it = store.streamItem(m[1]);
         if (it && (it.account_id === acct.id || acct.admin)) store.streamRemove(m[1]);
-        return redirect(res, "../../#stream");
+        return redirect(res, "../../#pages");
+    }
+    // Delete a page of yours (an admin, anyone's): its folder and its record, stream entry and all.
+    m = /^\/account\/pages\/([A-Za-z0-9_-]{22})\/delete$/.exec(p);
+    if (m) {
+        const owner = store.pageOwner(m[1]);
+        const root = workspaceRoot();
+        if (owner != null && (owner === acct.id || acct.admin) && root) {
+            rmSync(path.join(root, "pages", m[1]), { recursive: true, force: true });
+            store.deletePage(m[1]);
+        }
+        return redirect(res, "../../#pages");
     }
     m = /^\/account\/apps\/(\d+)\/revoke$/.exec(p);
     if (m) {

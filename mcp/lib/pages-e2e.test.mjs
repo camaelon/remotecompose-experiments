@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { RC2IMAGE } from "./rc2image.mjs";
+import { csrfFor } from "./accounts.mjs";
 
 const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "remotecompose-server.mjs");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -45,6 +46,7 @@ test("pages: list, get, replace in place, share, unshare, unpublish", { skip: !e
     async function account(email, name) {
         const reg = await fetch(`${base}/account/register`, { method: "POST", redirect: "manual",
             headers: { Origin: base, "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ email, name }) });
+        const sid = /rc_session=([^;]*)/.exec(reg.headers.get("set-cookie"))[1];
         const token = /rc_[A-Za-z0-9_-]{43}/.exec(await reg.text())[0];
         const rpc = async (method, params, session) => {
             const r = await fetch(`${base}/mcp`, { method: "POST", body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
@@ -53,10 +55,12 @@ test("pages: list, get, replace in place, share, unshare, unpublish", { skip: !e
             return { session: r.headers.get("mcp-session-id"), body: JSON.parse(text.startsWith("{") ? text : text.split("\n").find((l) => l.startsWith("data:")).slice(5)) };
         };
         const { session } = await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "1" } });
-        return async (name, args) => {
+        const call = async (name, args) => {
             const r = (await rpc("tools/call", { name, arguments: args }, session)).body.result;
             return { error: r.isError === true, text: r.content.map((x) => x.text ?? "").join("\n") };
         };
+        call.sid = sid;
+        return call;
     }
     const a = await account("a@example.com", "Ada");
     const b = await account("b@example.com", "Bo");
@@ -130,5 +134,24 @@ test("pages: list, get, replace in place, share, unshare, unpublish", { skip: !e
     assert.match(r.text, /Unpublished/);
     assert.equal((await fetch(`${base}/pages/${id}/`)).status, 404);
     assert.deepEqual(json(await a("pages", {})).pages, []);
+
+    // The account page: each card carries its actions (no separate Stream section); deleting
+    // asks first, and works only for the page's owner.
+    r = await a("publish", { json_path: "one.json", title: "Three" });
+    const third = /"page_id": "([^"]+)"/.exec(r.text)[1];
+    const accountPage = async (who) => (await fetch(`${base}/account/`, { headers: { Cookie: `rc_session=${who.sid}` } })).text();
+    const html = await accountPage(a);
+    assert.ok(!/<h2>Stream<\/h2>/.test(html), "no separate stream section");
+    assert.match(html, new RegExp(`action="pages/${third}/delete"[^]*?Delete permanently`));
+    assert.match(html, /<summary class="link">Post to the stream<\/summary>/);
+    assert.match(html, /<summary class="link danger">Delete…<\/summary>/);
+    const del = (who) => fetch(`${base}/account/pages/${third}/delete`, { method: "POST", redirect: "manual",
+        headers: { Origin: base, "Content-Type": "application/x-www-form-urlencoded", Cookie: `rc_session=${who.sid}` },
+        body: new URLSearchParams({ csrf: csrfFor(who.sid) }) });
+    assert.equal((await del(b)).status, 303);
+    assert.equal((await fetch(`${base}/pages/${third}/`)).status, 200, "someone else cannot delete it");
+    assert.equal((await del(a)).status, 303);
+    assert.equal((await fetch(`${base}/pages/${third}/`)).status, 404);
+    assert.ok(!(await accountPage(a)).includes(third));
     assert.equal(log.includes("unhandled"), false, log);
 });
