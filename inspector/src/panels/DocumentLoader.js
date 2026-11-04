@@ -160,6 +160,15 @@ export function getAllOperationsFlat(doc, u8) {
 }
 
 export async function loadRcArrayBuffer(arrayBuffer, name, sourceJson) {
+    // A compressed document (Header.COMPRESS) is inspected as its operations: every panel reads
+    // byte offsets in the uncompressed original, which is what the player parses too.
+    const rt = (typeof RC !== 'undefined' ? RC : undefined) || (typeof window !== 'undefined' ? window.RC : undefined) || globalThis.RC;
+    let compressedSize = null;
+    if (rt && rt.isCompressed && rt.isCompressed(new Uint8Array(arrayBuffer))) {
+        compressedSize = arrayBuffer.byteLength;
+        const plain = rt.decompressDocument(new Uint8Array(arrayBuffer));
+        arrayBuffer = plain.buffer.slice(plain.byteOffset, plain.byteOffset + plain.byteLength);
+    }
     currentBuffer = arrayBuffer;
     window.currentBuffer = currentBuffer;
     const u8 = new Uint8Array(arrayBuffer);
@@ -174,7 +183,7 @@ export async function loadRcArrayBuffer(arrayBuffer, name, sourceJson) {
     const headerDropZone = document.getElementById('headerDropZone');
     if (headerDropZone) headerDropZone.classList.add('has-file');
     const sizeEl = document.getElementById('metaSize');
-    if (sizeEl) sizeEl.textContent = `Size: ${u8.length} B`;
+    if (sizeEl) sizeEl.textContent = compressedSize !== null ? `Size: ${u8.length} B (${compressedSize} B compressed)` : `Size: ${u8.length} B`;
 
     let canvas = document.getElementById('previewCanvas');
     if (currentPlayer) {

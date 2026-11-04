@@ -1,5 +1,6 @@
 // RemoteComposeBuffer: wraps WireBuffer with inflateFromBuffer deserialization.
 
+import { decompressDocument, isCompressed } from "./Compression";
 import { WireBuffer } from './WireBuffer';
 import { Operations } from './Operations';
 import { Header } from './operations/Header';
@@ -31,7 +32,17 @@ export class RemoteComposeBuffer {
         this.mBuffer = buffer;
     }
 
+    /**
+     * The document's bytes; a compressed one (Header.COMPRESS) is decompressed first, once, as
+     * androidx's RemoteComposeBuffer.inflateFromBuffer does, so everything after sees the
+     * uncompressed original.
+     */
     static fromArrayBuffer(data: ArrayBuffer): RemoteComposeBuffer {
+        const bytes = new Uint8Array(data);
+        if (isCompressed(bytes)) {
+            const plain = decompressDocument(bytes);
+            return new RemoteComposeBuffer(WireBuffer.fromArrayBuffer(plain.buffer.slice(plain.byteOffset, plain.byteOffset + plain.byteLength) as ArrayBuffer));
+        }
         return new RemoteComposeBuffer(WireBuffer.fromArrayBuffer(data));
     }
 

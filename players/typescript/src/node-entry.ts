@@ -2,6 +2,7 @@
 
 export { CoreDocument } from './core/CoreDocument';
 export { RemoteComposeBuffer } from './core/RemoteComposeBuffer';
+export { decompressDocument, inflateZlib, isCompressed } from './core/Compression';
 export { CanvasPaintContext } from './web/CanvasPaintContext';
 export { WebRemoteContext } from './web/WebRemoteContext';
 export { ContextMode } from './core/RemoteContext';

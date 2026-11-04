@@ -25,9 +25,12 @@ var RC = (() => {
     RcdPlayer: () => RcdPlayer,
     WebCustomHost: () => WebCustomHost,
     base64ToArrayBuffer: () => base64ToArrayBuffer,
+    createHostApi: () => createHostApi,
     createPlayer: () => createPlayer,
     createSnapshot: () => createSnapshot,
+    decompressDocument: () => decompressDocument,
     fitInto: () => fitInto,
+    isCompressed: () => isCompressed,
     parseEmbedConfig: () => parseEmbedConfig,
     pinClock: () => pinClock
   });
@@ -2326,10 +2329,10 @@ var RC = (() => {
               }
               case 33: {
                 const aId = arrIdFromStack(stack.pop());
-                const floats = collectionsAccess.getFloats(aId);
-                if (floats && floats.length > 0) {
-                  let mx = floats[0];
-                  for (let j = 1; j < floats.length; j++) mx = Math.max(mx, floats[j]);
+                const floats2 = collectionsAccess.getFloats(aId);
+                if (floats2 && floats2.length > 0) {
+                  let mx = floats2[0];
+                  for (let j = 1; j < floats2.length; j++) mx = Math.max(mx, floats2[j]);
                   stack.push(mx);
                 } else {
                   stack.push(0);
@@ -2338,10 +2341,10 @@ var RC = (() => {
               }
               case 34: {
                 const aId = arrIdFromStack(stack.pop());
-                const floats = collectionsAccess.getFloats(aId);
-                if (floats && floats.length > 0) {
-                  let mn = floats[0];
-                  for (let j = 1; j < floats.length; j++) mn = Math.min(mn, floats[j]);
+                const floats2 = collectionsAccess.getFloats(aId);
+                if (floats2 && floats2.length > 0) {
+                  let mn = floats2[0];
+                  for (let j = 1; j < floats2.length; j++) mn = Math.min(mn, floats2[j]);
                   stack.push(mn);
                 } else {
                   stack.push(0);
@@ -2350,21 +2353,21 @@ var RC = (() => {
               }
               case 35: {
                 const aId = arrIdFromStack(stack.pop());
-                const floats = collectionsAccess.getFloats(aId);
+                const floats2 = collectionsAccess.getFloats(aId);
                 let sum = 0;
-                if (floats) {
-                  for (let j = 0; j < floats.length; j++) sum += floats[j];
+                if (floats2) {
+                  for (let j = 0; j < floats2.length; j++) sum += floats2[j];
                 }
                 stack.push(sum);
                 break;
               }
               case 36: {
                 const aId = arrIdFromStack(stack.pop());
-                const floats = collectionsAccess.getFloats(aId);
+                const floats2 = collectionsAccess.getFloats(aId);
                 let sum = 0;
-                if (floats && floats.length > 0) {
-                  for (let j = 0; j < floats.length; j++) sum += floats[j];
-                  stack.push(sum / floats.length);
+                if (floats2 && floats2.length > 0) {
+                  for (let j = 0; j < floats2.length; j++) sum += floats2[j];
+                  stack.push(sum / floats2.length);
                 } else {
                   stack.push(0);
                 }
@@ -2378,8 +2381,8 @@ var RC = (() => {
               case 38: {
                 const pos = stack.pop();
                 const aId = arrIdFromStack(stack.pop());
-                const floats = collectionsAccess.getFloats(aId);
-                stack.push(floats ? _FloatExpression.splineInterp(floats, pos) : 0);
+                const floats2 = collectionsAccess.getFloats(aId);
+                stack.push(floats2 ? _FloatExpression.splineInterp(floats2, pos) : 0);
                 break;
               }
               case 39:
@@ -8187,6 +8190,242 @@ var RC = (() => {
     const Ctor = parent.constructor;
     return new Ctor(loomManager, parent.getDocument(), ctx, blocks, parent.isSafeMode(), depth);
   }
+
+  // players/typescript/src/core/Compression.ts
+  var COMPRESS = 31;
+  var COMPRESSION_NONE = 0;
+  var COMPRESSION_DEFLATE = 1;
+  var MAX_DECOMPRESSED_SIZE = 32 * 1024 * 1024;
+  var MAGIC = 76283904;
+  var PROPERTY_COUNT_OFFSET = 1 + 3 * 4;
+  var PROPERTIES_OFFSET = PROPERTY_COUNT_OFFSET + 4;
+  var int32 = (b, i) => b[i] << 24 | b[i + 1] << 16 | b[i + 2] << 8 | b[i + 3] | 0;
+  var uint16 = (b, i) => b[i] << 8 | b[i + 1];
+  function headerInfo(b) {
+    if (b.length < PROPERTIES_OFFSET || b[0] !== 0) return null;
+    if ((int32(b, 1) & 4294901760) !== MAGIC) return null;
+    const count = int32(b, PROPERTY_COUNT_OFFSET);
+    let at = PROPERTIES_OFFSET, compression = null;
+    for (let i = 0; i < count; i++) {
+      if (at + 4 > b.length) throw new Error("Malformed header properties");
+      const tag = uint16(b, at), len = uint16(b, at + 2);
+      const end = at + 4 + len;
+      if (end > b.length) throw new Error("Malformed header properties");
+      if ((tag & 63) === COMPRESS && tag >> 10 === 0 && len === 4) compression = int32(b, at + 4);
+      at = end;
+    }
+    return { end: at, compression, count };
+  }
+  function isCompressed(bytes) {
+    try {
+      const h = headerInfo(bytes);
+      return !!h && h.compression !== null && h.compression !== COMPRESSION_NONE;
+    } catch {
+      return false;
+    }
+  }
+  function decompressDocument(bytes) {
+    const h = headerInfo(bytes);
+    if (!h || h.compression === null || h.compression === COMPRESSION_NONE) return bytes;
+    if (h.compression !== COMPRESSION_DEFLATE) throw new Error(`Unsupported document compression ${h.compression}`);
+    const head = [];
+    for (let i = 0; i < PROPERTY_COUNT_OFFSET; i++) head.push(bytes[i]);
+    const props = [];
+    let kept = 0;
+    for (let i = 0, at = PROPERTIES_OFFSET; i < h.count; i++) {
+      const tag = uint16(bytes, at), end = at + 4 + uint16(bytes, at + 2);
+      if ((tag & 63) !== COMPRESS) {
+        for (let j = at; j < end; j++) props.push(bytes[j]);
+        kept++;
+      }
+      at = end;
+    }
+    const body = inflateZlib(bytes.subarray(h.end), MAX_DECOMPRESSED_SIZE);
+    const out = new Uint8Array(head.length + 4 + props.length + body.length);
+    out.set(head, 0);
+    out.set([kept >>> 24 & 255, kept >>> 16 & 255, kept >>> 8 & 255, kept & 255], head.length);
+    out.set(props, head.length + 4);
+    out.set(body, head.length + 4 + props.length);
+    return out;
+  }
+  function inflateZlib(data, maxOut = MAX_DECOMPRESSED_SIZE) {
+    if (data.length < 6) throw new Error("Truncated compressed document");
+    const cmf = data[0], flg = data[1];
+    if ((cmf & 15) !== 8 || cmf >> 4 > 7 || (cmf << 8 | flg) % 31 !== 0) throw new Error("Corrupted compressed document");
+    if (flg & 32) throw new Error("Corrupted compressed document");
+    const inf = new Inflater(data, 2, maxOut);
+    inf.run();
+    const end = inf.byteEnd();
+    if (end + 4 > data.length) throw new Error("Truncated compressed document");
+    const out = inf.result();
+    if (int32(data, end) >>> 0 !== adler32(out)) throw new Error("Corrupted compressed document");
+    if (end + 4 !== data.length) throw new Error("Unexpected data after the compressed document");
+    return out;
+  }
+  function adler32(b) {
+    let a = 1, s = 0;
+    for (let i = 0; i < b.length; ) {
+      const n = Math.min(b.length, i + 3800);
+      for (; i < n; i++) {
+        a += b[i];
+        s += a;
+      }
+      a %= 65521;
+      s %= 65521;
+    }
+    return (s << 16 | a) >>> 0;
+  }
+  var LEN_BASE = [3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31, 35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258];
+  var LEN_EXTRA = [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0];
+  var DIST_BASE = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577];
+  var DIST_EXTRA = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13];
+  var CL_ORDER = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+  var Huffman = class {
+    constructor(lengths, n) {
+      this.counts = new Uint16Array(16);
+      this.symbols = new Uint16Array(n);
+      for (let i = 0; i < n; i++) this.counts[lengths[i]]++;
+      this.counts[0] = 0;
+      let left = 1;
+      for (let len = 1; len < 16; len++) {
+        left = (left << 1) - this.counts[len];
+        if (left < 0) throw new Error("Corrupted compressed document");
+      }
+      const offs = new Uint16Array(16);
+      for (let len = 1; len < 15; len++) offs[len + 1] = offs[len] + this.counts[len];
+      for (let i = 0; i < n; i++) if (lengths[i]) this.symbols[offs[lengths[i]]++] = i;
+    }
+  };
+  var FIXED = null;
+  function fixedCodes() {
+    if (!FIXED) {
+      const l = new Uint8Array(288);
+      l.fill(8, 0, 144);
+      l.fill(9, 144, 256);
+      l.fill(7, 256, 280);
+      l.fill(8, 280, 288);
+      FIXED = [new Huffman(l, 288), new Huffman(new Uint8Array(30).fill(5), 30)];
+    }
+    return FIXED;
+  }
+  var Inflater = class {
+    constructor(src, start, max) {
+      this.src = src;
+      this.max = max;
+      this.bitBuf = 0;
+      this.bitCnt = 0;
+      this.n = 0;
+      this.pos = start;
+      this.out = new Uint8Array(Math.min(max, Math.max(1024, src.length * 4)));
+    }
+    bits(need) {
+      while (this.bitCnt < need) {
+        if (this.pos >= this.src.length) throw new Error("Truncated compressed document");
+        this.bitBuf |= this.src[this.pos++] << this.bitCnt;
+        this.bitCnt += 8;
+      }
+      const v = this.bitBuf & (1 << need) - 1;
+      this.bitBuf >>>= need;
+      this.bitCnt -= need;
+      return v;
+    }
+    decode(h) {
+      let code = 0, first = 0, index = 0;
+      for (let len = 1; len < 16; len++) {
+        code |= this.bits(1);
+        const count = h.counts[len];
+        if (code - count < first) return h.symbols[index + (code - first)];
+        index += count;
+        first = first + count << 1;
+        code <<= 1;
+      }
+      throw new Error("Corrupted compressed document");
+    }
+    put(b) {
+      if (this.n >= this.out.length) {
+        if (this.n >= this.max) throw new Error(`Decompressed document exceeds ${this.max} bytes`);
+        const bigger = new Uint8Array(Math.min(this.max, this.out.length * 2));
+        bigger.set(this.out);
+        this.out = bigger;
+      }
+      this.out[this.n++] = b;
+    }
+    run() {
+      let last = 0;
+      while (!last) {
+        last = this.bits(1);
+        const type = this.bits(2);
+        if (type === 0) this.stored();
+        else if (type === 1) {
+          const [l, d] = fixedCodes();
+          this.codes(l, d);
+        } else if (type === 2) this.dynamic();
+        else throw new Error("Corrupted compressed document");
+      }
+    }
+    stored() {
+      this.bitBuf = 0;
+      this.bitCnt = 0;
+      if (this.pos + 4 > this.src.length) throw new Error("Truncated compressed document");
+      const len = this.src[this.pos] | this.src[this.pos + 1] << 8;
+      const nlen = this.src[this.pos + 2] | this.src[this.pos + 3] << 8;
+      this.pos += 4;
+      if (len !== (~nlen & 65535)) throw new Error("Corrupted compressed document");
+      if (this.pos + len > this.src.length) throw new Error("Truncated compressed document");
+      for (let i = 0; i < len; i++) this.put(this.src[this.pos++]);
+    }
+    dynamic() {
+      const nlen = this.bits(5) + 257, ndist = this.bits(5) + 1, ncode = this.bits(4) + 4;
+      if (nlen > 286 || ndist > 30) throw new Error("Corrupted compressed document");
+      const lengths = new Uint8Array(320);
+      for (let i = 0; i < ncode; i++) lengths[CL_ORDER[i]] = this.bits(3);
+      const cl = new Huffman(lengths, 19);
+      lengths.fill(0);
+      for (let i = 0; i < nlen + ndist; ) {
+        const sym = this.decode(cl);
+        if (sym < 16) {
+          lengths[i++] = sym;
+          continue;
+        }
+        let len = 0, rep;
+        if (sym === 16) {
+          if (i === 0) throw new Error("Corrupted compressed document");
+          len = lengths[i - 1];
+          rep = 3 + this.bits(2);
+        } else if (sym === 17) rep = 3 + this.bits(3);
+        else rep = 11 + this.bits(7);
+        if (i + rep > nlen + ndist) throw new Error("Corrupted compressed document");
+        while (rep--) lengths[i++] = len;
+      }
+      if (!lengths[256]) throw new Error("Corrupted compressed document");
+      this.codes(new Huffman(lengths, nlen), new Huffman(lengths.subarray(nlen), ndist));
+    }
+    codes(lit, dist) {
+      for (; ; ) {
+        let sym = this.decode(lit);
+        if (sym < 256) {
+          this.put(sym);
+          continue;
+        }
+        if (sym === 256) return;
+        sym -= 257;
+        if (sym >= 29) throw new Error("Corrupted compressed document");
+        const len = LEN_BASE[sym] + this.bits(LEN_EXTRA[sym]);
+        const ds = this.decode(dist);
+        if (ds >= 30) throw new Error("Corrupted compressed document");
+        const d = DIST_BASE[ds] + this.bits(DIST_EXTRA[ds]);
+        if (d > this.n) throw new Error("Corrupted compressed document");
+        for (let i = 0; i < len; i++) this.put(this.out[this.n - d]);
+      }
+    }
+    /** Where the DEFLATE data ended: the next whole byte. */
+    byteEnd() {
+      return this.pos - (this.bitCnt >> 3);
+    }
+    result() {
+      return this.out.slice(0, this.n);
+    }
+  };
 
   // players/typescript/src/core/WireBuffer.ts
   var _WireBuffer = class _WireBuffer {
@@ -22296,6 +22535,157 @@ var RC = (() => {
       out.set(pcm, 44);
       return out;
     }
+    /**
+     * SoundExpression TYPE_SYNTH (11), an EXTENSION of the reference's tone: one note with an
+     * ADSR envelope, an exponential pitch glide, vibrato, a pulse width, a one-pole low-pass
+     * filter, frequency modulation (bells, chimes) and an echo. `p` holds params[1..], already
+     * resolved; a missing or non-finite value takes its default (SYNTH_DEFAULTS). Waveforms as
+     * the tone's, plus 4 = noise (a new random value each cycle of the frequency: white noise
+     * at 22050 Hz and above, pitched below), from a fixed LCG so every player writes the same
+     * samples. The volumes are a gain per channel (stereo when they differ) and the rate a
+     * speed (pitch and times together).
+     */
+    static synthesizeSynthWav(p, leftGain, rightGain, rate) {
+      const v = _ToneSynthesizer.synthParams(p);
+      const r = _ToneSynthesizer.validRate(rate);
+      const voice = _ToneSynthesizer.voiceSamples(v, v[0], v[1], r);
+      return _ToneSynthesizer.toWav(_ToneSynthesizer.echo(voice, v, r), leftGain, rightGain);
+    }
+    /**
+     * SoundExpression TYPE_SEQUENCE (12), an EXTENSION: notes played by one synth voice,
+     * mixed into one sound. `voice` is the synth's resolved params[1..]; `notes` holds
+     * (start s, frequency Hz, duration s, gain) groups. A frequency of 0 or less is a rest.
+     * Notes may overlap (a chord); the echo is the voice's, applied to the mix.
+     */
+    static synthesizeSequenceWav(voice, notes, leftGain, rightGain, rate) {
+      const v = _ToneSynthesizer.synthParams(voice);
+      const r = _ToneSynthesizer.validRate(rate);
+      const sr = _ToneSynthesizer.SAMPLE_RATE;
+      const parts = [];
+      let total = 1;
+      for (let k = 0; k + 3 < notes.length; k += 4) {
+        const start = Math.max(0, num(notes[k], 0)) / r, f = num(notes[k + 1], 0);
+        const dur = Math.max(0, num(notes[k + 2], 0)), gain = num(notes[k + 3], 1);
+        if (!(f > 0) || dur <= 0 || gain === 0) continue;
+        const at = Math.round(start * sr);
+        if (at >= _ToneSynthesizer.MAX_SAMPLES) continue;
+        const samples = _ToneSynthesizer.voiceSamples(v, f, dur, r);
+        parts.push([at, samples, gain]);
+        total = Math.max(total, at + samples.length);
+      }
+      const mix = new Float32Array(Math.min(total, _ToneSynthesizer.MAX_SAMPLES));
+      for (const [at, samples, gain] of parts) {
+        const n = Math.min(samples.length, mix.length - at);
+        for (let i = 0; i < n; i++) mix[at + i] += samples[i] * gain;
+      }
+      return _ToneSynthesizer.toWav(_ToneSynthesizer.echo(mix, v, r), leftGain, rightGain);
+    }
+    static synthParams(p) {
+      return _ToneSynthesizer.SYNTH_DEFAULTS.map((d, i) => num(i < p.length ? p[i] : NaN, d));
+    }
+    static validRate(rate) {
+      return rate > 0 && Number.isFinite(rate) ? rate : 1;
+    }
+    /** One note of the voice `v` at frequency `freq`, held `hold` seconds: mono, -1..1. */
+    static voiceSamples(v, freq, hold, rate) {
+      const sr = _ToneSynthesizer.SAMPLE_RATE;
+      const f0 = Math.max(0, freq) * rate, wave = Math.floor(v[2]);
+      const attack = Math.max(0, v[3]) / rate, decay = Math.max(0, v[4]) / rate;
+      const sustain = Math.min(1, Math.max(0, v[5])), release = Math.max(0, v[6]) / rate;
+      const held = Math.max(Math.max(0, hold) / rate, sustain === 0 ? attack + decay : 0);
+      const glide = v[7] > 0 && v[0] > 0 ? v[7] / v[0] : 1;
+      const vibRate = Math.max(0, v[8]) * rate, vibDepth = v[9];
+      const pw = Math.min(0.99, Math.max(0.01, v[10])), cutoff = Math.max(0, v[11]);
+      const fmRatio = Math.max(0, v[12]), fmIndex = v[13];
+      const total = Math.max(1, Math.min(_ToneSynthesizer.MAX_SAMPLES, Math.round((held + release) * sr)));
+      const out = new Float32Array(total);
+      const lp = cutoff > 0 ? 1 - Math.exp(-2 * Math.PI * cutoff / sr) : 1;
+      let phase = 0, mod = 0, seed = 22222, noise = 0, y = 0, releaseFrom = -1;
+      const level = (t) => {
+        if (t < attack) return t / attack;
+        if (t < attack + decay) return 1 - (1 - sustain) * (t - attack) / decay;
+        return sustain;
+      };
+      for (let i = 0; i < total; i++) {
+        const t = i / sr;
+        let env;
+        if (t < held) env = level(t);
+        else {
+          if (releaseFrom < 0) releaseFrom = level(held);
+          env = release > 0 ? releaseFrom * Math.max(0, 1 - (t - held) / release) : 0;
+        }
+        let f = glide !== 1 && held > 0 ? f0 * Math.pow(glide, Math.min(t, held) / held) : f0;
+        if (vibRate > 0 && vibDepth !== 0) f *= Math.pow(2, vibDepth / 12 * Math.sin(2 * Math.PI * vibRate * t));
+        const before = phase;
+        phase += f / sr;
+        let q = phase - Math.floor(phase);
+        if (fmRatio > 0 && fmIndex !== 0) {
+          mod += f * fmRatio / sr;
+          q += fmIndex * env * Math.sin(2 * Math.PI * (mod - Math.floor(mod))) / (2 * Math.PI);
+          q -= Math.floor(q);
+        }
+        let x;
+        switch (wave) {
+          case 1:
+            x = q < pw ? 1 : -1;
+            break;
+          // square / pulse
+          case 2:
+            x = 2 * q - 1;
+            break;
+          // sawtooth
+          case 3:
+            x = 1 - 4 * Math.abs(q - 0.5);
+            break;
+          // triangle
+          case 4:
+            if (i === 0 || f >= sr || Math.floor(phase) !== Math.floor(before)) {
+              seed = Math.imul(seed, 1103515245) + 12345 >>> 0;
+              noise = (seed >>> 8) / 8388608 - 1;
+            }
+            x = noise;
+            break;
+          default:
+            x = Math.sin(2 * Math.PI * q);
+            break;
+        }
+        y += lp * (x * env - y);
+        out[i] = y;
+      }
+      return out;
+    }
+    /** The voice's echo applied to `dry`: repeats every delay, each `feedback` quieter. */
+    static echo(dry, v, rate) {
+      const delay = Math.max(0, v[14]) / rate, feedback = Math.min(0.95, Math.max(0, v[15]));
+      const sr = _ToneSynthesizer.SAMPLE_RATE, d = Math.round(delay * sr);
+      if (d < 1 || feedback <= 0) return dry;
+      const repeats = Math.ceil(Math.log(0.01) / Math.log(feedback));
+      const out = new Float32Array(Math.min(_ToneSynthesizer.MAX_SAMPLES, dry.length + d * repeats));
+      for (let i = 0; i < out.length; i++) out[i] = (i < dry.length ? dry[i] : 0) + (i >= d ? out[i - d] * feedback : 0);
+      return out;
+    }
+    /** -1..1 samples as a 16-bit WAV, one gain per channel: stereo when they differ. */
+    static toWav(samples, leftGain, rightGain) {
+      const gl = Number.isFinite(leftGain) ? leftGain : 1, gr = Number.isFinite(rightGain) ? rightGain : 1;
+      const channels = gl === gr ? 1 : 2;
+      let peak = 0;
+      for (let i = 0; i < samples.length; i++) peak = Math.max(peak, Math.abs(samples[i]));
+      if (peak > 1) for (let i = 0; i < samples.length; i++) samples[i] /= peak;
+      const pcm = new Uint8Array(samples.length * 2 * channels);
+      const put = (i, x) => {
+        const s = Math.max(-32768, Math.min(32767, Math.round(x * 32767)));
+        pcm[i] = s & 255;
+        pcm[i + 1] = s >> 8 & 255;
+      };
+      for (let i = 0; i < samples.length; i++) {
+        if (channels === 1) put(2 * i, samples[i] * gl);
+        else {
+          put(4 * i, samples[i] * gl);
+          put(4 * i + 2, samples[i] * gr);
+        }
+      }
+      return _ToneSynthesizer.buildWav(pcm, _ToneSynthesizer.SAMPLE_RATE, 16, channels);
+    }
     /** Synthesize a complete WAV file for the given tone. */
     static synthesizeWav(frequency, durationSec, waveform) {
       return _ToneSynthesizer.buildWav(
@@ -22309,7 +22699,47 @@ var RC = (() => {
     }
   };
   _ToneSynthesizer.SAMPLE_RATE = 22050;
+  /** TYPE_SYNTH defaults, by position after the type tag. */
+  _ToneSynthesizer.SYNTH_DEFAULTS = [
+    440,
+    // 1 frequency (Hz)
+    0.2,
+    // 2 duration (s): held, before the release
+    0,
+    // 3 waveform: 0 sine, 1 square, 2 sawtooth, 3 triangle, 4 noise
+    5e-3,
+    // 4 attack (s)
+    0,
+    // 5 decay (s)
+    1,
+    // 6 sustain level (0..1)
+    0.05,
+    // 7 release (s)
+    0,
+    // 8 frequencyEnd (Hz): glide to it over the duration; 0 = none
+    0,
+    // 9 vibrato rate (Hz)
+    0,
+    // 10 vibrato depth (semitones)
+    0.5,
+    // 11 pulse width (square, 0..1)
+    0,
+    // 12 low-pass cutoff (Hz): 0 = off
+    0,
+    // 13 FM ratio: modulator frequency / frequency; 0 = no FM
+    0,
+    // 14 FM index (radians of phase deviation), scaled by the envelope
+    0,
+    // 15 echo delay (s): 0 = no echo
+    0.4
+    // 16 echo feedback (0..0.95)
+  ];
+  /** The longest sound written: 30 seconds. */
+  _ToneSynthesizer.MAX_SAMPLES = _ToneSynthesizer.SAMPLE_RATE * 30;
   var ToneSynthesizer = _ToneSynthesizer;
+  function num(x, d) {
+    return Number.isFinite(x) ? x : d;
+  }
 
   // players/typescript/src/core/operations/SoundOperations.ts
   var _SoundData = class _SoundData extends Operation {
@@ -22334,27 +22764,84 @@ var RC = (() => {
   };
   _SoundData.OP_CODE = 169;
   var SoundData = _SoundData;
+  function isSoundVariable(bits) {
+    if (!isNaNBits(bits)) return false;
+    const id = idFromBits(bits);
+    return id !== 0 && (id > 40 || id < 10);
+  }
   var _SoundExpression = class _SoundExpression extends Operation {
     constructor(id, leftVolume, rightVolume, rate, params) {
       super();
+      /** The resolved inputs last synthesized, so an unchanged sound is not rebuilt. */
+      this.mLastKey = "";
+      this.mGain = [1, 1, 1];
+      // left, right, rate: resolved
+      /** Sequences played with this synth as their voice: rebuilt when it changes. */
+      this.mUsers = /* @__PURE__ */ new Set();
       this.mId = id;
       this.mLeftVolume = leftVolume;
       this.mRightVolume = rightVolume;
       this.mRate = rate;
       this.mParams = params;
+      this.mOut = new Float32Array(params.length);
+      for (let i = 0; i < params.length; i++) this.mOut[i] = intBitsToFloat(params[i]);
     }
     write(_buffer) {
     }
+    registerListening(context) {
+      for (let i = 1; i < this.mParams.length; i++) {
+        if (isSoundVariable(this.mParams[i])) context.listensTo(idFromBits(this.mParams[i]), this);
+      }
+      for (const b of [this.mLeftVolume, this.mRightVolume, this.mRate]) {
+        if (isSoundVariable(b)) context.listensTo(idFromBits(b), this);
+      }
+    }
+    updateVariables(context) {
+      for (let i = 1; i < this.mParams.length; i++) {
+        const b = this.mParams[i];
+        this.mOut[i] = isSoundVariable(b) ? context.getFloat(idFromBits(b)) : intBitsToFloat(b);
+      }
+      [this.mLeftVolume, this.mRightVolume, this.mRate].forEach((b, i) => {
+        this.mGain[i] = isSoundVariable(b) ? context.getFloat(idFromBits(b)) : intBitsToFloat(b);
+      });
+    }
     apply(context) {
       if (this.mParams.length === 0) return;
+      this.updateVariables(context);
       const typeId = idFromBits(this.mParams[0]);
       if (typeId === _SoundExpression.TYPE_TONE && this.mParams.length >= 4) {
-        const wav = ToneSynthesizer.synthesizeWav(
-          intBitsToFloat(this.mParams[1]),
-          intBitsToFloat(this.mParams[2]),
-          intBitsToFloat(this.mParams[3])
-        );
+        const key = `${this.mOut[1]}|${this.mOut[2]}|${this.mOut[3]}`;
+        if (key === this.mLastKey) return;
+        this.mLastKey = key;
+        const wav = ToneSynthesizer.synthesizeWav(this.mOut[1], this.mOut[2], this.mOut[3]);
         context.loadSound(this.mId, wav);
+      } else if (typeId === _SoundExpression.TYPE_SYNTH) {
+        context.putObject(this.mId, this);
+        const key = `${Array.from(this.mOut.subarray(1)).join("|")}|${this.mGain.join("|")}`;
+        if (key === this.mLastKey) return;
+        this.mLastKey = key;
+        context.loadSound(this.mId, ToneSynthesizer.synthesizeSynthWav(
+          this.mOut.subarray(1),
+          this.mGain[0],
+          this.mGain[1],
+          this.mGain[2]
+        ));
+        for (const user of this.mUsers) user.markDirty();
+      } else if (typeId === _SoundExpression.TYPE_SEQUENCE && this.mParams.length >= 2) {
+        const voice = context.getObject(Math.round(this.mOut[1]));
+        if (!(voice instanceof _SoundExpression) || idFromBits(voice.mParams[0]) !== _SoundExpression.TYPE_SYNTH) return;
+        voice.mUsers.add(this);
+        const voiceParams = voice.mOut.subarray(1);
+        const key = `${Array.from(voiceParams).join("|")}#${Array.from(this.mOut.subarray(2)).join("|")}|${this.mGain.join("|")}`;
+        if (key === this.mLastKey) return;
+        this.mLastKey = key;
+        context.loadSound(this.mId, ToneSynthesizer.synthesizeSequenceWav(
+          voiceParams,
+          this.mOut.subarray(2),
+          this.mGain[0],
+          this.mGain[1],
+          this.mGain[2]
+        ));
       }
     }
     deepToString(indent) {
@@ -22362,9 +22849,9 @@ var RC = (() => {
     }
     static read(buffer, operations) {
       const id = buffer.readId();
-      const leftVolume = buffer.readFloat();
-      const rightVolume = buffer.readFloat();
-      const rate = buffer.readFloat();
+      const leftVolume = buffer.readInt();
+      const rightVolume = buffer.readInt();
+      const rate = buffer.readInt();
       const len = buffer.readInt();
       if (len > _SoundExpression.MAX_PARAMS) {
         throw new Error(`SoundExpression: too many params ${len} > ${_SoundExpression.MAX_PARAMS}`);
@@ -22379,6 +22866,14 @@ var RC = (() => {
   _SoundExpression.OP_CODE = 206;
   _SoundExpression.MAX_PARAMS = 64;
   _SoundExpression.TYPE_TONE = 10;
+  /** EXTENSION, not in the reference: an enveloped note (ToneSynthesizer.synthesizeSynthWav). */
+  _SoundExpression.TYPE_SYNTH = 11;
+  /**
+   * EXTENSION: notes played by a synth voice, mixed into one sound. params = [TYPE_SEQUENCE,
+   * voice id (a plain float: the id of a TYPE_SYNTH SoundExpression written earlier), then
+   * (start s, frequency Hz, duration s, gain) per note].
+   */
+  _SoundExpression.TYPE_SEQUENCE = 12;
   var SoundExpression = _SoundExpression;
   var _PlaySound = class _PlaySound extends Operation {
     constructor(soundExpressionId) {
@@ -22388,6 +22883,7 @@ var RC = (() => {
     write(_buffer) {
     }
     apply(context) {
+      if (context.getMode() === "DATA" /* DATA */) return;
       context.playSound(this.mSoundExpressionId);
     }
     deepToString(indent) {
@@ -23089,7 +23585,17 @@ var RC = (() => {
     constructor(buffer) {
       this.mBuffer = buffer;
     }
+    /**
+     * The document's bytes; a compressed one (Header.COMPRESS) is decompressed first, once, as
+     * androidx's RemoteComposeBuffer.inflateFromBuffer does, so everything after sees the
+     * uncompressed original.
+     */
     static fromArrayBuffer(data) {
+      const bytes = new Uint8Array(data);
+      if (isCompressed(bytes)) {
+        const plain = decompressDocument(bytes);
+        return new _RemoteComposeBuffer(WireBuffer.fromArrayBuffer(plain.buffer.slice(plain.byteOffset, plain.byteOffset + plain.byteLength)));
+      }
       return new _RemoteComposeBuffer(WireBuffer.fromArrayBuffer(data));
     }
     getBuffer() {
@@ -26405,7 +26911,7 @@ void main() {
      * @param cacheKey   - optional cache key for the compiled program
      *                     (use shader text ID for stable caching)
      */
-    render(glsl, width, height, floats, ints, textures, cacheKey, docWidth, docHeight) {
+    render(glsl, width, height, floats2, ints, textures, cacheKey, docWidth, docHeight) {
       const gl = this.initGL();
       if (!gl) return false;
       if (this.canvas.width !== width || this.canvas.height !== height) {
@@ -26426,8 +26932,8 @@ void main() {
       if (resLoc) gl.uniform2f(resLoc, width, height);
       const docLoc = this.getUniformLoc(gl, cached, "u_doc_size");
       if (docLoc) gl.uniform2f(docLoc, docWidth ?? width, docHeight ?? height);
-      if (floats) {
-        for (const [name, values] of floats) {
+      if (floats2) {
+        for (const [name, values] of floats2) {
           const loc = this.getUniformLoc(gl, cached, name);
           if (!loc) continue;
           switch (values.length) {
@@ -27803,10 +28309,10 @@ void main() {
       if (w > maxW) w = maxW;
       if (h > maxH) h = maxH;
       sd.updateVariables(ctx);
-      const floats = /* @__PURE__ */ new Map();
+      const floats2 = /* @__PURE__ */ new Map();
       for (const name of sd.getUniformFloatNames()) {
         const vals = sd.getUniformFloats(name);
-        floats.set(name, vals);
+        floats2.set(name, vals);
       }
       const ints = /* @__PURE__ */ new Map();
       for (const name of sd.getUniformIntegerNames()) {
@@ -27834,7 +28340,7 @@ void main() {
         glsl,
         w,
         h,
-        floats,
+        floats2,
         ints,
         textures,
         cacheKey,
@@ -29163,6 +29669,11 @@ void main() {
       this.audioContext = null;
       this.soundBytes = /* @__PURE__ */ new Map();
       this.soundBuffers = /* @__PURE__ */ new Map();
+      this.soundDecoding = /* @__PURE__ */ new Set();
+      // One voice per sound, as Android's SoundSupport: playing a sound that is still playing
+      // restarts it rather than layering a copy (a playSound in a canvas runs every frame its
+      // condition holds).
+      this.soundSources = /* @__PURE__ */ new Map();
       this.canvasPaintContext = paintContext;
       this.mPaintContext = paintContext;
     }
@@ -29185,6 +29696,10 @@ void main() {
           this.mRemoteComposeState.overrideColor(varId, defaultColor);
         }
       }
+    }
+    /** The document's named variables: name -> {id, type} (NamedVariable's STRING_TYPE .. FLOAT_ARRAY_TYPE). */
+    getNamedVariables() {
+      return this.namedVariables;
     }
     getVariableNameMap() {
       const map = /* @__PURE__ */ new Map();
@@ -29375,26 +29890,46 @@ void main() {
         });
         const cached = this.soundBuffers.get(id);
         if (cached) {
-          this.startBuffer(ctx, cached);
+          this.startBuffer(ctx, cached, id);
           return;
         }
         const bytes = this.soundBytes.get(id);
-        if (!bytes) return;
+        if (!bytes || this.soundDecoding.has(id)) return;
+        this.soundDecoding.add(id);
         const arrayBuf = bytes.slice().buffer;
         const decoded = ctx.decodeAudioData(arrayBuf);
         if (decoded && typeof decoded.then === "function") {
           decoded.then((buffer) => {
+            this.soundDecoding.delete(id);
+            if (this.soundBytes.get(id) !== bytes) return;
             this.soundBuffers.set(id, buffer);
-            this.startBuffer(ctx, buffer);
-          }).catch((e) => console.warn(`RemoteCompose: decode sound(${id}) failed`, e));
+            this.startBuffer(ctx, buffer, id);
+          }).catch((e) => {
+            this.soundDecoding.delete(id);
+            console.warn(`RemoteCompose: decode sound(${id}) failed`, e);
+          });
+        } else {
+          this.soundDecoding.delete(id);
         }
       } catch (e) {
+        this.soundDecoding.delete(id);
         console.warn(`RemoteCompose: playSound(${id}) failed`, e);
       }
     }
-    startBuffer(ctx, buffer) {
+    startBuffer(ctx, buffer, id) {
       try {
+        const previous = this.soundSources.get(id);
+        if (previous) {
+          try {
+            previous.stop();
+          } catch {
+          }
+        }
         const source = ctx.createBufferSource();
+        this.soundSources.set(id, source);
+        source.onended = () => {
+          if (this.soundSources.get(id) === source) this.soundSources.delete(id);
+        };
         source.buffer = buffer;
         const gain = ctx.createGain();
         gain.gain.value = 1;
@@ -30093,6 +30628,175 @@ void main() {
     }
     if (tv) tv.getElapsedSeconds = () => elapsed;
     return pinned;
+  }
+
+  // players/typescript/src/web/HostApi.ts
+  var TYPES = ["string", "float", "color", "image", "int", "long", "float_array"];
+  var hex = (argb) => "#" + (argb >>> 0).toString(16).toUpperCase().padStart(8, "0");
+  function parseColor(v) {
+    if (typeof v === "number" && Number.isFinite(v)) return v | 0;
+    const m = /^#?([0-9a-f]{6}|[0-9a-f]{8})$/i.exec(String(v).trim());
+    if (!m) return null;
+    let n = parseInt(m[1], 16);
+    if (m[1].length === 6) n = 4278190080 + n;
+    return n | 0;
+  }
+  function floats(v) {
+    const xs = Array.isArray(v) ? v.map(Number) : String(v).split(/[\s,;[\]]+/).filter((t) => t !== "").map(Number);
+    return xs.length && xs.every(Number.isFinite) ? xs : null;
+  }
+  var TICK_MS = 50;
+  function createHostApi(player) {
+    const actions = [];
+    const changes = [];
+    const sticky = /* @__PURE__ */ new Map();
+    const last = /* @__PURE__ */ new Map();
+    let doc = null;
+    let disposed = false;
+    const ctx = () => player.getRemoteContext();
+    const named = () => ctx()?.getNamedVariables() ?? /* @__PURE__ */ new Map();
+    function read(name) {
+      const c = ctx();
+      const v = named().get(name);
+      if (!c || !v) return void 0;
+      switch (TYPES[v.type]) {
+        case "float":
+          return c.getFloat(v.id);
+        case "int":
+        case "long":
+          return c.getInteger(v.id);
+        case "color":
+          return hex(c.getColor(v.id));
+        case "string":
+          return c.getText(v.id) ?? "";
+        case "float_array": {
+          const s = c.mRemoteComposeState;
+          const a = s.getDynamicFloats(v.id) ?? s.getArray(v.id)?.getFloats?.();
+          return a ? Array.from(a) : [];
+        }
+        default:
+          return void 0;
+      }
+    }
+    function write(name, value) {
+      const c = ctx();
+      const v = named().get(name);
+      if (!c || !v) return false;
+      switch (TYPES[v.type]) {
+        case "float": {
+          const f = Number(value);
+          if (!Number.isFinite(f)) return false;
+          c.setNamedFloatOverride(name, f);
+          return true;
+        }
+        case "int":
+        case "long": {
+          const n = Number(value);
+          if (!Number.isFinite(n)) return false;
+          c.setNamedIntegerOverride(name, Math.trunc(n));
+          return true;
+        }
+        case "color": {
+          const col = parseColor(value);
+          if (col === null) return false;
+          c.setNamedColorOverride(name, col);
+          return true;
+        }
+        case "string":
+          c.setNamedStringOverride(name, String(value));
+          return true;
+        case "float_array": {
+          const xs = floats(value);
+          if (!xs) return false;
+          c.setNamedFloatArrayOverride(name, xs);
+          return true;
+        }
+        default:
+          return false;
+      }
+    }
+    function attach(d) {
+      doc = d;
+      d.addActionCallback({
+        onAction: (name, value) => {
+          if (disposed || doc !== d) return;
+          for (const l of actions.slice()) {
+            if (l.name === "*" || l.name === name) {
+              try {
+                l.handler(value, name);
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          }
+        }
+      });
+      for (const [name, value] of sticky) write(name, value);
+      player.repaint?.();
+    }
+    function tick() {
+      if (disposed) return;
+      const d = player.getDocument();
+      if (d && d !== doc && named().size) attach(d);
+      if (!changes.length || !doc) return;
+      const watched = changes.some((l) => l.name === "*") ? [...named().keys()] : [...new Set(changes.map((l) => l.name))];
+      for (const name of watched) {
+        const value = read(name);
+        const key = JSON.stringify(value);
+        if (last.get(name) === key) continue;
+        const first = !last.has(name);
+        last.set(name, key);
+        if (first) continue;
+        for (const l of changes.slice()) {
+          if (l.name === "*" || l.name === name) {
+            try {
+              l.handler(value, name);
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        }
+      }
+    }
+    const timer = setInterval(tick, TICK_MS);
+    tick();
+    const remover = (list, l) => () => {
+      const i = list.indexOf(l);
+      if (i >= 0) list.splice(i, 1);
+    };
+    return {
+      variables() {
+        const out = {};
+        for (const [name, v] of named()) out[name] = TYPES[v.type] ?? "string";
+        return out;
+      },
+      get: read,
+      set(name, value) {
+        const ok = write(name, value);
+        if (ok) {
+          sticky.set(name, value);
+          player.repaint?.();
+        }
+        return ok;
+      },
+      onAction(name, handler) {
+        const l = { name, handler };
+        actions.push(l);
+        return remover(actions, l);
+      },
+      onChange(name, handler) {
+        const l = { name, handler };
+        changes.push(l);
+        if (name !== "*" && !last.has(name)) last.set(name, JSON.stringify(read(name)));
+        return remover(changes, l);
+      },
+      dispose() {
+        disposed = true;
+        clearInterval(timer);
+        actions.length = 0;
+        changes.length = 0;
+      }
+    };
   }
 
   // players/typescript/src/web/main.ts

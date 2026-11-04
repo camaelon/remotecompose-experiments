@@ -1,3 +1,4 @@
+#include "rccore/Compression.h"
 #include "rccore/WireBuffer.h"
 #include "rccore/CoreDocument.h"
 #include "rccore/RemoteContext.h"
@@ -526,6 +527,9 @@ static int run(int argc, char* argv[]) {
         std::cerr << "Error: empty file\n";
         return 1;
     }
+    // A compressed document (Header.COMPRESS): the report and the render read the original.
+    try { rccore::decompressInPlace(data); }
+    catch (const rccore::CompressionError& e) { std::cerr << "Error: " << e.what() << "\n"; return 1; }
 
     // Parse document
     // Report sections, filled in as we go and written at whichever exit we reach.

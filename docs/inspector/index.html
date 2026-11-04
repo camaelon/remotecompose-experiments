@@ -16407,6 +16407,13 @@ ${esc5(b.topCombos)}">
     return result;
   }
   async function loadRcArrayBuffer(arrayBuffer, name, sourceJson) {
+    const rt = (typeof RC !== "undefined" ? RC : void 0) || (typeof window !== "undefined" ? window.RC : void 0) || globalThis.RC;
+    let compressedSize = null;
+    if (rt && rt.isCompressed && rt.isCompressed(new Uint8Array(arrayBuffer))) {
+      compressedSize = arrayBuffer.byteLength;
+      const plain = rt.decompressDocument(new Uint8Array(arrayBuffer));
+      arrayBuffer = plain.buffer.slice(plain.byteOffset, plain.byteOffset + plain.byteLength);
+    }
     currentBuffer = arrayBuffer;
     window.currentBuffer = currentBuffer;
     const u8 = new Uint8Array(arrayBuffer);
@@ -16419,7 +16426,7 @@ ${esc5(b.topCombos)}">
     const headerDropZone = document.getElementById("headerDropZone");
     if (headerDropZone) headerDropZone.classList.add("has-file");
     const sizeEl = document.getElementById("metaSize");
-    if (sizeEl) sizeEl.textContent = `Size: ${u8.length} B`;
+    if (sizeEl) sizeEl.textContent = compressedSize !== null ? `Size: ${u8.length} B (${compressedSize} B compressed)` : `Size: ${u8.length} B`;
     let canvas = document.getElementById("previewCanvas");
     if (currentPlayer) {
       currentPlayer.stop();
