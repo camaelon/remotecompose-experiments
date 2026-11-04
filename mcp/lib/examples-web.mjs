@@ -31,6 +31,7 @@
 // <base> is wherever the reverse proxy mounts the server (/examples/ on the VPS); every link is
 // relative, so the pages work under any prefix.
 
+import { HOME, MARK } from "./brand.mjs";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { brotliCompressSync, gzipSync, constants as zlibConstants } from "node:zlib";
@@ -198,7 +199,7 @@ async function playground(e, variant) {
         config: {
             title: `${e.id}${variant ? ` (${variant})` : ""} · ${e.title ?? e.id}`, layout: "fill", width, height, controls: true,
             // The Kobento logo, top left: back to the site's front page (the domain root).
-            home: { href: "/", label: "Kobento", title: "Kobento home", logo: MARK },
+            home: HOME,
             // The inspector (inspector/dist, served at <base>/inspector/) on this very document.
             inspectHref: `${variant ? "../../../" : "../../"}inspector/?url=${encodeURIComponent(`../rc/${e.id}${variant ? `/${variant}` : ""}.rc`)}`,
             rcBytes: rcBytes.length, fileName: `${e.folder.split("/").pop()}${variant ? `.${variant}` : ""}.rc`,
@@ -348,8 +349,6 @@ for (const b of chips) b.addEventListener("click", () => {
 
 const FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">`;
 
-// The Kobento mark: four rounded tiles (the logo's colours), inline so it needs no file.
-const MARK = `<svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="2" y="2" width="16.5" height="16.5" rx="5" fill="#a27be5"/><rect x="21.5" y="2" width="16.5" height="16.5" rx="5" fill="#409bf0"/><rect x="2" y="21.5" width="16.5" height="16.5" rx="5" fill="#36c495"/><rect x="21.5" y="21.5" width="16.5" height="16.5" rx="5" fill="#f6a525"/></svg>`;
 
 /** The site's sections: the landing page is at the root, every other one a folder below it. */
 function siteNav(current) {

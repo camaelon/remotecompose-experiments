@@ -328,8 +328,9 @@ function pageDocument(file) {
 // A published page is served rebuilt from what it stores (its config `var C` and document
 // `var DATA`) with the current page template and player, so fixes to either reach pages
 // already published: the old player bundles stay on disk for a page someone saved. A
-// playground also gets an Inspect button when this server serves the inspector
-// (definition.inspector, set by the server that includes this one). A page that cannot be
+// playground also gets an Inspect button when this server serves the inspector, and the site's
+// logo link top left (definition.inspector and definition.home, set by the server that
+// includes this one). A page that cannot be
 // rebuilt (an old side-loaded app script, or no config) is served as it is, with only its
 // player reference brought up to date.
 async function pageRewrite(id) {
@@ -341,7 +342,7 @@ async function pageRewrite(id) {
         apply: (buf) => {
             const s = buf.toString("utf8");
             try {
-                const out = rebuildPage(s, { id, player: name, inspector });
+                const out = rebuildPage(s, { id, player: name, inspector, home: definition.home ?? null });
                 if (out) return Buffer.from(out, "utf8");
             } catch {}
             const out = name ? s.replace(/\.\.\/_player\/[0-9a-f]{16}\.js/g, () => `../_player/${name}`) : s;
@@ -351,12 +352,13 @@ async function pageRewrite(id) {
 }
 
 /** The page HTML rebuilt from its stored config and document, or null when it cannot be. */
-export function rebuildPage(html, { id, player, inspector }) {
+export function rebuildPage(html, { id, player, inspector, home = null }) {
     const c = /\n {2}var C = (\{.*\});\n {2}var DATA = "([A-Za-z0-9+/=]*)";\n/.exec(html);
     const src = player ? `../_player/${player}` : /<script src="(\.\.\/_player\/[0-9a-f]{16}\.js)"><\/script>/.exec(html)?.[1];
     if (!c || !src) return null;
     let config = JSON.parse(c[1]);
     if (config.app && !config.app.embedded) return null;   // a side-loaded script: kept as published
+    if (config.controls && home && !config.home) config = { ...config, home };
     if (config.controls && inspector && !config.inspectHref) {
         config = { ...config, inspectHref: `../../inspector/?url=${encodeURIComponent(`../pages/${id}/${config.fileName || "document.rc"}`)}` };
     }

@@ -17,6 +17,7 @@
 import { definition as json2rc } from "./json2rc-server.mjs";
 import { definition as render, publishImage } from "./rc-render-server.mjs";
 import { definition as inspect } from "./inspect-server.mjs";
+import { HOME } from "./lib/brand.mjs";
 import { definition as deploy } from "./deploy-server.mjs";
 import { definition as examples } from "./examples-server.mjs";
 import { serve, isMain, currentCall } from "./lib/mcp-server.mjs";
@@ -1460,8 +1461,10 @@ async function searchReference(query, { app = false } = {}) {
     return best.map((p) => `[${p.topic}]\n${trim(p.text)}`).join("\n\n");
 }
 
-// The examples site serves the inspector (<base>/inspector/), so published pages can link to it.
+// The examples site serves the inspector (<base>/inspector/) and the front page: published
+// playgrounds link to both, as the examples' own playgrounds do.
 deploy.inspector = true;
+deploy.home = HOME;
 
 export const definition = {
     name: "kobento",
